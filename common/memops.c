@@ -30,12 +30,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
-#ifdef __linux__
 #include <endian.h>
-#endif
 #include "memops.h"
 
-#if defined (__SSE2__) && !defined (__sun__)
+#if defined (__SSE2__)
 #include <emmintrin.h>
 #ifdef __SSE4_1__
 #include <smmintrin.h>
@@ -196,7 +194,7 @@
 	}
 
 
-#if defined (__SSE2__) && !defined (__sun__)
+#if defined (__SSE2__)
 
 /* generates same as _mm_set_ps(1.f, 1.f, 1f., 1f) but faster  */
 static inline __m128 gen_one(void)
@@ -394,7 +392,7 @@ void sample_move_d32u24_sSs (char *dst, jack_default_audio_sample_t *src, unsign
 
 void sample_move_d32u24_sS (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state)
 {
-#if defined (__SSE2__) && !defined (__sun__)
+#if defined (__SSE2__)
 	__m128 int_max = _mm_set1_ps(SAMPLE_24BIT_MAX_F);
 	__m128 int_min = _mm_sub_ps(_mm_setzero_ps(), int_max);
 	__m128 factor = int_max;
@@ -543,7 +541,7 @@ void sample_move_dS_s32u24s (jack_default_audio_sample_t *dst, char *src, unsign
 
 void sample_move_dS_s32u24 (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip)
 {
-#if defined (__SSE2__) && !defined (__sun__)
+#if defined (__SSE2__)
 	unsigned long unrolled = nsamples / 4;
 	static float inv_sample_max_24bit = 1.0 / SAMPLE_24BIT_SCALING;
 	__m128 factor = _mm_set1_ps(inv_sample_max_24bit);
@@ -660,7 +658,7 @@ void sample_move_d32l24_sSs (char *dst, jack_default_audio_sample_t *src, unsign
 
 void sample_move_d32l24_sS (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state)
 {
-#if defined (__SSE2__) && !defined (__sun__)
+#if defined (__SSE2__)
 	__m128 int_max = _mm_set1_ps(SAMPLE_24BIT_MAX_F);
 	__m128 int_min = _mm_sub_ps(_mm_setzero_ps(), int_max);
 	__m128 factor = int_max;
@@ -848,7 +846,7 @@ void sample_move_dS_s32 (jack_default_audio_sample_t *dst, char *src, unsigned l
 
 void sample_move_dS_s32l24 (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip)
 {
-#if defined (__SSE2__) && !defined (__sun__)
+#if defined (__SSE2__)
 	unsigned long unrolled = nsamples / 4;
 	static float inv_sample_max_24bit = 1.0 / SAMPLE_24BIT_SCALING;
 	__m128 factor = _mm_set1_ps(inv_sample_max_24bit);
@@ -958,7 +956,7 @@ void sample_move_d24_sSs (char *dst, jack_default_audio_sample_t *src, unsigned 
 
 void sample_move_d24_sS (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state)
 {
-#if defined (__SSE2__) && !defined (__sun__)
+#if defined (__SSE2__)
 	_MM_SET_ROUNDING_MODE(_MM_ROUND_NEAREST);
 	while (nsamples >= 4) {
 		int i;
@@ -1092,7 +1090,7 @@ void sample_move_dS_s24 (jack_default_audio_sample_t *dst, char *src, unsigned l
 {
 	const jack_default_audio_sample_t scaling = 1.f/SAMPLE_24BIT_SCALING;
 
-#if defined (__SSE2__) && !defined (__sun__)
+#if defined (__SSE2__)
 	const __m128 scaling_block = _mm_set_ps1(scaling);
 	while (nsamples >= 4) {
 		int x0, x1, x2, x3;

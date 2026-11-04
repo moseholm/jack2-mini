@@ -18,7 +18,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#include "JackDebugClient.h"
 #include "JackLibClient.h"
 #include "JackChannel.h"
 #include "JackLibGlobals.h"
@@ -93,11 +92,7 @@ jack_client_t* jack_client_new_aux(const char* client_name, jack_options_t optio
         return 0;
     }
 
-    if (JACK_DEBUG) {
-        client = new JackDebugClient(new JackLibClient(GetSynchroTable())); // Debug mode
-    } else {
-        client = new JackLibClient(GetSynchroTable());
-    }
+    client = new JackLibClient(GetSynchroTable());
 
     int res = client->Open(va.server_name, client_name, va.session_id, options, status);
     if (res < 0) {
@@ -146,11 +141,7 @@ static jack_client_t* jack_client_open_aux(const char* client_name, jack_options
         return 0;
     }
 
-    if (JACK_DEBUG) {
-        client = new JackDebugClient(new JackLibClient(GetSynchroTable())); // Debug mode
-    } else {
-        client = new JackLibClient(GetSynchroTable());
-    }
+    client = new JackLibClient(GetSynchroTable());
 
     int res = client->Open(va.server_name, client_name, va.session_id, options, status);
     if (res < 0) {

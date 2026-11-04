@@ -27,8 +27,13 @@
 #include <new>  // GCC 4.0
 #include <errno.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/mman.h>
 
-#include "JackShmMem_os.h"
+#define CHECK_MLOCK(ptr, size) (mlock((ptr), (size)) == 0)
+#define CHECK_MUNLOCK(ptr, size) (munlock((ptr), (size)) == 0)
+#define CHECK_MLOCKALL() (mlockall(MCL_CURRENT | MCL_FUTURE) == 0)
+#define CHECK_MUNLOCKALL() (munlockall() == 0)
 
 namespace Jack
 {

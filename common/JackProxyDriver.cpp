@@ -543,11 +543,7 @@ namespace Jack
             const char* default_client_name = getenv("JACK_PROXY_CLIENT_NAME");
             strcpy(client_name, (default_client_name) ? default_client_name : DEFAULT_CLIENT_NAME);
 
-#ifdef WIN32
-            const char* username = getenv("USERNAME");
-#else
             const char* username = getenv("LOGNAME");
-#endif
 
             for (node = params; node; node = jack_slist_next(node)) {
                 param = (const jack_driver_param_t*) node->data;

@@ -28,10 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "types.h"
 #include <stdio.h>
 
-#ifdef JACK_MONITOR
-#include "JackEngineProfiling.h"
-#endif
-
 namespace Jack
 {
 
@@ -81,17 +77,13 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
     float fCPULoad;
     float fMaxCPULoad;
 
-    // For OSX thread
+    // Thread timing
     UInt64 fPeriod;
     UInt64 fComputation;
     UInt64 fConstraint;
 
     // Timer
     alignas(UInt32) alignas(JackFrameTimer) JackFrameTimer fFrameTimer;
-
-#ifdef JACK_MONITOR
-    JackEngineProfiling fProfiler;
-#endif
 
     JackEngineControl(bool sync, bool temporary, long timeout, bool rt, long priority, bool verbose, jack_timer_type_t clock, const char* server_name)
       {
@@ -110,11 +102,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
         fSavedRealTime = false;
         fServerPriority = priority;
 
-    #ifdef WIN32
-        fClientPriority = (rt) ? priority - 3 : 0;
-    #else
         fClientPriority = (rt) ? priority - 5 : 0;
-    #endif
         fMaxClientPriority = (rt) ? priority - 1 : 0;
         fVerbose = verbose;
         fPrevCycleTime = 0;
@@ -157,9 +145,6 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
     {
         fTransport.CycleBegin(fSampleRate, cur_cycle_begin);
         CalcCPULoad(table, manager, cur_cycle_begin, prev_cycle_end);
-#ifdef JACK_MONITOR
-        fProfiler.Profile(table, manager, fPeriodUsecs, cur_cycle_begin, prev_cycle_end);
-#endif
     }
 
     void CycleEnd(JackClientInterface** table)

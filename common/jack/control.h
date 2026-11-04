@@ -16,9 +16,7 @@
 #include <jack/types.h>
 #include <jack/jslist.h>
 #include <jack/systemdeps.h>
-#if !defined(sun) && !defined(__sun__)
 #include <stdbool.h>
-#endif
 
 /** Parameter types, intentionally similar to jack_driver_param_type_t */
 typedef enum
@@ -72,10 +70,6 @@ typedef struct jackctl_sigmask jackctl_sigmask_t;
 #ifdef __cplusplus
 extern "C" {
 #endif
-#if 0
-} /* Adjust editor indent */
-#endif
-
 /**
  * @defgroup ControlAPI The API for starting and controlling a JACK server
  * @{
@@ -632,9 +626,6 @@ jack_log(
 
 /**@}*/
 
-#if 0
-{ /* Adjust editor indent */
-#endif
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

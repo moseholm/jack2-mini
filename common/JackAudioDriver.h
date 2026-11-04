@@ -30,7 +30,7 @@ namespace Jack
 \brief The base class for audio drivers: drivers with audio ports.
 
 A concrete derived class will have to be defined with a real audio driver API, 
-either callback based one (like CoreAudio, PortAudio..) ones or blocking ones (like ALSA).
+either callback based ones or blocking ones (like ALSA).
 
 Most of the generic audio handing code is part of this class :
     - concrete callback basedd derived subclasses typically have to Open/Close the underlying audio API, 

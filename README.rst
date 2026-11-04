@@ -1,11 +1,11 @@
 `JACK2 <https://jackaudio.org/>`_
 ################################
 
-.. image:: https://travis-ci.org/jackaudio/jack2.svg?branch=master
-   :target: https://travis-ci.org/jackaudio/jack2  
+.. image:: https://github.com/jackaudio/jack2/actions/workflows/build.yml/badge.svg
+   :target: https://github.com/jackaudio/jack2/actions/workflows/build.yml
 .. image:: https://repology.org/badge/tiny-repos/jack-audio-connection-kit.svg
    :target: https://repology.org/metapackage/jack-audio-connection-kit/versions
-   
+
 JACK2 aka jackdmp is a C++ version of the JACK low-latency audio server for
 multi-processor machines. It is a new implementation of the JACK server core
 features that aims at removing some limitations of the JACK1 design. The
@@ -36,5 +36,23 @@ and robust system.
     mode usually result in fewer (less audible) audio glitches in a loaded
     system.
 
+This source tree is configured for Linux only, using ALSA as the hardware
+backend. It provides the JACK engine, graph processing, the ALSA driver, and
+the ``dummy``, ``loopback`` and ``proxy`` drivers.
+
 For further information, see the JACK `homepage <https://jackaudio.org/>`_ and `wiki <https://github.com/jackaudio/jackaudio.github.com/wiki>`_. There are also the #jack and #lad chat channels on `Libera Chat IRC <https://web.libera.chat/#jack>`_.
 
+Building
+========
+
+The build requires a C/C++ compiler, Python 3, and the ALSA development
+headers and libraries. On Debian-based systems the dependencies are::
+
+    sudo apt-get install build-essential libasound2-dev python3
+
+Configure and build with::
+
+    ./waf configure --prefix=/usr/local
+    ./waf build
+
+Add ``--tests`` to the configure step to build the test programs.

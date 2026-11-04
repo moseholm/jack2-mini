@@ -96,24 +96,6 @@ class SERVER_EXPORT JackQuitException : public JackException {
         {}
 };
 
-/*!
-\brief Exception possibly thrown by Net slaves.
-*/
-
-class SERVER_EXPORT JackNetException : public JackException {
-
-    public:
-
-        JackNetException(const std::string& msg) : JackException(msg)
-        {}
-        JackNetException(char* msg) : JackException(msg)
-        {}
-        JackNetException(const char* msg) : JackException(msg)
-        {}
-        JackNetException() : JackException("")
-        {}
-};
-
 }
 
 #endif

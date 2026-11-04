@@ -21,59 +21,40 @@
 #include "driver_interface.h"
 #include "JackTools.h"
 #include "JackError.h"
-#include <stdlib.h>
-#include <stdio.h>
+
 #include <assert.h>
+#include <dlfcn.h>
+#include <errno.h>
 #include <signal.h>
-
-#ifdef WIN32
-#include <process.h>
-#include "JackPlatformPlug_os.h"
-#endif
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace std;
 
 namespace Jack {
 
-    void JackTools::KillServer()
-    {
-    #ifdef WIN32
-        raise(SIGINT);
-    #else
-        kill(GetPID(), SIGINT);
-    #endif
-    }
-
-     int JackTools::MkDir(const char* path)
-     {
-#ifdef WIN32
-        return CreateDirectory(path, NULL) == 0;
-#else
-        return mkdir(path, 0777) != 0;
-#endif
-    }
-
 #define DEFAULT_TMP_DIR "/tmp"
     char* jack_tmpdir = (char*)DEFAULT_TMP_DIR;
 
+    void JackTools::KillServer()
+    {
+        kill(GetPID(), SIGINT);
+    }
+
+    int JackTools::MkDir(const char* path)
+    {
+        return mkdir(path, 0777) != 0;
+    }
+
     int JackTools::GetPID()
     {
-#ifdef WIN32
-        return _getpid();
-#else
         return getpid();
-#endif
     }
 
     int JackTools::GetUID()
     {
-#ifdef WIN32
-        return  _getpid();
-        //#error "No getuid function available"
-#else
         return geteuid();
-#endif
     }
 
     const char* JackTools::DefaultServerName()
@@ -86,33 +67,13 @@ namespace Jack {
     }
 
     /* returns the name of the per-user subdirectory of jack_tmpdir */
-#ifdef WIN32
-
-    const char* JackTools::UserDir()
-    {
-        return "";
-    }
-
-    const char* JackTools::ServerDir(const char* server_name, char* server_dir)
-    {
-        return "";
-    }
-
-    void JackTools::CleanupFiles(const char* server_name) {}
-
-    int JackTools::GetTmpdir()
-    {
-        return 0;
-    }
-
-#else
     const char* JackTools::UserDir()
     {
         static char user_dir[JACK_PATH_MAX + 1] = "";
 
         /* format the path name on the first call */
         if (user_dir[0] == '\0') {
-            if (getenv ("JACK_PROMISCUOUS_SERVER")) {
+            if (getenv("JACK_PROMISCUOUS_SERVER")) {
                 snprintf(user_dir, sizeof(user_dir), "%s/jack", jack_tmpdir);
             } else {
                 snprintf(user_dir, sizeof(user_dir), "%s/jack-%d", jack_tmpdir, GetUID());
@@ -165,7 +126,7 @@ namespace Jack {
 
             char fullpath[JACK_PATH_MAX + 1];
 
-            if ((strcmp(dirent->d_name, ".") == 0) || (strcmp (dirent->d_name, "..") == 0)) {
+            if ((strcmp(dirent->d_name, ".") == 0) || (strcmp(dirent->d_name, "..") == 0)) {
                 continue;
             }
 
@@ -221,7 +182,6 @@ namespace Jack {
         pclose(in);
         return 0;
     }
-#endif
 
     void JackTools::RewriteName(const char* name, char* new_name)
     {
@@ -236,62 +196,21 @@ namespace Jack {
         new_name[i] = '\0';
     }
 
-#ifdef WIN32
-
-void BuildClientPath(char* path_to_so, int path_len, const char* so_name)
-{
-    snprintf(path_to_so, path_len, ADDON_DIR "/%s.dll", so_name);
-}
-
-void PrintLoadError(const char* so_name)
-{
-    // Retrieve the system error message for the last-error code
-    LPVOID lpMsgBuf;
-    LPVOID lpDisplayBuf;
-    DWORD dw = GetLastError();
-
-    FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        dw,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR) &lpMsgBuf,
-        0, NULL );
-
-    // Display the error message and exit the process
-    lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT,
-        (lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)so_name) + 40) * sizeof(TCHAR));
-    _snprintf((LPTSTR)lpDisplayBuf, LocalSize(lpDisplayBuf) / sizeof(TCHAR),
-        TEXT("error loading %s err = %s"), so_name, (LPCTSTR)lpMsgBuf);
-
-    jack_error((LPCTSTR)lpDisplayBuf);
-
-    LocalFree(lpMsgBuf);
-    LocalFree(lpDisplayBuf);
-}
-
-#else
-
-void PrintLoadError(const char* so_name)
-{
-    jack_log("error loading %s err = %s", so_name, dlerror());
-}
-
-void BuildClientPath(char* path_to_so, int path_len, const char* so_name)
-{
-    const char* internal_dir;
-    if ((internal_dir = getenv("JACK_INTERNAL_DIR")) == 0) {
-        if ((internal_dir = getenv("JACK_DRIVER_DIR")) == 0) {
-            internal_dir = ADDON_DIR;
-        }
+    void PrintLoadError(const char* so_name)
+    {
+        jack_log("error loading %s err = %s", so_name, dlerror());
     }
 
-    snprintf(path_to_so, path_len, "%s/%s.so", internal_dir, so_name);
-}
+    void BuildClientPath(char* path_to_so, int path_len, const char* so_name)
+    {
+        const char* internal_dir;
+        if ((internal_dir = getenv("JACK_INTERNAL_DIR")) == 0) {
+            if ((internal_dir = getenv("JACK_DRIVER_DIR")) == 0) {
+                internal_dir = ADDON_DIR;
+            }
+        }
 
-#endif
-
+        snprintf(path_to_so, path_len, "%s/%s.so", internal_dir, so_name);
+    }
 
 }  // end of namespace

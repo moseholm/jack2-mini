@@ -26,9 +26,7 @@ extern "C"
 #endif
 
 int jack_group2gid (const char *group); /*!< Lookup gid for a UNIX group in a thread-safe way */
-#ifndef WIN32
 int jack_promiscuous_perms (int fd, const char *path, gid_t gid); /*!< Set promiscuous permissions on object referenced by fd and/or path */
-#endif
 
 #ifdef __cplusplus
 }

@@ -34,64 +34,6 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "control.h"
 #include "JackConstants.h"
 #include "JackPlatformPlug.h"
-#ifdef __ANDROID__
-#include "JackControlAPIAndroid.h"
-#endif
-
-#if defined(HAVE_DBUS_1) && defined(__linux__)
-#include <cstdlib>
-#include <dbus/dbus.h>
-#include "audio_reserve.h"
-#endif
-
-#if HAVE_SYSTEMD
-#include <systemd/sd-daemon.h>
-#endif
-
-/*
-This is a simple port of the old jackdmp.cpp file to use the new jack2 control API. Available options for the server
-are "hard-coded" in the source. A much better approach would be to use the control API to:
-- dynamically retrieve available server parameters and then prepare to parse them
-- get available drivers and their possible parameters, then prepare to parse them.
-*/
-
-#ifdef __APPLE__
-#include <CoreFoundation/CFNotificationCenter.h>
-#include <CoreFoundation/CoreFoundation.h>
-
-static void notify_server_start(const char* server_name)
-{
-    // Send notification to be used in the JackRouter plugin
-    CFStringRef ref = CFStringCreateWithCString(NULL, server_name, kCFStringEncodingMacRoman);
-    CFNotificationCenterPostNotificationWithOptions(CFNotificationCenterGetDistributedCenter(),
-            CFSTR("com.grame.jackserver.start"),
-            ref,
-            NULL,
-            kCFNotificationDeliverImmediately | kCFNotificationPostToAllSessions);
-    CFRelease(ref);
-}
-
-static void notify_server_stop(const char* server_name)
-{
-    // Send notification to be used in the JackRouter plugin
-    CFStringRef ref1 = CFStringCreateWithCString(NULL, server_name, kCFStringEncodingMacRoman);
-    CFNotificationCenterPostNotificationWithOptions(CFNotificationCenterGetDistributedCenter(),
-            CFSTR("com.grame.jackserver.stop"),
-            ref1,
-            NULL,
-            kCFNotificationDeliverImmediately | kCFNotificationPostToAllSessions);
-    CFRelease(ref1);
-}
-
-#else
-
-static void notify_server_start(const char* server_name)
-{}
-static void notify_server_stop(const char* server_name)
-{}
-
-#endif
-
 static void copyright(FILE* file)
 {
     fprintf(file, "jackdmp " JACK_VERSION "\n"
@@ -143,25 +85,6 @@ static jackctl_parameter_t * jackctl_get_parameter(const JSList * parameters_lis
     return NULL;
 }
 
-#ifdef __ANDROID__
-static void jackctl_server_switch_master_dummy(jackctl_server_t * server_ctl, char * master_driver_name)
-{
-    static bool is_dummy_driver = false;
-    if(!strcmp(master_driver_name, "dummy")) {
-        return;
-    }
-    jackctl_driver_t * driver_ctr;
-    if(is_dummy_driver) {
-        is_dummy_driver = false;
-        driver_ctr = jackctl_server_get_driver(server_ctl, master_driver_name);
-    } else {
-        is_dummy_driver = true;
-        driver_ctr = jackctl_server_get_driver(server_ctl, "dummy");
-    }
-    jackctl_server_switch_master(server_ctl, driver_ctr);
-}
-#endif
-
 static void print_server_drivers(jackctl_server_t *server, FILE* file)
 {
     const JSList * node_ptr = jackctl_server_get_drivers_list(server);
@@ -209,9 +132,7 @@ static void usage(FILE* file, jackctl_server_t *server, bool full = true)
             "               [ --internal-client OR -I internal-client-name ]\n"
             "               [ --internal-session-file OR -C internal-session-file ]\n"
             "               [ --verbose OR -v ]\n"
-#ifdef __linux__
             "               [ --clocksource OR -c [ h(pet) | s(ystem) ]\n"
-#endif
             "               [ --autoconnect OR -a <modechar>]\n");
 
     server_parameters = jackctl_server_get_parameters(server);
@@ -259,7 +180,6 @@ int main(int argc, char** argv)
 {
     jackctl_server_t * server_ctl;
     const JSList * server_parameters;
-    const char* server_name = JACK_DEFAULT_SERVER_NAME;
     jackctl_driver_t * master_driver_ctl;
     jackctl_driver_t * loopback_driver_ctl = NULL;
     int replace_registry = 0;
@@ -271,16 +191,10 @@ int main(int argc, char** argv)
         }
     }
     const char *options = "-d:X:I:P:uvshrRL:STFl:t:mn:p:C:"
-        "a:"
-#ifdef __linux__
-        "c:"
-#endif
-        ;
+        "a:c:";
 
     struct option long_options[] = {
-#ifdef __linux__
                                        { "clock-source", 1, 0, 'c' },
-#endif
                                        { "internal-session-file", 1, 0, 'C' },
                                        { "loopback-driver", 1, 0, 'L' },
                                        { "audio-driver", 1, 0, 'd' },
@@ -322,17 +236,9 @@ int main(int argc, char** argv)
 
     // Assume that we fail.
     int return_value = -1;
-    bool notify_sent = false;
 
     copyright(stdout);
-#if defined(HAVE_DBUS_1) && defined(__linux__)
-    if (getenv("JACK_NO_AUDIO_RESERVATION"))
-        server_ctl = jackctl_server_create2(NULL, NULL, NULL);
-    else
-        server_ctl = jackctl_server_create2(audio_acquire, audio_release, audio_reserve_loop);
-#else
     server_ctl = jackctl_server_create2(NULL, NULL, NULL);
-#endif
     if (server_ctl == NULL) {
         fprintf(stderr, "Failed to create server object\n");
         return -1;
@@ -346,7 +252,6 @@ int main(int argc, char** argv)
                                long_options, &option_index)) != EOF) {
         switch (opt) {
 
-        #ifdef __linux__
             case 'c':
                 param = jackctl_get_parameter(server_parameters, "clock-source");
                 if (param != NULL) {
@@ -369,7 +274,6 @@ int main(int argc, char** argv)
                     }
                 }
                 break;
-        #endif
 
             case 'a':
                 param = jackctl_get_parameter(server_parameters, "self-connect-mode");
@@ -442,7 +346,6 @@ int main(int argc, char** argv)
                 break;
 
             case 'n':
-                server_name = optarg;
                 param = jackctl_get_parameter(server_parameters, "name");
                 if (param != NULL) {
                     strncpy(value.str, optarg, JACK_PARAM_STRING_MAX);
@@ -626,34 +529,11 @@ int main(int argc, char** argv)
         goto close_server;
     }
 
-    notify_server_start(server_name);
-    notify_sent = true;
     return_value = 0;
 
-#if HAVE_SYSTEMD
-    sd_notify(0, "READY=1");
-#endif
-
     // Waits for signal
-#ifdef __ANDROID__
-    //reserve SIGUSR2 signal for switching master driver
-    while(1) {
-        int signal = jackctl_wait_signals_and_return(sigmask);
-        if (signal == SIGUSR2) {
-            jackctl_server_switch_master_dummy(server_ctl, master_driver_name);
-        } else {
-            break;
-        }
-    }
-#else
     jackctl_wait_signals(sigmask);
-#endif
 
-#if HAVE_SYSTEMD
-    sd_notify(0, "STOPPING=1");
-#endif
-
- stop_server:
     if (!jackctl_server_stop(server_ctl)) {
         fprintf(stderr, "Cannot stop server...\n");
     }
@@ -681,8 +561,5 @@ int main(int argc, char** argv)
 
  destroy_server:
     jackctl_server_destroy(server_ctl);
-    if (notify_sent) {
-        notify_server_stop(server_name);
-    }
     return return_value;
 }

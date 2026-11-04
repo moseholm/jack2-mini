@@ -1,14 +1,9 @@
-/* This module provides a set of abstract shared memory interfaces
- * with support using both System V and POSIX shared memory
- * implementations.  The code is divided into three sections:
+/* This module provides the POSIX shared memory interface used by JACK.
+ *
+ * The code is divided into two sections:
  *
  *	- common (interface-independent) code
  *	- POSIX implementation
- *	- System V implementation
- *  - Windows implementation
- *
- * The implementation used is determined by whether USE_POSIX_SHM was
- * set in the ./configure step.
  */
 
 /*
@@ -55,12 +50,10 @@ extern "C"
 #define JACK_SHM_REGISTRY_INDEX -2	/* pseudo SHM index for registry */
 
 
-    /* On Mac OS X, SHM_NAME_MAX is the maximum length of a shared memory
-     * segment name (instead of NAME_MAX or PATH_MAX as defined by the
-     * standard).
+    /* On POSIX systems, SHM_NAME_MAX is the maximum length of a shared
+     * memory segment name (instead of NAME_MAX or PATH_MAX as defined by
+     * the standard).
      */
-#ifdef USE_POSIX_SHM
-
 #ifndef NAME_MAX
 #define NAME_MAX 255
 #endif
@@ -70,47 +63,13 @@ extern "C"
 #endif
     typedef char shm_name_t[SHM_NAME_MAX];
     typedef shm_name_t jack_shm_id_t;
-
-#elif WIN32
-#define NAME_MAX 255
-#ifndef SHM_NAME_MAX
-#define SHM_NAME_MAX NAME_MAX
-#endif
-    typedef char shm_name_t[SHM_NAME_MAX];
-    typedef shm_name_t jack_shm_id_t;
-
-#elif __ANDROID__
-
-#ifndef NAME_MAX
-#define NAME_MAX 255
-#endif
-
-#ifndef SHM_NAME_MAX
-#define SHM_NAME_MAX NAME_MAX
-#endif
-    typedef char shm_name_t[SHM_NAME_MAX];
-    typedef shm_name_t jack_shm_id_t;
-    typedef int jack_shm_fd_t;
-
-#else
-    /* System V SHM */
-    typedef int	jack_shm_id_t;
-#endif /* SHM type */
 
     /* shared memory type */
     typedef enum {
-        shm_POSIX = 1, 			/* POSIX shared memory */
-        shm_SYSV = 2, 			/* System V shared memory */
-        shm_WIN32 = 3,			/* Windows 32 shared memory */
-        shm_ANDROID = 4			/* Android shared memory */
+        shm_POSIX = 1 			/* POSIX shared memory */
     } jack_shmtype_t;
 
-#ifdef __APPLE__
-    /* we need to align and pack data to 32bit so that x86_64 and arm64 work together */
-    typedef int32_t jack_shm_registry_index_t;
-#else
     typedef int16_t jack_shm_registry_index_t;
-#endif
 
     /**
      * A structure holding information about shared memory allocated by
@@ -122,11 +81,7 @@ extern "C"
      * server names, followed by an array of segment registry entries.
      */
     typedef struct _jack_shm_server {
-#ifdef WIN32
-        int	pid;	/* process ID */
-#else
         pid_t pid;	/* process ID */
-#endif
 
         char	name[JACK_SERVER_NAME_SIZE+1];
     }
@@ -145,18 +100,9 @@ extern "C"
 
     typedef struct _jack_shm_registry {
         jack_shm_registry_index_t index;     /* offset into the registry */
-
-#ifdef WIN32
-        int	allocator; /* PID that created shm segment */
-#else
         pid_t allocator; /* PID that created shm segment */
-#endif
-
         jack_shmsize_t size;      /* for POSIX unattach */
-        jack_shm_id_t id;        /* API specific, see above */
-#ifdef __ANDROID__
-        jack_shm_fd_t fd;
-#endif
+        jack_shm_id_t id;        /* POSIX shm name, see above */
     }
     jack_shm_registry_t;
 
@@ -175,9 +121,6 @@ extern "C"
     struct _jack_shm_info {
         jack_shm_registry_index_t index;       /* offset into the registry */
         uint32_t size;
-#ifdef __ANDROID__
-        jack_shm_fd_t fd;
-#endif
         union {
             void *attached_at;  /* address where attached */
             char ptr_size[8];

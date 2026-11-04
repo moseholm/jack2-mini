@@ -21,7 +21,32 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define __JackAtomic__
 
 #include "JackTypes.h"
-#include "JackAtomic_os.h"
+
+#if defined(__i386__) || defined(__x86_64__)
+
+#define LOCK "lock ; "
+
+static inline char CAS(volatile UInt32 value, UInt32 newvalue, volatile void* addr)
+{
+    register char ret;
+    __asm__ __volatile__ (
+        "# CAS \n\t"
+        LOCK "cmpxchg %2, (%1) \n\t"
+        "sete %0               \n\t"
+        : "=a" (ret)
+        : "c" (addr), "d" (newvalue), "a" (value)
+        );
+    return ret;
+}
+
+#else
+
+static inline char CAS(volatile UInt32 value, UInt32 newvalue, volatile void* addr)
+{
+    return __sync_bool_compare_and_swap((UInt32*)addr, value, newvalue);
+}
+
+#endif
 
 static inline long INC_ATOMIC(volatile SInt32* val)
 {
@@ -42,5 +67,3 @@ static inline long DEC_ATOMIC(volatile SInt32* val)
 }
 
 #endif
-
-

@@ -17,7 +17,6 @@
 
 */
 
-#ifndef WIN32
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -25,19 +24,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <grp.h>
-#ifdef __APPLE__
-#include <AvailabilityMacros.h>
-#endif
 #include "JackError.h"
-#endif
 
 
 int
 jack_group2gid(const char* group)
 {
-#ifdef WIN32
-    return -1;
-#else
     size_t buflen;
     char *buf;
     int ret;
@@ -51,14 +43,9 @@ jack_group2gid(const char* group)
     if (!*buf)
         return ret;
 
-/* MacOSX only defines _SC_GETGR_R_SIZE_MAX starting from 10.4 */
-#if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_4
-    buflen = 4096;
-#else
     buflen = sysconf(_SC_GETGR_R_SIZE_MAX);
     if (buflen == -1)
         buflen = 4096;
-#endif
     buf = (char*)malloc(buflen);
 
     while (buf && ((ret = getgrnam_r(group, &grp, buf, buflen, &result)) == ERANGE)) {
@@ -71,10 +58,8 @@ jack_group2gid(const char* group)
     if (ret || !result)
         return -1;
     return grp.gr_gid;
-#endif
 }
 
-#ifndef WIN32
 int
 jack_promiscuous_perms(int fd, const char* path, gid_t gid)
 {
@@ -92,4 +77,3 @@ jack_promiscuous_perms(int fd, const char* path, gid_t gid)
 	}
 	return 0;
 }
-#endif

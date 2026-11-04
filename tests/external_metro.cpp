@@ -25,11 +25,7 @@ const double PI = 3.14;
 
 static void JackSleep(int sec)
 {
-	#ifdef WIN32
-		Sleep(sec * 1000);
-	#else
-		sleep(sec);
-	#endif
+	sleep(sec);
 }
 
 int ExternalMetro::process_audio (jack_nframes_t nframes, void* arg)

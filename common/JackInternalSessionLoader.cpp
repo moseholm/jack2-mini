@@ -17,6 +17,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
+#include <algorithm>
 #include <fstream>
 #include "JackInternalSessionLoader.h"
 #include "JackLockedEngine.h"
@@ -60,12 +61,7 @@ int JackInternalSessionLoader::Load(const char* file)
             ConnectPorts(iss, linenr);
         } else if ( (command.compare("l") == 0) || (command.compare("load") == 0) ) {
             LoadClient(iss, linenr);
-#if 0
-        /* NOTE: c++11 only */
-        } else if (command.front() == '#') {
-#else
         } else if (command[0] == '#') {
-#endif
             /* ignoring commented lines.
              * The # can be followed by non spaces.
              * Therefore only compare the first letter of the command.

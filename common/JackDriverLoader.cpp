@@ -28,59 +28,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <errno.h>
 #include <string.h>
 
-#ifndef WIN32
 #include <dirent.h>
-#endif
 
-#ifdef WIN32
-typedef wchar_t file_char_t;
-#else
-typedef char file_char_t;
-#endif
-
-#ifdef WIN32
-
-static wchar_t* locate_dll_driver_dir()
-{
-    HMODULE libjack_handle = NULL;
-    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                       reinterpret_cast<LPCWSTR>(locate_dll_driver_dir), &libjack_handle);
-
-    // For WIN32 ADDON_DIR is defined in JackConstants.h as relative path
-    wchar_t driver_dir_storage[512];
-    if (3 < GetModuleFileNameW(libjack_handle, driver_dir_storage, 512)) {
-        wchar_t *p = wcsrchr(driver_dir_storage, L'\\');
-        if (p && (p != driver_dir_storage)) {
-            *p = 0;
-        }   
-        jack_info("Drivers/internals found in : %S", driver_dir_storage);
-        wcscat(driver_dir_storage, L"\\");
-        wcscat(driver_dir_storage, ADDON_DIRW);
-        return wcsdup(driver_dir_storage);
-    } else {
-        jack_error("Cannot get JACK dll directory : %d", GetLastError());
-        return NULL;
-    }
-}
-
-static wchar_t* locate_driver_dir(HANDLE& file, WIN32_FIND_DATAW& filedata)
-{
-    // Search drivers/internals iin the same folder of "libjackserver.dll"
-    wchar_t* driver_dir = locate_dll_driver_dir();
-    wchar_t dll_filename[512];
-    swprintf(dll_filename, 510, L"%S/*.dll", driver_dir);
-    file = (HANDLE)FindFirstFileW(dll_filename, &filedata);
-
-    if (file == INVALID_HANDLE_VALUE) {
-        jack_error("Drivers not found in \"%S\": \"%S\"", driver_dir, dll_filename);
-        free(driver_dir);
-        return NULL;
-    } else {
-        return driver_dir;
-    }
-}
-
-#endif
 
 jack_driver_desc_t* jackctl_driver_get_desc(jackctl_driver_t * driver);
 
@@ -418,23 +367,15 @@ jack_driver_desc_t* jack_find_driver_descriptor (JSList * drivers, const char* n
     return desc;
 }
 
-static void* check_symbol(const file_char_t* sofile, const char* symbol, const file_char_t* driver_dir, void** res_dllhandle = NULL)
+static void* check_symbol(const char* sofile, const char* symbol, const char* driver_dir, void** res_dllhandle = NULL)
 {
     void* dlhandle;
     void* res = NULL;
-    file_char_t filename[1024];
-#ifdef WIN32
-    swprintf(filename, 1022, L"%S/%S", driver_dir, sofile);
-#else
+    char filename[1024];
     snprintf(filename, 1022, "%s/%s", driver_dir, sofile);
-#endif
     
     if ((dlhandle = LoadDriverModule(filename)) == NULL) {
-#ifdef WIN32
-        jack_error ("Could not open component .dll '%S': %ld", filename, GetLastError());
-#else
         jack_error ("Could not open component .so '%s': %s", filename, dlerror());
-#endif
     } else {
         res = (void*)GetDriverProc(dlhandle, symbol);
         if (res_dllhandle) {
@@ -447,30 +388,26 @@ static void* check_symbol(const file_char_t* sofile, const char* symbol, const f
     return res;
 }
 
-static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const file_char_t* sofile, const char* symbol, const file_char_t* driver_dir)
+static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sofile, const char* symbol, const char* driver_dir)
 {
     jack_driver_desc_t* descriptor = NULL;
     jack_driver_desc_t* other_descriptor;
     JackDriverDescFunction so_get_descriptor = NULL;
-    file_char_t filename[1024];
+    char filename[1024];
     JSList* node;
     void* dlhandle = NULL;
 
-#ifdef WIN32
-    swprintf(filename, 1022, L"%S/%S", driver_dir, sofile);
-#else
     snprintf(filename, 1022, "%s/%s", driver_dir, sofile);
-#endif
     
     so_get_descriptor = (JackDriverDescFunction)check_symbol(sofile, symbol, driver_dir, &dlhandle);
 
     if (so_get_descriptor == NULL) {
-        jack_error("jack_get_descriptor : dll %S is not a driver", sofile);
+        jack_error("jack_get_descriptor : dll %s is not a driver", sofile);
         goto error;
     }
 
     if ((descriptor = so_get_descriptor ()) == NULL) {
-        jack_error("Driver from '%S' returned NULL descriptor", filename);
+        jack_error("Driver from '%s' returned NULL descriptor", filename);
         goto error;
     }
 
@@ -478,18 +415,14 @@ static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const file_char
     for (node = drivers; node; node = jack_slist_next (node)) {
         other_descriptor = (jack_driver_desc_t*) node->data;
         if (strcmp(descriptor->name, other_descriptor->name) == 0) {
-            jack_error("The drivers in '%S' and '%S' both have the name '%S'; using the first",
+            jack_error("The drivers in '%s' and '%s' both have the name '%s'; using the first",
                        other_descriptor->file, filename, other_descriptor->name);
             /* FIXME: delete the descriptor */
             goto error;
         }
     }
 
-#ifdef WIN32
-    wcsncpy(descriptor->file, filename, JACK_PATH_MAX);
-#else
     strncpy(descriptor->file, filename, JACK_PATH_MAX);
-#endif
     
 error:
     if (dlhandle) {
@@ -498,66 +431,6 @@ error:
     return descriptor;
 }
 
-#ifdef WIN32
-
-JSList * jack_drivers_load(JSList * drivers)
-{
-    //char dll_filename[512];
-    WIN32_FIND_DATAW filedata;
-    HANDLE file;
-    const wchar_t* ptr = NULL;
-    JSList* driver_list = NULL;
-    jack_driver_desc_t* desc = NULL;
-
-    wchar_t* driver_dir = locate_driver_dir(file, filedata);
-    if (!driver_dir) {
-        jack_error("Driver folder not found");
-        goto error;
-    }
-
-    do {
-        /* check the filename is of the right format */
-        if (wcsncmp (L"jack_", filedata.cFileName, 5) != 0) {
-            continue;
-        }
-
-        ptr = wcsrchr (filedata.cFileName, L'.');
-        if (!ptr) {
-            continue;
-        }
-
-        ptr++;
-        if (wcsncmp (L"dll", ptr, 3) != 0) {
-            continue;
-        }
-
-        /* check if dll is an internal client */
-        if (check_symbol(filedata.cFileName, "jack_internal_initialize", driver_dir) != NULL) {
-            continue;
-        }
-
-        desc = jack_get_descriptor (drivers, filedata.cFileName, "driver_get_descriptor", driver_dir);
-        if (desc) {
-            driver_list = jack_slist_append (driver_list, desc);
-        } else {
-            jack_error ("jack_get_descriptor returns null for \'%S\'", filedata.cFileName);
-        }
-
-    } while (FindNextFileW(file, &filedata));
-
-    if (!driver_list) {
-        jack_error ("Could not find any drivers in %S!", driver_dir);
-    }
-
-error:
-    if (driver_dir) {
-        free(driver_dir);
-    }
-    FindClose(file);
-    return driver_list;
-}
-
-#else
 
 JSList* jack_drivers_load (JSList * drivers)
 {
@@ -625,64 +498,7 @@ JSList* jack_drivers_load (JSList * drivers)
     return driver_list;
 }
 
-#endif
 
-#ifdef WIN32
-
-JSList* jack_internals_load(JSList * internals)
-{
-    ///char dll_filename[512];
-    WIN32_FIND_DATAW filedata;
-    HANDLE file;
-    const wchar_t* ptr = NULL;
-    JSList* driver_list = NULL;
-    jack_driver_desc_t* desc;
-
-    wchar_t* driver_dir = locate_driver_dir(file, filedata);
-    if (!driver_dir) {
-        jack_error("Driver folder not found");
-        goto error;
-    }
-
-    do {
-
-        ptr = wcsrchr (filedata.cFileName, L'.');
-        if (!ptr) {
-            continue;
-        }
-
-        ptr++;
-        if (wcsncmp (L"dll", ptr, 3) != 0) {
-            continue;
-        }
-
-        /* check if dll is an internal client */
-        if (check_symbol(filedata.cFileName, "jack_internal_initialize", driver_dir) == NULL) {
-            continue;
-        }
-
-        desc = jack_get_descriptor (internals, filedata.cFileName, "jack_get_descriptor", driver_dir);
-        if (desc) {
-            driver_list = jack_slist_append (driver_list, desc);
-        } else {
-            jack_error ("jack_get_descriptor returns null for \'%s\'", filedata.cFileName);
-        }
-
-    } while (FindNextFileW(file, &filedata));
-
-    if (!driver_list) {
-        jack_error ("Could not find any internals in %s!", driver_dir);
-    }
-
- error:
-    if (driver_dir) {
-        free(driver_dir);
-    }
-    FindClose(file);
-    return driver_list;
-}
-
-#else
 
 JSList* jack_internals_load(JSList * internals)
 {
@@ -746,57 +562,35 @@ JSList* jack_internals_load(JSList * internals)
     return driver_list;
 }
 
-#endif
 
 Jack::JackDriverClientInterface* JackDriverInfo::Open(jack_driver_desc_t* driver_desc,
                                                     Jack::JackLockedEngine* engine,
                                                     Jack::JackSynchro* synchro,
                                                     const JSList* params)
 {
-#ifdef WIN32
-    int errstr;
-#else
     const char* errstr;
-#endif
 
     fHandle = LoadDriverModule (driver_desc->file);
 
     if (fHandle == NULL) {
-#ifdef WIN32
-        if ((errstr = GetLastError ()) != 0) {
-            jack_error ("Can't load \"%S\": %ld", driver_desc->file, errstr);
-#else
         if ((errstr = dlerror ()) != 0) {
             jack_error ("Can't load \"%s\": %s", driver_desc->file, errstr);
-#endif
 
         } else {
-#ifdef WIN32
-          jack_error ("Error loading driver shared object %S", driver_desc->file);
-#else
           jack_error ("Error loading driver shared object %s", driver_desc->file);
-#endif
         }
         return NULL;
     }
 
 
-    //jack_error (" ---------------------------------  Successfully opened driver \"%S\"\n", driver_desc->file);
+    //jack_error (" ---------------------------------  Successfully opened driver \"%s\"\n", driver_desc->file);
 
         
     fInitialize = (driverInitialize)GetDriverProc(fHandle, "driver_initialize");
 
-#ifdef WIN32
-    if ((fInitialize == NULL) && (errstr = GetLastError ()) != 0) {
-#else
     if ((fInitialize == NULL) && (errstr = dlerror ()) != 0) {
-#endif
 
-#ifdef WIN32
-        jack_error("No initialize function in shared object %S\n", driver_desc->file);
-#else
         jack_error("No initialize function in shared object %s\n", driver_desc->file);
-#endif
         return NULL;
     }
 

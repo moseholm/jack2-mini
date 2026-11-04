@@ -12,7 +12,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software 
+along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
@@ -20,6 +20,54 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackPlatformPlug__
 #define __JackPlatformPlug__
 
-#include "JackPlatformPlug_os.h"
+#define jack_server_dir "/dev/shm"
+#define jack_client_dir "/dev/shm"
+#define JACK_DEFAULT_DRIVER "alsa"
+
+namespace Jack
+{
+    struct JackRequest;
+    struct JackResult;
+
+    class JackPosixMutex;
+    class JackPosixThread;
+    class JackSocketServerChannel;
+    class JackSocketClientChannel;
+    class JackSocketServerNotifyChannel;
+    class JackSocketNotifyChannel;
+    class JackClientSocket;
+}
+
+/* __JackPlatformMutex__ */
+#include "JackPosixMutex.h"
+namespace Jack { typedef JackPosixMutex JackMutex; }
+
+/* __JackPlatformThread__ */
+#include "JackPosixThread.h"
+namespace Jack { typedef JackPosixThread JackThread; }
+
+/* __JackPlatformSynchro__  client activation */
+#include "JackLinuxFutex.h"
+namespace Jack { typedef JackLinuxFutex JackSynchro; }
+
+/* __JackPlatformProcessSync__ */
+#include "JackPosixProcessSync.h"
+namespace Jack { typedef JackPosixProcessSync JackProcessSync; }
+
+/* __JackPlatformServerChannel__ */
+#include "JackSocketServerChannel.h"
+namespace Jack { typedef JackSocketServerChannel JackServerChannel; }
+
+/* __JackPlatformClientChannel__ */
+#include "JackSocketClientChannel.h"
+namespace Jack { typedef JackSocketClientChannel JackClientChannel; }
+
+/* __JackPlatformServerNotifyChannel__ */
+#include "JackSocketServerNotifyChannel.h"
+namespace Jack { typedef JackSocketServerNotifyChannel JackServerNotifyChannel; }
+
+/* __JackPlatformNotifyChannel__ */
+#include "JackSocketNotifyChannel.h"
+namespace Jack { typedef JackSocketNotifyChannel JackNotifyChannel; }
 
 #endif

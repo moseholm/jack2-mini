@@ -5,22 +5,40 @@
  it under the terms of the GNU Lesser General Public License as published by
  the Free Software Foundation; either version 2.1 of the License, or
  (at your option) any later version.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU Lesser General Public License for more details.
- 
+
  You should have received a copy of the GNU Lesser General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- 
+
 */
 
 #ifndef __JackSystemDeps__
 #define __JackSystemDeps__
 
 #include "systemdeps.h"
-#include "JackSystemDeps_os.h"
+
+#include <inttypes.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <dlfcn.h>
+
+#ifndef UINT32_MAX
+#define UINT32_MAX 4294967295U
+#endif
+
+#define DRIVER_HANDLE void*
+#define LoadDriverModule(name) dlopen((name), RTLD_NOW | RTLD_GLOBAL)
+#define UnloadDriverModule(handle) dlclose((handle))
+#define GetDriverProc(handle, name) dlsym((handle), (name))
+
+#define JACK_HANDLE void*
+#define LoadJackModule(name) dlopen((name), RTLD_NOW | RTLD_LOCAL);
+#define UnloadJackModule(handle) dlclose((handle));
+#define GetJackProc(handle, name) dlsym((handle), (name));
 
 #endif

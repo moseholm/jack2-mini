@@ -122,8 +122,6 @@ int jack_client_stop_thread(jack_client_t* client, jack_native_thread_t thread) 
  */
  int jack_client_kill_thread(jack_client_t* client, jack_native_thread_t thread) JACK_OPTIONAL_WEAK_EXPORT;
 
-#ifndef _WIN32
-
  typedef int (*jack_thread_creator_t)(pthread_t*,
 				     const pthread_attr_t*,
 				     void* (*function)(void*),
@@ -148,8 +146,6 @@ int jack_client_stop_thread(jack_client_t* client, jack_native_thread_t thread) 
  *
  */
 void jack_set_thread_creator (jack_thread_creator_t creator) JACK_OPTIONAL_WEAK_EXPORT;
-
-#endif
 
 /**@}*/
 

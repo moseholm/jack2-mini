@@ -82,10 +82,6 @@ class SERVER_EXPORT JackThreadInterface
         {
             return fStatus;
         }
-        void SetStatus(kThreadState status)
-        {
-            fStatus = status;
-        }
 
         void SetParams(UInt64 period, UInt64 computation, UInt64 constraint) // Empty implementation, will only make sense on OSX...
         {}

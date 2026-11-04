@@ -85,11 +85,7 @@
  *
  */
 
-#ifdef __APPLE__
-#define WEAK_ATTRIBUTE weak_import
-#else
 #define WEAK_ATTRIBUTE __weak__
-#endif
 
 #ifndef JACK_OPTIONAL_WEAK_EXPORT
 /* JACK_OPTIONAL_WEAK_EXPORT needs to be a macro which

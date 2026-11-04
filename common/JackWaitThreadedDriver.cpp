@@ -23,7 +23,6 @@
 #include "JackGlobals.h"
 #include "JackClient.h"
 #include "JackEngineControl.h"
-#include "JackException.h"
 #include "JackError.h"
 #include "JackTools.h"
 
@@ -39,7 +38,7 @@ bool JackWaitThreadedDriver::Execute()
 {
     SetRealTime();
 
-    // Process a null cycle until NetDriver has started
+    // Process a null cycle until the decorated driver has started
     while (!fStarter.fRunning && fThread.GetStatus() == JackThread::kRunning) {
         // Use base class method
         assert(static_cast<JackWaiterDriver*>(fDriver));
@@ -51,36 +50,12 @@ bool JackWaitThreadedDriver::Execute()
 
 bool JackWaitThreadedDriver::ExecuteReal()
 {
-    try {
-
-        // Switch to keep running even in case of error
-        while (fThread.GetStatus() == JackThread::kRunning) {
-            fDriver->Process();
-        }
-
-        return false;
-
-    } catch (JackNetException& e) {
-
-        e.PrintMessage();
-        jack_info("Driver is restarted");
-        fThread.DropSelfRealTime();
-
-        // Thread has been stopped...
-        if (fThread.GetStatus() == JackThread::kIdle) {
-            return false;
-        }
-
-        // Thread in kIniting status again...
-        fThread.SetStatus(JackThread::kIniting);
-        if (Init()) {
-            // Thread in kRunning status again...
-            fThread.SetStatus(JackThread::kRunning);
-            return true;
-        }
-
-        return false;
+    // Switch to keep running even in case of error
+    while (fThread.GetStatus() == JackThread::kRunning) {
+        fDriver->Process();
     }
+
+    return false;
 }
 
 } // end of namespace

@@ -40,8 +40,7 @@ JackTransportEngine::JackTransportEngine(): JackAtomicArrayState<jack_position_t
                   "fWriteCounter must be first member of JackTransportEngine to ensure its alignment");
     fTransportState = JackTransportStopped;
     fTransportCmd = fPreviousCmd = TransportCommandStop;
-    fSyncTimeout = 10000000;	/* 10 seconds default...
-				   in case of big netjack1 roundtrip */
+    fSyncTimeout = 10000000;	/* 10 seconds default */
     fSyncTimeLeft = 0;
     fTimeBaseMaster = -1;
     fWriteCounter = 0;
