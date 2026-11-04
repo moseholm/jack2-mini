@@ -27,10 +27,6 @@ extern "C"
 {
 #endif
 
-#ifdef sun
-#define __inline__
-#endif
-
 typedef	enum  {
 	None,
 	Rectangular,

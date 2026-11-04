@@ -2,26 +2,15 @@
 .stamp_*
 .DS_Store
 __pycache__
-*.dll
 *.pyc
-*.pkg
 flake8.txt
 codeBlocks
-/android/.server/
-/android/.client/
-/build/
-/man/*.1
 
-# common release files
+# build output
+/build/
 /destdir/
 
-# macos release files
-/macos/package.xml
-/macos/package-welcome.txt
-
-# windows release files
-/innosetup/
-/is.exe
-/windows/inno/version.iss
-/windows/inno/win32
-/windows/inno/win64
+# test output
+/framefile-*.dat
+/framegraph-*.gnu
+/framegraph-*.png

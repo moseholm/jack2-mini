@@ -137,12 +137,6 @@ void JackSocketServerChannel::ClientAdd(detail::JackChannelTransactionInterface*
         fSocketTable[fd].first = refnum;
         fRebuild = true;
         jack_log("JackSocketServerChannel::ClientAdd ref = %d fd = %d", refnum, fd);
-    #ifdef __APPLE__
-        int on = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (const char*)&on, sizeof(on)) < 0) {
-            jack_log("JackSocketServerChannel::ClientAdd : setsockopt SO_NOSIGPIPE fd = %ld err = %s", fd, strerror(errno));
-        }
-    #endif
     } else {
         jack_error("Cannot create new client");
     }

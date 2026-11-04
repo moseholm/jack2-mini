@@ -47,7 +47,6 @@ struct JackEngineControl;
 
 class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnableInterface
 {
-        friend class JackDebugClient;
 
     protected:
 

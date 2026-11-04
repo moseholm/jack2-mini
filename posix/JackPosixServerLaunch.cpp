@@ -17,12 +17,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
-#if !defined(WIN32) || defined(__CYGWIN__)
-
-#ifdef PTHREAD_WIN32        // Added by JE - 13-02-2010
-#include <ptw32/pthread.h>  // Makes sure we #include the ptw32 version for
-#endif                      // consistency - even though we won't need it !
-
 #include "JackConstants.h"
 #include "JackChannel.h"
 #include "JackLibGlobals.h"
@@ -32,55 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <sys/wait.h>
 
 using namespace Jack;
-
-#if defined(USE_LIBDBUS_AUTOLAUNCH)
-
-#include <dbus/dbus.h>
-
-static int start_server_dbus(const char* server_name)
-{
-    DBusError err;
-    DBusConnection *conn;
-    DBusMessage *msg;
-
-    // initialise the errors
-    dbus_error_init(&err);
-
-    // connect to the bus
-    conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
-    if (dbus_error_is_set(&err)) {
-        fprintf(stderr, "Connection Error (%s)\n", err.message);
-        dbus_error_free(&err);
-    }
-    if (NULL == conn) {
-        return 1;
-    }
-
-    msg = dbus_message_new_method_call(
-        "org.jackaudio.service",     // target for the method call
-        "/org/jackaudio/Controller", // object to call on
-        "org.jackaudio.JackControl", // interface to call on
-        "StartServer");              // method name
-    if (NULL == msg) {
-        fprintf(stderr, "Message Null\n");
-        return 1;
-    }
-
-    // send message and get a handle for a reply
-    if (!dbus_connection_send(conn, msg, NULL))
-    {
-        fprintf(stderr, "Out Of Memory!\n");
-        return 1;
-    }
-
-    dbus_message_unref(msg);
-    dbus_connection_flush(conn);
-    dbus_error_free(&err);
-
-    return 0;
-}
-
-#elif defined(USE_CLASSIC_AUTOLAUNCH)
 
 /* Exec the JACK server in this process.  Does not return. */
 static void start_server_classic_aux(const char* server_name)
@@ -222,22 +167,13 @@ static int start_server_classic(const char* server_name)
     return 0;			/* (probably) successful */
 }
 
-#endif
-
 static int start_server(const char* server_name, jack_options_t options)
 {
     if ((options & JackNoStartServer) || getenv("JACK_NO_START_SERVER")) {
         return 1;
     }
 
-#if defined(USE_LIBDBUS_AUTOLAUNCH)
-    return start_server_dbus(server_name);
-#elif defined(USE_CLASSIC_AUTOLAUNCH)
     return start_server_classic(server_name);
-#else
-    fprintf(stderr, "Automatic start of JACK server is disabled at configure time\n");
-    return 1;
-#endif
 }
 
 static int server_connect(char* server_name)
@@ -274,5 +210,3 @@ int try_start_server(jack_varargs_t* va, jack_options_t options, jack_status_t* 
 
     return 0;
 }
-
-#endif  // !defined(WIN32) || defined(__CYGWIN__)

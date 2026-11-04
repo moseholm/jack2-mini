@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 //#define JACK_SCHED_POLICY SCHED_RR
 #define JACK_SCHED_POLICY SCHED_FIFO
 
-#if defined(__linux__) && !defined(SCHED_RESET_ON_FORK)
+#ifndef SCHED_RESET_ON_FORK
 # define SCHED_RESET_ON_FORK 0x40000000
 #endif
 
@@ -306,7 +306,7 @@ SERVER_EXPORT void ThreadExit()
 
 bool jack_get_thread_realtime_priority_range(int * min_ptr, int * max_ptr)
 {
-#if defined(_POSIX_PRIORITY_SCHEDULING) && !defined(__APPLE__)
+#if defined(_POSIX_PRIORITY_SCHEDULING)
     int min, max;
 
     min = sched_get_priority_min(JACK_SCHED_POLICY);

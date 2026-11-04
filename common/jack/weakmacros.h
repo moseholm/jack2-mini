@@ -32,11 +32,7 @@
  * <jack/weakjack.h> before jack.h.
  *************************************************************/
 
-#ifdef __APPLE__
-#define WEAK_ATTRIBUTE weak_import
-#else
 #define WEAK_ATTRIBUTE __weak__
-#endif
 
 #ifndef JACK_WEAK_EXPORT
 #ifdef __GNUC__
@@ -47,23 +43,10 @@
    require linker arguments in the client as well.
 */
 
-#ifdef _WIN32
-    /*
-        Not working with __declspec(dllexport) so normal linking
-        Linking with JackWeakAPI.cpp will be the preferred way.
-    */
-    #define JACK_WEAK_EXPORT
-#else
     #define JACK_WEAK_EXPORT __attribute__((WEAK_ATTRIBUTE))
-#endif
 
 #else
 /* Add other things here for non-gcc platforms */
-
-#ifdef _WIN32
-#define JACK_WEAK_EXPORT
-#endif
-
 #endif
 #endif
 
@@ -80,11 +63,6 @@
 #define JACK_OPTIONAL_WEAK_DEPRECATED_EXPORT __attribute__((__deprecated__))
 #else
 /* Add other things here for non-gcc platforms */
-
-#ifdef _WIN32
-#define JACK_OPTIONAL_WEAK_DEPRECATED_EXPORT
-#endif
-
 #endif /* __GNUC__ */
 
 #ifndef JACK_OPTIONAL_WEAK_DEPRECATED_EXPORT

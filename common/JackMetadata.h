@@ -20,23 +20,7 @@
 #ifndef __JackMetadata__
 #define __JackMetadata__
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-// libdb does not work in 32bit mixed mode
-#ifdef BUILD_WITH_32_64
-#undef HAVE_DB
-#define HAVE_DB 0
-#endif
-
 #include <stdint.h>
-#include <limits.h>
-
-#if HAVE_DB
-#include <db.h>
-#endif
-
 #include <jack/uuid.h>
 
 #ifdef __cplusplus
@@ -83,25 +67,9 @@ class JackClient;
 
 class JackMetadata
 {
-    private:
-
-    #if HAVE_DB
-        DB* fDB;
-        DB_ENV* fDBenv;
-        const bool fIsEngine;
-        char fDBFilesDir[PATH_MAX + 1];
-    #endif
-
-        int PropertyInit();
-        int PropertyChangeNotify(JackClient* client, jack_uuid_t subject, const char* key, jack_property_change_t change);
-
-    #if HAVE_DB
-        void MakeKeyDbt(DBT* dbt, jack_uuid_t subject, const char* key);
-    #endif
-
     public:
 
-        JackMetadata(bool isEngine);
+        JackMetadata();
         ~JackMetadata();
 
         int GetProperty(jack_uuid_t subject, const char* key, char** value, char** type);
@@ -119,7 +87,6 @@ class JackMetadata
         int RemoveAllProperties(JackClient* client);
 
 };
-
 
 } // end of namespace
 

@@ -206,12 +206,10 @@ hammerfall_release (jack_hardware_t *hw)
 		return;
 	}
 
-#ifndef __ANDROID__
     if (h->monitor_thread) {
         pthread_cancel (h->monitor_thread);
         pthread_join (h->monitor_thread, &status);
     }
-#endif
 
 	free (h);
 }
@@ -299,12 +297,6 @@ jack_alsa_hammerfall_hw_new (alsa_driver_t *driver)
 	h->monitor_interval.tv_nsec = 0;
 
 	hw->private_hw = h;
-
-#if 0
-	if (pthread_create (&h->monitor_thread, 0, hammerfall_monitor_controls, hw)) {
-		jack_error ("ALSA/Hammerfall: cannot create sync monitor thread");
-	}
-#endif
 
 	return hw;
 }

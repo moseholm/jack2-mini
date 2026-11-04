@@ -24,6 +24,9 @@
 #include "types.h"
 #include "JackCompilerDeps.h"
 
+#include <stdint.h>
+#include <pthread.h>
+
 typedef unsigned short UInt16;
 #if __LP64__
 typedef unsigned int UInt32;
@@ -33,7 +36,10 @@ typedef unsigned long UInt32;
 typedef signed long   SInt32;
 #endif
 
-#include "JackTypes_os.h"
+typedef unsigned long long UInt64;
+typedef pthread_key_t jack_tls_key;
+
+typedef int (*jack_thread_creator_t)(pthread_t*, const pthread_attr_t*, void* (*function)(void*), void* arg);
 
 typedef uint16_t jack_int_t;  // Internal type for ports and refnum
 

@@ -26,9 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#ifndef WIN32
 #include <unistd.h>
-#endif
 #include <string.h>
 #include <getopt.h>
 #include <math.h>
@@ -40,15 +38,7 @@
 
 #define TEST_EXCLUDE_DEPRECATED 1
 
-#if defined(WIN32) && !defined(M_PI)
-#define M_PI 3.151592653
-#endif
-
-#ifdef WIN32
-#define jack_sleep(val) Sleep((val))
-#else
 #define jack_sleep(val) usleep((val) * 1000)
-#endif
 
 typedef struct
 {
@@ -164,11 +154,7 @@ void Collect(FrameTimeCollector* TheFrame)
 
 void Jack_Thread_Init_Callback(void *arg)
 {
-#ifdef WIN32
-    Log("Init callback has been successfully called from thread = %x. (msg from callback)\n", GetCurrentThread());
-#else
     Log("Init callback has been successfully called from thread = %x. (msg from callback)\n", pthread_self());
-#endif
     init_clbk = 1;
 }
 

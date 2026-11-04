@@ -240,11 +240,7 @@ int main (int ac, char *av [])
     while (1)
     {
  
-    #ifdef WIN32 
-        Sleep (250); 
-    #else 
-        usleep (250000); 
- 	#endif        
+        usleep (250000);
         if (mtdm_resolve (mtdm) < 0) printf ("Signal below threshold...\n");
         else 
         {

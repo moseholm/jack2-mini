@@ -61,10 +61,6 @@ typedef struct jackctl_sigmask jackctl_sigmask_t;
 #ifdef __cplusplus
 extern "C" {
 #endif
-#if 0
-} /* Adjust editor indent */
-#endif
-
 SERVER_EXPORT jackctl_sigmask_t *
 jackctl_setup_signals(
     unsigned int flags);
@@ -243,9 +239,6 @@ jackctl_server_switch_master(jackctl_server_t * server,
 SERVER_EXPORT int
 jackctl_parse_driver_params(jackctl_driver * driver_ptr, int argc, char* argv[]);
 
-#if 0
-{ /* Adjust editor indent */
-#endif
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

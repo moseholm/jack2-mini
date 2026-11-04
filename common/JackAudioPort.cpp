@@ -24,11 +24,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <string.h>
 
-#if defined (__APPLE__)
-#include <Accelerate/Accelerate.h>
-#elif defined (__SSE__) && !defined (__sun__)
+#if defined(__SSE__)
 #include <xmmintrin.h>
-#elif defined (__ARM_NEON__) || defined (__ARM_NEON)
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 #include <arm_neon.h>
 #endif
 
@@ -42,21 +40,18 @@ static void AudioBufferInit(void* buffer, size_t buffer_size, jack_nframes_t)
 
 static inline void MixAudioBuffer(jack_default_audio_sample_t* mixbuffer, jack_default_audio_sample_t* buffer, jack_nframes_t frames)
 {
-#ifdef __APPLE__
-    vDSP_vadd(buffer, 1, mixbuffer, 1, mixbuffer, 1, frames);
-#else
     jack_nframes_t frames_group = frames / 4;
     frames = frames % 4;
 
     while (frames_group > 0) {
-    #if defined (__SSE__) && !defined (__sun__)
+    #if defined(__SSE__)
         __m128 vec = _mm_add_ps(_mm_load_ps(mixbuffer), _mm_load_ps(buffer));
         _mm_store_ps(mixbuffer, vec);
 
         mixbuffer += 4;
         buffer += 4;
         frames_group--;
-    #elif defined (__ARM_NEON__) || defined (__ARM_NEON)
+    #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
         float32x4_t vec = vaddq_f32(vld1q_f32(mixbuffer), vld1q_f32(buffer));
         vst1q_f32(mixbuffer, vec);
 
@@ -99,7 +94,6 @@ static inline void MixAudioBuffer(jack_default_audio_sample_t* mixbuffer, jack_d
         *mixbuffer = mixFloat1;
         mixbuffer++;
     }
-#endif
 }
 
 static void AudioBufferMixdown(void* mixbuffer, void** src_buffers, int src_count, jack_nframes_t nframes)
@@ -107,7 +101,7 @@ static void AudioBufferMixdown(void* mixbuffer, void** src_buffers, int src_coun
     void* buffer;
 
     // Copy first buffer
-#if defined (__SSE__) && !defined (__sun__)
+#if defined(__SSE__)
     jack_nframes_t frames_group = nframes / 4;
     jack_nframes_t remaining_frames = nframes % 4;
 
@@ -125,7 +119,7 @@ static void AudioBufferMixdown(void* mixbuffer, void** src_buffers, int src_coun
     for (jack_nframes_t i = 0; i != remaining_frames; ++i) {
         target[i] = source[i];
     }
-#elif defined (__ARM_NEON__) || defined (__ARM_NEON)
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
     jack_nframes_t frames_group = nframes / 4;
     jack_nframes_t remaining_frames = nframes % 4;
 

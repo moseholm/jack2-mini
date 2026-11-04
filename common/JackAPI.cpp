@@ -241,9 +241,7 @@ extern "C"
 
     LIB_EXPORT int jack_client_stop_thread(jack_client_t* client, jack_native_thread_t thread);
     LIB_EXPORT int jack_client_kill_thread(jack_client_t* client, jack_native_thread_t thread);
-#ifndef WIN32
     LIB_EXPORT void jack_set_thread_creator(jack_thread_creator_t jtc);
-#endif
     LIB_EXPORT char * jack_get_internal_client_name(jack_client_t *client,
             jack_intclient_t intclient);
     LIB_EXPORT jack_intclient_t jack_internal_client_handle(jack_client_t *client,
@@ -1794,7 +1792,6 @@ LIB_EXPORT int jack_client_kill_thread(jack_client_t* client, jack_native_thread
     return JackThread::KillImp(thread);
 }
 
-#ifndef WIN32
 LIB_EXPORT void jack_set_thread_creator (jack_thread_creator_t jtc)
 {
     if (jtc == NULL) {
@@ -1803,7 +1800,6 @@ LIB_EXPORT void jack_set_thread_creator (jack_thread_creator_t jtc)
         JackGlobals::fJackThreadCreator = jtc;
 	}
 }
-#endif
 
 // intclient.h
 LIB_EXPORT int jack_internal_client_new (const char* client_name,

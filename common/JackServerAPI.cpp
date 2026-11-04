@@ -22,7 +22,6 @@ This program is free software; you can redistribute it and/or modify
 #include "JackGraphManager.h"
 #include "JackInternalClient.h"
 #include "JackServer.h"
-#include "JackDebugClient.h"
 #include "JackServerGlobals.h"
 #include "JackTools.h"
 #include "JackCompilerDeps.h"
@@ -80,11 +79,7 @@ jack_client_t* jack_client_new_aux(const char* client_name, jack_options_t optio
         return NULL;
     }
 
-    if (JACK_DEBUG) {
-        client = new JackDebugClient(new JackInternalClient(JackServerGlobals::fInstance, GetSynchroTable())); // Debug mode
-    } else {
-        client = new JackInternalClient(JackServerGlobals::fInstance, GetSynchroTable());
-    }
+    client = new JackInternalClient(JackServerGlobals::fInstance, GetSynchroTable());
 
     int res = client->Open(va.server_name, client_name, va.session_id, options, status);
     if (res < 0) {
@@ -131,11 +126,7 @@ jack_client_t* jack_client_open_aux(const char* client_name, jack_options_t opti
         return NULL;
     }
 
-    if (JACK_DEBUG) {
-        client = new JackDebugClient(new JackInternalClient(JackServerGlobals::fInstance, GetSynchroTable())); // Debug mode
-    } else {
-        client = new JackInternalClient(JackServerGlobals::fInstance, GetSynchroTable());
-    }
+    client = new JackInternalClient(JackServerGlobals::fInstance, GetSynchroTable());
 
     int res = client->Open(va.server_name, client_name, va.session_id, options, status);
     if (res < 0) {

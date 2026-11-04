@@ -581,14 +581,6 @@ alsa_driver_configure_stream (alsa_driver_t *driver, char *device_name,
 		return -1;
 	}
 	jack_info ("ALSA: use %d periods for %s", *nperiodsp, stream_name);
-#if 0
-	if (!jack_power_of_two(driver->frames_per_cycle)) {
-		jack_error("JACK: frames must be a power of two "
-			   "(64, 512, 1024, ...)\n");
-		return -1;
-	}
-#endif
-
 	if ((err = snd_pcm_hw_params_set_buffer_size (handle, hw_params,
 						      *nperiodsp *
 						      driver->frames_per_cycle))
@@ -632,20 +624,6 @@ alsa_driver_configure_stream (alsa_driver_t *driver, char *device_name,
 			    stream_name);
 		return -1;
 	}
-
-#if 0
-	jack_info ("set silence size to %lu * %lu = %lu",
-		 driver->frames_per_cycle, *nperiodsp,
-		 driver->frames_per_cycle * *nperiodsp);
-
-	if ((err = snd_pcm_sw_params_set_silence_size (
-		     handle, sw_params,
-		     driver->frames_per_cycle * *nperiodsp)) < 0) {
-		jack_error ("ALSA: cannot set silence size for %s",
-			    stream_name);
-		return -1;
-	}
-#endif
 
 	if (handle == driver->playback_handle)
 		err = snd_pcm_sw_params_set_avail_min (
@@ -1427,11 +1405,7 @@ alsa_driver_wait (alsa_driver_t *driver, int extra_fd, int *status, float
 			driver->poll_late++;
 		}
 
-#ifdef __ANDROID__
-		poll_result = poll (driver->pfd, nfds, -1);  //fix for sleep issue
-#else
 		poll_result = poll (driver->pfd, nfds, driver->poll_timeout);
-#endif
 		if (poll_result < 0) {
 
 			if (errno == EINTR) {
@@ -1832,54 +1806,6 @@ alsa_driver_write (alsa_driver_t* driver, jack_nframes_t nframes)
 	return 0;
 }
 
-#if 0
-static int  /* UNUSED */
-alsa_driver_change_sample_clock (alsa_driver_t *driver, SampleClockMode mode)
-{
-	return driver->hw->change_sample_clock (driver->hw, mode);
-}
-
-static void  /* UNUSED */
-alsa_driver_request_all_monitor_input (alsa_driver_t *driver, int yn)
-
-{
-	if (driver->hw_monitoring) {
-		if (yn) {
-			driver->hw->set_input_monitor_mask (driver->hw, ~0U);
-		} else {
-			driver->hw->set_input_monitor_mask (
-				driver->hw, driver->input_monitor_mask);
-		}
-	}
-
-	driver->all_monitor_in = yn;
-}
-
-static void  /* UNUSED */
-alsa_driver_set_hw_monitoring (alsa_driver_t *driver, int yn)
-{
-	if (yn) {
-		driver->hw_monitoring = TRUE;
-
-		if (driver->all_monitor_in) {
-			driver->hw->set_input_monitor_mask (driver->hw, ~0U);
-		} else {
-			driver->hw->set_input_monitor_mask (
-				driver->hw, driver->input_monitor_mask);
-		}
-	} else {
-		driver->hw_monitoring = FALSE;
-		driver->hw->set_input_monitor_mask (driver->hw, 0);
-	}
-}
-
-static ClockSyncStatus  /* UNUSED */
-alsa_driver_clock_sync_status (channel_t chn)
-{
-	return Lock;
-}
-#endif
-
 void
 alsa_driver_delete (alsa_driver_t *driver)
 {
@@ -2168,13 +2094,6 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 				  SND_PCM_NONBLOCK) < 0) {
 			switch (errno) {
 			case EBUSY:
-#ifdef __ANDROID__
-                jack_error ("\n\nATTENTION: The playback device \"%s\" is "
-                            "already in use. Please stop the"
-                            " application using it and "
-                            "run JACK again",
-                            playback_alsa_device);
-#else
                 current_apps = discover_alsa_using_apps ();
                 if (current_apps) {
                         jack_error ("\n\nATTENTION: The playback device \"%s\" is "
@@ -2192,7 +2111,6 @@ alsa_driver_new (char *name, char *playback_alsa_device,
                                     "run JACK again",
                                     playback_alsa_device);
                 }
-#endif
                 alsa_driver_delete (driver);
 				return NULL;
 
@@ -2220,11 +2138,6 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 				  SND_PCM_NONBLOCK) < 0) {
 			switch (errno) {
 			case EBUSY:
-#ifdef __ANDROID__
-                jack_error ("\n\nATTENTION: The capture (recording) device \"%s\" is "
-                            "already in use",
-                            capture_alsa_device);
-#else
                 current_apps = discover_alsa_using_apps ();
                 if (current_apps) {
                         jack_error ("\n\nATTENTION: The capture device \"%s\" is "
@@ -2244,7 +2157,6 @@ alsa_driver_new (char *name, char *playback_alsa_device,
                 }
 				alsa_driver_delete (driver);
 				return NULL;
-#endif
 				break;
 
 			case EPERM:

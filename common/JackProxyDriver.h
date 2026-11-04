@@ -25,17 +25,7 @@
 #define DEFAULT_UPSTREAM "default" /*!< Default upstream Jack server to connect to */
 #define DEFAULT_CLIENT_NAME "proxy" /*!< Default client name to use when connecting to upstream Jack server */
 
-#ifdef __APPLE__
-    #define JACK_PROXY_CLIENT_LIB "libjack.0.dylib"
-#elif defined(WIN32)
-    #ifdef _WIN64
-        #define JACK_PROXY_CLIENT_LIB "libjack64.dll"
-    #else
-        #define JACK_PROXY_CLIENT_LIB "libjack.dll"
-    #endif
-#else
-    #define JACK_PROXY_CLIENT_LIB "libjack.so.0"
-#endif
+#define JACK_PROXY_CLIENT_LIB "libjack.so.0"
 
 #define PROXY_DEF_SYMBOL(ret,name,...) ret (*name) (__VA_ARGS__)
 #define PROXY_LOAD_SYMBOL(ret,name,...) name = (ret (*) (__VA_ARGS__)) GetJackProc(fHandle, #name); assert(name)
@@ -51,7 +41,7 @@ namespace Jack
 
     - a classic server with hw driver is launched system-wide at boot time, in
       promiscuous mode, optionally restricted to the audio group
-    - in each user session, a jackdbus server is automatically started with
+    - in each user session, a JACK server is automatically started with
       JackProxyDriver as master driver, automatically connected to the
       system-wide one
     - optionally, each user run PulseAudio with a pulse-jack bridge

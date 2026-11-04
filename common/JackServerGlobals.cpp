@@ -130,16 +130,10 @@ bool JackServerGlobals::Init()
 
         jack_log("JackServerGlobals Init");
 
-        const char *options = "-d:X:I:P:uvshVrRL:STFl:t:mn:p:"
-    #ifdef __linux__
-            "c:"
-    #endif
-        ;
+        const char *options = "-d:X:I:P:uvshVrRL:STFl:t:mn:p:c:";
 
     struct option long_options[] = {
-    #ifdef __linux__
                                        { "clock-source", 1, 0, 'c' },
-    #endif
                                        { "loopback-driver", 1, 0, 'L' },
                                        { "audio-driver", 1, 0, 'd' },
                                        { "midi-driver", 1, 0, 'X' },
@@ -185,12 +179,6 @@ bool JackServerGlobals::Init()
             }
             fclose(fp);
         }
-
-        /*
-        For testing
-        int argc = 15;
-        char* argv[] = {"jackdmp", "-R", "-v", "-d", "coreaudio", "-p", "512", "-d", "~:Aggregate:0", "-r", "48000", "-i", "2", "-o", "2" };
-        */
 
         opterr = 0;
         optind = 1; // Important : to reset argv parsing
@@ -315,11 +303,9 @@ bool JackServerGlobals::Init()
             goto error;
         }
 
-#ifndef WIN32
         if (server_name == NULL) {
             server_name = (char*)JackTools::DefaultServerName();
         }
-#endif
 
         rc = jack_register_server(server_name, false);
         switch (rc) {

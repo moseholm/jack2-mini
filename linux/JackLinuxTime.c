@@ -122,22 +122,6 @@ static jack_time_t jack_get_microseconds_from_hpet (void)
 
 #endif /* HPET_SUPPORT */
 
-#define HAVE_CLOCK_GETTIME 1
-
-#ifndef HAVE_CLOCK_GETTIME
-
-static jack_time_t jack_get_microseconds_from_system (void)
-{
-	jack_time_t jackTime;
-	struct timeval tv;
-
-	gettimeofday (&tv, NULL);
-	jackTime = (jack_time_t) tv.tv_sec * 1000000 + (jack_time_t) tv.tv_usec;
-	return jackTime;
-}
-
-#else
-
 static jack_time_t jack_get_microseconds_from_system (void)
 {
 	jack_time_t jackTime;
@@ -152,8 +136,6 @@ static jack_time_t jack_get_microseconds_from_system (void)
 		(jack_time_t) time.tv_nsec / 1e3;
 	return jackTime;
 }
-
-#endif /* HAVE_CLOCK_GETTIME */
 
 
 SERVER_EXPORT void JackSleep(long usec)
@@ -196,11 +178,7 @@ const char* ClockSourceName(jack_timer_type_t source)
         case JACK_TIMER_HPET:
             return "hpet";
         case JACK_TIMER_SYSTEM_CLOCK:
-        #ifdef HAVE_CLOCK_GETTIME
             return "system clock via clock_gettime";
-        #else
-            return "system clock via gettimeofday";
-        #endif
 	}
 
 	/* what is wrong with gcc ? */

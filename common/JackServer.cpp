@@ -54,7 +54,7 @@ JackServer::JackServer(bool sync, bool temporary, int timeout, bool rt, int prio
     jack_info("self-connect-mode is \"%s\"", jack_get_self_connect_mode_description(self_connect_mode));
 
     fGraphManager = JackGraphManager::Allocate(port_max);
-    fMetadata = new JackMetadata(true);
+    fMetadata = new JackMetadata();
     fEngineControl = new JackEngineControl(sync, temporary, timeout, rt, priority, verbose, clock, server_name);
     fEngine = new JackLockedEngine(fGraphManager, GetSynchroTable(), fEngineControl, self_connect_mode);
 

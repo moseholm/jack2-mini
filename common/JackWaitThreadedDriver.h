@@ -28,10 +28,10 @@ namespace Jack
 {
 
 /*!
-\brief Wrapper for a restartable threaded driver (e.g. JackNetDriver).
+\brief Wrapper for a restartable threaded driver (e.g. JackProxyDriver).
 
-The idea is to behave as the "dummy" driver, until the network connection is really started and processing starts.
-The Execute method will call the ProcessNull method from the base JackWaiterDriver, until the decorated driver Initialize method returns.
+The idea is to behave as the "dummy" driver until the decorated driver has finished initializing.
+The Execute method will call the ProcessNull method from the base JackWaiterDriver until the decorated driver's Initialize method returns.
 A helper JackDriverStarter thread is used for that purpose.
 */
 
@@ -68,7 +68,7 @@ class SERVER_EXPORT JackWaitThreadedDriver : public JackThreadedDriver
                     if (fDriver->Initialize()) {
                         fRunning = true;
                     } else {
-                        jack_error("Initing net driver fails...");
+                        jack_error("Initializing driver fails...");
                     }
 
                     return false;
@@ -80,8 +80,8 @@ class SERVER_EXPORT JackWaitThreadedDriver : public JackThreadedDriver
 
     public:
 
-        JackWaitThreadedDriver(JackDriver* net_driver)
-            : JackThreadedDriver(net_driver), fStarter(net_driver)
+        JackWaitThreadedDriver(JackDriver* driver)
+            : JackThreadedDriver(driver), fStarter(driver)
         {}
         virtual ~JackWaitThreadedDriver()
         {}

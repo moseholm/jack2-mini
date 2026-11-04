@@ -20,11 +20,9 @@
 
 */
 
-#ifndef WIN32
 #include <stdint.h>
 #include <dirent.h>
 #include <pthread.h>
-#endif
 
 #include "types.h"
 #include <string.h>
@@ -534,47 +532,6 @@ jackctl_server_free_parameters(
     }
 }
 
-#ifdef WIN32
-
-struct jackctl_sigmask
-{
-    HANDLE wait_event;
-};
-
-static jackctl_sigmask sigmask;
-
-static void signal_handler(int signum)
-{
-    printf("Jack main caught signal %d\n", signum);
-    (void) signal(SIGINT, SIG_DFL);
-    SetEvent(sigmask.wait_event);
-}
-
-jackctl_sigmask_t *
-jackctl_setup_signals(
-    unsigned int flags)
-{
-    if ((sigmask.wait_event = CreateEvent(NULL, FALSE, FALSE, NULL)) == NULL) {
-        jack_error("CreateEvent fails err = %ld", GetLastError());
-        return 0;
-    }
-
-    (void) signal(SIGINT, signal_handler);
-    (void) signal(SIGABRT, signal_handler);
-    (void) signal(SIGTERM, signal_handler);
-
-    return &sigmask;
-}
-
-void jackctl_wait_signals(jackctl_sigmask_t * signals)
-{
-    if (WaitForSingleObject(signals->wait_event, INFINITE) != WAIT_OBJECT_0) {
-        jack_error("WaitForSingleObject fails err = %ld", GetLastError());
-    }
-}
-
-#else
-
 struct jackctl_sigmask
 {
     sigset_t signals;
@@ -642,12 +599,7 @@ jackctl_setup_signals(
     sigaddset(&sigmask.signals, SIGQUIT);
     sigaddset(&sigmask.signals, SIGPIPE);
     sigaddset(&sigmask.signals, SIGTERM);
-#ifndef __ANDROID__
-    /* android's bionic c doesn't provide pthread_cancel() and related functions.
-     * to solve this issue, use pthread_kill() & SIGUSR1 instead.
-     */
     sigaddset(&sigmask.signals, SIGUSR1);
-#endif
     sigaddset(&sigmask.signals, SIGUSR2);
 
     /* all child threads will inherit this mask unless they
@@ -683,11 +635,7 @@ jackctl_wait_signals(jackctl_sigmask_t * sigmask)
     bool waiting = true;
 
     while (waiting) {
-    #if defined(sun) && !defined(__sun__) // SUN compiler only, to check
-        sigwait(&sigmask->signals);
-    #else
         sigwait(&sigmask->signals, &sig);
-    #endif
         fprintf(stderr, "Jack main caught signal %d\n", sig);
 
         switch (sig) {
@@ -713,7 +661,6 @@ jackctl_wait_signals(jackctl_sigmask_t * sigmask)
         sigprocmask(SIG_UNBLOCK, &sigmask->signals, 0);
     }
 }
-#endif
 
 static
 jack_driver_param_constraint_desc_t *
