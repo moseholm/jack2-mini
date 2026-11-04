@@ -1,14 +1,9 @@
-.lock*
-.stamp_*
-.DS_Store
-__pycache__
-*.pyc
-flake8.txt
-codeBlocks
-
 # build output
 /build/
 /destdir/
+
+# local CMake configuration
+/CMakeUserPresets.json
 
 # test output
 /framefile-*.dat

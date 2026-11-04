@@ -45,14 +45,28 @@ For further information, see the JACK `homepage <https://jackaudio.org/>`_ and `
 Building
 ========
 
-The build requires a C/C++ compiler, Python 3, and the ALSA development
-headers and libraries. On Debian-based systems the dependencies are::
+The build requires CMake, a C/C++ compiler, and the ALSA development headers
+and libraries. On Debian-based systems the dependencies are::
 
-    sudo apt-get install build-essential libasound2-dev python3
+    sudo apt-get install build-essential cmake libasound2-dev
 
 Configure and build with::
 
-    ./waf configure --prefix=/usr/local
-    ./waf build
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+    cmake --build build --parallel
 
-Add ``--tests`` to the configure step to build the test programs.
+Install with::
+
+    cmake --install build
+
+The install prefix and library directory can be set with the standard CMake
+options ``-DCMAKE_INSTALL_PREFIX=/usr/local`` and
+``-DCMAKE_INSTALL_LIBDIR=lib``.
+
+Build the test programs with ``-DJACK_BUILD_TESTS=ON``::
+
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON
+    cmake --build build --parallel
+
+The maximum number of clients and ports per application can be configured with
+``-DJACK_MAX_CLIENTS=256`` and ``-DJACK_PORTS_PER_APPLICATION=2048``.
