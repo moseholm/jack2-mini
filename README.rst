@@ -67,6 +67,9 @@ Each secondary card has a JACK rate control, ``JACK Secondary Capture Rate`` or
 to see the current rate and write it to request a change. A native rate control
 can be named in the configuration instead.
 
+Applications can be told about a change with ``jack_set_secondary_sample_rate_callback()``,
+which receives the card name, the new rate and a bitmask of the directions affected.
+
 Limitations:
 
 - Only one JACK server may use a given ALSA card. A card may serve only one
