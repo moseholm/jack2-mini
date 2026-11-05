@@ -49,6 +49,11 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         std::vector<JackAlsaSecondaryCard*> fSecondaryCards;
         JackAlsaControlMonitor* fControlMonitor;
         JackAlsaReconfigWorker* fReconfigWorker;
+        std::vector<int> fCardLocks;
+        std::vector<std::string> fCardLockNames;
+
+        bool LockCard(const char* pcm_name, bool shared);
+        void UnlockCards();
 
         void UpdateLatencies();
         void StopSecondaryCards();

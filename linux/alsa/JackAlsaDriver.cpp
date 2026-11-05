@@ -430,6 +430,16 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         }
     }
 
+    // One server per card: lock the primary devices before touching them.
+    if (capturing && !LockCard(capture_driver_name, true)) {
+        Close();
+        return -1;
+    }
+    if (playing && !LockCard(playback_driver_name, true)) {
+        Close();
+        return -1;
+    }
+
     fDriver = alsa_driver_new ((char*)"alsa_pcm", (char*)playback_driver_name, (char*)capture_driver_name,
                                NULL,
                                nframes,
@@ -479,6 +489,11 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
             return -1;
         }
 
+        if (!LockCard(cfg.capture_device.empty() ? cfg.playback_device.c_str() : cfg.capture_device.c_str(), false)) {
+            Close();
+            return -1;
+        }
+
         JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg, JackResamplerFactory::Default());
         if (card->Open(primary->frames_per_cycle, primary->frame_rate, primary->user_nperiods,
                        fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
@@ -519,10 +534,48 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
     return 0;
 }
 
+// shared: the primary's capture and playback may use one card.  A secondary
+// card must be a card this server does not already use, since its rate
+// control element would clash with the other device's.
+bool JackAlsaDriver::LockCard(const char* pcm_name, bool shared)
+{
+    std::string ctl = JackAlsaControlDeviceName(pcm_name);
+    if (ctl.empty()) {
+        return false;
+    }
+    for (size_t i = 0; i < fCardLockNames.size(); i++) {
+        if (ctl == fCardLockNames[i]) {
+            if (shared) {
+                return true;
+            }
+            jack_error("secondary ALSA card %s is already used by this server", ctl.c_str());
+            return false;
+        }
+    }
+    int fd = JackAlsaControlLockCard(ctl);
+    if (fd < 0) {
+        return false;
+    }
+    fCardLocks.push_back(fd);
+    fCardLockNames.push_back(ctl);
+    return true;
+}
+
+void JackAlsaDriver::UnlockCards()
+{
+    for (size_t i = 0; i < fCardLocks.size(); i++) {
+        JackAlsaControlUnlockCard(fCardLocks[i]);
+    }
+    fCardLocks.clear();
+    fCardLockNames.clear();
+}
+
 int JackAlsaDriver::Close()
 {
     // Generic audio driver close
     int res = JackAudioDriver::Close();
+
+    UnlockCards();
 
     // The monitor and worker refer to the cards, so they go first.
     delete fControlMonitor;

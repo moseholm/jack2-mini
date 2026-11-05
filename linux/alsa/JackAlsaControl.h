@@ -51,6 +51,15 @@ struct JackAlsaRateElement {
 // Control device for a PCM name, e.g. "hw:1,0" -> "hw:1".
 std::string JackAlsaControlDeviceName(const std::string& pcm);
 
+/*
+Exclusive per-card lock, held for the life of a JACK server.  Returns the
+lock fd (>= 0) or -1 when the card is already held by another server or by
+another device of this server.  The kernel releases the lock if the process
+dies, so a crashed server never leaves the card locked.
+*/
+int JackAlsaControlLockCard(const std::string& ctl_name);
+void JackAlsaControlUnlockCard(int fd);
+
 // Element name JACK creates for a direction, e.g. "JACK Secondary Capture Rate".
 std::string JackAlsaRateElementName(JackAlsaRateDirection dir);
 
