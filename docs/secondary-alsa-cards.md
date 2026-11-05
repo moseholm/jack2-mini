@@ -269,3 +269,7 @@ What was found on `snd-aloop` (kernel 7.0):
   duplex or capture-only loopback therefore cannot validate the capture path.
 - 32-bit float does not carry data through the loopback at all, which is why the
   `format` key exists. Use `format=s32` on the loopback.
+- A playback-only secondary card on the loopback (`format=s32`) reopened at
+  96 kHz after a write to `JACK Secondary Playback Rate`, and the tone was read
+  back at 96 kHz with the same peak. This is the end-to-end check of a playback
+  rate change with audio.
