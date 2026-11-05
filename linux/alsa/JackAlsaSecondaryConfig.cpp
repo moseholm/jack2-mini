@@ -34,7 +34,8 @@ JackAlsaSecondaryConfig::JackAlsaSecondaryConfig()
       rate(0),
       nperiods(0),
       optional(false),
-      follow_hw_rate(false)
+      follow_hw_rate(false),
+      clock(SecondaryClockAsync)
 {}
 
 static std::string Trim(const std::string& text)
@@ -127,6 +128,18 @@ static std::string DefaultNameForDevice(const std::string& device)
     return sanitized.empty() ? "card" : sanitized;
 }
 
+static bool ParseClock(const std::string& value, JackAlsaSecondaryClock* clock)
+{
+    if (value == "async") {
+        *clock = SecondaryClockAsync;
+    } else if (value == "sync") {
+        *clock = SecondaryClockSync;
+    } else {
+        return false;
+    }
+    return true;
+}
+
 static bool ParseMode(const std::string& value, JackAlsaSecondaryMode* mode)
 {
     if (value == "duplex" || value == "both") {
@@ -194,6 +207,11 @@ static bool ApplyField(JackAlsaSecondaryConfig* config,
     } else if (key == "follow_hw_rate") {
         if (!ParseBool(value, &config->follow_hw_rate)) {
             *error = "invalid follow_hw_rate value '" + value + "'";
+            return false;
+        }
+    } else if (key == "clock") {
+        if (!ParseClock(value, &config->clock)) {
+            *error = "invalid clock '" + value + "' (use async or sync)";
             return false;
         }
     } else if (key == "capture_rate_ctl") {
