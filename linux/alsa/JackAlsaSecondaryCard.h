@@ -19,6 +19,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef __JackAlsaSecondaryCard__
 #define __JackAlsaSecondaryCard__
 
+#include "JackAlsaDriftController.h"
 #include "JackAlsaRateConverter.h"
 #include "JackAlsaRingBuffer.h"
 #include "JackAlsaSecondaryConfig.h"
@@ -81,6 +82,10 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         float** fPlaybackConvOut;
         unsigned int fConvCap;
 
+        JackAlsaDriftController fDrift;
+        std::atomic<unsigned int> fXrunGeneration;
+        unsigned int fSeenXrunGeneration;
+
         float** fCaptureTemp;
         float** fPlaybackTemp;
         float** fPortScratch;
@@ -90,6 +95,7 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         std::vector<jack_port_id_t> fPlaybackPorts;
 
         void FreeBuffers();
+        void UpdateDrift(bool capture_side);
 
         // ALSA core callbacks
         void ReadInput(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread);
@@ -145,6 +151,9 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         jack_nframes_t Rate() const { return fRate; }
         bool IsOpen() const { return fOpened; }
         bool IsRunning() const { return fRunning.load(); }
+        // Clears resampler history and drift state.  Called by the driver after a primary xrun.
+        void ResetResampling();
+
         bool IsConverting() const { return fCaptureConverter != NULL || fPlaybackConverter != NULL; }
 
         std::vector<jack_port_id_t>& CapturePorts() { return fCapturePorts; }

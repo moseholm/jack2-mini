@@ -74,6 +74,18 @@ void JackAlsaRateConverter::Reset()
     }
 }
 
+void JackAlsaRateConverter::SetRate(double rate)
+{
+    if (fResampler) {
+        fResampler->SetRate(rate);
+    }
+}
+
+unsigned int JackAlsaRateConverter::OutputBacklog()
+{
+    return fResampler ? fResampler->OutputLength(fInCount) : 0;
+}
+
 unsigned int JackAlsaRateConverter::NeedInput(unsigned int out_frames)
 {
     unsigned int pending = (fOutCount < out_frames) ? fOutCount : out_frames;

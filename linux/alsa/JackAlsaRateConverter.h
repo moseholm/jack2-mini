@@ -62,6 +62,15 @@ class JackAlsaRateConverter
 
         void Reset();
 
+        // Ratio correction forwarded to the resampler, 1.0 is nominal.
+        void SetRate(double rate);
+
+        // Input frames held in staging, not yet consumed by the resampler.
+        unsigned int Backlog() const { return fInCount; }
+
+        // Output frames the staged input would produce, not yet converted.
+        unsigned int OutputBacklog();
+
         // Input frames to supply before Convert(out_frames) to produce out_frames.
         unsigned int NeedInput(unsigned int out_frames);
 
