@@ -19,9 +19,15 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaControl.h"
 #include "JackError.h"
 
+#include "JackPlatformPlug.h"
+
+#include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/file.h>
+#include <unistd.h>
 #include <vector>
 
 // Defined in JackAlsaDriver.cpp.
@@ -36,6 +42,36 @@ std::string JackAlsaControlDeviceName(const std::string& pcm)
     std::string result = name ? name : "";
     free(name);
     return result;
+}
+
+int JackAlsaControlLockCard(const std::string& ctl_name)
+{
+    std::string file = std::string(jack_server_dir) + "/jack_alsa_";
+    for (size_t i = 0; i < ctl_name.size(); i++) {
+        char c = ctl_name[i];
+        file += (isalnum((unsigned char)c) ? c : '_');
+    }
+    file += ".lock";
+
+    int fd = open(file.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
+    if (fd < 0) {
+        jack_error("cannot open card lock %s (%s)", file.c_str(), strerror(errno));
+        return -1;
+    }
+    if (flock(fd, LOCK_EX | LOCK_NB) < 0) {
+        jack_error("ALSA card %s is already in use by another JACK server or by this server; "
+                   "a card may serve only one JACK server", ctl_name.c_str());
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
+
+void JackAlsaControlUnlockCard(int fd)
+{
+    if (fd >= 0) {
+        close(fd);
+    }
 }
 
 std::string JackAlsaRateElementName(JackAlsaRateDirection dir)
@@ -191,7 +227,9 @@ int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, long in
         if (FindElement(ctl, name, &stale)) {
             snd_ctl_elem_info_t* info;
             snd_ctl_elem_info_alloca(&info);
-            // The kernel reports an unowned element with owner -1.
+            // Only a server that holds the card lock reaches this point, so an
+            // element left behind by a crashed server can be replaced.  The
+            // kernel reports an unowned element with owner -1.
             int owner = (ElementInfo(ctl, stale.numid, info) == 0) ? (int)snd_ctl_elem_info_get_owner(info) : -1;
             if (owner > 0) {
                 jack_error("ALSA control '%s' is in use by process %d; another JACK server may be using this card",
