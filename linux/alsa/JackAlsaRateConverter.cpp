@@ -81,6 +81,11 @@ void JackAlsaRateConverter::SetRate(double rate)
     }
 }
 
+unsigned int JackAlsaRateConverter::Delay()
+{
+    return fResampler ? fResampler->Delay() : 0;
+}
+
 unsigned int JackAlsaRateConverter::OutputBacklog()
 {
     return fResampler ? fResampler->OutputLength(fInCount) : 0;

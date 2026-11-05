@@ -181,6 +181,11 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         // new rate cannot be opened the previous rate is restored and -1 is returned.
         int Reconfigure(jack_nframes_t rate);
 
+        // Latency of the card's ports, in primary frames.  Counts the cycle, the
+        // card's ALSA buffer and the ring and converter buffering on this side.
+        jack_nframes_t CaptureLatency() const;
+        jack_nframes_t PlaybackLatency() const;
+
         // Resolves or creates the rate elements for the enabled directions.
         int OpenControls();
 

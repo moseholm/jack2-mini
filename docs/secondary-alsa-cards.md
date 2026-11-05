@@ -186,7 +186,10 @@ jack_set_secondary_sample_rate_callback(client, on_secondary_rate, NULL);
   period fail.
 - **Capture rate changes** need `follow_hw_rate=1` to be applied. That path is
   implemented but has not been tested on real hardware (see [Testing](#testing)).
-- **No latency reporting** on secondary ports yet. Their latency is zero.
+- **Latency is an estimate.** Secondary ports report the cycle, the card's ALSA
+  buffer, the ring prefill and the resampler's filter delay, in primary frames. It
+  is recomputed after a rate change. The ring's fill is held at about three periods,
+  so the value is a design estimate; it has not been measured against hardware.
 - **No runtime add or remove** of secondary cards. Cards are fixed at startup.
 - **Native control types.** Only integer controls are used. Enumerated controls
   are not yet supported, so a card whose rate control is an enum falls back to a
