@@ -75,11 +75,15 @@ JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& conf
       fConvCap(0),
       fXrunGeneration(0),
       fSeenXrunGeneration(0),
+      fCtl(NULL),
       fCaptureTemp(NULL),
       fPlaybackTemp(NULL),
       fPortScratch(NULL),
       fSilence(NULL)
-{}
+{
+    fRateValid[RateCapture] = false;
+    fRateValid[RatePlayback] = false;
+}
 
 JackAlsaSecondaryCard::~JackAlsaSecondaryCard()
 {
@@ -156,12 +160,6 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
         return -1;
     }
 
-    double period = ((double)primary_buffer_size * (double)requested_rate) / (double)primary_rate;
-    fPeriod = (jack_nframes_t)llround(period);
-    if (fPeriod < 1) {
-        fPeriod = 1;
-    }
-
     const std::string& playback_device = fConfig.playback_device.empty()
                                        ? fConfig.capture_device
                                        : fConfig.playback_device;
@@ -169,37 +167,68 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
                                       ? fConfig.playback_device
                                       : fConfig.capture_device;
 
-    jack_info("secondary card '%s': device %s, mode %s, rate %u, period %u, %u periods",
-              fConfig.name.c_str(),
-              (playback_device + "|" + capture_device).c_str(),
-              (fCaptureEnabled && fPlaybackEnabled) ? "duplex" :
-                  (fCaptureEnabled ? "capture" : "playback"),
-              requested_rate, fPeriod, fNperiods);
+    // The hardware may not run at the requested rate.  If it doesn't, reopen at
+    // the rate it actually gives, so the period matches the card's real clock.
+    jack_nframes_t rate = requested_rate;
+    for (int attempt = 0; attempt < 2 && fAlsaDriver == NULL; attempt++) {
+        double period = ((double)primary_buffer_size * (double)rate) / (double)primary_rate;
+        fPeriod = (jack_nframes_t)llround(period);
+        if (fPeriod < 1) {
+            fPeriod = 1;
+        }
 
-    fAlsaDriver = (alsa_driver_t*)alsa_driver_new((char*)"alsa_secondary",
-                                                  (char*)playback_device.c_str(),
-                                                  (char*)capture_device.c_str(),
-                                                  NULL,
-                                                  fPeriod,
-                                                  fNperiods,
-                                                  requested_rate,
-                                                  FALSE,
-                                                  FALSE,
-                                                  fCaptureEnabled,
-                                                  fPlaybackEnabled,
-                                                  None,
-                                                  FALSE,
-                                                  FALSE,
-                                                  fCaptureEnabled ? fConfig.capture_channels : 0,
-                                                  fPlaybackEnabled ? fConfig.playback_channels : 0,
-                                                  FALSE,
-                                                  0,
-                                                  0,
-                                                  NULL,
-                                                  1);
-    if (!fAlsaDriver) {
-        jack_error("secondary card '%s': cannot open ALSA device %s",
-                   fConfig.name.c_str(), (playback_device + "|" + capture_device).c_str());
+        jack_info("secondary card '%s': device %s, mode %s, rate %u, period %u, %u periods",
+                  fConfig.name.c_str(),
+                  (playback_device + "|" + capture_device).c_str(),
+                  (fCaptureEnabled && fPlaybackEnabled) ? "duplex" :
+                      (fCaptureEnabled ? "capture" : "playback"),
+                  rate, fPeriod, fNperiods);
+
+        alsa_driver_t* alsa = (alsa_driver_t*)alsa_driver_new((char*)"alsa_secondary",
+                                                              (char*)playback_device.c_str(),
+                                                              (char*)capture_device.c_str(),
+                                                              NULL,
+                                                              fPeriod,
+                                                              fNperiods,
+                                                              rate,
+                                                              FALSE,
+                                                              FALSE,
+                                                              fCaptureEnabled,
+                                                              fPlaybackEnabled,
+                                                              None,
+                                                              FALSE,
+                                                              FALSE,
+                                                              fCaptureEnabled ? fConfig.capture_channels : 0,
+                                                              fPlaybackEnabled ? fConfig.playback_channels : 0,
+                                                              FALSE,
+                                                              0,
+                                                              0,
+                                                              NULL,
+                                                              1);
+        if (!alsa) {
+            jack_error("secondary card '%s': cannot open ALSA device %s",
+                       fConfig.name.c_str(), (playback_device + "|" + capture_device).c_str());
+            return -1;
+        }
+
+        if (alsa->frame_rate == rate) {
+            fAlsaDriver = alsa;
+            break;
+        }
+
+        if (attempt == 0) {
+            jack_info("secondary card '%s': device runs at %u Hz, not the requested %u Hz; using %u Hz",
+                      fConfig.name.c_str(), (unsigned int)alsa->frame_rate, (unsigned int)rate,
+                      (unsigned int)alsa->frame_rate);
+            rate = alsa->frame_rate;
+        } else {
+            jack_error("secondary card '%s': device rate %u Hz does not settle",
+                       fConfig.name.c_str(), (unsigned int)alsa->frame_rate);
+        }
+        alsa_driver_delete(alsa);
+    }
+
+    if (fAlsaDriver == NULL) {
         return -1;
     }
 
@@ -304,8 +333,109 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
     callbacks.restart = RestartThunk;
     alsa_driver_set_callbacks(fAlsaDriver, &callbacks);
 
+    if (OpenControls() < 0) {
+        Close();
+        return -1;
+    }
+
     fOpened = true;
     return 0;
+}
+
+int JackAlsaSecondaryCard::OpenControls()
+{
+    const std::string& capture_pcm = fConfig.capture_device.empty() ? fConfig.playback_device : fConfig.capture_device;
+    const std::string& playback_pcm = fConfig.playback_device.empty() ? fConfig.capture_device : fConfig.playback_device;
+
+    std::string capture_ctl = JackAlsaControlDeviceName(capture_pcm);
+    std::string playback_ctl = JackAlsaControlDeviceName(playback_pcm);
+    if (capture_ctl.empty() || playback_ctl.empty() || capture_ctl != playback_ctl) {
+        jack_error("secondary card '%s': capture and playback devices must belong to the same ALSA card",
+                   fConfig.name.c_str());
+        return -1;
+    }
+    fCtlName = capture_ctl;
+
+    int err = snd_ctl_open(&fCtl, fCtlName.c_str(), 0);
+    if (err < 0) {
+        fCtl = NULL;
+        jack_error("secondary card '%s': cannot open control device %s (%s)",
+                   fConfig.name.c_str(), fCtlName.c_str(), snd_strerror(err));
+        return -1;
+    }
+
+    for (int d = 0; d < 2; d++) {
+        JackAlsaRateDirection dir = (JackAlsaRateDirection)d;
+        bool enabled = (dir == RateCapture) ? fCaptureEnabled : fPlaybackEnabled;
+        if (!enabled) {
+            continue;
+        }
+
+        const std::string& configured = (dir == RateCapture) ? fConfig.capture_rate_ctl : fConfig.playback_rate_ctl;
+        JackAlsaRateElement elem;
+        std::string error;
+        int res = JackAlsaControlResolveRate(fCtl, dir, configured, &elem, &error);
+        if (res < 0) {
+            jack_error("secondary card '%s': %s", fConfig.name.c_str(), error.c_str());
+            return -1;
+        }
+
+        if (res == 1) {
+            if (JackAlsaControlCreateRate(fCtl, dir, fRate, &elem) < 0) {
+                // Without a control the card keeps its startup rate; ASRC still
+                // corrects drift.
+                jack_error("secondary card '%s': cannot create a %s rate control; keeping %u Hz",
+                           fConfig.name.c_str(), (dir == RateCapture) ? "capture" : "playback", fRate);
+                continue;
+            }
+            jack_info("secondary card '%s': %s rate control is JACK element '%s' (numid %u)",
+                      fConfig.name.c_str(), (dir == RateCapture) ? "capture" : "playback",
+                      elem.name.c_str(), elem.numid);
+        } else {
+            jack_info("secondary card '%s': %s rate control is native element '%s' (numid %u, %s)",
+                      fConfig.name.c_str(), (dir == RateCapture) ? "capture" : "playback",
+                      elem.name.c_str(), elem.numid, elem.writable ? "writable" : "read-only");
+        }
+
+        fRateElem[d] = elem;
+        fRateValid[d] = true;
+    }
+
+    return 0;
+}
+
+void JackAlsaSecondaryCard::CloseControls()
+{
+    if (!fCtl) {
+        return;
+    }
+    for (int d = 0; d < 2; d++) {
+        if (fRateValid[d] && fRateElem[d].user) {
+            if (JackAlsaControlRemoveRate(fCtl, fRateElem[d]) < 0) {
+                jack_error("secondary card '%s': cannot remove control '%s'",
+                           fConfig.name.c_str(), fRateElem[d].name.c_str());
+            }
+        }
+        fRateValid[d] = false;
+    }
+    snd_ctl_close(fCtl);
+    fCtl = NULL;
+}
+
+int JackAlsaSecondaryCard::ReadRate(JackAlsaRateDirection dir, long* value)
+{
+    if (!fCtl || !fRateValid[dir]) {
+        return -1;
+    }
+    return JackAlsaControlReadRate(fCtl, fRateElem[dir], value);
+}
+
+int JackAlsaSecondaryCard::WriteRate(JackAlsaRateDirection dir, long value)
+{
+    if (!fCtl || !fRateValid[dir]) {
+        return -1;
+    }
+    return JackAlsaControlWriteRate(fCtl, fRateElem[dir], value);
 }
 
 int JackAlsaSecondaryCard::Close()
@@ -315,6 +445,7 @@ int JackAlsaSecondaryCard::Close()
     }
 
     Stop();
+    CloseControls();
 
     if (fAlsaDriver) {
         alsa_driver_delete(fAlsaDriver);

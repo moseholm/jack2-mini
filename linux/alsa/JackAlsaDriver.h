@@ -24,6 +24,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAudioDriver.h"
 #include "JackThreadedDriver.h"
 #include "JackTime.h"
+#include "JackAlsaReconfigWorker.h"
+#include "JackAlsaControlMonitor.h"
 #include "JackAlsaSecondaryCard.h"
 #include "JackAlsaSecondaryConfig.h"
 #include "alsa_driver.h"
@@ -37,7 +39,7 @@ namespace Jack
 \brief The ALSA driver.
 */
 
-class JackAlsaDriver : public JackAudioDriver
+class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
 {
 
     private:
@@ -45,14 +47,21 @@ class JackAlsaDriver : public JackAudioDriver
         jack_driver_t* fDriver;
         jack_native_thread_t fReservationLoopThread;
         std::vector<JackAlsaSecondaryCard*> fSecondaryCards;
+        JackAlsaControlMonitor* fControlMonitor;
+        JackAlsaReconfigWorker* fReconfigWorker;
 
         void UpdateLatencies();
         void StopSecondaryCards();
+        void StartControlMonitoring();
+        void StopControlMonitoring();
+
+        // JackAlsaRateRequestHandler
+        virtual void HandleRateRequest(int card, JackAlsaRateDirection dir, long value);
 
     public:
 
         JackAlsaDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
-		: JackAudioDriver(name, alias, engine, table),fDriver(NULL)
+		: JackAudioDriver(name, alias, engine, table),fDriver(NULL),fControlMonitor(NULL),fReconfigWorker(NULL)
         {}
         virtual ~JackAlsaDriver()
         {}

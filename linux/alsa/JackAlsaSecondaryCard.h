@@ -19,6 +19,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef __JackAlsaSecondaryCard__
 #define __JackAlsaSecondaryCard__
 
+#include "JackAlsaControl.h"
 #include "JackAlsaDriftController.h"
 #include "JackAlsaRateConverter.h"
 #include "JackAlsaRingBuffer.h"
@@ -86,6 +87,11 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         std::atomic<unsigned int> fXrunGeneration;
         unsigned int fSeenXrunGeneration;
 
+        snd_ctl_t* fCtl;
+        std::string fCtlName;
+        JackAlsaRateElement fRateElem[2];
+        bool fRateValid[2];
+
         float** fCaptureTemp;
         float** fPlaybackTemp;
         float** fPortScratch;
@@ -96,6 +102,7 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
 
         void FreeBuffers();
         void UpdateDrift(bool capture_side);
+        void CloseControls();
 
         // ALSA core callbacks
         void ReadInput(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread);
@@ -153,6 +160,15 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         bool IsRunning() const { return fRunning.load(); }
         // Clears resampler history and drift state.  Called by the driver after a primary xrun.
         void ResetResampling();
+
+        // Resolves or creates the rate elements for the enabled directions.
+        int OpenControls();
+
+        const std::string& ControlName() const { return fCtlName; }
+        bool RateElementValid(JackAlsaRateDirection dir) const { return fRateValid[dir]; }
+        const JackAlsaRateElement& RateElement(JackAlsaRateDirection dir) const { return fRateElem[dir]; }
+        int ReadRate(JackAlsaRateDirection dir, long* value);
+        int WriteRate(JackAlsaRateDirection dir, long value);
 
         bool IsConverting() const { return fCaptureConverter != NULL || fPlaybackConverter != NULL; }
 
