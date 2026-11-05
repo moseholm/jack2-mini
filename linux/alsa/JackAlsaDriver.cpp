@@ -479,7 +479,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
             return -1;
         }
 
-        JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg);
+        JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg, JackResamplerFactory::Default());
         if (card->Open(primary->frames_per_cycle, primary->frame_rate, primary->user_nperiods,
                        fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
             delete card;
