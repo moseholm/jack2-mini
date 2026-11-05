@@ -514,7 +514,15 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
             return -1;
         }
 
-        JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg, JackResamplerFactory::Default());
+        JackResamplerFactory* factory = JackResamplerFactory::Find(cfg.resampler.c_str());
+        if (factory == NULL) {
+            jack_error("secondary card '%s': resampler '%s' is not available (set JACK_RESAMPLER_PATH for plugins)",
+                       cfg.name.c_str(), cfg.resampler.c_str());
+            Close();
+            return -1;
+        }
+
+        JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg, factory);
         card->SetRTEpoch(&fRTEpoch);
         if (card->Open(primary->frames_per_cycle, primary->frame_rate, primary->user_nperiods,
                        fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
@@ -1123,7 +1131,7 @@ SERVER_EXPORT const jack_driver_desc_t* driver_get_descriptor ()
     strcpy(value.str, "none");
     jack_driver_descriptor_add_parameter(desc, &filler, "secondary", 'Y', JackDriverParamString, &value, NULL,
         "Secondary ALSA card (repeatable)",
-        "Secondary ALSA card, repeatable. Keys: name, device, mode (duplex|capture|playback), channels, rate, nperiods, clock (async|sync), format (auto|float|s32|s16), optional, follow_hw_rate. Example: name=usb1;device=hw:1;mode=capture;clock=async");
+        "Secondary ALSA card, repeatable. Keys: name, device, mode (duplex|capture|playback), channels, rate, nperiods, clock (async|sync), format (auto|float|s32|s16), resampler, optional, follow_hw_rate. Example: name=usb1;device=hw:1;mode=capture;clock=async");
     jack_driver_descriptor_add_parameter(desc, &filler, "secondary-file", 'K', JackDriverParamString, &value, NULL,
         "File with one secondary ALSA card per line",
         "File with one secondary ALSA card per line, read at startup. Same syntax as --secondary. Blank lines and lines starting with # are ignored");

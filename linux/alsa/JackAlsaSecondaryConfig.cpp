@@ -36,7 +36,8 @@ JackAlsaSecondaryConfig::JackAlsaSecondaryConfig()
       optional(false),
       follow_hw_rate(false),
       clock(SecondaryClockAsync),
-      sample_format(SampleFormatAuto)
+      sample_format(SampleFormatAuto),
+      resampler("pipewire")
 {}
 
 static std::string Trim(const std::string& text)
@@ -226,6 +227,12 @@ static bool ApplyField(JackAlsaSecondaryConfig* config,
             *error = "invalid follow_hw_rate value '" + value + "'";
             return false;
         }
+    } else if (key == "resampler") {
+        if (value.empty()) {
+            *error = "resampler name is empty";
+            return false;
+        }
+        config->resampler = value;
     } else if (key == "format") {
         if (!ParseFormat(value, &config->sample_format)) {
             *error = "invalid format '" + value + "' (use auto, float, s32 or s16)";
