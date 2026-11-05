@@ -30,6 +30,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaSecondaryConfig.h"
 #include "alsa_driver.h"
 
+#include <atomic>
+#include <stdint.h>
 #include <vector>
 
 namespace Jack
@@ -50,6 +52,7 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         JackAlsaControlMonitor* fControlMonitor;
         JackAlsaReconfigWorker* fReconfigWorker;
         std::vector<int> fCardLocks;
+        std::atomic<uint64_t> fRTEpoch;
         std::vector<std::string> fCardLockNames;
 
         bool LockCard(const char* pcm_name, bool shared);

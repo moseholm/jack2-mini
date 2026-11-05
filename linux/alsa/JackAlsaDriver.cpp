@@ -495,6 +495,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         }
 
         JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg, JackResamplerFactory::Default());
+        card->SetRTEpoch(&fRTEpoch);
         if (card->Open(primary->frames_per_cycle, primary->frame_rate, primary->user_nperiods,
                        fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
             delete card;
@@ -682,21 +683,33 @@ void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long
         return;
     }
 
-    // A discrete change needs the ALSA stream reopened at the new rate; the
-    // resampler alone cannot fix it.  Until the reopen path exists, the change
-    // is rejected and the element is restored.  With follow_hw_rate=0 (the
-    // default) the card keeps its rate by design.
-    if (dir == RateCapture && !secondary->Config().follow_hw_rate) {
+    const char* what = (dir == RateCapture) ? "capture" : "playback";
+    if (value < 8000 || value > 768000) {
+        jack_error("secondary card '%s': %s rate %ld Hz is out of range; keeping %ld Hz",
+                   secondary->Name().c_str(), what, value, current);
+    } else if (dir == RateCapture && !secondary->Config().follow_hw_rate) {
+        // The default: a card keeps its rate unless it is asked to follow the hardware.
         jack_error("secondary card '%s': capture rate changed to %ld Hz; keeping %ld Hz "
                    "(follow_hw_rate=0)", secondary->Name().c_str(), value, current);
     } else {
-        jack_error("secondary card '%s': %s rate change to %ld Hz needs a stream reopen, "
-                   "which is not implemented yet; keeping %ld Hz",
-                   secondary->Name().c_str(), (dir == RateCapture) ? "capture" : "playback", value, current);
+        jack_info("secondary card '%s': %s rate change %ld Hz -> %ld Hz, reopening",
+                  secondary->Name().c_str(), what, current, value);
+        if (secondary->Reconfigure((jack_nframes_t)value) < 0) {
+            jack_error("secondary card '%s': %s rate change to %ld Hz failed",
+                       secondary->Name().c_str(), what, value);
+        }
     }
-    if (secondary->RateElement(dir).writable && secondary->WriteRate(dir, current) < 0) {
-        jack_error("secondary card '%s': cannot restore the %s rate control",
-                   secondary->Name().c_str(), (dir == RateCapture) ? "capture" : "playback");
+
+    // Report the rate the card actually runs at.  The write echoes back as an
+    // event with the same value, which is ignored above.
+    long actual = (long)secondary->Rate();
+    for (int d = 0; d < 2; d++) {
+        JackAlsaRateDirection each = (JackAlsaRateDirection)d;
+        if (secondary->RateElementValid(each) && secondary->RateElement(each).writable) {
+            if (secondary->WriteRate(each, actual) < 0) {
+                jack_error("secondary card '%s': cannot update the rate control", secondary->Name().c_str());
+            }
+        }
     }
 }
 
@@ -764,6 +777,9 @@ int JackAlsaDriver::Write()
     for (size_t i = 0; i < fSecondaryCards.size(); i++) {
         fSecondaryCards[i]->WriteFromPorts(fGraphManager, fEngineControl->fBufferSize);
     }
+
+    // One RT cycle is complete.  Card reconfiguration waits on this counter.
+    fRTEpoch.fetch_add(1, std::memory_order_release);
     return 0;
 }
 
