@@ -48,6 +48,7 @@ Each card is a `;`-separated list of `key=value` pairs. A bare device name
 | `rate` | the primary rate | Stream rate. The device may give a different rate; see [Rate changes](#rate-changes). |
 | `nperiods` | the primary's `-n` | Periods in the ALSA buffer. At least 2. |
 | `clock` | `async` | `async` runs a drift controller; `sync` keeps a fixed ratio. See [Clocks](#clocks). |
+| `resampler` | `pipewire` | Resampler by name: `pipewire` (built in) or a plugin found in `JACK_RESAMPLER_PATH`. See [Resampler plugins](#resampler-plugins). |
 | `format` | `auto` | Sample format: `auto` (the ALSA core prefers 32-bit float), `float`, `s32` or `s16`. Set `s32` or `s16` when a device mishandles float. |
 | `optional` | `false` | If the card cannot be opened, skip it instead of failing the server. |
 | `follow_hw_rate` | `false` | Allow a capture rate change to reopen the card. See [Rate changes](#rate-changes). |
@@ -194,8 +195,31 @@ jack_set_secondary_sample_rate_callback(client, on_secondary_rate, NULL);
 - **Native control types.** Only integer controls are used. Enumerated controls
   are not yet supported, so a card whose rate control is an enum falls back to a
   JACK element.
-- **No dlopen plugin interface.** The resampler is selected in code. Only the
-  `pipewire` resampler is built in, and there is no linear fallback.
+- **No linear or other fallback resampler.** Only `pipewire` is built in. If a
+  requested resampler is unavailable, the server does not start.
+
+## Resampler plugins
+
+A secondary card can use a resampler supplied as a shared object. The built-in
+PipeWire resampler is always used when `resampler=pipewire` (the default), and a
+plugin cannot replace it.
+
+To use a plugin:
+
+1. Put `<name>.so` in a directory and point `JACK_RESAMPLER_PATH` at it. Several
+   directories may be given, separated by `:`.
+2. Select it with `resampler=<name>` on the card.
+
+The server loads a plugin when the card is configured. A plugin that is missing,
+has the wrong ABI version or struct size, or does not report the name it was
+loaded by, is refused with a message, and the server does not start.
+
+The ABI is internal to this source tree and is versioned. The header is
+`linux/alsa/resample/JackResamplerPlugin.h`; it is not installed. A plugin exports
+`jack_resampler_plugin_v1()`, which returns a `jack_resampler_plugin_t` with the
+create, destroy, reset, set_rate, in_len, out_len, process and delay functions.
+The unit tests include a pass-through plugin (`tests/alsa_test_resampler_plugin.c`)
+as a working example.
 
 ## Troubleshooting
 
@@ -208,6 +232,7 @@ jack_set_secondary_sample_rate_callback(client, on_secondary_rate, NULL);
 | `secondary card 'x': capture rate changed to R Hz; keeping Q Hz (follow_hw_rate=0)` | A capture change was refused by design. Set `follow_hw_rate=1` to allow it. |
 | `secondary card 'x': cannot create a ... rate control; keeping R Hz` | No JACK element could be created (for example, the name is taken). The card runs at its startup rate; drift control still works. |
 | `secondary card 'x': real-time thread did not reach a safe point` | The RT thread was not running, so the reopen was abandoned. Check that the server is started. |
+| `secondary card 'x': resampler 'n' is not available` | The named resampler is neither built in nor found in `JACK_RESAMPLER_PATH`. |
 | `secondary card 'x': offline, no usable rate` | Neither the requested nor the previous rate could be opened. The card is silent until a later change succeeds. |
 
 ## Testing
