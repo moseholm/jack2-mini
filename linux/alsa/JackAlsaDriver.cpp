@@ -697,6 +697,12 @@ void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long
         if (secondary->Reconfigure((jack_nframes_t)value) < 0) {
             jack_error("secondary card '%s': %s rate change to %ld Hz failed",
                        secondary->Name().c_str(), what, value);
+        } else if ((long)secondary->Rate() != current) {
+            // Only a change that took effect is reported.  A card whose capture and
+            // playback share one stream reports both directions in one call.
+            int directions = (secondary->CaptureEnabled() ? JackSecondaryRateCapture : 0) |
+                             (secondary->PlaybackEnabled() ? JackSecondaryRatePlayback : 0);
+            NotifySecondarySampleRate(secondary->Name().c_str(), secondary->Rate(), directions);
         }
     }
 
