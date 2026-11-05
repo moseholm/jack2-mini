@@ -182,6 +182,8 @@ set(JACK_ALSA_SOURCES
     linux/alsa/JackAlsaSecondaryCard.cpp
     linux/alsa/JackAlsaRateConverter.cpp
     linux/alsa/JackAlsaControl.cpp
+    linux/alsa/JackAlsaControlMonitor.cpp
+    linux/alsa/JackAlsaReconfigWorker.cpp
     linux/alsa/JackAlsaDriftController.cpp
     linux/alsa/resample/JackResampler.cpp
     linux/alsa/resample/pipewire_resample_bridge.c
