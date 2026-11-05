@@ -138,6 +138,13 @@ static void InstallAlsaCallbacks(JackAlsaDriver* driver, alsa_driver_t* alsa_dri
 int JackAlsaDriver::SetBufferSize(jack_nframes_t buffer_size)
 {
     jack_log("JackAlsaDriver::SetBufferSize %ld", buffer_size);
+
+    // Secondary card periods are derived from the primary buffer size, so it
+    // cannot change while secondary cards exist.
+    if (!fSecondaryCards.empty()) {
+        jack_error("buffer size cannot change while secondary ALSA cards are in use");
+        return -1;
+    }
     int res = alsa_driver_reset_parameters((alsa_driver_t *)fDriver, buffer_size,
                                            ((alsa_driver_t *)fDriver)->user_nperiods,
                                            ((alsa_driver_t *)fDriver)->frame_rate);
@@ -240,6 +247,30 @@ int JackAlsaDriver::Attach()
         }
     }
 
+    for (size_t c = 0; c < fSecondaryCards.size(); c++) {
+        JackAlsaSecondaryCard* card = fSecondaryCards[c];
+        std::vector<jack_port_id_t>& capture_ports = card->CapturePorts();
+        std::vector<jack_port_id_t>& playback_ports = card->PlaybackPorts();
+
+        for (int i = 0; i < card->CaptureChannels(); i++) {
+            snprintf(name, sizeof(name), "%s:capture_%s_%d", fClientControl.fName, card->Name().c_str(), i + 1);
+            if (fEngine->PortRegister(fClientControl.fRefNum, name, JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)CaptureDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
+                jack_error("driver: cannot register port for %s", name);
+                return -1;
+            }
+            capture_ports[i] = port_index;
+        }
+
+        for (int i = 0; i < card->PlaybackChannels(); i++) {
+            snprintf(name, sizeof(name), "%s:playback_%s_%d", fClientControl.fName, card->Name().c_str(), i + 1);
+            if (fEngine->PortRegister(fClientControl.fRefNum, name, JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
+                jack_error("driver: cannot register port for %s", name);
+                return -1;
+            }
+            playback_ports[i] = port_index;
+        }
+    }
+
     UpdateLatencies();
 
     if (alsa_driver->midi) {
@@ -254,6 +285,16 @@ int JackAlsaDriver::Attach()
 int JackAlsaDriver::Detach()
 {
     alsa_driver_t* alsa_driver = (alsa_driver_t*)fDriver;
+
+    for (size_t c = 0; c < fSecondaryCards.size(); c++) {
+        JackAlsaSecondaryCard* card = fSecondaryCards[c];
+        for (int i = 0; i < card->CaptureChannels(); i++) {
+            fEngine->PortUnRegister(fClientControl.fRefNum, card->CapturePorts()[i]);
+        }
+        for (int i = 0; i < card->PlaybackChannels(); i++) {
+            fEngine->PortUnRegister(fClientControl.fRefNum, card->PlaybackPorts()[i]);
+        }
+    }
     if (alsa_driver->midi)
         (alsa_driver->midi->detach)(alsa_driver->midi);
 
@@ -347,7 +388,8 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
                          const char* playback_driver_name,
                          jack_nframes_t capture_latency,
                          jack_nframes_t playback_latency,
-                         const char* midi_driver_name)
+                         const char* midi_driver_name,
+                         const std::vector<JackAlsaSecondaryConfig>& secondaries)
 {
     // Generic JackAudioDriver Open
     if (JackAudioDriver::Open(nframes, samplerate, capturing, playing,
@@ -417,6 +459,39 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
     // ALSA driver may have changed the in/out values
     fCaptureChannels = ((alsa_driver_t *)fDriver)->capture_nchannels;
     fPlaybackChannels = ((alsa_driver_t *)fDriver)->playback_nchannels;
+
+    alsa_driver_t* primary = (alsa_driver_t*)fDriver;
+    for (size_t i = 0; i < secondaries.size(); i++) {
+        const JackAlsaSecondaryConfig& cfg = secondaries[i];
+
+        for (size_t j = 0; j < i; j++) {
+            if (secondaries[j].name == cfg.name) {
+                jack_error("secondary ALSA card name '%s' is used more than once", cfg.name.c_str());
+                Close();
+                return -1;
+            }
+        }
+
+        if (cfg.capture_device == capture_driver_name || cfg.capture_device == playback_driver_name ||
+            cfg.playback_device == capture_driver_name || cfg.playback_device == playback_driver_name) {
+            jack_error("secondary ALSA card '%s' uses a device already used by the primary card", cfg.name.c_str());
+            Close();
+            return -1;
+        }
+
+        JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg);
+        if (card->Open(primary->frames_per_cycle, primary->frame_rate, primary->user_nperiods,
+                       fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
+            delete card;
+            if (cfg.optional) {
+                jack_error("skipping optional secondary ALSA card '%s'", cfg.name.c_str());
+                continue;
+            }
+            Close();
+            return -1;
+        }
+        fSecondaryCards.push_back(card);
+    }
     if (JackServerGlobals::on_device_reservation_loop != NULL) {
         device_reservation_loop_running = true;
         if (JackPosixThread::StartImp(&fReservationLoopThread, 0, 0, on_device_reservation_loop, NULL) != 0) {
@@ -431,6 +506,11 @@ int JackAlsaDriver::Close()
 {
     // Generic audio driver close
     int res = JackAudioDriver::Close();
+
+    for (size_t i = 0; i < fSecondaryCards.size(); i++) {
+        delete fSecondaryCards[i];
+    }
+    fSecondaryCards.clear();
 
     if (fDriver) {
         alsa_driver_delete((alsa_driver_t*)fDriver);
@@ -467,13 +547,33 @@ int JackAlsaDriver::Start()
         res = alsa_driver_start((alsa_driver_t *)fDriver);
         if (res < 0) {
             JackAudioDriver::Stop();
+        } else {
+            for (size_t i = 0; i < fSecondaryCards.size(); i++) {
+                if (fSecondaryCards[i]->Start() < 0) {
+                    res = -1;
+                    break;
+                }
+            }
+            if (res < 0) {
+                StopSecondaryCards();
+                alsa_driver_stop((alsa_driver_t *)fDriver);
+                JackAudioDriver::Stop();
+            }
         }
     }
     return res;
 }
 
+void JackAlsaDriver::StopSecondaryCards()
+{
+    for (size_t i = 0; i < fSecondaryCards.size(); i++) {
+        fSecondaryCards[i]->Stop();
+    }
+}
+
 int JackAlsaDriver::Stop()
 {
+    StopSecondaryCards();
     int res = alsa_driver_stop((alsa_driver_t *)fDriver);
     if (JackAudioDriver::Stop() < 0) {
         res = -1;
@@ -510,12 +610,28 @@ retry:
     // Has to be done before read
     JackDriver::CycleIncTime();
 
-    return alsa_driver_read((alsa_driver_t *)fDriver, fEngineControl->fBufferSize);
+    int res = alsa_driver_read((alsa_driver_t *)fDriver, fEngineControl->fBufferSize);
+    if (res < 0) {
+        return res;
+    }
+
+    for (size_t i = 0; i < fSecondaryCards.size(); i++) {
+        fSecondaryCards[i]->ReadToPorts(fGraphManager, fEngineControl->fBufferSize);
+    }
+    return 0;
 }
 
 int JackAlsaDriver::Write()
 {
-    return alsa_driver_write((alsa_driver_t *)fDriver, fEngineControl->fBufferSize);
+    int res = alsa_driver_write((alsa_driver_t *)fDriver, fEngineControl->fBufferSize);
+    if (res < 0) {
+        return res;
+    }
+
+    for (size_t i = 0; i < fSecondaryCards.size(); i++) {
+        fSecondaryCards[i]->WriteFromPorts(fGraphManager, fEngineControl->fBufferSize);
+    }
+    return 0;
 }
 
 void JackAlsaDriver::ReadInputAux(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread)
@@ -965,7 +1081,8 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
     // Special open for ALSA driver...
     if (alsa_driver->Open(frames_per_interrupt, user_nperiods, srate, hw_monitoring, hw_metering, capture, playback, dither, soft_mode, monitor,
                           user_capture_nchnls, user_playback_nchnls, shorts_first, capture_pcm_name, playback_pcm_name,
-                          systemic_input_latency, systemic_output_latency, midi_driver) == 0) {
+                          systemic_input_latency, systemic_output_latency, midi_driver,
+                          std::vector<Jack::JackAlsaSecondaryConfig>()) == 0) {
         return threaded_driver;
     } else {
         delete threaded_driver; // Delete the decorated driver

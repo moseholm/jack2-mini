@@ -24,7 +24,11 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAudioDriver.h"
 #include "JackThreadedDriver.h"
 #include "JackTime.h"
+#include "JackAlsaSecondaryCard.h"
+#include "JackAlsaSecondaryConfig.h"
 #include "alsa_driver.h"
+
+#include <vector>
 
 namespace Jack
 {
@@ -40,8 +44,10 @@ class JackAlsaDriver : public JackAudioDriver
 
         jack_driver_t* fDriver;
         jack_native_thread_t fReservationLoopThread;
+        std::vector<JackAlsaSecondaryCard*> fSecondaryCards;
 
         void UpdateLatencies();
+        void StopSecondaryCards();
 
     public:
 
@@ -68,7 +74,8 @@ class JackAlsaDriver : public JackAudioDriver
                  const char* playback_driver_name,
                  jack_nframes_t capture_latency,
                  jack_nframes_t playback_latency,
-                 const char* midi_driver_name);
+                 const char* midi_driver_name,
+                 const std::vector<JackAlsaSecondaryConfig>& secondaries);
 
         int Close();
         int Attach();
