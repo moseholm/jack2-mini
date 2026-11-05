@@ -154,6 +154,7 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         void NotifyGraphReorder();
         void NotifyBufferSize(jack_nframes_t buffer_size);
         void NotifySampleRate(jack_nframes_t sample_rate);
+        void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, int direction);
         void NotifyFreewheel(bool onoff);
         void NotifyQuit();
 

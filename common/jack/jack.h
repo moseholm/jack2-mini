@@ -456,6 +456,22 @@ int jack_set_sample_rate_callback (jack_client_t *client,
                                    void *arg) JACK_OPTIONAL_WEAK_EXPORT;
 
 /**
+ * Tell the JACK server to call @a callback when a secondary ALSA card
+ * changes its sample rate.  Only the secondary cards are reported; the
+ * primary card's rate is fixed while secondary cards are in use.
+ *
+ * The callback is called from a non-real-time thread, after the new rate is
+ * active.  A failed change is not reported.
+ *
+ * NOTE: this function cannot be called while the client is activated.
+ *
+ * @return 0 on success, otherwise a non-zero error code
+ */
+int jack_set_secondary_sample_rate_callback (jack_client_t *client,
+                                             JackSecondarySampleRateCallback callback,
+                                             void *arg) JACK_OPTIONAL_WEAK_EXPORT;
+
+/**
  * Tell the JACK server to call @a client_registration_callback whenever a
  * client is registered or unregistered, passing @a arg as a parameter.
  *

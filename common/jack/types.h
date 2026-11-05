@@ -363,6 +363,28 @@ typedef int (*JackBufferSizeCallback)(jack_nframes_t nframes, void *arg);
 typedef int (*JackSampleRateCallback)(jack_nframes_t nframes, void *arg);
 
 /**
+ * Direction bits passed to a JackSecondarySampleRateCallback.  A card whose
+ * capture and playback share one clock reports both bits in one call.
+ */
+enum JackSecondaryRateDirection {
+    JackSecondaryRateCapture  = 0x1,
+    JackSecondaryRatePlayback = 0x2
+};
+
+/**
+ * Prototype for the client supplied function that is called when a
+ * secondary ALSA card changes sample rate.
+ *
+ * @param rate the rate the card now runs at, in Hz
+ * @param card the card's name, as given in its --secondary configuration
+ * @param direction a bitmask of JackSecondaryRateDirection values
+ * @param arg the pointer passed to jack_set_secondary_sample_rate_callback()
+ *
+ * @return zero on success, non-zero on error
+ */
+typedef int (*JackSecondarySampleRateCallback)(jack_nframes_t rate, const char *card, int direction, void *arg);
+
+/**
  * Prototype for the client supplied function that is called
  * whenever a port is registered or unregistered.
  *

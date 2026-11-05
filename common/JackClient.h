@@ -58,6 +58,7 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         JackThreadInitCallback fInit;
         JackBufferSizeCallback fBufferSize;
         JackSampleRateCallback fSampleRate;
+        JackSecondarySampleRateCallback fSecondarySampleRate;
         JackClientRegistrationCallback fClientRegistration;
         JackFreewheelCallback fFreewheel;
         JackPortRegistrationCallback fPortRegistration;
@@ -78,6 +79,7 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         void* fInitArg;
         void* fBufferSizeArg;
         void* fSampleRateArg;
+        void* fSecondarySampleRateArg;
         void* fClientRegistrationArg;
         void* fFreewheelArg;
         void* fPortRegistrationArg;
@@ -183,6 +185,7 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         virtual int SetGraphOrderCallback(JackGraphOrderCallback callback, void* arg);
         virtual int SetBufferSizeCallback(JackBufferSizeCallback callback, void* arg);
         virtual int SetSampleRateCallback(JackBufferSizeCallback callback, void* arg);
+        virtual int SetSecondarySampleRateCallback(JackSecondarySampleRateCallback callback, void* arg);
         virtual int SetClientRegistrationCallback(JackClientRegistrationCallback callback, void* arg);
         virtual int SetFreewheelCallback(JackFreewheelCallback callback, void* arg);
         virtual int SetPortRegistrationCallback(JackPortRegistrationCallback callback, void* arg);

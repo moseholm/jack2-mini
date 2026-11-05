@@ -382,6 +382,11 @@ void JackEngine::NotifyGraphReorder()
     NotifyClients(kGraphOrderCallback, false, "", 0, 0);
 }
 
+void JackEngine::NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, int direction)
+{
+    NotifyClients(kSecondarySampleRateCallback, false, card, sample_rate, direction);
+}
+
 void JackEngine::NotifyBufferSize(jack_nframes_t buffer_size)
 {
     NotifyClients(kBufferSizeCallback, true, "", buffer_size, 0);
