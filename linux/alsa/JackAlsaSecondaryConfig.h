@@ -32,6 +32,17 @@ enum JackAlsaSecondaryMode {
 };
 
 /*
+ * Sample format for a secondary card.  Auto lets the ALSA core choose, which
+ * prefers 32-bit float.  The numbers match ALSA_SAMPLE_FORMAT_* in alsa_driver.h.
+ */
+enum JackAlsaSampleFormat {
+    SampleFormatAuto = 0,
+    SampleFormatFloat = 1,
+    SampleFormatS32 = 2,
+    SampleFormatS16 = 3
+};
+
+/*
  * Clock handling for a secondary card.  Async (default) runs a drift
  * controller that keeps the card's ring near its target fill.  Sync holds a
  * fixed ratio, which is only correct when the card's clock is locked to the
@@ -66,6 +77,7 @@ struct JackAlsaSecondaryConfig {
     bool optional;
     bool follow_hw_rate;
     JackAlsaSecondaryClock clock;
+    JackAlsaSampleFormat sample_format;
 
     // Optional native ALSA control element names.  Empty means auto-probe.
     std::string capture_rate_ctl;

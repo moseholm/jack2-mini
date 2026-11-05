@@ -48,6 +48,7 @@ Each card is a `;`-separated list of `key=value` pairs. A bare device name
 | `rate` | the primary rate | Stream rate. The device may give a different rate; see [Rate changes](#rate-changes). |
 | `nperiods` | the primary's `-n` | Periods in the ALSA buffer. At least 2. |
 | `clock` | `async` | `async` runs a drift controller; `sync` keeps a fixed ratio. See [Clocks](#clocks). |
+| `format` | `auto` | Sample format: `auto` (the ALSA core prefers 32-bit float), `float`, `s32` or `s16`. Set `s32` or `s16` when a device mishandles float. |
 | `optional` | `false` | If the card cannot be opened, skip it instead of failing the server. |
 | `follow_hw_rate` | `false` | Allow a capture rate change to reopen the card. See [Rate changes](#rate-changes). |
 | `capture_rate_ctl`, `playback_rate_ctl` | auto | Name of a native ALSA control to use as the rate control. See [Rate controls](#rate-controls). |
@@ -254,5 +255,17 @@ jackd -d alsa -d hw:0 --secondary "name=loop;device=hw:Loopback,0,0;mode=duplex"
 amixer -c Loopback cset name='JACK Secondary Playback Rate' 44100
 ```
 
-Loopback devices may refuse some rates or periods; the log says why. This
-procedure has not been run yet.
+Loopback devices may refuse some rates or periods; the log says why.
+
+What was found on `snd-aloop` (kernel 7.0):
+
+- Playback through a secondary card reaches the loopback's capture side:
+  a 1 kHz tone played through the card was read back with a peak of 0.76 by
+  `arecord`.
+- Reading the loopback's capture side through the ALSA core's mmap path returns
+  silence, whether or not the tone is present. Plain read/write capture of the
+  same device returns the tone. This also happens for the primary card, so it is
+  a property of the loopback's mmap capture, not of the secondary-card code. A
+  duplex or capture-only loopback therefore cannot validate the capture path.
+- 32-bit float does not carry data through the loopback at all, which is why the
+  `format` key exists. Use `format=s32` on the loopback.

@@ -35,7 +35,8 @@ JackAlsaSecondaryConfig::JackAlsaSecondaryConfig()
       nperiods(0),
       optional(false),
       follow_hw_rate(false),
-      clock(SecondaryClockAsync)
+      clock(SecondaryClockAsync),
+      sample_format(SampleFormatAuto)
 {}
 
 static std::string Trim(const std::string& text)
@@ -140,6 +141,22 @@ static bool ParseClock(const std::string& value, JackAlsaSecondaryClock* clock)
     return true;
 }
 
+static bool ParseFormat(const std::string& value, JackAlsaSampleFormat* format)
+{
+    if (value == "auto") {
+        *format = SampleFormatAuto;
+    } else if (value == "float") {
+        *format = SampleFormatFloat;
+    } else if (value == "s32") {
+        *format = SampleFormatS32;
+    } else if (value == "s16") {
+        *format = SampleFormatS16;
+    } else {
+        return false;
+    }
+    return true;
+}
+
 static bool ParseMode(const std::string& value, JackAlsaSecondaryMode* mode)
 {
     if (value == "duplex" || value == "both") {
@@ -207,6 +224,11 @@ static bool ApplyField(JackAlsaSecondaryConfig* config,
     } else if (key == "follow_hw_rate") {
         if (!ParseBool(value, &config->follow_hw_rate)) {
             *error = "invalid follow_hw_rate value '" + value + "'";
+            return false;
+        }
+    } else if (key == "format") {
+        if (!ParseFormat(value, &config->sample_format)) {
+            *error = "invalid format '" + value + "' (use auto, float, s32 or s16)";
             return false;
         }
     } else if (key == "clock") {
