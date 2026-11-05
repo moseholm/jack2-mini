@@ -209,11 +209,20 @@ alsa_driver_generic_hardware (alsa_driver_t *driver)
 
 static int
 alsa_driver_hw_specific (alsa_driver_t *driver, int hw_monitoring,
-			 int hw_metering)
+			 int hw_metering, int generic_hw)
 {
 	int err;
 
-	if (!strcmp(driver->alsa_driver, "RME9652")) {
+	/*
+	 * Secondary cards must always use the generic backend: the card
+	 * specific backends manage global clock configuration and are only
+	 * appropriate for the primary card.
+	 */
+	if (generic_hw) {
+		if ((err = alsa_driver_generic_hardware (driver)) != 0) {
+			return err;
+		}
+	} else if (!strcmp(driver->alsa_driver, "RME9652")) {
 		if ((err = alsa_driver_hammerfall_hardware (driver)) != 0) {
 			return err;
 		}
@@ -1181,7 +1190,8 @@ alsa_driver_stop (alsa_driver_t *driver)
 */
 
 // JACK2
-    ClearOutput();
+    if (driver->callbacks.clear_output)
+        driver->callbacks.clear_output (driver->callbacks.arg);
 
 	if (driver->playback_handle) {
 		if ((err = snd_pcm_drop (driver->playback_handle)) < 0) {
@@ -1224,7 +1234,9 @@ alsa_driver_restart (alsa_driver_t *driver)
  	if ((res = driver->nt_stop((struct _jack_driver_nt *) driver))==0)
 		res = driver->nt_start((struct _jack_driver_nt *) driver);
     */
-    res = Restart();
+    res = (driver->callbacks.restart)
+        ? driver->callbacks.restart (driver->callbacks.arg)
+        : -1;
 	driver->xrun_recovery = 0;
 
 	if (res && driver->midi)
@@ -1450,7 +1462,8 @@ alsa_driver_wait (alsa_driver_t *driver, int extra_fd, int *status, float
 		}
 
         // JACK2
-        SetTime(poll_ret);
+        if (driver->callbacks.set_time)
+            driver->callbacks.set_time (driver->callbacks.arg, poll_ret);
 
 		if (extra_fd < 0) {
 			if (driver->poll_next && poll_ret > driver->poll_next) {
@@ -1666,7 +1679,10 @@ alsa_driver_read (alsa_driver_t *driver, jack_nframes_t nframes)
 				buf + nread, contiguous);
 		}
 */
-        ReadInput(orig_nframes, contiguous, nread);
+        // JACK2
+        if (driver->callbacks.read_input)
+            driver->callbacks.read_input (driver->callbacks.arg,
+                                          orig_nframes, contiguous, nread);
 
 		if ((err = snd_pcm_mmap_commit (driver->capture_handle,
 				offset, contiguous)) < 0) {
@@ -1733,7 +1749,8 @@ alsa_driver_write (alsa_driver_t* driver, jack_nframes_t nframes)
 		}
 	}
 */
-    MonitorInput();
+    if (driver->callbacks.monitor_input)
+        driver->callbacks.monitor_input (driver->callbacks.arg);
 
 	if (driver->hw_monitoring) {
 		if ((driver->hw->input_monitor_mask
@@ -1784,7 +1801,9 @@ alsa_driver_write (alsa_driver_t* driver, jack_nframes_t nframes)
 */
 
         // JACK2
-        WriteOutput(orig_nframes, contiguous, nwritten);
+        if (driver->callbacks.write_output)
+            driver->callbacks.write_output (driver->callbacks.arg,
+                                            orig_nframes, contiguous, nwritten);
 
 		if (!bitset_empty (driver->channels_not_done)) {
 			alsa_driver_silence_untouched_channels (driver,
@@ -1993,7 +2012,8 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 		 int shorts_first,
 		 jack_nframes_t capture_latency,
 		 jack_nframes_t playback_latency,
-		 alsa_midi_t *midi_driver
+		 alsa_midi_t *midi_driver,
+		 int generic_hw
 		 )
 {
 	int err;
@@ -2085,7 +2105,7 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 		return NULL;
 	}
 
-	alsa_driver_hw_specific (driver, hw_monitoring, hw_metering);
+	alsa_driver_hw_specific (driver, hw_monitoring, hw_metering, generic_hw);
 
 	if (playing) {
 		if (snd_pcm_open (&driver->playback_handle,
@@ -2273,6 +2293,17 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 	driver->client = client;
 
 	return (jack_driver_t *) driver;
+}
+
+void
+alsa_driver_set_callbacks (alsa_driver_t *driver,
+			   const alsa_driver_callbacks_t *callbacks)
+{
+	if (callbacks) {
+		driver->callbacks = *callbacks;
+	} else {
+		memset (&driver->callbacks, 0, sizeof (driver->callbacks));
+	}
 }
 
 int
