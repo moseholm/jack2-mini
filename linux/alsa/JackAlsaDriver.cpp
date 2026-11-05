@@ -492,6 +492,23 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         }
         fSecondaryCards.push_back(card);
     }
+
+    if (!fSecondaryCards.empty()) {
+        fReconfigWorker = new JackAlsaReconfigWorker(this);
+        fControlMonitor = new JackAlsaControlMonitor(fReconfigWorker);
+        for (size_t i = 0; i < fSecondaryCards.size(); i++) {
+            JackAlsaSecondaryCard* card = fSecondaryCards[i];
+            for (int d = 0; d < 2; d++) {
+                JackAlsaRateDirection dir = (JackAlsaRateDirection)d;
+                if (card->RateElementValid(dir) &&
+                    fControlMonitor->AddWatch((int)i, card->ControlName(), card->RateElement(dir), dir) < 0) {
+                    jack_error("secondary card '%s': rate control changes will not be seen",
+                               card->Name().c_str());
+                }
+            }
+        }
+    }
+
     if (JackServerGlobals::on_device_reservation_loop != NULL) {
         device_reservation_loop_running = true;
         if (JackPosixThread::StartImp(&fReservationLoopThread, 0, 0, on_device_reservation_loop, NULL) != 0) {
@@ -506,6 +523,12 @@ int JackAlsaDriver::Close()
 {
     // Generic audio driver close
     int res = JackAudioDriver::Close();
+
+    // The monitor and worker refer to the cards, so they go first.
+    delete fControlMonitor;
+    fControlMonitor = NULL;
+    delete fReconfigWorker;
+    fReconfigWorker = NULL;
 
     for (size_t i = 0; i < fSecondaryCards.size(); i++) {
         delete fSecondaryCards[i];
@@ -558,6 +581,8 @@ int JackAlsaDriver::Start()
                 StopSecondaryCards();
                 alsa_driver_stop((alsa_driver_t *)fDriver);
                 JackAudioDriver::Stop();
+            } else {
+                StartControlMonitoring();
             }
         }
     }
@@ -571,8 +596,52 @@ void JackAlsaDriver::StopSecondaryCards()
     }
 }
 
+void JackAlsaDriver::StartControlMonitoring()
+{
+    if (fControlMonitor == NULL) {
+        return;
+    }
+    if (fReconfigWorker->Start() < 0 || fControlMonitor->Start() < 0) {
+        // Losing rate-control events leaves the cards running at their current
+        // rates; the primary card is unaffected.
+        jack_error("secondary card rate controls are not being monitored");
+    }
+}
+
+void JackAlsaDriver::StopControlMonitoring()
+{
+    if (fControlMonitor == NULL) {
+        return;
+    }
+    fControlMonitor->Stop();
+    fReconfigWorker->Stop();
+}
+
+void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long value)
+{
+    if (card < 0 || card >= (int)fSecondaryCards.size()) {
+        return;
+    }
+    JackAlsaSecondaryCard* secondary = fSecondaryCards[card];
+    long current = (long)secondary->Rate();
+    if (value == current) {
+        // Our own write echoing back, or a no-op.
+        return;
+    }
+
+    // Runtime rate changes are not implemented yet, so the requested value is
+    // rejected and the element is restored to the current rate.
+    jack_error("secondary card '%s': %s rate change to %ld Hz is not supported yet, keeping %ld Hz",
+               secondary->Name().c_str(), (dir == RateCapture) ? "capture" : "playback", value, current);
+    if (secondary->RateElement(dir).writable && secondary->WriteRate(dir, current) < 0) {
+        jack_error("secondary card '%s': cannot restore the %s rate control",
+                   secondary->Name().c_str(), (dir == RateCapture) ? "capture" : "playback");
+    }
+}
+
 int JackAlsaDriver::Stop()
 {
+    StopControlMonitoring();
     StopSecondaryCards();
     int res = alsa_driver_stop((alsa_driver_t *)fDriver);
     if (JackAudioDriver::Stop() < 0) {
