@@ -42,6 +42,43 @@ the ``dummy``, ``loopback`` and ``proxy`` drivers.
 
 For further information, see the JACK `homepage <https://jackaudio.org/>`_ and `wiki <https://github.com/jackaudio/jackaudio.github.com/wiki>`_. There are also the #jack and #lad chat channels on `Libera Chat IRC <https://web.libera.chat/#jack>`_.
 
+Secondary ALSA cards
+====================
+
+The ALSA driver can use additional sound cards beside the primary one. The
+primary card drives the graph; each secondary card is a capture, playback or
+duplex device that is resampled to the primary rate::
+
+    jackd -d alsa -d hw:0 --secondary "name=usb1;device=hw:1;mode=capture"
+    jackd -d alsa -d hw:0 --secondary-file cards.conf
+
+``--secondary`` may be repeated. Its value is a ``;``-separated list of
+``key=value`` pairs: ``name``, ``device``, ``capture_device``,
+``playback_device``, ``mode`` (``duplex``, ``capture`` or ``playback``),
+``channels``, ``rate``, ``nperiods``, ``clock`` (``async``, the default, or
+``sync``), ``optional``, ``follow_hw_rate``, ``capture_rate_ctl`` and
+``playback_rate_ctl``. ``--secondary-file`` reads one card per line from a file,
+with ``#`` comments.
+
+Ports are ``system:capture_<name>_<n>`` and ``system:playback_<name>_<n>``.
+
+Each secondary card has a JACK rate control, ``JACK Secondary Capture Rate`` or
+``JACK Secondary Playback Rate``, on its ALSA control device. Applications read it
+to see the current rate and write it to request a change. A native rate control
+can be named in the configuration instead.
+
+Limitations:
+
+- Only one JACK server may use a given ALSA card. A card may serve only one
+  device of the server, and a secondary card must differ from the primary card.
+- A rate change reopens the card with a period of
+  ``primary buffer size * new rate / primary rate`` frames. If the device refuses
+  that period, the change is refused and the previous rate kept. The primary
+  buffer size is never changed for a secondary card's sake.
+- A capture rate change is applied only with ``follow_hw_rate=1``; otherwise it is
+  logged and the card keeps its rate.
+- Secondary ports report no latency yet.
+
 Building
 ========
 
