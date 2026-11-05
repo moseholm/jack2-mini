@@ -200,7 +200,7 @@ set(JACK_ALSARAWMIDI_SOURCES
     linux/alsarawmidi/JackALSARawMidiUtil.cpp)
 
 jack_add_driver(alsa ${JACK_ALSA_SOURCES})
-target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA m)
+target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA m ${CMAKE_DL_LIBS})
 # The vendored PipeWire resampler is built with its precomputed filter tables
 # disabled and a small SPA compatibility shim in place of the SPA headers.
 target_include_directories(jack_alsa PRIVATE
