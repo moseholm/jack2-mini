@@ -28,6 +28,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 using namespace Jack;
@@ -203,6 +204,37 @@ static void TestResamplerFactories()
     delete r;
 }
 
+static void TestResamplerPlugin()
+{
+    printf("resampler: a plugin is loaded by name from JACK_RESAMPLER_PATH\n");
+    CHECK(JackResamplerFactory::Find("passthrough_test") == NULL);   // path not set yet
+    setenv("JACK_RESAMPLER_PATH", JACK_TEST_PLUGIN_DIR, 1);
+    JackResamplerFactory* f = JackResamplerFactory::Find("passthrough_test");
+    CHECK(f != NULL);
+    CHECK(f != NULL && strcmp(f->Name(), "passthrough_test") == 0);
+    CHECK(JackResamplerFactory::Find("passthrough_test") == f);   // loaded once
+    CHECK(JackResamplerFactory::Find("no_such_plugin") == NULL);
+    CHECK(JackResamplerFactory::Find("pipewire") == JackResamplerFactory::Default());   // built-in wins
+
+    JackResamplerParams p = { 2, 48000, 44100, -1 };
+    JackResampler* r = f->Create(p);
+    CHECK(r != NULL);
+    if (r != NULL) {
+        float in0[3] = { 1, 2, 3 }, in1[3] = { 4, 5, 6 };
+        const float* in[2] = { in0, in1 };
+        float o0[3] = { 0 }, o1[3] = { 0 };
+        float* out[2] = { o0, o1 };
+        unsigned int in_len = 3, out_len = 3;
+        r->Process(in, &in_len, out, &out_len);
+        CHECK(in_len == 3 && out_len == 3);
+        CHECK(o0[2] == 3 && o1[0] == 4);
+        delete r;
+    }
+    JackResamplerParams q = { 3, 48000, 44100, -1 };
+    CHECK(f->Create(q) == NULL);   // the plugin refuses three channels
+    unsetenv("JACK_RESAMPLER_PATH");
+}
+
 static void TestConverterRates()
 {
     printf("converter: 44.1 kHz capture and 48 kHz playback keep exact counts\n");
@@ -339,6 +371,7 @@ int main()
     TestRing();
     TestConverterDI();
     TestResamplerFactories();
+    TestResamplerPlugin();
     TestConverterRates();
     TestDriftController();
     TestDriftLimits();

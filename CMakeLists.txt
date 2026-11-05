@@ -272,6 +272,16 @@ if(JACK_BUILD_TESTS)
     target_compile_definitions(jack_alsa_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE RESAMPLE_DISABLE_PRECOMP)
     target_link_libraries(jack_alsa_unit PRIVATE jackserver m)
     add_test(NAME alsa_secondary_unit COMMAND jack_alsa_unit)
+
+    # A test-only resampler plugin, loaded by name from JACK_RESAMPLER_PATH.
+    add_library(passthrough_test MODULE tests/alsa_test_resampler_plugin.c)
+    target_include_directories(passthrough_test PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa")
+    set_target_properties(passthrough_test PROPERTIES
+        PREFIX "" LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/plugins")
+    add_dependencies(jack_alsa_unit passthrough_test)
+    target_compile_definitions(jack_alsa_unit PRIVATE
+        JACK_TEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/tests/plugins")
 endif()
 
 message(STATUS "JACK ${JACK_VERSION}")
