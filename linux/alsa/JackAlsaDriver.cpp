@@ -458,7 +458,8 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
                                capture_latency,
                                playback_latency,
                                midi,
-                               0);
+                               0,
+                               ALSA_SAMPLE_FORMAT_ANY);
     if (!fDriver) {
         Close();
         return -1;

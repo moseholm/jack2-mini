@@ -62,6 +62,12 @@ typedef void (*WriteCopyFunction) (char *dst, jack_default_audio_sample_t *src,
  * carries its own callback table so that one process can drive the primary
  * card and any number of secondary cards independently.
  */
+/* Sample format requests for alsa_driver_new(): the core tries only the requested format. */
+#define ALSA_SAMPLE_FORMAT_ANY   0
+#define ALSA_SAMPLE_FORMAT_FLOAT 1
+#define ALSA_SAMPLE_FORMAT_S32   2
+#define ALSA_SAMPLE_FORMAT_S16   3
+
 typedef struct _alsa_driver_callbacks {
     void *arg;
 
@@ -165,6 +171,9 @@ typedef struct _alsa_driver {
 
     alsa_midi_t *midi;
     int xrun_recovery;
+
+    // ALSA_SAMPLE_FORMAT_ANY lets the core choose; otherwise only the requested format is tried.
+    int sample_format_request;
 
     alsa_driver_callbacks_t callbacks;
 
@@ -271,7 +280,8 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 		 jack_nframes_t capture_latency,
 		 jack_nframes_t playback_latency,
 		 alsa_midi_t *midi_driver,
-		 int generic_hw
+		 int generic_hw,
+		 int sample_format
 		 );
 
 void

@@ -489,31 +489,50 @@ alsa_driver_configure_stream (alsa_driver_t *driver, char *device_name,
 		}
 	}
 
-	format = (sample_width == 4) ? 0 : NUMFORMATS - 1;
-
-	while (1) {
-		if ((err = snd_pcm_hw_params_set_format (
-			     handle, hw_params, formats[format].format)) < 0) {
-
-			if ((sample_width == 4
-			     ? format++ >= NUMFORMATS - 1
-			     : format-- <= 0)) {
-				jack_error ("Sorry. The audio interface \"%s\""
-					    " doesn't support any of the"
-					    " hardware sample formats that"
-					    " JACK's alsa-driver can use.",
-					    device_name);
-				return -1;
-			}
-		} else {
-			if (formats[format].swapped) {
-				driver->quirk_bswap = 1;
-			} else {
-				driver->quirk_bswap = 0;
-			}
-			jack_info ("ALSA: final selected sample format for %s: %s", stream_name, formats[format].Name);
-			break;
+	if (driver->sample_format_request != ALSA_SAMPLE_FORMAT_ANY) {
+		/* formats[] order: 0 = float, 1 = S32_LE, 7 = S16_LE */
+		int wanted;
+		switch (driver->sample_format_request) {
+		case ALSA_SAMPLE_FORMAT_FLOAT: wanted = 0; break;
+		case ALSA_SAMPLE_FORMAT_S32:   wanted = 1; break;
+		default:                       wanted = 7; break;
 		}
+		if ((err = snd_pcm_hw_params_set_format (handle, hw_params,
+							 formats[wanted].format)) < 0) {
+			jack_error ("ALSA: %s does not support the requested %s sample format",
+				    device_name, formats[wanted].Name);
+			return -1;
+		}
+		driver->quirk_bswap = formats[wanted].swapped ? 1 : 0;
+		jack_info ("ALSA: final selected sample format for %s: %s (requested)", stream_name, formats[wanted].Name);
+	} else {
+		format = (sample_width == 4) ? 0 : NUMFORMATS - 1;
+
+		while (1) {
+			if ((err = snd_pcm_hw_params_set_format (
+				     handle, hw_params, formats[format].format)) < 0) {
+
+				if ((sample_width == 4
+				     ? format++ >= NUMFORMATS - 1
+				     : format-- <= 0)) {
+					jack_error ("Sorry. The audio interface \"%s\""
+						    " doesn't support any of the"
+						    " hardware sample formats that"
+						    " JACK's alsa-driver can use.",
+						    device_name);
+					return -1;
+				}
+			} else {
+				if (formats[format].swapped) {
+					driver->quirk_bswap = 1;
+				} else {
+					driver->quirk_bswap = 0;
+				}
+				jack_info ("ALSA: final selected sample format for %s: %s", stream_name, formats[format].Name);
+				break;
+			}
+		}
+
 	}
 
 	frame_rate = driver->frame_rate ;
@@ -2013,7 +2032,8 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 		 jack_nframes_t capture_latency,
 		 jack_nframes_t playback_latency,
 		 alsa_midi_t *midi_driver,
-		 int generic_hw
+		 int generic_hw,
+		 int sample_format
 		 )
 {
 	int err;
@@ -2099,6 +2119,7 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 
 	driver->midi = midi_driver;
 	driver->xrun_recovery = 0;
+	driver->sample_format_request = sample_format;
 
 	if (alsa_driver_check_card_type (driver)) {
 		alsa_driver_delete (driver);
