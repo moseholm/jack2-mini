@@ -101,6 +101,17 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         std::vector<jack_port_id_t> fPlaybackPorts;
 
         void FreeBuffers();
+        void FreeStreamObjects();
+        int OpenStream(jack_nframes_t requested_rate, jack_nframes_t primary_buffer_size,
+                       jack_nframes_t primary_rate);
+        int BuildBuffers(jack_nframes_t primary_buffer_size, jack_nframes_t primary_rate);
+        bool ReopenAt(jack_nframes_t rate, int capture_channels, int playback_channels);
+        bool WaitForRTCycles(unsigned int cycles);
+
+        jack_nframes_t fPrimaryBufferSize;
+        jack_nframes_t fPrimaryRate;
+        std::atomic<bool> fSilent;
+        const std::atomic<uint64_t>* fRTEpoch;
         void UpdateDrift(bool capture_side);
         void CloseControls();
 
@@ -160,6 +171,15 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         bool IsRunning() const { return fRunning.load(); }
         // Clears resampler history and drift state.  Called by the driver after a primary xrun.
         void ResetResampling();
+
+        // Gives the card the driver's RT cycle counter, used to know when the RT
+        // thread has stopped touching the card during a reconfiguration.
+        void SetRTEpoch(const std::atomic<uint64_t>* epoch) { fRTEpoch = epoch; }
+
+        // Changes the stream rate: stops the card, reopens the ALSA stream and rebuilds
+        // its buffers, converters and rings, then restarts it if it was running.  If the
+        // new rate cannot be opened the previous rate is restored and -1 is returned.
+        int Reconfigure(jack_nframes_t rate);
 
         // Resolves or creates the rate elements for the enabled directions.
         int OpenControls();

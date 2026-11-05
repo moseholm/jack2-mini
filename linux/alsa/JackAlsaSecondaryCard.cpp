@@ -23,8 +23,10 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "alsa_driver.h"
 
 #include <algorithm>
+#include <chrono>
 #include <math.h>
 #include <string.h>
+#include <thread>
 
 namespace Jack
 {
@@ -83,11 +85,24 @@ JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& conf
 {
     fRateValid[RateCapture] = false;
     fRateValid[RatePlayback] = false;
+    fSilent.store(false);
+    fRTEpoch = NULL;
+    fPrimaryBufferSize = 0;
+    fPrimaryRate = 0;
 }
 
 JackAlsaSecondaryCard::~JackAlsaSecondaryCard()
 {
     Close();
+}
+
+void JackAlsaSecondaryCard::FreeStreamObjects()
+{
+    if (fAlsaDriver) {
+        alsa_driver_delete(fAlsaDriver);
+        fAlsaDriver = NULL;
+    }
+    FreeBuffers();
 }
 
 void JackAlsaSecondaryCard::FreeBuffers()
@@ -132,34 +147,12 @@ void JackAlsaSecondaryCard::FreeBuffers()
     FreeChannelBuffers(fPlaybackConvOut, fPlaybackChannels);
     fPlaybackConvOut = NULL;
 
-    fCapturePorts.clear();
-    fPlaybackPorts.clear();
 }
 
-int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
-                                jack_nframes_t primary_rate,
-                                jack_nframes_t primary_nperiods,
-                                bool realtime,
-                                int priority)
+int JackAlsaSecondaryCard::OpenStream(jack_nframes_t requested_rate,
+                                      jack_nframes_t primary_buffer_size,
+                                      jack_nframes_t primary_rate)
 {
-    if (fOpened) {
-        return 0;
-    }
-
-    fRealTime = realtime;
-    fPriority = priority;
-
-    fCaptureEnabled = (fConfig.mode != SecondaryModePlayback);
-    fPlaybackEnabled = (fConfig.mode != SecondaryModeCapture);
-
-    jack_nframes_t requested_rate = (fConfig.rate > 0) ? fConfig.rate : primary_rate;
-    fNperiods = (fConfig.nperiods > 0) ? fConfig.nperiods : primary_nperiods;
-
-    if (primary_buffer_size == 0 || primary_rate == 0) {
-        jack_error("secondary card '%s': invalid primary timing", fConfig.name.c_str());
-        return -1;
-    }
-
     const std::string& playback_device = fConfig.playback_device.empty()
                                        ? fConfig.capture_device
                                        : fConfig.playback_device;
@@ -236,15 +229,12 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
     fPlaybackChannels = fPlaybackEnabled ? fAlsaDriver->playback_nchannels : 0;
     fPeriod = fAlsaDriver->frames_per_cycle;
     fRate = fAlsaDriver->frame_rate;
+    return 0;
+}
 
-    if ((fCaptureEnabled && fCaptureChannels == 0) ||
-        (fPlaybackEnabled && fPlaybackChannels == 0)) {
-        jack_error("secondary card '%s': no usable channels", fConfig.name.c_str());
-        alsa_driver_delete(fAlsaDriver);
-        fAlsaDriver = NULL;
-        return -1;
-    }
-
+int JackAlsaSecondaryCard::BuildBuffers(jack_nframes_t primary_buffer_size,
+                                        jack_nframes_t primary_rate)
+{
     fCaptureTemp = new float*[fCaptureChannels];
     for (int i = 0; i < fCaptureChannels; i++) {
         fCaptureTemp[i] = new float[fPeriod];
@@ -332,6 +322,42 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
     callbacks.set_time = SetTimeThunk;
     callbacks.restart = RestartThunk;
     alsa_driver_set_callbacks(fAlsaDriver, &callbacks);
+    return 0;
+}
+
+int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
+                                jack_nframes_t primary_rate,
+                                jack_nframes_t primary_nperiods,
+                                bool realtime,
+                                int priority)
+{
+    if (fOpened) {
+        return 0;
+    }
+
+    fRealTime = realtime;
+    fPriority = priority;
+
+    fCaptureEnabled = (fConfig.mode != SecondaryModePlayback);
+    fPlaybackEnabled = (fConfig.mode != SecondaryModeCapture);
+
+    jack_nframes_t requested_rate = (fConfig.rate > 0) ? fConfig.rate : primary_rate;
+    fNperiods = (fConfig.nperiods > 0) ? fConfig.nperiods : primary_nperiods;
+
+    if (primary_buffer_size == 0 || primary_rate == 0) {
+        jack_error("secondary card '%s': invalid primary timing", fConfig.name.c_str());
+        return -1;
+    }
+
+    fPrimaryBufferSize = primary_buffer_size;
+    fPrimaryRate = primary_rate;
+
+    if (OpenStream(requested_rate, primary_buffer_size, primary_rate) < 0) {
+        return -1;
+    }
+    if (BuildBuffers(primary_buffer_size, primary_rate) < 0) {
+        return -1;
+    }
 
     if (OpenControls() < 0) {
         Close();
@@ -446,13 +472,9 @@ int JackAlsaSecondaryCard::Close()
 
     Stop();
     CloseControls();
-
-    if (fAlsaDriver) {
-        alsa_driver_delete(fAlsaDriver);
-        fAlsaDriver = NULL;
-    }
-
-    FreeBuffers();
+    FreeStreamObjects();
+    fCapturePorts.clear();
+    fPlaybackPorts.clear();
     fOpened = false;
     fCaptureChannels = 0;
     fPlaybackChannels = 0;
@@ -511,6 +533,91 @@ int JackAlsaSecondaryCard::Start()
     }
 
     return 0;
+}
+
+bool JackAlsaSecondaryCard::WaitForRTCycles(unsigned int cycles)
+{
+    // A cycle that was already running when fSilent was set may finish one
+    // more time, so wait for two completed cycles to be sure the RT thread
+    // has seen the flag.
+    uint64_t start = fRTEpoch->load(std::memory_order_acquire);
+    for (int i = 0; i < 2000; i++) {
+        if (fRTEpoch->load(std::memory_order_acquire) >= start + cycles) {
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return false;
+}
+
+bool JackAlsaSecondaryCard::ReopenAt(jack_nframes_t rate, int capture_channels, int playback_channels)
+{
+    if (OpenStream(rate, fPrimaryBufferSize, fPrimaryRate) < 0) {
+        return false;
+    }
+    if (fCaptureChannels != capture_channels || fPlaybackChannels != playback_channels) {
+        // The port lists are fixed, so the channel layout must not change.
+        jack_error("secondary card '%s': channel count changed at %u Hz", fConfig.name.c_str(), rate);
+        FreeStreamObjects();
+        return false;
+    }
+    if (BuildBuffers(fPrimaryBufferSize, fPrimaryRate) < 0) {
+        FreeStreamObjects();
+        return false;
+    }
+    return true;
+}
+
+int JackAlsaSecondaryCard::Reconfigure(jack_nframes_t rate)
+{
+    if (!fOpened) {
+        return -1;
+    }
+    if (rate == fRate) {
+        return 0;
+    }
+
+    jack_nframes_t old_rate = fRate;
+    int capture_channels = fCaptureChannels;
+    int playback_channels = fPlaybackChannels;
+    bool was_running = fRunning.load();
+
+    // Publish silence first, then wait until the RT thread has run past this
+    // point, so it never touches a buffer while it is being freed.
+    fSilent.store(true, std::memory_order_release);
+    if (was_running && fRTEpoch != NULL && !WaitForRTCycles(2)) {
+        jack_error("secondary card '%s': real-time thread did not reach a safe point; keeping %u Hz",
+                   fConfig.name.c_str(), old_rate);
+        fSilent.store(false, std::memory_order_release);
+        return -1;
+    }
+
+    Stop();
+    FreeStreamObjects();
+
+    bool ok = ReopenAt(rate, capture_channels, playback_channels);
+    if (!ok) {
+        jack_error("secondary card '%s': cannot run at %u Hz; restoring %u Hz",
+                   fConfig.name.c_str(), rate, old_rate);
+        ok = ReopenAt(old_rate, capture_channels, playback_channels);
+        if (!ok) {
+            // The card stays silent: it is offline until the next successful change.
+            jack_error("secondary card '%s': offline, no usable rate", fConfig.name.c_str());
+            return -1;
+        }
+    }
+
+    if (was_running && Start() < 0) {
+        jack_error("secondary card '%s': cannot restart after the rate change", fConfig.name.c_str());
+        return -1;
+    }
+
+    fSilent.store(false, std::memory_order_release);
+    if (ok && fRate == rate) {
+        jack_info("secondary card '%s': now running at %u Hz", fConfig.name.c_str(), fRate);
+        return 0;
+    }
+    return -1;
 }
 
 int JackAlsaSecondaryCard::Stop()
@@ -648,6 +755,17 @@ void JackAlsaSecondaryCard::ReadToPorts(JackGraphManager* graph_manager, jack_nf
         return;
     }
 
+    if (fSilent.load(std::memory_order_acquire)) {
+        // Reconfiguring: publish silence rather than data from a stream being rebuilt.
+        for (int i = 0; i < fCaptureChannels; i++) {
+            float* buf = (float*)graph_manager->GetBuffer(fCapturePorts[i], nframes);
+            if (buf) {
+                memset(buf, 0, sizeof(float) * nframes);
+            }
+        }
+        return;
+    }
+
     for (int i = 0; i < fCaptureChannels; i++) {
         fPortScratch[i] = (float*)graph_manager->GetBuffer(fCapturePorts[i], nframes);
         if (!fPortScratch[i]) {
@@ -680,6 +798,10 @@ void JackAlsaSecondaryCard::WriteFromPorts(JackGraphManager* graph_manager, jack
 {
     if (!fPlaybackEnabled || !fPlaybackRing ||
         fPlaybackPorts.size() < (size_t)fPlaybackChannels) {
+        return;
+    }
+
+    if (fSilent.load(std::memory_order_acquire)) {
         return;
     }
 
