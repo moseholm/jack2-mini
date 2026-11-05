@@ -75,6 +75,66 @@ static void* on_device_reservation_loop(void*)
     return NULL;
 }
 
+/*
+ * Per-instance thunks installed in the ALSA core.  The core used to call
+ * global C functions that reached a single global JackAlsaDriver; routing the
+ * calls through the callback table lets each ALSA core instance (primary and
+ * secondary cards) address its own driver object.
+ */
+
+static void AlsaReadInputThunk(void* arg, jack_nframes_t orig_nframes,
+                               snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread)
+{
+    static_cast<JackAlsaDriver*>(arg)->ReadInputAux(orig_nframes, contiguous, nread);
+}
+
+static void AlsaMonitorInputThunk(void* arg)
+{
+    static_cast<JackAlsaDriver*>(arg)->MonitorInputAux();
+}
+
+static void AlsaClearOutputThunk(void* arg)
+{
+    static_cast<JackAlsaDriver*>(arg)->ClearOutputAux();
+}
+
+static void AlsaWriteOutputThunk(void* arg, jack_nframes_t orig_nframes,
+                                 snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nwritten)
+{
+    static_cast<JackAlsaDriver*>(arg)->WriteOutputAux(orig_nframes, contiguous, nwritten);
+}
+
+static void AlsaSetTimeThunk(void* arg, jack_time_t time)
+{
+    static_cast<JackAlsaDriver*>(arg)->SetTimetAux(time);
+}
+
+static int AlsaRestartThunk(void* arg)
+{
+    JackAlsaDriver* driver = static_cast<JackAlsaDriver*>(arg);
+    int res;
+    if ((res = driver->Stop()) == 0) {
+        res = driver->Start();
+    }
+    return res;
+}
+
+static void InstallAlsaCallbacks(JackAlsaDriver* driver, alsa_driver_t* alsa_driver)
+{
+    alsa_driver_callbacks_t callbacks;
+
+    memset(&callbacks, 0, sizeof(callbacks));
+    callbacks.arg = driver;
+    callbacks.read_input = AlsaReadInputThunk;
+    callbacks.monitor_input = AlsaMonitorInputThunk;
+    callbacks.clear_output = AlsaClearOutputThunk;
+    callbacks.write_output = AlsaWriteOutputThunk;
+    callbacks.set_time = AlsaSetTimeThunk;
+    callbacks.restart = AlsaRestartThunk;
+
+    alsa_driver_set_callbacks(alsa_driver, &callbacks);
+}
+
 int JackAlsaDriver::SetBufferSize(jack_nframes_t buffer_size)
 {
     jack_log("JackAlsaDriver::SetBufferSize %ld", buffer_size);
@@ -345,11 +405,14 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
                                shorts_first,
                                capture_latency,
                                playback_latency,
-                               midi);
+                               midi,
+                               0);
     if (!fDriver) {
         Close();
         return -1;
     }
+
+    InstallAlsaCallbacks(this, (alsa_driver_t*)fDriver);
 
     // ALSA driver may have changed the in/out values
     fCaptureChannels = ((alsa_driver_t *)fDriver)->capture_nchannels;
@@ -768,8 +831,6 @@ SERVER_EXPORT const jack_driver_desc_t* driver_get_descriptor ()
     return desc;
 }
 
-static Jack::JackAlsaDriver* g_alsa_driver;
-
 SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLockedEngine* engine, Jack::JackSynchro* table, const JSList* params)
 {
     jack_nframes_t srate = 48000;
@@ -899,10 +960,10 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
         playback = TRUE;
     }
 
-    g_alsa_driver = new Jack::JackAlsaDriver("system", "alsa_pcm", engine, table);
-    Jack::JackDriverClientInterface* threaded_driver = new Jack::JackThreadedDriver(g_alsa_driver);
+    Jack::JackAlsaDriver* alsa_driver = new Jack::JackAlsaDriver("system", "alsa_pcm", engine, table);
+    Jack::JackDriverClientInterface* threaded_driver = new Jack::JackThreadedDriver(alsa_driver);
     // Special open for ALSA driver...
-    if (g_alsa_driver->Open(frames_per_interrupt, user_nperiods, srate, hw_monitoring, hw_metering, capture, playback, dither, soft_mode, monitor,
+    if (alsa_driver->Open(frames_per_interrupt, user_nperiods, srate, hw_monitoring, hw_metering, capture, playback, dither, soft_mode, monitor,
                           user_capture_nchnls, user_playback_nchnls, shorts_first, capture_pcm_name, playback_pcm_name,
                           systemic_input_latency, systemic_output_latency, midi_driver) == 0) {
         return threaded_driver;
@@ -910,38 +971,6 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
         delete threaded_driver; // Delete the decorated driver
         return NULL;
     }
-}
-
-// Code to be used in alsa_driver.c
-
-void ReadInput(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread)
-{
-    g_alsa_driver->ReadInputAux(orig_nframes, contiguous, nread);
-}
-void MonitorInput()
-{
-    g_alsa_driver->MonitorInputAux();
-}
-void ClearOutput()
-{
-    g_alsa_driver->ClearOutputAux();
-}
-void WriteOutput(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nwritten)
-{
-    g_alsa_driver->WriteOutputAux(orig_nframes, contiguous, nwritten);
-}
-void SetTime(jack_time_t time)
-{
-    g_alsa_driver->SetTimetAux(time);
-}
-
-int Restart()
-{
-    int res;
-    if ((res = g_alsa_driver->Stop()) == 0) {
-        res = g_alsa_driver->Start();
-    }
-    return res;
 }
 
 #ifdef __cplusplus

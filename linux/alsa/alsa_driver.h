@@ -54,6 +54,27 @@ typedef void (*WriteCopyFunction) (char *dst, jack_default_audio_sample_t *src,
                                    unsigned long dst_skip_bytes,
                                    dither_state_t *state);
 
+/*
+ * Per-instance callbacks used by the ALSA core to access JACK port buffers.
+ *
+ * Historically these were global C functions implemented in JackAlsaDriver.cpp
+ * that reached the single global ALSA driver.  Each ALSA core instance now
+ * carries its own callback table so that one process can drive the primary
+ * card and any number of secondary cards independently.
+ */
+typedef struct _alsa_driver_callbacks {
+    void *arg;
+
+    void (*read_input)  (void *arg, jack_nframes_t orig_nframes,
+                         snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread);
+    void (*monitor_input)(void *arg);
+    void (*clear_output)(void *arg);
+    void (*write_output) (void *arg, jack_nframes_t orig_nframes,
+                          snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nwritten);
+    void (*set_time)     (void *arg, jack_time_t time);
+    int  (*restart)      (void *arg);
+} alsa_driver_callbacks_t;
+
 typedef struct _alsa_driver {
 
     JACK_DRIVER_NT_DECL
@@ -144,6 +165,8 @@ typedef struct _alsa_driver {
 
     alsa_midi_t *midi;
     int xrun_recovery;
+
+    alsa_driver_callbacks_t callbacks;
 
 } alsa_driver_t;
 
@@ -247,8 +270,14 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 		 int shorts_first,
 		 jack_nframes_t capture_latency,
 		 jack_nframes_t playback_latency,
-		 alsa_midi_t *midi_driver
+		 alsa_midi_t *midi_driver,
+		 int generic_hw
 		 );
+
+void
+alsa_driver_set_callbacks (alsa_driver_t *driver,
+			   const alsa_driver_callbacks_t *callbacks);
+
 void
 alsa_driver_delete (alsa_driver_t *driver);
 
@@ -269,15 +298,6 @@ int
 alsa_driver_write (alsa_driver_t* driver, jack_nframes_t nframes);
 
 jack_time_t jack_get_microseconds(void);
-
-// Code implemented in JackAlsaDriver.cpp
-
-void ReadInput(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread);
-void MonitorInput();
-void ClearOutput();
-void WriteOutput(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nwritten);
-void SetTime(jack_time_t time);
-int Restart();
 
 #ifdef __cplusplus
 }
