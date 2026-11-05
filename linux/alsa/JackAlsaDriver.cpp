@@ -944,6 +944,14 @@ SERVER_EXPORT const jack_driver_desc_t* driver_get_descriptor ()
         "ALSA MIDI driver",
         NULL);
 
+    strcpy(value.str, "none");
+    jack_driver_descriptor_add_parameter(desc, &filler, "secondary", 'Y', JackDriverParamString, &value, NULL,
+        "Secondary ALSA card (repeatable)",
+        "Secondary ALSA card, repeatable. Keys: name, device, mode (duplex|capture|playback), channels, rate, nperiods, optional, follow_hw_rate. Example: name=usb1;device=hw:1;mode=capture");
+    jack_driver_descriptor_add_parameter(desc, &filler, "secondary-file", 'K', JackDriverParamString, &value, NULL,
+        "File with one secondary ALSA card per line",
+        "File with one secondary ALSA card per line, read at startup. Same syntax as --secondary. Blank lines and lines starting with # are ignored");
+
     return desc;
 }
 
@@ -969,6 +977,7 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
     const JSList * node;
     const jack_driver_param_t * param;
     const char *midi_driver = "none";
+    std::vector<Jack::JackAlsaSecondaryConfig> secondaries;
 
     for (node = params; node; node = jack_slist_next (node)) {
         param = (const jack_driver_param_t *) node->data;
@@ -1067,6 +1076,28 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
             case 'X':
                 midi_driver = strdup(param->value.str);
                 break;
+
+            case 'Y':
+                if (strcmp (param->value.str, "none") != 0) {
+                    Jack::JackAlsaSecondaryConfig config;
+                    std::string error;
+                    if (!Jack::JackAlsaSecondaryConfigParse(param->value.str, &config, &error)) {
+                        jack_error("invalid --secondary \"%s\": %s", param->value.str, error.c_str());
+                        return NULL;
+                    }
+                    secondaries.push_back(config);
+                }
+                break;
+
+            case 'K':
+                if (strcmp (param->value.str, "none") != 0) {
+                    std::string error;
+                    if (!Jack::JackAlsaSecondaryConfigLoadFile(param->value.str, &secondaries, &error)) {
+                        jack_error("%s", error.c_str());
+                        return NULL;
+                    }
+                }
+                break;
         }
     }
 
@@ -1082,7 +1113,7 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
     if (alsa_driver->Open(frames_per_interrupt, user_nperiods, srate, hw_monitoring, hw_metering, capture, playback, dither, soft_mode, monitor,
                           user_capture_nchnls, user_playback_nchnls, shorts_first, capture_pcm_name, playback_pcm_name,
                           systemic_input_latency, systemic_output_latency, midi_driver,
-                          std::vector<Jack::JackAlsaSecondaryConfig>()) == 0) {
+                          secondaries) == 0) {
         return threaded_driver;
     } else {
         delete threaded_driver; // Delete the decorated driver
