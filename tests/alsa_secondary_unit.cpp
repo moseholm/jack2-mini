@@ -113,6 +113,20 @@ static void TestConfigClock()
     CHECK(c.clock == SecondaryClockAsync);
 }
 
+static void TestConfigFormat()
+{
+    printf("config: format=float|s32|s16|auto\n");
+    JackAlsaSecondaryConfig c;
+    std::string err;
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1", &c, &err));
+    CHECK(c.sample_format == SampleFormatAuto);
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;format=s32", &c, &err));
+    CHECK(c.sample_format == SampleFormatS32);
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;format=s16", &c, &err));
+    CHECK(c.sample_format == SampleFormatS16);
+    CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;format=u8", &c, &err));
+}
+
 static void TestConfigFile()
 {
     printf("config: file with comments and an error line\n");
@@ -320,6 +334,7 @@ int main()
     TestConfigDefaults();
     TestConfigErrors();
     TestConfigClock();
+    TestConfigFormat();
     TestConfigFile();
     TestRing();
     TestConverterDI();
