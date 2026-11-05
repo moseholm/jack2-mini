@@ -180,6 +180,7 @@ set(JACK_ALSA_SOURCES
     linux/alsa/JackAlsaRingBuffer.cpp
     linux/alsa/JackAlsaSecondaryConfig.cpp
     linux/alsa/JackAlsaSecondaryCard.cpp
+    linux/alsa/JackAlsaRateConverter.cpp
     linux/alsa/resample/JackResampler.cpp
     linux/alsa/resample/pipewire_resample_bridge.c
     linux/alsa/resample/resample-native.c

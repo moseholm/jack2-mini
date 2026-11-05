@@ -19,8 +19,10 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef __JackAlsaSecondaryCard__
 #define __JackAlsaSecondaryCard__
 
+#include "JackAlsaRateConverter.h"
 #include "JackAlsaRingBuffer.h"
 #include "JackAlsaSecondaryConfig.h"
+#include "resample/JackResampler.h"
 #include "JackPlatformPlug.h"
 #include "JackThread.h"
 #include "types.h"
@@ -72,6 +74,13 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         JackAlsaRingBuffer* fCaptureRing;
         JackAlsaRingBuffer* fPlaybackRing;
 
+        JackResamplerFactory* fFactory;
+        JackAlsaRateConverter* fCaptureConverter;
+        JackAlsaRateConverter* fPlaybackConverter;
+        float** fCaptureConvIn;
+        float** fPlaybackConvOut;
+        unsigned int fConvCap;
+
         float** fCaptureTemp;
         float** fPlaybackTemp;
         float** fPortScratch;
@@ -104,7 +113,7 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
 
     public:
 
-        JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& config);
+        JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& config, JackResamplerFactory* factory);
         virtual ~JackAlsaSecondaryCard();
 
         int Open(jack_nframes_t primary_buffer_size,
@@ -136,6 +145,7 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         jack_nframes_t Rate() const { return fRate; }
         bool IsOpen() const { return fOpened; }
         bool IsRunning() const { return fRunning.load(); }
+        bool IsConverting() const { return fCaptureConverter != NULL || fPlaybackConverter != NULL; }
 
         std::vector<jack_port_id_t>& CapturePorts() { return fCapturePorts; }
         std::vector<jack_port_id_t>& PlaybackPorts() { return fPlaybackPorts; }

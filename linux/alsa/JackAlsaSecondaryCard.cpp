@@ -29,7 +29,28 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 namespace Jack
 {
 
-JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& config)
+static float** AllocChannelBuffers(int channels, unsigned int frames)
+{
+    float** buffers = new float*[channels];
+    for (int i = 0; i < channels; i++) {
+        buffers[i] = new float[frames];
+        memset(buffers[i], 0, sizeof(float) * frames);
+    }
+    return buffers;
+}
+
+static void FreeChannelBuffers(float** buffers, int channels)
+{
+    if (buffers == NULL) {
+        return;
+    }
+    for (int i = 0; i < channels; i++) {
+        delete[] buffers[i];
+    }
+    delete[] buffers;
+}
+
+JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& config, JackResamplerFactory* factory)
     : fConfig(config),
       fAlsaDriver(NULL),
       fThread(this),
@@ -46,6 +67,12 @@ JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& conf
       fPlaybackChannels(0),
       fCaptureRing(NULL),
       fPlaybackRing(NULL),
+      fFactory(factory),
+      fCaptureConverter(NULL),
+      fPlaybackConverter(NULL),
+      fCaptureConvIn(NULL),
+      fPlaybackConvOut(NULL),
+      fConvCap(0),
       fCaptureTemp(NULL),
       fPlaybackTemp(NULL),
       fPortScratch(NULL),
@@ -86,6 +113,18 @@ void JackAlsaSecondaryCard::FreeBuffers()
 
     delete fPlaybackRing;
     fPlaybackRing = NULL;
+
+    delete fCaptureConverter;
+    fCaptureConverter = NULL;
+
+    delete fPlaybackConverter;
+    fPlaybackConverter = NULL;
+
+    FreeChannelBuffers(fCaptureConvIn, fCaptureChannels);
+    fCaptureConvIn = NULL;
+
+    FreeChannelBuffers(fPlaybackConvOut, fPlaybackChannels);
+    fPlaybackConvOut = NULL;
 
     fCapturePorts.clear();
     fPlaybackPorts.clear();
@@ -167,15 +206,6 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
     fPeriod = fAlsaDriver->frames_per_cycle;
     fRate = fAlsaDriver->frame_rate;
 
-    if (fRate != primary_rate) {
-        jack_error("secondary card '%s': actual rate %u differs from primary rate %u; "
-                   "resampling is not available in this build",
-                   fConfig.name.c_str(), fRate, primary_rate);
-        alsa_driver_delete(fAlsaDriver);
-        fAlsaDriver = NULL;
-        return -1;
-    }
-
     if ((fCaptureEnabled && fCaptureChannels == 0) ||
         (fPlaybackEnabled && fPlaybackChannels == 0)) {
         jack_error("secondary card '%s': no usable channels", fConfig.name.c_str());
@@ -202,6 +232,48 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
     jack_nframes_t silence_size = std::max(primary_buffer_size, fPeriod);
     fSilence = new float[silence_size];
     memset(fSilence, 0, sizeof(float) * silence_size);
+
+    fConvCap = std::max(primary_buffer_size, fPeriod) * 4 + 1024;
+    if (fRate != primary_rate) {
+        if (fFactory == NULL) {
+            jack_error("secondary card '%s': no resampler factory", fConfig.name.c_str());
+            FreeBuffers();
+            alsa_driver_delete(fAlsaDriver);
+            fAlsaDriver = NULL;
+            return -1;
+        }
+
+        // Capture: card rate -> primary rate.  Playback: primary rate -> card rate.
+        if (fCaptureEnabled && fRate != primary_rate) {
+            JackResamplerParams params = { (unsigned int)fCaptureChannels, fRate, primary_rate, -1 };
+            JackResampler* resampler = fFactory->Create(params);
+            fCaptureConverter = new JackAlsaRateConverter(resampler, fCaptureChannels, fConvCap);
+            if (!fCaptureConverter->IsValid()) {
+                jack_error("secondary card '%s': cannot create capture resampler %u->%u",
+                           fConfig.name.c_str(), fRate, primary_rate);
+                FreeBuffers();
+                alsa_driver_delete(fAlsaDriver);
+                fAlsaDriver = NULL;
+                return -1;
+            }
+            fCaptureConvIn = AllocChannelBuffers(fCaptureChannels, fConvCap);
+        }
+
+        if (fPlaybackEnabled && fRate != primary_rate) {
+            JackResamplerParams params = { (unsigned int)fPlaybackChannels, primary_rate, fRate, -1 };
+            JackResampler* resampler = fFactory->Create(params);
+            fPlaybackConverter = new JackAlsaRateConverter(resampler, fPlaybackChannels, fConvCap);
+            if (!fPlaybackConverter->IsValid()) {
+                jack_error("secondary card '%s': cannot create playback resampler %u->%u",
+                           fConfig.name.c_str(), primary_rate, fRate);
+                FreeBuffers();
+                alsa_driver_delete(fAlsaDriver);
+                fAlsaDriver = NULL;
+                return -1;
+            }
+            fPlaybackConvOut = AllocChannelBuffers(fPlaybackChannels, fConvCap);
+        }
+    }
 
     jack_nframes_t ring_capacity = fPeriod * 8;
     if (ring_capacity < fPeriod + 1) {
@@ -265,6 +337,12 @@ int JackAlsaSecondaryCard::Start()
 
     if (fCaptureRing) {
         fCaptureRing->Reset();
+    }
+    if (fCaptureConverter) {
+        fCaptureConverter->Reset();
+    }
+    if (fPlaybackConverter) {
+        fPlaybackConverter->Reset();
     }
     if (fPlaybackRing) {
         // Pre-fill a few periods of silence so the first writes do not
@@ -387,7 +465,23 @@ void JackAlsaSecondaryCard::ReadToPorts(JackGraphManager* graph_manager, jack_nf
         }
     }
 
-    fCaptureRing->Read(fPortScratch, nframes);
+    if (!fCaptureConverter) {
+        fCaptureRing->Read(fPortScratch, nframes);
+        return;
+    }
+
+    unsigned int need = fCaptureConverter->NeedInput(nframes);
+    if (need > fConvCap) {
+        need = fConvCap;
+    }
+    fCaptureRing->Read(fCaptureConvIn, need);
+
+    unsigned int got = fCaptureConverter->Convert(fCaptureConvIn, need, fPortScratch, nframes);
+    for (int i = 0; i < fCaptureChannels; i++) {
+        if (got < nframes) {
+            memset(fPortScratch[i] + got, 0, sizeof(float) * (nframes - got));
+        }
+    }
 }
 
 void JackAlsaSecondaryCard::WriteFromPorts(JackGraphManager* graph_manager, jack_nframes_t nframes)
@@ -406,6 +500,17 @@ void JackAlsaSecondaryCard::WriteFromPorts(JackGraphManager* graph_manager, jack
         if (!fPortScratch[i]) {
             fPortScratch[i] = fSilence;
         }
+    }
+
+    if (fPlaybackConverter) {
+        unsigned int produced = fPlaybackConverter->Convert(fPortScratch, nframes,
+                                                            fPlaybackConvOut, fConvCap);
+        jack_nframes_t written = fPlaybackRing->Write((const float* const*)fPlaybackConvOut, produced);
+        if (written != produced) {
+            jack_log("secondary card '%s': playback ring overflow, dropped %u frames",
+                     fConfig.name.c_str(), produced - written);
+        }
+        return;
     }
 
     jack_nframes_t written = fPlaybackRing->Write((const float* const*)fPortScratch, nframes);
