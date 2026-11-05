@@ -179,7 +179,11 @@ set(JACK_ALSA_SOURCES
     linux/alsa/ice1712.c
     linux/alsa/JackAlsaRingBuffer.cpp
     linux/alsa/JackAlsaSecondaryConfig.cpp
-    linux/alsa/JackAlsaSecondaryCard.cpp)
+    linux/alsa/JackAlsaSecondaryCard.cpp
+    linux/alsa/resample/JackResampler.cpp
+    linux/alsa/resample/pipewire_resample_bridge.c
+    linux/alsa/resample/resample-native.c
+    linux/alsa/resample/resample-native-c.c)
 
 set(JACK_ALSARAWMIDI_SOURCES
     linux/alsarawmidi/JackALSARawMidiDriver.cpp
@@ -191,7 +195,13 @@ set(JACK_ALSARAWMIDI_SOURCES
     linux/alsarawmidi/JackALSARawMidiUtil.cpp)
 
 jack_add_driver(alsa ${JACK_ALSA_SOURCES})
-target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA)
+target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA m)
+# The vendored PipeWire resampler is built with its precomputed filter tables
+# disabled and a small SPA compatibility shim in place of the SPA headers.
+target_include_directories(jack_alsa PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample"
+    "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample/spa-shim")
+target_compile_definitions(jack_alsa PRIVATE RESAMPLE_DISABLE_PRECOMP)
 
 jack_add_driver(alsarawmidi ${JACK_ALSARAWMIDI_SOURCES})
 target_link_libraries(jack_alsarawmidi PRIVATE PkgConfig::ALSA)
