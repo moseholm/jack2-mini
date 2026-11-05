@@ -79,6 +79,9 @@ struct JackAlsaSecondaryConfig {
     JackAlsaSecondaryClock clock;
     JackAlsaSampleFormat sample_format;
 
+    // Resampler by name: "pipewire" (built in) or a plugin in JACK_RESAMPLER_PATH.
+    std::string resampler;
+
     // Optional native ALSA control element names.  Empty means auto-probe.
     std::string capture_rate_ctl;
     std::string playback_rate_ctl;

@@ -128,6 +128,18 @@ static void TestConfigFormat()
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;format=u8", &c, &err));
 }
 
+static void TestConfigResampler()
+{
+    printf("config: resampler=<name>\n");
+    JackAlsaSecondaryConfig c;
+    std::string err;
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1", &c, &err));
+    CHECK(c.resampler == "pipewire");
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;resampler=passthrough_test", &c, &err));
+    CHECK(c.resampler == "passthrough_test");
+    CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;resampler=", &c, &err));
+}
+
 static void TestConfigFile()
 {
     printf("config: file with comments and an error line\n");
@@ -367,6 +379,7 @@ int main()
     TestConfigErrors();
     TestConfigClock();
     TestConfigFormat();
+    TestConfigResampler();
     TestConfigFile();
     TestRing();
     TestConverterDI();
