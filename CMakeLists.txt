@@ -176,7 +176,8 @@ set(JACK_ALSA_SOURCES
     linux/alsa/hdsp.c
     linux/alsa/alsa_driver.c
     linux/alsa/hammerfall.c
-    linux/alsa/ice1712.c)
+    linux/alsa/ice1712.c
+    linux/alsa/JackAlsaRingBuffer.cpp)
 
 set(JACK_ALSARAWMIDI_SOURCES
     linux/alsarawmidi/JackALSARawMidiDriver.cpp
