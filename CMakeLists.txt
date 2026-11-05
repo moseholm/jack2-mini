@@ -249,6 +249,29 @@ if(JACK_BUILD_TESTS)
         target_link_libraries(${program} PRIVATE jack rt)
         install(TARGETS ${program} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     endforeach()
+
+    # Unit tests for the secondary ALSA card building blocks.  They use the
+    # real sources, not a library, and need no ALSA hardware.
+    enable_testing()
+    set(JACK_ALSA_UNIT_SOURCES
+        tests/alsa_secondary_unit.cpp
+        linux/alsa/JackAlsaRingBuffer.cpp
+        linux/alsa/JackAlsaSecondaryConfig.cpp
+        linux/alsa/JackAlsaRateConverter.cpp
+        linux/alsa/JackAlsaDriftController.cpp
+        linux/alsa/resample/JackResampler.cpp
+        linux/alsa/resample/pipewire_resample_bridge.c
+        linux/alsa/resample/resample-native.c
+        linux/alsa/resample/resample-native-c.c)
+    add_executable(jack_alsa_unit ${JACK_ALSA_UNIT_SOURCES})
+    target_include_directories(jack_alsa_unit PRIVATE
+        ${JACK_INCLUDE_DIRS}
+        "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa"
+        "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample"
+        "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample/spa-shim")
+    target_compile_definitions(jack_alsa_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE RESAMPLE_DISABLE_PRECOMP)
+    target_link_libraries(jack_alsa_unit PRIVATE jackserver m)
+    add_test(NAME alsa_secondary_unit COMMAND jack_alsa_unit)
 endif()
 
 message(STATUS "JACK ${JACK_VERSION}")
