@@ -163,6 +163,24 @@ int JackAlsaDriver::SetBufferSize(jack_nframes_t buffer_size)
     return res;
 }
 
+void JackAlsaDriver::UpdateSecondaryLatencies()
+{
+    for (size_t c = 0; c < fSecondaryCards.size(); c++) {
+        JackAlsaSecondaryCard* card = fSecondaryCards[c];
+        jack_latency_range_t range;
+
+        range.min = range.max = card->CaptureLatency();
+        for (int i = 0; i < card->CaptureChannels(); i++) {
+            fGraphManager->GetPort(card->CapturePorts()[i])->SetLatencyRange(JackCaptureLatency, &range);
+        }
+
+        range.min = range.max = card->PlaybackLatency();
+        for (int i = 0; i < card->PlaybackChannels(); i++) {
+            fGraphManager->GetPort(card->PlaybackPorts()[i])->SetLatencyRange(JackPlaybackLatency, &range);
+        }
+    }
+}
+
 void JackAlsaDriver::UpdateLatencies()
 {
     jack_latency_range_t range;
@@ -272,6 +290,7 @@ int JackAlsaDriver::Attach()
     }
 
     UpdateLatencies();
+    UpdateSecondaryLatencies();
 
     if (alsa_driver->midi) {
         int err = (alsa_driver->midi->attach)(alsa_driver->midi);
@@ -699,6 +718,7 @@ void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long
             jack_error("secondary card '%s': %s rate change to %ld Hz failed",
                        secondary->Name().c_str(), what, value);
         } else if ((long)secondary->Rate() != current) {
+            UpdateSecondaryLatencies();
             // Only a change that took effect is reported.  A card whose capture and
             // playback share one stream reports both directions in one call.
             int directions = (secondary->CaptureEnabled() ? JackSecondaryRateCapture : 0) |

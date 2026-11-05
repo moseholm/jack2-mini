@@ -369,6 +369,35 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
     return 0;
 }
 
+jack_nframes_t JackAlsaSecondaryCard::CaptureLatency() const
+{
+    if (fRate == 0 || fPrimaryRate == 0) {
+        return 0;
+    }
+    // Card frames -> primary frames.
+    double ratio = (double)fPrimaryRate / (double)fRate;
+    double frames = fPrimaryBufferSize;
+    if (fCaptureConverter) {
+        // The RT side keeps about three periods in the ring, and the converter adds its filter delay.
+        frames += (3.0 * fPeriod + fCaptureConverter->Delay()) * ratio;
+    }
+    return (jack_nframes_t)ceil(frames);
+}
+
+jack_nframes_t JackAlsaSecondaryCard::PlaybackLatency() const
+{
+    if (fRate == 0 || fPrimaryRate == 0) {
+        return 0;
+    }
+    double ratio = (double)fPrimaryRate / (double)fRate;
+    // The card's ALSA buffer, the playback ring's prefill, and the converter delay.
+    double card_frames = (double)(fNperiods > 0 ? fNperiods - 1 : 0) * fPeriod + 3.0 * fPeriod;
+    if (fPlaybackConverter) {
+        card_frames += fPlaybackConverter->Delay();
+    }
+    return (jack_nframes_t)ceil(fPrimaryBufferSize + card_frames * ratio);
+}
+
 int JackAlsaSecondaryCard::OpenControls()
 {
     const std::string& capture_pcm = fConfig.capture_device.empty() ? fConfig.playback_device : fConfig.capture_device;

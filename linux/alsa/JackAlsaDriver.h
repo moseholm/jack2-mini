@@ -59,6 +59,7 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         void UnlockCards();
 
         void UpdateLatencies();
+        void UpdateSecondaryLatencies();
         void StopSecondaryCards();
         void StartControlMonitoring();
         void StopControlMonitoring();

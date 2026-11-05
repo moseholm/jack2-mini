@@ -68,6 +68,9 @@ class JackAlsaRateConverter
         // Input frames held in staging, not yet consumed by the resampler.
         unsigned int Backlog() const { return fInCount; }
 
+        // Filter delay of the resampler, in frames.
+        unsigned int Delay();
+
         // Output frames the staged input would produce, not yet converted.
         unsigned int OutputBacklog();
 
