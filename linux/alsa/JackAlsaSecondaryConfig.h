@@ -31,6 +31,17 @@ enum JackAlsaSecondaryMode {
     SecondaryModePlayback
 };
 
+/*
+ * Clock handling for a secondary card.  Async (default) runs a drift
+ * controller that keeps the card's ring near its target fill.  Sync holds a
+ * fixed ratio, which is only correct when the card's clock is locked to the
+ * primary.
+ */
+enum JackAlsaSecondaryClock {
+    SecondaryClockAsync = 0,
+    SecondaryClockSync
+};
+
 /*!
 \brief Description of one secondary ALSA card.
 
@@ -54,6 +65,7 @@ struct JackAlsaSecondaryConfig {
 
     bool optional;
     bool follow_hw_rate;
+    JackAlsaSecondaryClock clock;
 
     // Optional native ALSA control element names.  Empty means auto-probe.
     std::string capture_rate_ctl;
