@@ -96,6 +96,9 @@ extern "C"
     LIB_EXPORT int jack_set_sample_rate_callback(jack_client_t *client,
             JackSampleRateCallback srate_callback,
             void *arg);
+    LIB_EXPORT int jack_set_secondary_sample_rate_callback(jack_client_t *client,
+            JackSecondarySampleRateCallback callback,
+            void *arg);
     LIB_EXPORT int jack_set_client_registration_callback(jack_client_t *,
             JackClientRegistrationCallback
             registration_callback, void *arg);
@@ -945,6 +948,19 @@ LIB_EXPORT int jack_set_buffer_size_callback(jack_client_t* ext_client, JackBuff
         return -1;
     } else {
         return client->SetBufferSizeCallback(bufsize_callback, arg);
+    }
+}
+
+LIB_EXPORT int jack_set_secondary_sample_rate_callback(jack_client_t* ext_client, JackSecondarySampleRateCallback callback, void* arg)
+{
+    JackGlobals::CheckContext("jack_set_secondary_sample_rate_callback");
+
+    JackClient* client = (JackClient*)ext_client;
+    if (client == NULL) {
+        jack_error("jack_set_secondary_sample_rate_callback called with a NULL client");
+        return -1;
+    } else {
+        return client->SetSecondarySampleRateCallback(callback, arg);
     }
 }
 

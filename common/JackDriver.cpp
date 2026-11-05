@@ -226,6 +226,11 @@ void JackDriver::NotifySampleRate(jack_nframes_t sample_rate)
     fEngineControl->InitFrameTime();
 }
 
+void JackDriver::NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, int direction)
+{
+    fEngine->NotifySecondarySampleRate(card, sample_rate, direction);
+}
+
 void JackDriver::NotifyFailure(int code, const char* reason)
 {
     fEngine->NotifyFailure(code, reason);

@@ -48,6 +48,7 @@ enum NotificationType {
     kSessionCallback = 17,
     kLatencyCallback = 18,
     kPropertyChangeCallback = 19,
+    kSecondarySampleRateCallback = 20,
     kMaxNotification = 64  // To keep some room in JackClientControl fCallback table
 };
 

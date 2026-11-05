@@ -306,6 +306,13 @@ class SERVER_EXPORT JackLockedEngine
             fEngine.NotifySampleRate(sample_rate);
             CATCH_EXCEPTION
         }
+        void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, int direction)
+        {
+            TRY_CALL
+            JackLock lock(&fEngine);
+            fEngine.NotifySecondarySampleRate(card, sample_rate, direction);
+            CATCH_EXCEPTION
+        }
         void NotifyFreewheel(bool onoff)
         {
             TRY_CALL

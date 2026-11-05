@@ -45,6 +45,8 @@ JackClient::JackClient(JackSynchro* table):fThread(this)
 {
     fSynchroTable = table;
     fProcess = NULL;
+    fSecondarySampleRate = NULL;
+    fSecondarySampleRateArg = NULL;
     fGraphOrder = NULL;
     fXrun = NULL;
     fShutdown = NULL;
@@ -219,6 +221,13 @@ int JackClient::ClientNotify(int refnum, const char* name, int notify, int sync,
                 jack_log("JackClient::kSampleRateCallback sample_rate = %ld", value1);
                 if (fSampleRate) {
                     res = fSampleRate(value1, fSampleRateArg);
+                }
+                break;
+
+            case kSecondarySampleRateCallback:
+                jack_log("JackClient::kSecondarySampleRateCallback rate = %ld direction = %ld card = %s", value1, value2, message);
+                if (fSecondarySampleRate) {
+                    res = fSecondarySampleRate(value1, message, value2, fSecondarySampleRateArg);
                 }
                 break;
 
@@ -1088,6 +1097,19 @@ int JackClient::SetSampleRateCallback(JackSampleRateCallback callback, void *arg
         if (callback) {
             callback(GetEngineControl()->fSampleRate, arg);
         }
+        return 0;
+    }
+}
+
+int JackClient::SetSecondarySampleRateCallback(JackSecondarySampleRateCallback callback, void *arg)
+{
+    if (IsActive()) {
+        jack_error("You cannot set callbacks on an active client");
+        return -1;
+    } else {
+        GetClientControl()->fCallback[kSecondarySampleRateCallback] = (callback != NULL);
+        fSecondarySampleRateArg = arg;
+        fSecondarySampleRate = callback;
         return 0;
     }
 }
