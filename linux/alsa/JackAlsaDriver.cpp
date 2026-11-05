@@ -682,10 +682,18 @@ void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long
         return;
     }
 
-    // Runtime rate changes are not implemented yet, so the requested value is
-    // rejected and the element is restored to the current rate.
-    jack_error("secondary card '%s': %s rate change to %ld Hz is not supported yet, keeping %ld Hz",
-               secondary->Name().c_str(), (dir == RateCapture) ? "capture" : "playback", value, current);
+    // A discrete change needs the ALSA stream reopened at the new rate; the
+    // resampler alone cannot fix it.  Until the reopen path exists, the change
+    // is rejected and the element is restored.  With follow_hw_rate=0 (the
+    // default) the card keeps its rate by design.
+    if (dir == RateCapture && !secondary->Config().follow_hw_rate) {
+        jack_error("secondary card '%s': capture rate changed to %ld Hz; keeping %ld Hz "
+                   "(follow_hw_rate=0)", secondary->Name().c_str(), value, current);
+    } else {
+        jack_error("secondary card '%s': %s rate change to %ld Hz needs a stream reopen, "
+                   "which is not implemented yet; keeping %ld Hz",
+                   secondary->Name().c_str(), (dir == RateCapture) ? "capture" : "playback", value, current);
+    }
     if (secondary->RateElement(dir).writable && secondary->WriteRate(dir, current) < 0) {
         jack_error("secondary card '%s': cannot restore the %s rate control",
                    secondary->Name().c_str(), (dir == RateCapture) ? "capture" : "playback");
