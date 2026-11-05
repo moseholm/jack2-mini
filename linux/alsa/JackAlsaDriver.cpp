@@ -601,6 +601,9 @@ retry:
          */
         jack_log("ALSA XRun wait_status = %d", wait_status);
         NotifyXRun(fBeginDateUst, fDelayedUsecs);
+        for (size_t i = 0; i < fSecondaryCards.size(); i++) {
+            fSecondaryCards[i]->ResetResampling();
+        }
         goto retry; /* recoverable error*/
     }
 
@@ -947,7 +950,7 @@ SERVER_EXPORT const jack_driver_desc_t* driver_get_descriptor ()
     strcpy(value.str, "none");
     jack_driver_descriptor_add_parameter(desc, &filler, "secondary", 'Y', JackDriverParamString, &value, NULL,
         "Secondary ALSA card (repeatable)",
-        "Secondary ALSA card, repeatable. Keys: name, device, mode (duplex|capture|playback), channels, rate, nperiods, optional, follow_hw_rate. Example: name=usb1;device=hw:1;mode=capture");
+        "Secondary ALSA card, repeatable. Keys: name, device, mode (duplex|capture|playback), channels, rate, nperiods, clock (async|sync), optional, follow_hw_rate. Example: name=usb1;device=hw:1;mode=capture;clock=async");
     jack_driver_descriptor_add_parameter(desc, &filler, "secondary-file", 'K', JackDriverParamString, &value, NULL,
         "File with one secondary ALSA card per line",
         "File with one secondary ALSA card per line, read at startup. Same syntax as --secondary. Blank lines and lines starting with # are ignored");

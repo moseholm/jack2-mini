@@ -73,6 +73,8 @@ JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& conf
       fCaptureConvIn(NULL),
       fPlaybackConvOut(NULL),
       fConvCap(0),
+      fXrunGeneration(0),
+      fSeenXrunGeneration(0),
       fCaptureTemp(NULL),
       fPlaybackTemp(NULL),
       fPortScratch(NULL),
@@ -234,7 +236,9 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
     memset(fSilence, 0, sizeof(float) * silence_size);
 
     fConvCap = std::max(primary_buffer_size, fPeriod) * 4 + 1024;
-    if (fRate != primary_rate) {
+    // Asynchronous clocks always go through a converter, even at equal rates,
+    // so the drift controller has something to steer.
+    if (fRate != primary_rate || fConfig.clock == SecondaryClockAsync) {
         if (fFactory == NULL) {
             jack_error("secondary card '%s': no resampler factory", fConfig.name.c_str());
             FreeBuffers();
@@ -244,7 +248,7 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
         }
 
         // Capture: card rate -> primary rate.  Playback: primary rate -> card rate.
-        if (fCaptureEnabled && fRate != primary_rate) {
+        if (fCaptureEnabled) {
             JackResamplerParams params = { (unsigned int)fCaptureChannels, fRate, primary_rate, -1 };
             JackResampler* resampler = fFactory->Create(params);
             fCaptureConverter = new JackAlsaRateConverter(resampler, fCaptureChannels, fConvCap);
@@ -259,7 +263,7 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
             fCaptureConvIn = AllocChannelBuffers(fCaptureChannels, fConvCap);
         }
 
-        if (fPlaybackEnabled && fRate != primary_rate) {
+        if (fPlaybackEnabled) {
             JackResamplerParams params = { (unsigned int)fPlaybackChannels, primary_rate, fRate, -1 };
             JackResampler* resampler = fFactory->Create(params);
             fPlaybackConverter = new JackAlsaRateConverter(resampler, fPlaybackChannels, fConvCap);
@@ -338,11 +342,17 @@ int JackAlsaSecondaryCard::Start()
     if (fCaptureRing) {
         fCaptureRing->Reset();
     }
-    if (fCaptureConverter) {
-        fCaptureConverter->Reset();
-    }
-    if (fPlaybackConverter) {
-        fPlaybackConverter->Reset();
+    ResetResampling();
+    fSeenXrunGeneration = fXrunGeneration.load();
+
+    if (fCaptureRing && fCaptureConverter) {
+        // Give the converter a cushion of silence, matching the playback ring.
+        for (int i = 0; i < fCaptureChannels; i++) {
+            fPortScratch[i] = fSilence;
+        }
+        for (int period = 0; period < 3; period++) {
+            fCaptureRing->Write((const float* const*)fPortScratch, fPeriod);
+        }
     }
     if (fPlaybackRing) {
         // Pre-fill a few periods of silence so the first writes do not
@@ -423,6 +433,7 @@ bool JackAlsaSecondaryCard::Execute()
 
     if (nframes == 0) {
         // An xrun was detected and recovered.
+        fXrunGeneration.fetch_add(1, std::memory_order_relaxed);
         return true;
     }
 
@@ -451,6 +462,54 @@ bool JackAlsaSecondaryCard::Execute()
     return fRunning.load();
 }
 
+void JackAlsaSecondaryCard::ResetResampling()
+{
+    if (fCaptureConverter) {
+        fCaptureConverter->Reset();
+    }
+    if (fPlaybackConverter) {
+        fPlaybackConverter->Reset();
+    }
+    fDrift.Reset();
+}
+
+void JackAlsaSecondaryCard::UpdateDrift(bool capture_side)
+{
+    if (fConfig.clock != SecondaryClockAsync) {
+        return;
+    }
+
+    unsigned int generation = fXrunGeneration.load(std::memory_order_relaxed);
+    if (generation != fSeenXrunGeneration) {
+        fSeenXrunGeneration = generation;
+        fDrift.Reset();
+    }
+
+    // The ring is measured together with the converter's own staging, so
+    // the target is the total buffered audio rather than just the ring.
+    double fill;
+    if (capture_side) {
+        fill = fCaptureRing->AvailableRead() + fCaptureConverter->Backlog();
+    } else {
+        fill = fPlaybackRing->AvailableRead() + fPlaybackConverter->OutputBacklog();
+    }
+
+    double rate = fDrift.Update(fill, 3.0 * fPeriod, fPeriod);
+
+    if (capture_side) {
+        // Capture converts card -> primary.  A duplex card shares one clock, so
+        // the playback converter (primary -> card) runs the reciprocal rate.
+        if (fCaptureConverter) {
+            fCaptureConverter->SetRate(rate);
+        }
+        if (fPlaybackConverter) {
+            fPlaybackConverter->SetRate(1.0 / rate);
+        }
+    } else if (fPlaybackConverter) {
+        fPlaybackConverter->SetRate(rate);
+    }
+}
+
 void JackAlsaSecondaryCard::ReadToPorts(JackGraphManager* graph_manager, jack_nframes_t nframes)
 {
     if (!fCaptureEnabled || !fCaptureRing ||
@@ -469,6 +528,8 @@ void JackAlsaSecondaryCard::ReadToPorts(JackGraphManager* graph_manager, jack_nf
         fCaptureRing->Read(fPortScratch, nframes);
         return;
     }
+
+    UpdateDrift(true);
 
     unsigned int need = fCaptureConverter->NeedInput(nframes);
     if (need > fConvCap) {
@@ -503,6 +564,9 @@ void JackAlsaSecondaryCard::WriteFromPorts(JackGraphManager* graph_manager, jack
     }
 
     if (fPlaybackConverter) {
+        if (!fCaptureEnabled) {
+            UpdateDrift(false);
+        }
         unsigned int produced = fPlaybackConverter->Convert(fPortScratch, nframes,
                                                             fPlaybackConvOut, fConvCap);
         jack_nframes_t written = fPlaybackRing->Write((const float* const*)fPlaybackConvOut, produced);
