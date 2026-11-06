@@ -69,6 +69,7 @@ int JackAlsaControlMonitor::AddWatch(int card, const std::string& ctl_name,
         device = new Device;
         device->name = ctl_name;
         device->ctl = ctl;
+        device->dead = false;
         fDevices.push_back(device);
     }
 
@@ -103,9 +104,12 @@ bool JackAlsaControlMonitor::Init()
     return true;
 }
 
-void JackAlsaControlMonitor::Dispatch(Device* device)
+// Reads the pending events on a device.  Returns false when the device can no
+// longer be read, which means it has gone away.
+bool JackAlsaControlMonitor::Dispatch(Device* device)
 {
-    while (snd_ctl_read(device->ctl, fEvent) == 1) {
+    int ret;
+    while ((ret = snd_ctl_read(device->ctl, fEvent)) == 1) {
         if (snd_ctl_event_get_type(fEvent) != SND_CTL_EVENT_ELEM) {
             continue;
         }
@@ -125,24 +129,49 @@ void JackAlsaControlMonitor::Dispatch(Device* device)
             }
         }
     }
+    return ret == 0 || ret == -EAGAIN;
+}
+
+void JackAlsaControlMonitor::MarkDead(Device* device)
+{
+    if (device->dead) {
+        return;
+    }
+    device->dead = true;
+    jack_error("ALSA control device %s went away; its rate controls are no longer monitored",
+               device->name.c_str());
 }
 
 bool JackAlsaControlMonitor::Execute()
 {
+    // Each live device contributes its poll descriptors.  Dead devices are left out
+    // entirely: a removed device keeps reporting POLLNVAL or POLLHUP, and polling it
+    // again would spin the thread.
+    struct Range {
+        Device* device;
+        size_t begin;
+        size_t count;
+    };
     std::vector<struct pollfd> fds;
-    std::vector<size_t> first;   // index of each device's first pollfd
+    std::vector<Range> ranges;
 
     for (size_t i = 0; i < fDevices.size(); i++) {
-        int count = snd_ctl_poll_descriptors_count(fDevices[i]->ctl);
-        first.push_back(fds.size());
-        struct pollfd pfd[8];
-        if (count > 8) {
-            count = 8;
+        Device* device = fDevices[i];
+        if (device->dead) {
+            continue;
         }
-        snd_ctl_poll_descriptors(fDevices[i]->ctl, pfd, count);
+        struct pollfd pfd[8];
+        int count = snd_ctl_poll_descriptors_count(device->ctl);
+        if (count <= 0 || count > 8 ||
+            snd_ctl_poll_descriptors(device->ctl, pfd, count) < 0) {
+            MarkDead(device);
+            continue;
+        }
+        Range range = { device, fds.size(), (size_t)count };
         for (int k = 0; k < count; k++) {
             fds.push_back(pfd[k]);
         }
+        ranges.push_back(range);
     }
 
     struct pollfd wake;
@@ -164,15 +193,22 @@ bool JackAlsaControlMonitor::Execute()
         return false;
     }
 
-    for (size_t i = 0; i < fDevices.size(); i++) {
-        size_t begin = first[i];
-        size_t end = (i + 1 < fDevices.size()) ? first[i + 1] : fds.size() - 1;
+    for (size_t i = 0; i < ranges.size(); i++) {
+        Device* device = ranges[i].device;
         unsigned short revents = 0;
-        if (end > begin) {
-            snd_ctl_poll_descriptors_revents(fDevices[i]->ctl, &fds[begin], end - begin, &revents);
+        if (snd_ctl_poll_descriptors_revents(device->ctl, &fds[ranges[i].begin],
+                                             ranges[i].count, &revents) < 0) {
+            MarkDead(device);
+            continue;
         }
-        if (revents & (POLLIN | POLLERR)) {
-            Dispatch(fDevices[i]);
+        if (revents & POLLIN) {
+            if (!Dispatch(device)) {
+                MarkDead(device);
+                continue;
+            }
+        }
+        if (revents & (POLLERR | POLLHUP | POLLNVAL)) {
+            MarkDead(device);
         }
     }
     return true;

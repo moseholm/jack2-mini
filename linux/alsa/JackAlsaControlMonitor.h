@@ -66,6 +66,7 @@ class JackAlsaControlMonitor : public JackRunnableInterface
             std::string name;
             snd_ctl_t* ctl;
             std::vector<Watch> watches;
+            bool dead;   // the device went away; it is no longer polled
         };
 
         JackAlsaControlListener* fListener;
@@ -75,7 +76,8 @@ class JackAlsaControlMonitor : public JackRunnableInterface
         snd_ctl_event_t* fEvent;
 
         void Subscribe(Device* device);
-        void Dispatch(Device* device);
+        bool Dispatch(Device* device);
+        void MarkDead(Device* device);
 
         JackAlsaControlMonitor(const JackAlsaControlMonitor&);
         JackAlsaControlMonitor& operator=(const JackAlsaControlMonitor&);
