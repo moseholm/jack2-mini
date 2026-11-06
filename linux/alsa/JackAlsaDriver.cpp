@@ -557,10 +557,15 @@ static bool ResolvePcm(const std::string& pcm, const std::vector<JackAlsaPcmInfo
 // are not added again.  Automatic cards stop at the slot limit.
 static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
         const std::vector<JackAlsaSecondaryConfig>& configured,
-        const char* primary_capture, const char* primary_playback)
+        const char* primary_capture, const char* primary_playback,
+        const std::vector<JackAlsaPcmInfo>& known, bool report,
+        std::vector<JackAlsaPcmInfo>* listing)
 {
     std::vector<JackAlsaSecondaryConfig> plan = configured;
-    std::vector<JackAlsaPcmInfo> pcms = JackAlsaEnumeratePcms();
+    std::vector<JackAlsaPcmInfo> pcms = JackAlsaEnumeratePcms(known, report);
+    if (listing != NULL) {
+        *listing = pcms;
+    }
 
     std::vector<std::pair<int, int> > claimed;
     const char* names[] = { primary_capture, primary_playback };
@@ -615,8 +620,10 @@ static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
             continue;
         }
         used.push_back(PortBaseOf(cfg));
-        jack_info("automatic secondary card for %s: %s, %d/%d channels",
-                  pcm.pcm.c_str(), PortBaseOf(cfg).c_str(), cfg.capture_channels, cfg.playback_channels);
+        if (report) {
+            jack_info("automatic secondary card for %s: %s, %d/%d channels",
+                      pcm.pcm.c_str(), PortBaseOf(cfg).c_str(), cfg.capture_channels, cfg.playback_channels);
+        }
         plan.push_back(cfg);
     }
     return plan;
@@ -723,7 +730,12 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
     fPlaybackChannels = ((alsa_driver_t *)fDriver)->playback_nchannels;
 
     alsa_driver_t* primary = (alsa_driver_t*)fDriver;
-    std::vector<JackAlsaSecondaryConfig> plan = BuildSecondaryPlan(secondaries, capture_driver_name, playback_driver_name);
+    fConfiguredSecondaries = secondaries;
+    fReportedFailures.clear();
+    std::vector<JackAlsaPcmInfo> listing;
+    std::vector<JackAlsaSecondaryConfig> plan = BuildSecondaryPlan(secondaries, capture_driver_name, playback_driver_name,
+                                                                   fKnownPcms, true, &listing);
+    fKnownPcms = listing;
 
     // Always created: a card can appear after startup, and the watchers must
     // exist to add it.
@@ -769,13 +781,8 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
             return -1;
         }
 
-        JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg, factory);
-        card->SetRTState(&fRTEpoch, &fRTRunning);
-        card->SetId(fNextCardId++);
-        card->SetFailureSink(fReconfigWorker);
-        if (card->Open(primary->frames_per_cycle, primary->frame_rate, primary->user_nperiods,
-                       fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
-            delete card;
+        JackAlsaSecondaryCard* card = CreateCard(cfg, factory, primary);
+        if (card == NULL) {
             if (cfg.optional || cfg.automatic) {
                 jack_error("skipping secondary ALSA card '%s'", PortBaseOf(cfg).c_str());
                 continue;
@@ -959,9 +966,130 @@ void JackAlsaDriver::StopControlMonitoring()
     fReconfigWorker->Stop();
 }
 
+// The identity of a card for reconciliation: its port base and its mode.  A card
+// whose device changed mode is a different card.
+static std::string CardKeyOf(const JackAlsaSecondaryConfig& cfg)
+{
+    return PortBaseOf(cfg) + "|" + std::to_string((int)cfg.mode);
+}
+
+// Runs on the worker thread once a burst of sound events has settled.  Cards
+// whose device is gone are retired; devices that are now present are added.
+// A device that fails to open is not retried until the next event.
 void JackAlsaDriver::HandleSoundChanged()
 {
-    jack_log("JackAlsaDriver: the sound devices changed");
+    if (fDriver == NULL) {
+        return;
+    }
+    alsa_driver_t* primary = (alsa_driver_t*)fDriver;
+
+    std::vector<JackAlsaPcmInfo> listing;
+    std::vector<JackAlsaSecondaryConfig> plan = BuildSecondaryPlan(fConfiguredSecondaries, fCaptureDriverName,
+                                                                   fPlaybackDriverName, fKnownPcms, false, &listing);
+    fKnownPcms = listing;
+
+    std::vector<JackAlsaSecondaryCard*> cards;
+    {
+        std::lock_guard<std::mutex> lock(fCardsMutex);
+        cards = fSecondaryCards;
+    }
+    std::vector<std::string> current;
+    std::vector<std::string> desired;
+    for (size_t i = 0; i < cards.size(); i++) {
+        current.push_back(CardKeyOf(cards[i]->Config()));
+    }
+    for (size_t j = 0; j < plan.size(); j++) {
+        desired.push_back(CardKeyOf(plan[j]));
+    }
+
+    JackAlsaCardChanges changes = JackAlsaDiffCards(current, desired);
+    for (size_t k = 0; k < changes.retire.size(); k++) {
+        JackAlsaSecondaryCard* card = cards[changes.retire[k]];
+        jack_info("secondary card '%s' removed: its device is no longer present or no longer wanted",
+                  PortBaseOf(card->Config()).c_str());
+        RetireCard(card);
+    }
+    for (size_t k = 0; k < changes.add.size(); k++) {
+        AddCard(plan[changes.add[k]], primary);
+    }
+    UpdateSecondaryLatencies();
+}
+
+// Creates and opens a card for the primary's current settings.  Returns NULL if
+// the card cannot be opened.
+JackAlsaSecondaryCard* JackAlsaDriver::CreateCard(const JackAlsaSecondaryConfig& cfg, JackResamplerFactory* factory,
+                                                  alsa_driver_t* primary)
+{
+    JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg, factory);
+    card->SetRTState(&fRTEpoch, &fRTRunning);
+    card->SetId(fNextCardId++);
+    card->SetFailureSink(fReconfigWorker);
+    if (card->Open(primary->frames_per_cycle, primary->frame_rate, primary->user_nperiods,
+                   fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
+        delete card;
+        return NULL;
+    }
+    return card;
+}
+
+// Adds a card for a device that appeared after startup.  Runs on the worker
+// thread, with the driver running.  A failure is logged once and the card is
+// left out until the next event.
+bool JackAlsaDriver::AddCard(const JackAlsaSecondaryConfig& cfg, alsa_driver_t* primary)
+{
+    const std::string& pcm = cfg.capture_device.empty() ? cfg.playback_device : cfg.capture_device;
+    if (!LockCard(pcm.c_str(), true)) {
+        ReportOnce("secondary card '" + PortBaseOf(cfg) + "' is skipped: its card is held by another server");
+        return false;
+    }
+
+    JackResamplerFactory* factory = JackResamplerFactory::Find(cfg.resampler.c_str());
+    if (factory == NULL) {
+        ReportOnce("secondary card '" + PortBaseOf(cfg) + "': resampler '" + cfg.resampler + "' is not available");
+        return false;
+    }
+
+    JackAlsaSecondaryCard* card = CreateCard(cfg, factory, primary);
+    if (card == NULL) {
+        ReportOnce("secondary card '" + PortBaseOf(cfg) + "' cannot be opened; it will be tried at the next device change");
+        return false;
+    }
+    if (card->Start() < 0) {
+        delete card;
+        ReportOnce("secondary card '" + PortBaseOf(cfg) + "' cannot be started; it will be tried at the next device change");
+        return false;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(fCardsMutex);
+        fSecondaryCards.push_back(card);
+    }
+    if (!PromoteCard(card)) {
+        // Not promoted, so the RT thread never used it; retiring frees it.
+        RetireCard(card);
+        ReportOnce("secondary card '" + PortBaseOf(cfg) + "' cannot be added; it will be tried at the next device change");
+        return false;
+    }
+
+    for (int d = 0; d < 2; d++) {
+        JackAlsaRateDirection dir = (JackAlsaRateDirection)d;
+        if (card->RateElementValid(dir)) {
+            fControlMonitor->QueueWatch(card->Id(), card->ControlName(), card->RateElement(dir), dir);
+        }
+    }
+    jack_info("secondary card '%s' added", PortBaseOf(cfg).c_str());
+    return true;
+}
+
+void JackAlsaDriver::ReportOnce(const std::string& message)
+{
+    for (size_t i = 0; i < fReportedFailures.size(); i++) {
+        if (fReportedFailures[i] == message) {
+            return;
+        }
+    }
+    fReportedFailures.push_back(message);
+    jack_error("%s", message.c_str());
 }
 
 void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long value)

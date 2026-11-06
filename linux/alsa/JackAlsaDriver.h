@@ -27,6 +27,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaReconfigWorker.h"
 #include "JackAlsaControlMonitor.h"
 #include "JackAlsaSecondaryCard.h"
+#include "JackAlsaCardDiff.h"
+#include "JackAlsaEnumerate.h"
 #include "JackAlsaHotplug.h"
 #include "JackAlsaSlotTable.h"
 #include "JackAlsaSecondaryConfig.h"
@@ -66,6 +68,9 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         std::atomic<bool> fRTRunning;
         std::atomic<bool> fRestarting;
         std::vector<std::string> fCardLockNames;
+        std::vector<JackAlsaSecondaryConfig> fConfiguredSecondaries;   // as given to Open
+        std::vector<JackAlsaPcmInfo> fKnownPcms;                       // the last device listing
+        std::vector<std::string> fReportedFailures;                    // each logged once
 
         bool LockCard(const char* pcm_name, bool shared);
         void UnlockCards();
@@ -77,6 +82,10 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         void UnregisterCardPorts(JackAlsaSecondaryCard* card);
         void RetireCard(JackAlsaSecondaryCard* card);
         bool WaitForRTSafePoint();
+        JackAlsaSecondaryCard* CreateCard(const JackAlsaSecondaryConfig& cfg, JackResamplerFactory* factory,
+                                          alsa_driver_t* primary);
+        bool AddCard(const JackAlsaSecondaryConfig& cfg, alsa_driver_t* primary);
+        void ReportOnce(const std::string& message);
 
     public:
         // Called on the RT thread when the ALSA core asks for a restart after an xrun.

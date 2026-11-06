@@ -41,11 +41,15 @@ struct JackAlsaPcmInfo {
 };
 
 /*
-Lists every PCM device that has a stream, on every card.  Devices that cannot
-be opened right now (for example an HDMI output with a stream busy elsewhere)
-are left out, with a log line.
+Lists every PCM device that has a stream, on every card.
+
+A device that cannot be opened right now (it is held by a stream of this or
+another application) keeps the channel counts it had in \a known, the previous
+listing, so a device in use is not taken to be gone.  A device with no known
+counts and no open is left out.  \a report turns the log lines on.
 */
-std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms();
+std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcmInfo>& known,
+                                                   bool report);
 
 } // end of namespace
 
