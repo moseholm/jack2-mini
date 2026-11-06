@@ -111,11 +111,20 @@ static void AlsaSetTimeThunk(void* arg, jack_time_t time)
 
 static int AlsaRestartThunk(void* arg)
 {
-    JackAlsaDriver* driver = static_cast<JackAlsaDriver*>(arg);
-    int res;
-    if ((res = driver->Stop()) == 0) {
-        res = driver->Start();
+    return static_cast<JackAlsaDriver*>(arg)->RestartFromRT();
+}
+
+int JackAlsaDriver::RestartFromRT()
+{
+    // Stop and Start run inside one RT cycle here.  The RT side stays marked as
+    // running throughout, so a reconfiguration waits for the cycle to finish
+    // rather than freeing buffers mid-restart.
+    fRestarting.store(true);
+    int res = Stop();
+    if (res == 0) {
+        res = Start();
     }
+    fRestarting.store(false);
     return res;
 }
 
@@ -523,7 +532,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         }
 
         JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg, factory);
-        card->SetRTEpoch(&fRTEpoch);
+        card->SetRTState(&fRTEpoch, &fRTRunning);
         if (card->Open(primary->frames_per_cycle, primary->frame_rate, primary->user_nperiods,
                        fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
             delete card;
@@ -665,6 +674,9 @@ int JackAlsaDriver::Start()
                 JackAudioDriver::Stop();
             } else {
                 StartControlMonitoring();
+                if (!fRestarting.load()) {
+                    fRTRunning.store(true);
+                }
             }
         }
     }
@@ -750,6 +762,9 @@ void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long
 
 int JackAlsaDriver::Stop()
 {
+    if (!fRestarting.load()) {
+        fRTRunning.store(false);
+    }
     StopControlMonitoring();
     StopSecondaryCards();
     int res = alsa_driver_stop((alsa_driver_t *)fDriver);

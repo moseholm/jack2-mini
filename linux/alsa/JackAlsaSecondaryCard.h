@@ -112,6 +112,7 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         jack_nframes_t fPrimaryRate;
         std::atomic<bool> fSilent;
         const std::atomic<uint64_t>* fRTEpoch;
+        const std::atomic<bool>* fRTRunning;
         void UpdateDrift(bool capture_side);
         void CloseControls();
 
@@ -174,7 +175,13 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
 
         // Gives the card the driver's RT cycle counter, used to know when the RT
         // thread has stopped touching the card during a reconfiguration.
-        void SetRTEpoch(const std::atomic<uint64_t>* epoch) { fRTEpoch = epoch; }
+        // The driver shares its RT cycle counter and running state.  While the RT
+        // side runs, a reconfiguration waits for it to pass a safe point.
+        void SetRTState(const std::atomic<uint64_t>* epoch, const std::atomic<bool>* running)
+        {
+            fRTEpoch = epoch;
+            fRTRunning = running;
+        }
 
         // Changes the stream rate: stops the card, reopens the ALSA stream and rebuilds
         // its buffers, converters and rings, then restarts it if it was running.  If the
