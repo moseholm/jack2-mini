@@ -24,6 +24,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include <algorithm>
 #include <chrono>
+#include <errno.h>
 #include <math.h>
 #include <string.h>
 #include <thread>
@@ -473,9 +474,11 @@ void JackAlsaSecondaryCard::CloseControls()
     }
     for (int d = 0; d < 2; d++) {
         if (fRateValid[d] && fRateElem[d].user) {
-            if (JackAlsaControlRemoveRate(fCtl, fRateElem[d]) < 0) {
-                jack_error("secondary card '%s': cannot remove control '%s'",
-                           fConfig.name.c_str(), fRateElem[d].name.c_str());
+            int err = JackAlsaControlRemoveRate(fCtl, fRateElem[d]);
+            // ENODEV: the card has been unplugged, so its control is already gone.
+            if (err < 0 && err != -ENODEV) {
+                jack_error("secondary card '%s': cannot remove control '%s' (%s)",
+                           fConfig.name.c_str(), fRateElem[d].name.c_str(), strerror(-err));
             }
         }
         fRateValid[d] = false;
