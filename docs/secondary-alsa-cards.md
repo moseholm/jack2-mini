@@ -82,7 +82,26 @@ Each automatic card:
 Automatic cards never stop the server. Only the configured cards can do that.
 There are eight secondary slots. Devices beyond the eighth are logged and not added.
 
-Hot-plugging is not handled yet: cards are found at startup only.
+## Hot-plug
+
+The server listens to udev for changes in the `sound` subsystem and does not
+poll. When a burst of events has been quiet for 250 ms, it compares the devices
+now present with its cards, using the same rules as at startup:
+
+- a card whose device has gone (unplugged, or its driver unloaded) is removed:
+  its ports are unregistered and its latency leaves the graph;
+- a device that has appeared is added as an automatic card, and its ports and
+  rate controls appear;
+- a device that fails to open or start is logged once and tried again at the
+  next device change. Nothing retries in the meantime;
+- a card whose I/O fails is removed the same way, and returns at the next change.
+
+A device that is busy (held by another application or by this server) keeps its
+card or stays out, without an error on each change. Hot-plug never changes the
+primary card.
+
+udev is needed at build time (`libudev-dev`). If udev cannot be reached at
+runtime, the server keeps the cards it found at startup.
 
 ## Ports
 
@@ -223,8 +242,8 @@ jack_set_secondary_sample_rate_callback(client, on_secondary_rate, NULL);
   buffer, the ring prefill and the resampler's filter delay, in primary frames. It
   is recomputed after a rate change. The ring's fill is held at about three periods,
   so the value is a design estimate; it has not been measured against hardware.
-- **No hot-plug yet.** Cards are found at startup. A card that appears later is
-  not added until the server is restarted.
+- **Hot-plug depends on udev events.** A device that appears while another
+  application holds it is added at the next change, not when it is released.
 - **Eight secondary slots** in total, automatic and configured together.
 - **Native control types.** Only integer controls are used. Enumerated controls
   are not yet supported, so a card whose rate control is an enum falls back to a
