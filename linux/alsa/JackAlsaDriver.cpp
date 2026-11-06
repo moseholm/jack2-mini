@@ -725,10 +725,11 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
     alsa_driver_t* primary = (alsa_driver_t*)fDriver;
     std::vector<JackAlsaSecondaryConfig> plan = BuildSecondaryPlan(secondaries, capture_driver_name, playback_driver_name);
 
-    if (!plan.empty()) {
-        fReconfigWorker = new JackAlsaReconfigWorker(this);
-        fControlMonitor = new JackAlsaControlMonitor(fReconfigWorker);
-    }
+    // Always created: a card can appear after startup, and the watchers must
+    // exist to add it.
+    fReconfigWorker = new JackAlsaReconfigWorker(this);
+    fControlMonitor = new JackAlsaControlMonitor(fReconfigWorker);
+    fHotplug = new JackAlsaHotplug(fReconfigWorker);
 
     for (size_t i = 0; i < plan.size(); i++) {
         const JackAlsaSecondaryConfig& cfg = plan[i];
@@ -848,9 +849,13 @@ int JackAlsaDriver::Close()
     // Generic audio driver close
     int res = JackAudioDriver::Close();
 
+    // Stop every thread that can change the cards before they are freed.
+    StopControlMonitoring();
     UnlockCards();
 
-    // The monitor and worker refer to the cards, so they go first.
+    // The hot-plug listener, monitor and worker refer to the cards, so they go first.
+    delete fHotplug;
+    fHotplug = NULL;
     delete fControlMonitor;
     fControlMonitor = NULL;
     delete fReconfigWorker;
@@ -937,6 +942,9 @@ void JackAlsaDriver::StartControlMonitoring()
         // rates; the primary card is unaffected.
         jack_error("secondary card rate controls are not being monitored");
     }
+    if (fHotplug != NULL && fHotplug->Start() < 0) {
+        jack_error("hot-plug is not active; cards will not be added or removed while running");
+    }
 }
 
 void JackAlsaDriver::StopControlMonitoring()
@@ -944,8 +952,16 @@ void JackAlsaDriver::StopControlMonitoring()
     if (fControlMonitor == NULL) {
         return;
     }
+    if (fHotplug != NULL) {
+        fHotplug->Stop();
+    }
     fControlMonitor->Stop();
     fReconfigWorker->Stop();
+}
+
+void JackAlsaDriver::HandleSoundChanged()
+{
+    jack_log("JackAlsaDriver: the sound devices changed");
 }
 
 void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long value)
