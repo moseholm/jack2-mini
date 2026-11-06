@@ -66,15 +66,74 @@ void JackAlsaControlMonitor::RemoveWatches(int card)
     }
 }
 
-void JackAlsaControlMonitor::ApplyRemovals()
+void JackAlsaControlMonitor::QueueWatch(int card, const std::string& ctl_name,
+                                        const JackAlsaRateElement& elem, JackAlsaRateDirection dir)
+{
+    PendingWatch watch;
+    watch.card = card;
+    watch.ctl_name = ctl_name;
+    watch.elem = elem;
+    watch.dir = dir;
+    {
+        std::lock_guard<std::mutex> lock(fUpdateMutex);
+        fAdditions.push_back(watch);
+    }
+    if (fUpdateFd >= 0) {
+        uint64_t one = 1;
+        if (write(fUpdateFd, &one, sizeof(one)) < 0) {
+            jack_error("control monitor: cannot signal a watch change");
+        }
+    }
+}
+
+// Runs on the monitor thread.
+void JackAlsaControlMonitor::AddPendingWatch(const PendingWatch& pending)
+{
+    Device* device = NULL;
+    for (size_t i = 0; i < fDevices.size(); i++) {
+        if (fDevices[i]->name == pending.ctl_name) {
+            device = fDevices[i];
+            break;
+        }
+    }
+    if (device == NULL) {
+        snd_ctl_t* ctl;
+        int err = snd_ctl_open(&ctl, pending.ctl_name.c_str(), 0);
+        if (err < 0) {
+            jack_error("control monitor: cannot open %s for events (%s)",
+                       pending.ctl_name.c_str(), snd_strerror(err));
+            return;
+        }
+        device = new Device;
+        device->name = pending.ctl_name;
+        device->ctl = ctl;
+        device->dead = false;
+        fDevices.push_back(device);
+        Subscribe(device);
+    }
+
+    Watch watch;
+    watch.card = pending.card;
+    watch.dir = pending.dir;
+    watch.elem = pending.elem;
+    device->watches.push_back(watch);
+}
+
+void JackAlsaControlMonitor::ApplyUpdates()
 {
     std::vector<int> cards;
+    std::vector<PendingWatch> additions;
     {
         std::lock_guard<std::mutex> lock(fUpdateMutex);
         cards.swap(fRemovals);
+        additions.swap(fAdditions);
     }
     uint64_t dummy;
     while (read(fUpdateFd, &dummy, sizeof(dummy)) > 0) {
+    }
+
+    for (size_t a = 0; a < additions.size(); a++) {
+        AddPendingWatch(additions[a]);
     }
 
     for (size_t c = 0; c < cards.size(); c++) {
@@ -247,7 +306,7 @@ bool JackAlsaControlMonitor::Execute()
     }
 
     if (fds[fds.size() - 2].revents & POLLIN) {
-        ApplyRemovals();
+        ApplyUpdates();
         return true;
     }
 
@@ -274,9 +333,7 @@ bool JackAlsaControlMonitor::Execute()
 
 int JackAlsaControlMonitor::Start()
 {
-    if (fDevices.empty()) {
-        return 0;
-    }
+    // Runs even with nothing watched yet: watches can be queued while it runs.
     if (fWakeFd < 0) {
         fWakeFd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
         if (fWakeFd < 0) {

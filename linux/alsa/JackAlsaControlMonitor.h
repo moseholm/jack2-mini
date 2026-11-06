@@ -77,12 +77,20 @@ class JackAlsaControlMonitor : public JackRunnableInterface
         int fUpdateFd;
         std::mutex fUpdateMutex;
         std::vector<int> fRemovals;
+        struct PendingWatch {
+            int card;
+            std::string ctl_name;
+            JackAlsaRateElement elem;
+            JackAlsaRateDirection dir;
+        };
+        std::vector<PendingWatch> fAdditions;
         snd_ctl_event_t* fEvent;
 
         void Subscribe(Device* device);
         bool Dispatch(Device* device);
         void MarkDead(Device* device);
-        void ApplyRemovals();
+        void ApplyUpdates();
+        void AddPendingWatch(const PendingWatch& watch);
 
         JackAlsaControlMonitor(const JackAlsaControlMonitor&);
         JackAlsaControlMonitor& operator=(const JackAlsaControlMonitor&);
@@ -95,6 +103,11 @@ class JackAlsaControlMonitor : public JackRunnableInterface
         // Must be called before Start().  Opens the device on first use.
         int AddWatch(int card, const std::string& ctl_name, const JackAlsaRateElement& elem,
                      JackAlsaRateDirection dir);
+
+        // Starts watching an element while the thread is running.  The thread adds it
+        // between polls; the control device is opened and subscribed on that thread.
+        void QueueWatch(int card, const std::string& ctl_name, const JackAlsaRateElement& elem,
+                        JackAlsaRateDirection dir);
 
         // Stops watching a card's elements.  Safe while the thread is running: the
         // thread applies the removal between polls.  A device with no watches left
