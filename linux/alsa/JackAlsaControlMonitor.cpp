@@ -29,8 +29,10 @@ namespace Jack
 {
 
 JackAlsaControlMonitor::JackAlsaControlMonitor(JackAlsaControlListener* listener)
-    : fListener(listener), fThread(this), fWakeFd(-1), fEvent(NULL)
-{}
+    : fListener(listener), fThread(this), fWakeFd(-1), fUpdateFd(-1), fEvent(NULL)
+{
+    fUpdateFd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+}
 
 JackAlsaControlMonitor::~JackAlsaControlMonitor()
 {
@@ -44,6 +46,51 @@ JackAlsaControlMonitor::~JackAlsaControlMonitor()
     }
     if (fWakeFd >= 0) {
         close(fWakeFd);
+    }
+    if (fUpdateFd >= 0) {
+        close(fUpdateFd);
+    }
+}
+
+void JackAlsaControlMonitor::RemoveWatches(int card)
+{
+    {
+        std::lock_guard<std::mutex> lock(fUpdateMutex);
+        fRemovals.push_back(card);
+    }
+    if (fUpdateFd >= 0) {
+        uint64_t one = 1;
+        if (write(fUpdateFd, &one, sizeof(one)) < 0) {
+            jack_error("control monitor: cannot signal a watch change");
+        }
+    }
+}
+
+void JackAlsaControlMonitor::ApplyRemovals()
+{
+    std::vector<int> cards;
+    {
+        std::lock_guard<std::mutex> lock(fUpdateMutex);
+        cards.swap(fRemovals);
+    }
+    uint64_t dummy;
+    while (read(fUpdateFd, &dummy, sizeof(dummy)) > 0) {
+    }
+
+    for (size_t c = 0; c < cards.size(); c++) {
+        for (size_t i = fDevices.size(); i-- > 0;) {
+            Device* device = fDevices[i];
+            for (size_t w = device->watches.size(); w-- > 0;) {
+                if (device->watches[w].card == cards[c]) {
+                    device->watches.erase(device->watches.begin() + w);
+                }
+            }
+            if (device->watches.empty()) {
+                snd_ctl_close(device->ctl);
+                delete device;
+                fDevices.erase(fDevices.begin() + i);
+            }
+        }
     }
 }
 
@@ -174,6 +221,12 @@ bool JackAlsaControlMonitor::Execute()
         ranges.push_back(range);
     }
 
+    struct pollfd update;
+    update.fd = fUpdateFd;
+    update.events = POLLIN;
+    update.revents = 0;
+    fds.push_back(update);
+
     struct pollfd wake;
     wake.fd = fWakeFd;
     wake.events = POLLIN;
@@ -191,6 +244,11 @@ bool JackAlsaControlMonitor::Execute()
 
     if (fds.back().revents & POLLIN) {
         return false;
+    }
+
+    if (fds[fds.size() - 2].revents & POLLIN) {
+        ApplyRemovals();
+        return true;
     }
 
     for (size_t i = 0; i < ranges.size(); i++) {

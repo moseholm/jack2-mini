@@ -24,6 +24,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackThread.h"
 
 #include <alsa/asoundlib.h>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -73,11 +74,15 @@ class JackAlsaControlMonitor : public JackRunnableInterface
         std::vector<Device*> fDevices;
         JackThread fThread;
         int fWakeFd;
+        int fUpdateFd;
+        std::mutex fUpdateMutex;
+        std::vector<int> fRemovals;
         snd_ctl_event_t* fEvent;
 
         void Subscribe(Device* device);
         bool Dispatch(Device* device);
         void MarkDead(Device* device);
+        void ApplyRemovals();
 
         JackAlsaControlMonitor(const JackAlsaControlMonitor&);
         JackAlsaControlMonitor& operator=(const JackAlsaControlMonitor&);
@@ -90,6 +95,11 @@ class JackAlsaControlMonitor : public JackRunnableInterface
         // Must be called before Start().  Opens the device on first use.
         int AddWatch(int card, const std::string& ctl_name, const JackAlsaRateElement& elem,
                      JackAlsaRateDirection dir);
+
+        // Stops watching a card's elements.  Safe while the thread is running: the
+        // thread applies the removal between polls.  A device with no watches left
+        // is closed.
+        void RemoveWatches(int card);
 
         int Start();
         int Stop();
