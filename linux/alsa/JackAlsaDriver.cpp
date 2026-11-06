@@ -1030,6 +1030,11 @@ void JackAlsaDriver::HandleSoundChanged()
     }
 
     JackAlsaCardChanges changes = JackAlsaDiffCards(current, desired);
+    if (changes.retire.empty() && changes.add.empty()) {
+        // Verbose only: a change event that changes nothing must not touch the
+        // graph, but seeing the reconcile is useful when testing hot-plug.
+        jack_log("sound device change: no secondary card added or removed");
+    }
     for (size_t k = 0; k < changes.retire.size(); k++) {
         JackAlsaSecondaryCard* card = cards[changes.retire[k]];
         jack_info("secondary card '%s' removed: its device is no longer present or no longer wanted",
