@@ -23,6 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaDriftController.h"
 #include "JackAlsaRateConverter.h"
 #include "JackAlsaRingBuffer.h"
+#include "JackAlsaSlotTable.h"
 #include "JackAlsaSecondaryConfig.h"
 #include "resample/JackResampler.h"
 
@@ -247,6 +248,31 @@ static void TestResamplerPlugin()
     unsetenv("JACK_RESAMPLER_PATH");
 }
 
+static void TestSlotTable()
+{
+    printf("slots: fixed table, full and free, RT-readable\n");
+    typedef JackAlsaSlotTable<int, 3> Table;
+    Table table;
+    int a = 1, b = 2, c = 3, d = 4;
+    CHECK(Table::Capacity() == 3);
+    CHECK(table.Count() == 0);
+    CHECK(table.Assign(&a) == 0);
+    CHECK(table.Assign(&b) == 1);
+    CHECK(table.Assign(&c) == 2);
+    CHECK(table.Assign(&d) == -1);                  // full
+    CHECK(table.Count() == 3);
+    CHECK(table.Get(1) == &b);
+    CHECK(table.Remove(&b) == 1);
+    CHECK(table.Get(1) == NULL);
+    CHECK(table.Count() == 2);
+    CHECK(table.Remove(&b) == 0);                   // already gone
+    CHECK(table.Assign(&d) == 1);                   // the freed slot is reused
+    CHECK(table.Remove(&a) == 1);
+    CHECK(table.Remove(&c) == 1);
+    CHECK(table.Remove(&d) == 1);
+    CHECK(table.Count() == 0);
+}
+
 static void TestConverterRates()
 {
     printf("converter: 44.1 kHz capture and 48 kHz playback keep exact counts\n");
@@ -385,6 +411,7 @@ int main()
     TestConverterDI();
     TestResamplerFactories();
     TestResamplerPlugin();
+    TestSlotTable();
     TestConverterRates();
     TestDriftController();
     TestDriftLimits();
