@@ -150,3 +150,11 @@ For general JACK information, see the `JACK homepage <https://jackaudio.org/>`_
 and `wiki <https://github.com/jackaudio/jackaudio.github.com/wiki>`_. There are
 also the #jack and #lad chat channels on
 `Libera Chat IRC <https://web.libera.chat/#jack>`_.
+
+Acknowledgements
+================
+
+This project came together in `opencode <https://opencode.ai/>`_, with a great
+deal of help from **Big Pickle** and **Claude Haiku**. Without those three this
+would not have happened. Thank you for the long hours on ALSA, udev, resampling
+and the JACK graph.
