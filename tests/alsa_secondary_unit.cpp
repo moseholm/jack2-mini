@@ -323,6 +323,22 @@ static void TestCardExcluded()
     CHECK(!JackAlsaCardExcluded("LoopbackX", one));
 }
 
+static void TestPrimaryById()
+{
+    printf("primary: named by ALSA id, not by number\n");
+    CHECK(JackAlsaPcmNameIsById("hw:CARD=PCH"));
+    CHECK(JackAlsaPcmNameIsById("hw:CARD=PCH,DEV=0"));
+    CHECK(JackAlsaPcmNameIsById("hw:PCH,0"));
+    CHECK(JackAlsaPcmNameIsById("plughw:CARD=Loopback,DEV=1"));
+    CHECK(!JackAlsaPcmNameIsById("hw:0"));
+    CHECK(!JackAlsaPcmNameIsById("hw:2,0"));
+    CHECK(!JackAlsaPcmNameIsById("hw:CARD=0"));
+    CHECK(!JackAlsaPcmNameIsById("hw:"));
+    CHECK(!JackAlsaPcmNameIsById("hw:CARD="));
+    CHECK(!JackAlsaPcmNameIsById(""));
+    CHECK(!JackAlsaPcmNameIsById("default"));
+}
+
 static void TestConverterRates()
 {
     printf("converter: 44.1 kHz capture and 48 kHz playback keep exact counts\n");
@@ -465,6 +481,7 @@ int main()
     TestPcmDeviceNumber();
     TestCardDiff();
     TestCardExcluded();
+    TestPrimaryById();
     TestConverterRates();
     TestDriftController();
     TestDriftLimits();

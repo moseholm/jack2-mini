@@ -83,6 +83,8 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         void UnregisterCardPorts(JackAlsaSecondaryCard* card);
         void RetireCard(JackAlsaSecondaryCard* card);
         bool WaitForRTSafePoint();
+        void PrimaryFailed(int status);
+        std::atomic<bool> fPrimaryFailed;
         JackAlsaSecondaryCard* CreateCard(const JackAlsaSecondaryConfig& cfg, JackResamplerFactory* factory,
                                           alsa_driver_t* primary);
         bool AddCard(const JackAlsaSecondaryConfig& cfg, alsa_driver_t* primary);
@@ -109,6 +111,7 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         {
             fRTRunning.store(false);
             fRestarting.store(false);
+            fPrimaryFailed.store(false);
             fNextCardId = 0;
         }
         virtual ~JackAlsaDriver()

@@ -108,6 +108,28 @@ int JackAlsaPcmDeviceNumber(const std::string& pcm)
     return 0;
 }
 
+bool JackAlsaPcmNameIsById(const std::string& pcm)
+{
+    size_t colon = pcm.find(':');
+    if (colon == std::string::npos) {
+        return false;
+    }
+    std::string type = pcm.substr(0, colon);
+    if (type != "hw" && type != "plughw") {
+        return false;
+    }
+    std::string rest = pcm.substr(colon + 1);
+    if (rest.compare(0, 5, "CARD=") == 0) {
+        rest = rest.substr(5);
+    }
+    size_t end = rest.find(',');
+    std::string card = (end == std::string::npos) ? rest : rest.substr(0, end);
+    if (card.empty()) {
+        return false;
+    }
+    return card.find_first_not_of("0123456789") != std::string::npos;
+}
+
 bool JackAlsaCardExcluded(const std::string& card_id, const std::vector<std::string>& excluded)
 {
     for (size_t i = 0; i < excluded.size(); i++) {
