@@ -203,6 +203,11 @@ rebuilds its buffers and converters, and restarts it. The card's audio is
 silent during the reopen. The primary card and the JACK graph are not
 restarted.
 
+On a duplex card both directions share one PCM and one clock. A playback
+change therefore reopens both streams, and both rate controls then read the
+new rate; the capture control does not need its own write. A change written
+to the capture control is still governed by `follow_hw_rate`.
+
 ### The period limit
 
 The card's ALSA period is set from the primary's buffer size:
