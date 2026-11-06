@@ -1,61 +1,113 @@
-`JACK2 <https://jackaudio.org/>`_
-################################
+jack2-mini
+##########
 
-.. image:: https://github.com/jackaudio/jack2/actions/workflows/build.yml/badge.svg
-   :target: https://github.com/jackaudio/jack2/actions/workflows/build.yml
-.. image:: https://repology.org/badge/tiny-repos/jack-audio-connection-kit.svg
-   :target: https://repology.org/metapackage/jack-audio-connection-kit/versions
+.. image:: https://github.com/moseholm/jack2-mini/actions/workflows/build.yml/badge.svg
+   :target: https://github.com/moseholm/jack2-mini/actions/workflows/build.yml
 
-JACK2 aka jackdmp is a C++ version of the JACK low-latency audio server for
-multi-processor machines. It is a new implementation of the JACK server core
-features that aims at removing some limitations of the JACK1 design. The
-activation system has been changed for a data flow model and lock-free
-programming techniques for graph access have been used to have a more dynamic
-and robust system.
+jack2-mini is a Linux-only JACK server built on the JACK2 engine. It uses ALSA
+as its only hardware backend and gives the whole graph one clock: a single
+**primary** ALSA card. Every other sound device can join as a **secondary**
+card, resampled to the primary rate and added or removed while the server runs.
 
-- uses a new client activation model, that allows simultaneous client
-  execution (on a SMP machine) when parallel clients exist in the graph (client
-  that have the same inputs). This activation model allows to better use
-  available CPU on a smp machine, but also works on mono-processor machine.
+It is meant for a machine where one JACK server should own all of the sound
+hardware: no PulseAudio, no second jackd, and no application taking a card
+behind the server's back. Existing JACK clients work unchanged.
 
-- uses a lock-free way to access (read/write) the client graph, thus
-  allowing connections/disconnection to be done without interrupting the audio
-  stream. The result is that connections/disconnections are glitch-free.
+.. code-block:: text
 
-- can work in two different modes at the server level:
+    JACK clients
+         |
+    +----+--------------------------------------------------+
+    |                  JACK graph (jack2)                  |
+    +----+---------------------------+---------------------+
+         |                           |
+    primary card                secondary cards
+    hw:CARD=PCH                 hw:CARD=USB, hw:CARD=NVidia, ...
+    clock and buffer size       resampled to the primary rate
+                                added/removed by udev
 
-  - *synchronous activation*: in a given cycle, the server waits for all
-    clients to be finished (similar to normal jackd)
+What it does
+============
 
-  - *asynchronous activation*: in a given cycle, the server does not wait for
-    all clients to be finished and use output buffer computed the previous
-    cycle.
-    The audible result of this mode is that if a client is not activated
-    during one cycle, other clients may still run and the resulting audio
-    stream will still be produced (even if its partial in some way). This
-    mode usually result in fewer (less audible) audio glitches in a loaded
-    system.
+- **One primary card, chosen by ALSA id.** Start the server with
+  ``-d hw:CARD=PCH``. Numeric names such as ``hw:0`` are refused, so the
+  choice survives card renumbering. The primary sets the graph's rate and
+  buffer size.
+- **Every other PCM device is a secondary card.** They are discovered at
+  startup, one ALSA PCM device per secondary card. A device with both
+  directions is used duplex; otherwise it uses the direction it supports.
+  Automatic cards use at most 12 channels per direction.
+- **Everything is resampled to the primary rate.** A secondary runs at its own
+  rate and the built-in PipeWire resampler converts between it and the graph.
+  There is no linear fallback.
+- **Hot-plug is part of the design.** The server listens to udev. A device that
+  appears is added, and a device that goes away has its ports removed, without
+  restarting the primary or the graph. Failed opens are retried at the next
+  device event, not by polling.
+- **Per-device ports and controls.** A secondary device gets ports named
+  ``system:capture_<card>_d<dev>_<ch>`` and
+  ``system:playback_<card>_d<dev>_<ch>``, plus
+  ``JACK Secondary Capture Rate d<dev>`` and
+  ``JACK Secondary Playback Rate d<dev>`` ALSA controls.
+- **Rate changes through ALSA.** Writing a secondary's rate control reopens
+  that card at the new rate while the primary keeps running. Playback changes
+  are applied when the device accepts them; capture changes need
+  ``follow_hw_rate=1``. A refused change restores the control to the rate the
+  card is actually using.
+- **One server per card.** Each card is locked for the server's lifetime. A
+  second server is refused for that card, while several devices of one card
+  can be used by the same server.
+- **Eight secondary slots.** Automatic and explicitly configured cards share
+  the same eight slots.
+- **Resampler plugins.** Besides the built-in PipeWire resampler, a secondary
+  can load a versioned resampler plugin selected with ``resampler=``.
 
-This source tree is configured for Linux only, using ALSA as the hardware
-backend. It provides the JACK engine, graph processing, the ALSA driver, and
-the ``dummy``, ``loopback`` and ``proxy`` drivers.
+Requirements and ownership
+==========================
 
-For further information, see the JACK `homepage <https://jackaudio.org/>`_ and `wiki <https://github.com/jackaudio/jackaudio.github.com/wiki>`_. There are also the #jack and #lad chat channels on `Libera Chat IRC <https://web.libera.chat/#jack>`_.
+- Linux with ALSA. This tree does not build for other platforms or backends.
+- jack2-mini must be the only thing that opens the ALSA cards. Stop
+  PulseAudio and any other jackd instance. PipeWire may keep running, but its
+  ALSA devices must be disabled so it does not claim the cards.
+- The primary card must be present when the server starts. If it disappears,
+  the server stops with an error naming the device; no secondary takes over.
+- The graph rate and buffer size are fixed by the primary. A secondary's
+  period is derived from the primary buffer size and its own rate.
 
-Secondary ALSA cards
-====================
+Running
+=======
 
-The ALSA driver can also use additional sound cards, which are resampled to the
-primary card's rate. Configuration, ports, rate changes, the notification API,
-and the limits are described in `docs/secondary-alsa-cards.md
-<docs/secondary-alsa-cards.md>`_.
+Build first (see `Building`_), then::
+
+    jackd -d alsa -d hw:CARD=PCH -r 48000 -p 1024
+
+Leave a card out of automatic discovery with ``--exclude-card`` (repeatable,
+case-insensitive)::
+
+    jackd -d alsa -d hw:CARD=PCH --exclude-card=Loopback
+
+Override an automatic card, or configure one explicitly, with ``--secondary``
+(repeatable) or ``--secondary-file``::
+
+    jackd -d alsa -d hw:CARD=PCH \
+        --secondary "name=usb;device=hw:CARD=USB,DEV=0;mode=duplex"
+
+Explicit cards are fatal if they cannot be opened, unless ``optional=1`` is
+set. Automatic cards never stop the server.
+
+Secondary cards
+===============
+
+Configuration keys, ports, clocks, rate controls, the client notification API,
+hot-plug behaviour and the current limits are described in
+`docs/secondary-alsa-cards.md <docs/secondary-alsa-cards.md>`_.
 
 Building
 ========
 
-The build requires CMake, a C/C++ compiler, the ALSA development headers
-and libraries, and libudev for sound-device hot-plug. On Debian-based systems
-the dependencies are::
+The build requires CMake, a C/C++ compiler, the ALSA development headers and
+libraries, and libudev for sound-device hot-plug. On Debian-based systems the
+dependencies are::
 
     sudo apt-get install build-essential cmake libasound2-dev libudev-dev
 
@@ -72,10 +124,29 @@ The install prefix and library directory can be set with the standard CMake
 options ``-DCMAKE_INSTALL_PREFIX=/usr/local`` and
 ``-DCMAKE_INSTALL_LIBDIR=lib``.
 
-Build the test programs with ``-DJACK_BUILD_TESTS=ON``::
+The maximum number of clients and ports per application can be configured with
+``-DJACK_MAX_CLIENTS=256`` and ``-DJACK_PORTS_PER_APPLICATION=2048``.
+
+Tests
+=====
+
+The tests are off by default. Configure with ``-DJACK_BUILD_TESTS=ON`` to build
+the secondary-card unit tests and the JACK test programs::
 
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON
     cmake --build build --parallel
+    ctest --test-dir build
 
-The maximum number of clients and ports per application can be configured with
-``-DJACK_MAX_CLIENTS=256`` and ``-DJACK_PORTS_PER_APPLICATION=2048``.
+Heritage
+========
+
+jack2-mini is a focused fork of `JACK2 <https://github.com/jackaudio/jack2>`_.
+The JACK engine, graph and client API come from JACK2 and work as before; what
+this tree changes is how Linux hardware is discovered and owned. It builds the
+ALSA and ALSA raw MIDI drivers together with the ``dummy``, ``loopback`` and
+``proxy`` drivers. See ``COPYING`` for the license.
+
+For general JACK information, see the `JACK homepage <https://jackaudio.org/>`_
+and `wiki <https://github.com/jackaudio/jackaudio.github.com/wiki>`_. There are
+also the #jack and #lad chat channels on
+`Libera Chat IRC <https://web.libera.chat/#jack>`_.
