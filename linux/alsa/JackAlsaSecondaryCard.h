@@ -19,6 +19,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef __JackAlsaSecondaryCard__
 #define __JackAlsaSecondaryCard__
 
+#include "JackAlsaCardFailureSink.h"
 #include "JackAlsaControl.h"
 #include "JackAlsaDriftController.h"
 #include "JackAlsaRateConverter.h"
@@ -113,6 +114,11 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         std::atomic<bool> fSilent;
         const std::atomic<uint64_t>* fRTEpoch;
         const std::atomic<bool>* fRTRunning;
+        int fId;
+        JackAlsaCardFailureSink* fFailureSink;
+
+        // Stops the card after an I/O error and tells the driver.
+        void MarkFailed();
         void UpdateDrift(bool capture_side);
         void CloseControls();
 
@@ -160,6 +166,11 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         void WriteFromPorts(JackGraphManager* graph_manager, jack_nframes_t nframes);
 
         const std::string& Name() const { return fConfig.name; }
+
+        // Stable identifier chosen by the driver; used to route events to the card.
+        int Id() const { return fId; }
+        void SetId(int id) { fId = id; }
+        void SetFailureSink(JackAlsaCardFailureSink* sink) { fFailureSink = sink; }
         const JackAlsaSecondaryConfig& Config() const { return fConfig; }
 
         bool CaptureEnabled() const { return fCaptureEnabled; }

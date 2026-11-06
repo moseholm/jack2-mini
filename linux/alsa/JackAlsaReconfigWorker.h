@@ -19,6 +19,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef __JackAlsaReconfigWorker__
 #define __JackAlsaReconfigWorker__
 
+#include "JackAlsaCardFailureSink.h"
 #include "JackAlsaControl.h"
 #include "JackAlsaControlMonitor.h"
 #include "JackPlatformPlug.h"
@@ -28,6 +29,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <map>
 #include <mutex>
 #include <utility>
+#include <vector>
 
 namespace Jack
 {
@@ -42,6 +44,7 @@ class JackAlsaRateRequestHandler
         virtual ~JackAlsaRateRequestHandler()
         {}
         virtual void HandleRateRequest(int card, JackAlsaRateDirection dir, long value) = 0;
+        virtual void HandleCardFailure(int card) = 0;
 };
 
 /*!
@@ -53,7 +56,7 @@ writes results in one handler call with the latest value.  The handler runs on
 the worker thread, never on the RT thread.
 */
 
-class JackAlsaReconfigWorker : public JackRunnableInterface, public JackAlsaControlListener
+class JackAlsaReconfigWorker : public JackRunnableInterface, public JackAlsaControlListener, public JackAlsaCardFailureSink
 {
 
     private:
@@ -64,6 +67,7 @@ class JackAlsaReconfigWorker : public JackRunnableInterface, public JackAlsaCont
         std::mutex fMutex;
         std::condition_variable fCond;
         std::map<Key, long> fPending;
+        std::vector<int> fFailures;
         bool fRunning;
         JackThread fThread;
 
@@ -77,6 +81,9 @@ class JackAlsaReconfigWorker : public JackRunnableInterface, public JackAlsaCont
 
         // JackAlsaControlListener
         virtual void OnRateEvent(int card, JackAlsaRateDirection dir, long value);
+
+        // JackAlsaCardFailureSink.  Failures are handled before rate requests.
+        virtual void OnCardFailed(int card_id);
 
         int Start();
         int Stop();

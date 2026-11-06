@@ -88,6 +88,8 @@ JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& conf
     fSilent.store(false);
     fRTEpoch = NULL;
     fRTRunning = NULL;
+    fId = -1;
+    fFailureSink = NULL;
     fPrimaryBufferSize = 0;
     fPrimaryRate = 0;
 }
@@ -566,6 +568,14 @@ int JackAlsaSecondaryCard::Start()
     return 0;
 }
 
+void JackAlsaSecondaryCard::MarkFailed()
+{
+    fRunning.store(false);
+    if (fFailureSink != NULL) {
+        fFailureSink->OnCardFailed(fId);
+    }
+}
+
 bool JackAlsaSecondaryCard::WaitForRTCycles(unsigned int cycles)
 {
     // A cycle that was already running when fSilent was set may finish one
@@ -699,7 +709,7 @@ bool JackAlsaSecondaryCard::Execute()
     if (wait_status < 0) {
         jack_error("secondary card '%s': ALSA wait failed (status %d)",
                    fConfig.name.c_str(), wait_status);
-        fRunning.store(false);
+        MarkFailed();
         return false;
     }
 
@@ -712,7 +722,7 @@ bool JackAlsaSecondaryCard::Execute()
     if (fCaptureEnabled) {
         if (alsa_driver_read(fAlsaDriver, fPeriod) < 0) {
             jack_error("secondary card '%s': ALSA read failed", fConfig.name.c_str());
-            fRunning.store(false);
+            MarkFailed();
             return false;
         }
         jack_nframes_t written = fCaptureRing->Write((const float* const*)fCaptureTemp, fPeriod);
@@ -726,7 +736,7 @@ bool JackAlsaSecondaryCard::Execute()
         fPlaybackRing->Read(fPlaybackTemp, fPeriod);
         if (alsa_driver_write(fAlsaDriver, fPeriod) < 0) {
             jack_error("secondary card '%s': ALSA write failed", fConfig.name.c_str());
-            fRunning.store(false);
+            MarkFailed();
             return false;
         }
     }

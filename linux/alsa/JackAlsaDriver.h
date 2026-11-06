@@ -27,10 +27,12 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaReconfigWorker.h"
 #include "JackAlsaControlMonitor.h"
 #include "JackAlsaSecondaryCard.h"
+#include "JackAlsaSlotTable.h"
 #include "JackAlsaSecondaryConfig.h"
 #include "alsa_driver.h"
 
 #include <atomic>
+#include <mutex>
 #include <stdint.h>
 #include <vector>
 
@@ -41,6 +43,9 @@ namespace Jack
 \brief The ALSA driver.
 */
 
+// The cards the RT thread walks.  Eight is the limit for secondary cards.
+typedef JackAlsaSlotTable<JackAlsaSecondaryCard, 8> JackAlsaCardSlots;
+
 class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
 {
 
@@ -48,7 +53,10 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
 
         jack_driver_t* fDriver;
         jack_native_thread_t fReservationLoopThread;
-        std::vector<JackAlsaSecondaryCard*> fSecondaryCards;
+        std::vector<JackAlsaSecondaryCard*> fSecondaryCards;   // owned cards, guarded by fCardsMutex
+        JackAlsaCardSlots fSlots;                              // the RT thread's view of promoted cards
+        std::mutex fCardsMutex;
+        int fNextCardId;
         JackAlsaControlMonitor* fControlMonitor;
         JackAlsaReconfigWorker* fReconfigWorker;
         std::vector<int> fCardLocks;
@@ -62,6 +70,11 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
 
         void UpdateLatencies();
         void UpdateSecondaryLatencies();
+        JackAlsaSecondaryCard* FindCard(int id);
+        bool PromoteCard(JackAlsaSecondaryCard* card);
+        void UnregisterCardPorts(JackAlsaSecondaryCard* card);
+        void RetireCard(JackAlsaSecondaryCard* card);
+        bool WaitForRTSafePoint();
 
     public:
         // Called on the RT thread when the ALSA core asks for a restart after an xrun.
@@ -74,6 +87,7 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
 
         // JackAlsaRateRequestHandler
         virtual void HandleRateRequest(int card, JackAlsaRateDirection dir, long value);
+        virtual void HandleCardFailure(int card);
 
     public:
 
@@ -82,6 +96,7 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         {
             fRTRunning.store(false);
             fRestarting.store(false);
+            fNextCardId = 0;
         }
         virtual ~JackAlsaDriver()
         {}

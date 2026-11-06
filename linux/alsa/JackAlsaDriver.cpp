@@ -32,6 +32,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <sys/types.h>
 #include <sys/time.h>
 #include <string.h>
+#include <chrono>
+#include <thread>
 
 #include "JackAlsaDriver.h"
 #include "JackEngineControl.h"
@@ -172,8 +174,136 @@ int JackAlsaDriver::SetBufferSize(jack_nframes_t buffer_size)
     return res;
 }
 
+JackAlsaSecondaryCard* JackAlsaDriver::FindCard(int id)
+{
+    std::lock_guard<std::mutex> lock(fCardsMutex);
+    for (size_t i = 0; i < fSecondaryCards.size(); i++) {
+        if (fSecondaryCards[i]->Id() == id) {
+            return fSecondaryCards[i];
+        }
+    }
+    return NULL;
+}
+
+// Registers a card's ports and puts it in a slot.  Called on the server thread
+// at Attach, before the RT thread starts.
+bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
+{
+    char name[REAL_JACK_PORT_NAME_SIZE+1];
+    jack_port_id_t port_index;
+    std::vector<jack_port_id_t>& capture_ports = card->CapturePorts();
+    std::vector<jack_port_id_t>& playback_ports = card->PlaybackPorts();
+
+    for (int i = 0; i < card->CaptureChannels(); i++) {
+        snprintf(name, sizeof(name), "%s:capture_%s_%d", fClientControl.fName, card->Name().c_str(), i + 1);
+        if (fEngine->PortRegister(fClientControl.fRefNum, name, JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)CaptureDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
+            jack_error("driver: cannot register port for %s", name);
+            UnregisterCardPorts(card);
+            return false;
+        }
+        capture_ports[i] = port_index;
+    }
+
+    for (int i = 0; i < card->PlaybackChannels(); i++) {
+        snprintf(name, sizeof(name), "%s:playback_%s_%d", fClientControl.fName, card->Name().c_str(), i + 1);
+        if (fEngine->PortRegister(fClientControl.fRefNum, name, JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
+            jack_error("driver: cannot register port for %s", name);
+            UnregisterCardPorts(card);
+            return false;
+        }
+        playback_ports[i] = port_index;
+    }
+
+    if (fSlots.Assign(card) < 0) {
+        jack_error("secondary card '%s' cannot be used: all %zu secondary card slots are in use",
+                   card->Name().c_str(), JackAlsaCardSlots::Capacity());
+        UnregisterCardPorts(card);
+        return false;
+    }
+    return true;
+}
+
+void JackAlsaDriver::UnregisterCardPorts(JackAlsaSecondaryCard* card)
+{
+    std::vector<jack_port_id_t>& capture_ports = card->CapturePorts();
+    std::vector<jack_port_id_t>& playback_ports = card->PlaybackPorts();
+    for (size_t i = 0; i < capture_ports.size(); i++) {
+        if (capture_ports[i]) {
+            fEngine->PortUnRegister(fClientControl.fRefNum, capture_ports[i]);
+            capture_ports[i] = 0;
+        }
+    }
+    for (size_t i = 0; i < playback_ports.size(); i++) {
+        if (playback_ports[i]) {
+            fEngine->PortUnRegister(fClientControl.fRefNum, playback_ports[i]);
+            playback_ports[i] = 0;
+        }
+    }
+}
+
+// Waits until the RT thread has finished two cycles, so it can no longer hold
+// a reference to a card taken out of its slot.  Returns false on timeout.
+bool JackAlsaDriver::WaitForRTSafePoint()
+{
+    if (!fRTRunning.load()) {
+        return true;
+    }
+    uint64_t start = fRTEpoch.load(std::memory_order_acquire);
+    for (int i = 0; i < 2000; i++) {
+        if (fRTEpoch.load(std::memory_order_acquire) >= start + 2) {
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return false;
+}
+
+// Takes a card out of service and frees it.  Runs on the worker thread.  The
+// card leaves the RT slots first; only then is the RT thread waited out, so
+// no cycle still uses the card when its ports are removed and it is freed.
+void JackAlsaDriver::RetireCard(JackAlsaSecondaryCard* card)
+{
+    {
+        std::lock_guard<std::mutex> lock(fCardsMutex);
+        for (size_t i = 0; i < fSecondaryCards.size(); i++) {
+            if (fSecondaryCards[i] == card) {
+                fSecondaryCards.erase(fSecondaryCards.begin() + i);
+                break;
+            }
+        }
+        fSlots.Remove(card);
+    }
+
+    if (!WaitForRTSafePoint()) {
+        // The RT thread did not reach a safe point.  Leak the card rather than free
+        // memory the RT thread may still use.
+        jack_error("secondary card '%s' could not be removed safely; it is left unused",
+                   card->Name().c_str());
+        return;
+    }
+
+    if (fControlMonitor != NULL) {
+        fControlMonitor->RemoveWatches(card->Id());
+    }
+    UnregisterCardPorts(card);
+    delete card;   // stops the card's thread, closes its controls and stream
+    UpdateSecondaryLatencies();
+}
+
+void JackAlsaDriver::HandleCardFailure(int card_id)
+{
+    JackAlsaSecondaryCard* card = FindCard(card_id);
+    if (card == NULL) {
+        return;
+    }
+    jack_error("secondary card '%s' failed; it has been removed and its ports are gone",
+               card->Name().c_str());
+    RetireCard(card);
+}
+
 void JackAlsaDriver::UpdateSecondaryLatencies()
 {
+    std::lock_guard<std::mutex> lock(fCardsMutex);
     for (size_t c = 0; c < fSecondaryCards.size(); c++) {
         JackAlsaSecondaryCard* card = fSecondaryCards[c];
         jack_latency_range_t range;
@@ -274,27 +404,16 @@ int JackAlsaDriver::Attach()
         }
     }
 
-    for (size_t c = 0; c < fSecondaryCards.size(); c++) {
-        JackAlsaSecondaryCard* card = fSecondaryCards[c];
-        std::vector<jack_port_id_t>& capture_ports = card->CapturePorts();
-        std::vector<jack_port_id_t>& playback_ports = card->PlaybackPorts();
-
-        for (int i = 0; i < card->CaptureChannels(); i++) {
-            snprintf(name, sizeof(name), "%s:capture_%s_%d", fClientControl.fName, card->Name().c_str(), i + 1);
-            if (fEngine->PortRegister(fClientControl.fRefNum, name, JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)CaptureDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
-                jack_error("driver: cannot register port for %s", name);
-                return -1;
-            }
-            capture_ports[i] = port_index;
+    {
+        std::vector<JackAlsaSecondaryCard*> cards;
+        {
+            std::lock_guard<std::mutex> lock(fCardsMutex);
+            cards = fSecondaryCards;
         }
-
-        for (int i = 0; i < card->PlaybackChannels(); i++) {
-            snprintf(name, sizeof(name), "%s:playback_%s_%d", fClientControl.fName, card->Name().c_str(), i + 1);
-            if (fEngine->PortRegister(fClientControl.fRefNum, name, JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
-                jack_error("driver: cannot register port for %s", name);
+        for (size_t c = 0; c < cards.size(); c++) {
+            if (!PromoteCard(cards[c])) {
                 return -1;
             }
-            playback_ports[i] = port_index;
         }
     }
 
@@ -314,13 +433,13 @@ int JackAlsaDriver::Detach()
 {
     alsa_driver_t* alsa_driver = (alsa_driver_t*)fDriver;
 
-    for (size_t c = 0; c < fSecondaryCards.size(); c++) {
-        JackAlsaSecondaryCard* card = fSecondaryCards[c];
-        for (int i = 0; i < card->CaptureChannels(); i++) {
-            fEngine->PortUnRegister(fClientControl.fRefNum, card->CapturePorts()[i]);
-        }
-        for (int i = 0; i < card->PlaybackChannels(); i++) {
-            fEngine->PortUnRegister(fClientControl.fRefNum, card->PlaybackPorts()[i]);
+    // Stop the threads that can change the card list before taking the cards out.
+    StopControlMonitoring();
+    {
+        std::lock_guard<std::mutex> lock(fCardsMutex);
+        for (size_t c = 0; c < fSecondaryCards.size(); c++) {
+            fSlots.Remove(fSecondaryCards[c]);
+            UnregisterCardPorts(fSecondaryCards[c]);
         }
     }
     if (alsa_driver->midi)
@@ -500,6 +619,11 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
     fPlaybackChannels = ((alsa_driver_t *)fDriver)->playback_nchannels;
 
     alsa_driver_t* primary = (alsa_driver_t*)fDriver;
+    if (!secondaries.empty()) {
+        fReconfigWorker = new JackAlsaReconfigWorker(this);
+        fControlMonitor = new JackAlsaControlMonitor(fReconfigWorker);
+    }
+
     for (size_t i = 0; i < secondaries.size(); i++) {
         const JackAlsaSecondaryConfig& cfg = secondaries[i];
 
@@ -533,6 +657,8 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
 
         JackAlsaSecondaryCard* card = new JackAlsaSecondaryCard(cfg, factory);
         card->SetRTState(&fRTEpoch, &fRTRunning);
+        card->SetId(fNextCardId++);
+        card->SetFailureSink(fReconfigWorker);
         if (card->Open(primary->frames_per_cycle, primary->frame_rate, primary->user_nperiods,
                        fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
             delete card;
@@ -546,18 +672,14 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         fSecondaryCards.push_back(card);
     }
 
-    if (!fSecondaryCards.empty()) {
-        fReconfigWorker = new JackAlsaReconfigWorker(this);
-        fControlMonitor = new JackAlsaControlMonitor(fReconfigWorker);
-        for (size_t i = 0; i < fSecondaryCards.size(); i++) {
-            JackAlsaSecondaryCard* card = fSecondaryCards[i];
-            for (int d = 0; d < 2; d++) {
-                JackAlsaRateDirection dir = (JackAlsaRateDirection)d;
-                if (card->RateElementValid(dir) &&
-                    fControlMonitor->AddWatch((int)i, card->ControlName(), card->RateElement(dir), dir) < 0) {
-                    jack_error("secondary card '%s': rate control changes will not be seen",
-                               card->Name().c_str());
-                }
+    for (size_t i = 0; i < fSecondaryCards.size(); i++) {
+        JackAlsaSecondaryCard* card = fSecondaryCards[i];
+        for (int d = 0; d < 2; d++) {
+            JackAlsaRateDirection dir = (JackAlsaRateDirection)d;
+            if (card->RateElementValid(dir) &&
+                fControlMonitor->AddWatch(card->Id(), card->ControlName(), card->RateElement(dir), dir) < 0) {
+                jack_error("secondary card '%s': rate control changes will not be seen",
+                           card->Name().c_str());
             }
         }
     }
@@ -662,6 +784,7 @@ int JackAlsaDriver::Start()
         if (res < 0) {
             JackAudioDriver::Stop();
         } else {
+            std::lock_guard<std::mutex> lock(fCardsMutex);
             for (size_t i = 0; i < fSecondaryCards.size(); i++) {
                 if (fSecondaryCards[i]->Start() < 0) {
                     res = -1;
@@ -685,6 +808,7 @@ int JackAlsaDriver::Start()
 
 void JackAlsaDriver::StopSecondaryCards()
 {
+    std::lock_guard<std::mutex> lock(fCardsMutex);
     for (size_t i = 0; i < fSecondaryCards.size(); i++) {
         fSecondaryCards[i]->Stop();
     }
@@ -713,10 +837,10 @@ void JackAlsaDriver::StopControlMonitoring()
 
 void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long value)
 {
-    if (card < 0 || card >= (int)fSecondaryCards.size()) {
-        return;
+    JackAlsaSecondaryCard* secondary = FindCard(card);
+    if (secondary == NULL) {
+        return;   // the card was removed; its watch may still have delivered this
     }
-    JackAlsaSecondaryCard* secondary = fSecondaryCards[card];
     long current = (long)secondary->Rate();
     if (value == current) {
         // Our own write echoing back, or a no-op.
@@ -794,8 +918,11 @@ retry:
          */
         jack_log("ALSA XRun wait_status = %d", wait_status);
         NotifyXRun(fBeginDateUst, fDelayedUsecs);
-        for (size_t i = 0; i < fSecondaryCards.size(); i++) {
-            fSecondaryCards[i]->ResetResampling();
+        for (size_t i = 0; i < fSlots.Capacity(); i++) {
+            JackAlsaSecondaryCard* card = fSlots.Get(i);
+            if (card) {
+                card->ResetResampling();
+            }
         }
         goto retry; /* recoverable error*/
     }
@@ -811,8 +938,11 @@ retry:
         return res;
     }
 
-    for (size_t i = 0; i < fSecondaryCards.size(); i++) {
-        fSecondaryCards[i]->ReadToPorts(fGraphManager, fEngineControl->fBufferSize);
+    for (size_t i = 0; i < fSlots.Capacity(); i++) {
+        JackAlsaSecondaryCard* card = fSlots.Get(i);
+        if (card) {
+            card->ReadToPorts(fGraphManager, fEngineControl->fBufferSize);
+        }
     }
     return 0;
 }
@@ -824,8 +954,11 @@ int JackAlsaDriver::Write()
         return res;
     }
 
-    for (size_t i = 0; i < fSecondaryCards.size(); i++) {
-        fSecondaryCards[i]->WriteFromPorts(fGraphManager, fEngineControl->fBufferSize);
+    for (size_t i = 0; i < fSlots.Capacity(); i++) {
+        JackAlsaSecondaryCard* card = fSlots.Get(i);
+        if (card) {
+            card->WriteFromPorts(fGraphManager, fEngineControl->fBufferSize);
+        }
     }
 
     // One RT cycle is complete.  Card reconfiguration waits on this counter.
