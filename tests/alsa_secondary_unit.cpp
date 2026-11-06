@@ -309,6 +309,20 @@ static void TestCardDiff()
     CHECK(c.retire.size() == 1 && c.add.size() == 1);
 }
 
+static void TestCardExcluded()
+{
+    printf("exclude-card: ids are matched without case\n");
+    std::vector<std::string> none;
+    std::vector<std::string> one;
+    one.push_back("Loopback");
+    CHECK(!JackAlsaCardExcluded("Loopback", none));
+    CHECK(JackAlsaCardExcluded("Loopback", one));
+    CHECK(JackAlsaCardExcluded("loopback", one));
+    CHECK(!JackAlsaCardExcluded("NVidia", one));
+    CHECK(!JackAlsaCardExcluded("Loop", one));
+    CHECK(!JackAlsaCardExcluded("LoopbackX", one));
+}
+
 static void TestConverterRates()
 {
     printf("converter: 44.1 kHz capture and 48 kHz playback keep exact counts\n");
@@ -450,6 +464,7 @@ int main()
     TestSlotTable();
     TestPcmDeviceNumber();
     TestCardDiff();
+    TestCardExcluded();
     TestConverterRates();
     TestDriftController();
     TestDriftLimits();

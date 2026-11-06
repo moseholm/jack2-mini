@@ -82,6 +82,21 @@ Each automatic card:
 Automatic cards never stop the server. Only the configured cards can do that.
 There are eight secondary slots. Devices beyond the eighth are logged and not added.
 
+### Leaving out cards
+
+To keep automatic discovery off a card, give its ALSA id with `--exclude-card`.
+It can be repeated:
+
+```sh
+# Real hardware only: no loopback devices
+jackd -d alsa -d hw:0 --exclude-card=Loopback
+```
+
+The id is the one ALSA shows in `aplay -l` or `/proc/asound/cards` (for example
+`Loopback` or `NVidia`), and matching ignores case. Every device on an excluded
+card is left out. A card configured with `--secondary` or `--secondary-file` is
+still used, so `--exclude-card` never removes a card you asked for by name.
+
 ## Hot-plug
 
 The server listens to udev for changes in the `sound` subsystem and does not

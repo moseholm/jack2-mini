@@ -559,6 +559,7 @@ static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
         const std::vector<JackAlsaSecondaryConfig>& configured,
         const char* primary_capture, const char* primary_playback,
         const std::vector<JackAlsaPcmInfo>& known, bool report,
+        const std::vector<std::string>& excluded,
         std::vector<JackAlsaPcmInfo>* listing)
 {
     std::vector<JackAlsaSecondaryConfig> plan = configured;
@@ -590,6 +591,12 @@ static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
     for (size_t i = 0; i < pcms.size(); i++) {
         const JackAlsaPcmInfo& pcm = pcms[i];
         if (std::find(claimed.begin(), claimed.end(), std::make_pair(pcm.card_num, pcm.device)) != claimed.end()) {
+            continue;
+        }
+        if (JackAlsaCardExcluded(pcm.card_id, excluded)) {
+            if (report) {
+                jack_info("ALSA device %s is not added: its card %s is excluded", pcm.pcm.c_str(), pcm.card_id.c_str());
+            }
             continue;
         }
         if (plan.size() >= JackAlsaCardSlots::Capacity()) {
@@ -647,7 +654,8 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
                          jack_nframes_t capture_latency,
                          jack_nframes_t playback_latency,
                          const char* midi_driver_name,
-                         const std::vector<JackAlsaSecondaryConfig>& secondaries)
+                         const std::vector<JackAlsaSecondaryConfig>& secondaries,
+                         const std::vector<std::string>& excluded_cards)
 {
     // Generic JackAudioDriver Open
     if (JackAudioDriver::Open(nframes, samplerate, capturing, playing,
@@ -731,10 +739,11 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
 
     alsa_driver_t* primary = (alsa_driver_t*)fDriver;
     fConfiguredSecondaries = secondaries;
+    fExcludedCards = excluded_cards;
     fReportedFailures.clear();
     std::vector<JackAlsaPcmInfo> listing;
     std::vector<JackAlsaSecondaryConfig> plan = BuildSecondaryPlan(secondaries, capture_driver_name, playback_driver_name,
-                                                                   fKnownPcms, true, &listing);
+                                                                   fKnownPcms, true, fExcludedCards, &listing);
     fKnownPcms = listing;
 
     // Always created: a card can appear after startup, and the watchers must
@@ -985,7 +994,8 @@ void JackAlsaDriver::HandleSoundChanged()
 
     std::vector<JackAlsaPcmInfo> listing;
     std::vector<JackAlsaSecondaryConfig> plan = BuildSecondaryPlan(fConfiguredSecondaries, fCaptureDriverName,
-                                                                   fPlaybackDriverName, fKnownPcms, false, &listing);
+                                                                   fPlaybackDriverName, fKnownPcms, false,
+                                                                   fExcludedCards, &listing);
     fKnownPcms = listing;
 
     std::vector<JackAlsaSecondaryCard*> cards;
@@ -1537,6 +1547,10 @@ SERVER_EXPORT const jack_driver_desc_t* driver_get_descriptor ()
     jack_driver_descriptor_add_parameter(desc, &filler, "secondary", 'Y', JackDriverParamString, &value, NULL,
         "Secondary ALSA card (repeatable)",
         "Secondary ALSA card, repeatable. Keys: name, device, mode (duplex|capture|playback), channels, rate, nperiods, clock (async|sync), format (auto|float|s32|s16), resampler, optional, follow_hw_rate. Example: name=usb1;device=hw:1;mode=capture;clock=async");
+    jack_driver_descriptor_add_parameter(desc, &filler, "exclude-card", 'Z', JackDriverParamString, &value, NULL,
+        "ALSA card id to leave out of automatic discovery (repeatable)",
+        "ALSA card id (for example Loopback) that automatic discovery must not add. Repeatable. Applies only to automatic cards; a card given with --secondary or --secondary-file is still used. Matching ignores case");
+
     jack_driver_descriptor_add_parameter(desc, &filler, "secondary-file", 'K', JackDriverParamString, &value, NULL,
         "File with one secondary ALSA card per line",
         "File with one secondary ALSA card per line, read at startup. Same syntax as --secondary. Blank lines and lines starting with # are ignored");
@@ -1567,6 +1581,7 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
     const jack_driver_param_t * param;
     const char *midi_driver = "none";
     std::vector<Jack::JackAlsaSecondaryConfig> secondaries;
+    std::vector<std::string> excluded_cards;
 
     for (node = params; node; node = jack_slist_next (node)) {
         param = (const jack_driver_param_t *) node->data;
@@ -1678,6 +1693,12 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
                 }
                 break;
 
+            case 'Z':
+                if (strcmp (param->value.str, "none") != 0 && param->value.str[0] != '\0') {
+                    excluded_cards.push_back(param->value.str);
+                }
+                break;
+
             case 'K':
                 if (strcmp (param->value.str, "none") != 0) {
                     std::string error;
@@ -1702,7 +1723,7 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
     if (alsa_driver->Open(frames_per_interrupt, user_nperiods, srate, hw_monitoring, hw_metering, capture, playback, dither, soft_mode, monitor,
                           user_capture_nchnls, user_playback_nchnls, shorts_first, capture_pcm_name, playback_pcm_name,
                           systemic_input_latency, systemic_output_latency, midi_driver,
-                          secondaries) == 0) {
+                          secondaries, excluded_cards) == 0) {
         return threaded_driver;
     } else {
         delete threaded_driver; // Delete the decorated driver

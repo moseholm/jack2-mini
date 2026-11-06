@@ -126,6 +126,9 @@ bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
 // Device number of a PCM name: "hw:2,3" -> 3, "hw:CARD=X,DEV=7" -> 7, "hw:X" -> 0.
 int JackAlsaPcmDeviceNumber(const std::string& pcm);
 
+// True if an ALSA card id is in the --exclude-card list.  Ids are compared without case.
+bool JackAlsaCardExcluded(const std::string& card_id, const std::vector<std::string>& excluded);
+
 std::string JackAlsaSecondarySanitizeName(const std::string& name);
 
 } // end of namespace
