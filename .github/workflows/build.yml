@@ -35,29 +35,20 @@ jobs:
       run: DESTDIR=$(pwd)/destdir cmake --install build
 
   linux-aarch64:
-    # Builds and tests the AArch64 target under QEMU user emulation.  The
-    # emulated run checks correctness (including the NEON resampler kernel),
-    # not timing; performance is measured on real hardware.
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # Native AArch64 build and test on GitHub's arm64 runner.  Matches the
+    # target architecture; it does not measure realtime performance, which is
+    # checked on the boards.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
     steps:
     - uses: actions/checkout@v4
-    - name: Register QEMU
-      uses: docker/setup-qemu-action@v3
-      with:
-        platforms: arm64
-    - name: Build and test
+    - name: Install dependencies
       run: |
-        docker run --rm --platform linux/arm64 \
-          -v "$PWD:/src:ro" \
-          -w /tmp \
-          ubuntu:24.04 bash -euxo pipefail -c '
-            export DEBIAN_FRONTEND=noninteractive
-            apt-get update -qq
-            apt-get install -y -qq build-essential cmake ninja-build pkg-config \
-              libasound2-dev libudev-dev
-            cmake -S /src -B /tmp/build -G Ninja \
-              -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON
-            cmake --build /tmp/build --parallel
-            ctest --test-dir /tmp/build --output-on-failure
-          '
+        sudo apt-get update -qq
+        sudo apt-get install -y build-essential cmake ninja-build pkg-config libasound2-dev libudev-dev
+    - name: Configure
+      run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON
+    - name: Build
+      run: cmake --build build --parallel "$(nproc)"
+    - name: Test
+      run: ctest --test-dir build --output-on-failure
