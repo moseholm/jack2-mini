@@ -94,6 +94,19 @@ static bool ParseInt(const std::string& value, int* result)
     return true;
 }
 
+int JackAlsaPcmDeviceNumber(const std::string& pcm)
+{
+    size_t dev = pcm.find("DEV=");
+    if (dev != std::string::npos) {
+        return atoi(pcm.c_str() + dev + 4);
+    }
+    size_t comma = pcm.rfind(',');
+    if (comma != std::string::npos) {
+        return atoi(pcm.c_str() + comma + 1);
+    }
+    return 0;
+}
+
 std::string JackAlsaSecondarySanitizeName(const std::string& name)
 {
     std::string result;

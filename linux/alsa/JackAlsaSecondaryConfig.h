@@ -119,6 +119,9 @@ bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
 /*!
 \brief Turn an arbitrary string into a valid JACK port name component.
 */
+// Device number of a PCM name: "hw:2,3" -> 3, "hw:CARD=X,DEV=7" -> 7, "hw:X" -> 0.
+int JackAlsaPcmDeviceNumber(const std::string& pcm);
+
 std::string JackAlsaSecondarySanitizeName(const std::string& name);
 
 } // end of namespace

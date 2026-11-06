@@ -115,6 +115,7 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         const std::atomic<uint64_t>* fRTEpoch;
         const std::atomic<bool>* fRTRunning;
         int fId;
+        int fDevice;
         JackAlsaCardFailureSink* fFailureSink;
 
         // Stops the card after an I/O error and tells the driver.
@@ -166,6 +167,12 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         void WriteFromPorts(JackGraphManager* graph_manager, jack_nframes_t nframes);
 
         const std::string& Name() const { return fConfig.name; }
+
+        // The device number of this card's PCM, or -1 when it is not known.
+        int Device() const { return fDevice; }
+
+        // The name used in port names: the card name with its device, e.g. "nvidia_d3".
+        std::string PortBase() const;
 
         // Stable identifier chosen by the driver; used to route events to the card.
         int Id() const { return fId; }

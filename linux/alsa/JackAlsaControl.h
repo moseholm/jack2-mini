@@ -61,7 +61,8 @@ int JackAlsaControlLockCard(const std::string& ctl_name);
 void JackAlsaControlUnlockCard(int fd);
 
 // Element name JACK creates for a direction, e.g. "JACK Secondary Capture Rate".
-std::string JackAlsaRateElementName(JackAlsaRateDirection dir);
+// With a device number, the name carries it, e.g. "JACK Secondary Capture Rate d3".
+std::string JackAlsaRateElementName(JackAlsaRateDirection dir, int device);
 
 /*
 Find an existing native rate element.  A configured name is used exclusively;
@@ -75,7 +76,7 @@ int JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection dir,
 
 // Create the JACK user element for a direction with the given initial rate.
 // A stale element with no owner is replaced; one held by a live client is an error.
-int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, long initial,
+int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, int device, long initial,
                               JackAlsaRateElement* out);
 
 int JackAlsaControlRemoveRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem);

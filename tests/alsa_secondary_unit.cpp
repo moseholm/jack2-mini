@@ -273,6 +273,16 @@ static void TestSlotTable()
     CHECK(table.Count() == 0);
 }
 
+static void TestPcmDeviceNumber()
+{
+    printf("naming: device numbers from PCM names\n");
+    CHECK(JackAlsaPcmDeviceNumber("hw:2,3") == 3);
+    CHECK(JackAlsaPcmDeviceNumber("hw:1,7") == 7);
+    CHECK(JackAlsaPcmDeviceNumber("hw:CARD=NVidia,DEV=8") == 8);
+    CHECK(JackAlsaPcmDeviceNumber("hw:0") == 0);
+    CHECK(JackAlsaPcmDeviceNumber("hw:CARD=Loopback") == 0);
+}
+
 static void TestConverterRates()
 {
     printf("converter: 44.1 kHz capture and 48 kHz playback keep exact counts\n");
@@ -412,6 +422,7 @@ int main()
     TestResamplerFactories();
     TestResamplerPlugin();
     TestSlotTable();
+    TestPcmDeviceNumber();
     TestConverterRates();
     TestDriftController();
     TestDriftLimits();

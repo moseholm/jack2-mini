@@ -195,7 +195,7 @@ bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
     std::vector<jack_port_id_t>& playback_ports = card->PlaybackPorts();
 
     for (int i = 0; i < card->CaptureChannels(); i++) {
-        snprintf(name, sizeof(name), "%s:capture_%s_%d", fClientControl.fName, card->Name().c_str(), i + 1);
+        snprintf(name, sizeof(name), "%s:capture_%s_%d", fClientControl.fName, card->PortBase().c_str(), i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name, JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)CaptureDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name);
             UnregisterCardPorts(card);
@@ -205,7 +205,7 @@ bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
     }
 
     for (int i = 0; i < card->PlaybackChannels(); i++) {
-        snprintf(name, sizeof(name), "%s:playback_%s_%d", fClientControl.fName, card->Name().c_str(), i + 1);
+        snprintf(name, sizeof(name), "%s:playback_%s_%d", fClientControl.fName, card->PortBase().c_str(), i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name, JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name);
             UnregisterCardPorts(card);
@@ -642,7 +642,9 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
             return -1;
         }
 
-        if (!LockCard(cfg.capture_device.empty() ? cfg.playback_device.c_str() : cfg.capture_device.c_str(), false)) {
+        // One server may use several devices of one card: rate elements are named per
+        // device.  Other servers are still excluded by the card lock.
+        if (!LockCard(cfg.capture_device.empty() ? cfg.playback_device.c_str() : cfg.capture_device.c_str(), true)) {
             Close();
             return -1;
         }
