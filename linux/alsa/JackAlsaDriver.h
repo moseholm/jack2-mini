@@ -53,6 +53,8 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         JackAlsaReconfigWorker* fReconfigWorker;
         std::vector<int> fCardLocks;
         std::atomic<uint64_t> fRTEpoch;
+        std::atomic<bool> fRTRunning;
+        std::atomic<bool> fRestarting;
         std::vector<std::string> fCardLockNames;
 
         bool LockCard(const char* pcm_name, bool shared);
@@ -60,6 +62,12 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
 
         void UpdateLatencies();
         void UpdateSecondaryLatencies();
+
+    public:
+        // Called on the RT thread when the ALSA core asks for a restart after an xrun.
+        int RestartFromRT();
+
+    private:
         void StopSecondaryCards();
         void StartControlMonitoring();
         void StopControlMonitoring();
@@ -71,7 +79,10 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
 
         JackAlsaDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
 		: JackAudioDriver(name, alias, engine, table),fDriver(NULL),fControlMonitor(NULL),fReconfigWorker(NULL)
-        {}
+        {
+            fRTRunning.store(false);
+            fRestarting.store(false);
+        }
         virtual ~JackAlsaDriver()
         {}
 

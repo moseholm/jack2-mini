@@ -87,6 +87,7 @@ JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& conf
     fRateValid[RatePlayback] = false;
     fSilent.store(false);
     fRTEpoch = NULL;
+    fRTRunning = NULL;
     fPrimaryBufferSize = 0;
     fPrimaryRate = 0;
 }
@@ -615,7 +616,10 @@ int JackAlsaSecondaryCard::Reconfigure(jack_nframes_t rate)
     // Publish silence first, then wait until the RT thread has run past this
     // point, so it never touches a buffer while it is being freed.
     fSilent.store(true, std::memory_order_release);
-    if (was_running && fRTEpoch != NULL && !WaitForRTCycles(2)) {
+    // The RT side may use this card's buffers while the driver runs, even when
+    // the card's own thread has stopped (for example after an I/O error).
+    bool rt_live = (fRTRunning != NULL && fRTRunning->load());
+    if (rt_live && fRTEpoch != NULL && !WaitForRTCycles(2)) {
         jack_error("secondary card '%s': real-time thread did not reach a safe point; keeping %u Hz",
                    fConfig.name.c_str(), old_rate);
         fSilent.store(false, std::memory_order_release);
