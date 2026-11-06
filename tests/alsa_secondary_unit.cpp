@@ -239,7 +239,8 @@ static void TestResamplerFactories()
         printf("resampler: selected '%s' kernel\n", kernel);
         bool known = strcmp(kernel, "full_c") == 0 || strcmp(kernel, "inter_c") == 0 ||
                      strcmp(kernel, "full_sse") == 0 || strcmp(kernel, "inter_sse") == 0 ||
-                     strcmp(kernel, "full_avx2") == 0 || strcmp(kernel, "inter_avx2") == 0;
+                     strcmp(kernel, "full_avx2") == 0 || strcmp(kernel, "inter_avx2") == 0 ||
+                     strcmp(kernel, "full_neon") == 0 || strcmp(kernel, "inter_neon") == 0;
         CHECK(known);
         jack_pw_resampler_free(pw);
     }

@@ -191,14 +191,19 @@ jack_add_driver(loopback common/JackLoopbackDriver.cpp)
 jack_add_driver(proxy common/JackProxyDriver.cpp)
 
 # The vendored PipeWire resampler is portable C by default.  On x86 we also
-# build its SSE and AVX2 kernels; the bridge selects one at runtime and keeps
-# the C version as the fallback.  The filter tables are still computed at
-# setup time because the precomputed table is not vendored.
+# build its SSE and AVX2 kernels, and on AArch64 its NEON kernel; the bridge
+# selects one at runtime (x86) or statically (AArch64, where NEON is baseline)
+# and keeps the C version as the fallback.  The filter tables are still
+# computed at setup time because the precomputed table is not vendored.
 include(CheckCCompilerFlag)
 set(JACK_RESAMPLER_SIMD_SOURCES)
 set(JACK_RESAMPLER_SIMD_DEFINITIONS)
 set(JACK_RESAMPLER_SIMD_ENABLED OFF)
-if(JACK_RESAMPLER_SIMD AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64|i[3-6]86)$")
+if(JACK_RESAMPLER_SIMD AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
+    list(APPEND JACK_RESAMPLER_SIMD_SOURCES linux/alsa/resample/resample-native-neon.c)
+    list(APPEND JACK_RESAMPLER_SIMD_DEFINITIONS HAVE_NEON)
+    set(JACK_RESAMPLER_SIMD_ENABLED ON)
+elseif(JACK_RESAMPLER_SIMD AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64|i[3-6]86)$")
     check_c_compiler_flag("-msse" JACK_HAVE_MSSE)
     if(JACK_HAVE_MSSE)
         list(APPEND JACK_RESAMPLER_SIMD_SOURCES linux/alsa/resample/resample-native-sse.c)

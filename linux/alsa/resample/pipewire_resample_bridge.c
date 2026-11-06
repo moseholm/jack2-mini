@@ -31,13 +31,18 @@ struct jack_pw_resampler {
 /*
  * The resampler table is ordered from the widest kernel to the portable C
  * one, and find_resample_info() treats cpu_flags == 0 as "portable only".
- * Ask the compiler runtime which kernels this CPU can actually execute.
+ * On x86 ask the compiler runtime which kernels this CPU can execute.
  * __builtin_cpu_supports() masks AVX/AVX2/FMA with the OS XSAVE state, so it
  * is safe to use even when the kernel has not enabled the extended registers.
+ * NEON is part of every AArch64 core, so it is simply reported as present.
  */
 static uint32_t jack_pw_detect_cpu_flags(void)
 {
     uint32_t flags = 0;
+
+#if defined(HAVE_NEON) && defined(__aarch64__)
+    flags |= SPA_CPU_FLAG_NEON;
+#endif
 
 #if (defined(__GNUC__) || defined(__clang__)) && \
     (defined(__x86_64__) || defined(__i386__))

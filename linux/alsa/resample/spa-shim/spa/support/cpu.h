@@ -12,6 +12,9 @@
 
 #include <spa/utils/defs.h>
 
+/* ARM specific */
+#define SPA_CPU_FLAG_NEON		(1 << 5)
+
 /* x86 specific */
 #define SPA_CPU_FLAG_SSE		(1<<3)	/**< SSE */
 #define SPA_CPU_FLAG_SSSE3		(1<<7)	/**< SSSE3 */

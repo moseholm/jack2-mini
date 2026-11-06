@@ -1,8 +1,8 @@
 # Vendored PipeWire resampler
 
 The files `resample.h`, `resample-native-impl.h`, `resample-native.c`,
-`resample-native-c.c`, `resample-native-sse.c`, `resample-native-avx2.c` and
-`dbesi0.c` are copied unmodified from PipeWire:
+`resample-native-c.c`, `resample-native-sse.c`, `resample-native-avx2.c`,
+`resample-native-neon.c` and `dbesi0.c` are copied unmodified from PipeWire:
 
 - Source: https://github.com/PipeWire/pipewire/tree/2173ca6a92fc117a457ad2598961f61485854fad/spa/plugins/audioconvert
 - License: MIT (PipeWire, Copyright Wim Taymans), see the SPDX header in each file.
@@ -16,6 +16,11 @@ upstream dispatcher pick the widest match; the C kernel remains the fallback.
 This costs no CPU feature checks in the audio callback because the choice is
 made when the resampler is created. Configure with
 `-DJACK_RESAMPLER_SIMD=OFF` to build the portable C kernel only.
+
+On AArch64 the NEON kernel (`resample-native-neon.c`) is built instead. NEON is
+part of the AArch64 baseline, so the bridge reports it without a runtime check.
+Only the AArch64 assembly path is built; the 32-bit ARM intrinsics path in that
+file is not used by this project.
 
 The precomputed filter tables and PipeWire's SPA logging are not included.
 `RESAMPLE_DISABLE_PRECOMP` is defined for the ALSA driver target, so filters are
