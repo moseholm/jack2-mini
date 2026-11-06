@@ -89,6 +89,7 @@ JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& conf
     fRTEpoch = NULL;
     fRTRunning = NULL;
     fId = -1;
+    fDevice = -1;
     fFailureSink = NULL;
     fPrimaryBufferSize = 0;
     fPrimaryRate = 0;
@@ -345,6 +346,8 @@ int JackAlsaSecondaryCard::Open(jack_nframes_t primary_buffer_size,
     fCaptureEnabled = (fConfig.mode != SecondaryModePlayback);
     fPlaybackEnabled = (fConfig.mode != SecondaryModeCapture);
 
+    fDevice = JackAlsaPcmDeviceNumber(fConfig.capture_device.empty() ? fConfig.playback_device : fConfig.capture_device);
+
     jack_nframes_t requested_rate = (fConfig.rate > 0) ? fConfig.rate : primary_rate;
     fNperiods = (fConfig.nperiods > 0) ? fConfig.nperiods : primary_nperiods;
 
@@ -440,7 +443,7 @@ int JackAlsaSecondaryCard::OpenControls()
         }
 
         if (res == 1) {
-            if (JackAlsaControlCreateRate(fCtl, dir, fRate, &elem) < 0) {
+            if (JackAlsaControlCreateRate(fCtl, dir, fDevice, fRate, &elem) < 0) {
                 // Without a control the card keeps its startup rate; ASRC still
                 // corrects drift.
                 jack_error("secondary card '%s': cannot create a %s rate control; keeping %u Hz",
@@ -566,6 +569,14 @@ int JackAlsaSecondaryCard::Start()
     }
 
     return 0;
+}
+
+std::string JackAlsaSecondaryCard::PortBase() const
+{
+    if (fDevice < 0) {
+        return fConfig.name;
+    }
+    return fConfig.name + "_d" + std::to_string(fDevice);
 }
 
 void JackAlsaSecondaryCard::MarkFailed()

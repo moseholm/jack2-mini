@@ -74,9 +74,13 @@ void JackAlsaControlUnlockCard(int fd)
     }
 }
 
-std::string JackAlsaRateElementName(JackAlsaRateDirection dir)
+std::string JackAlsaRateElementName(JackAlsaRateDirection dir, int device)
 {
-    return (dir == RateCapture) ? "JACK Secondary Capture Rate" : "JACK Secondary Playback Rate";
+    std::string name = (dir == RateCapture) ? "JACK Secondary Capture Rate" : "JACK Secondary Playback Rate";
+    if (device >= 0) {
+        name += " d" + std::to_string(device);
+    }
+    return name;
 }
 
 struct ElementMatch {
@@ -211,10 +215,10 @@ static void SetId(snd_ctl_elem_id_t* id, const std::string& name, unsigned int i
     snd_ctl_elem_id_set_index(id, index);
 }
 
-int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, long initial,
+int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, int device, long initial,
                               JackAlsaRateElement* out)
 {
-    std::string name = JackAlsaRateElementName(dir);
+    std::string name = JackAlsaRateElementName(dir, device);
     snd_ctl_elem_id_t* id;
     snd_ctl_elem_id_alloca(&id);
     SetId(id, name, SND_CTL_ELEM_IFACE_MIXER, 0);
