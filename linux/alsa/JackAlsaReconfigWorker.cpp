@@ -40,6 +40,15 @@ void JackAlsaReconfigWorker::OnRateEvent(int card, JackAlsaRateDirection dir, lo
     fCond.notify_one();
 }
 
+void JackAlsaReconfigWorker::OnCardFailed(int card_id)
+{
+    {
+        std::lock_guard<std::mutex> lock(fMutex);
+        fFailures.push_back(card_id);
+    }
+    fCond.notify_one();
+}
+
 bool JackAlsaReconfigWorker::Init()
 {
     return true;
@@ -48,15 +57,22 @@ bool JackAlsaReconfigWorker::Init()
 bool JackAlsaReconfigWorker::Execute()
 {
     std::map<Key, long> batch;
+    std::vector<int> failures;
     {
         std::unique_lock<std::mutex> lock(fMutex);
-        fCond.wait(lock, [this] { return !fPending.empty() || !fRunning; });
+        fCond.wait(lock, [this] { return !fPending.empty() || !fFailures.empty() || !fRunning; });
         if (!fRunning) {
             return false;
         }
+        failures.swap(fFailures);
         batch.swap(fPending);
     }
 
+    for (size_t i = 0; i < failures.size(); i++) {
+        if (fHandler) {
+            fHandler->HandleCardFailure(failures[i]);
+        }
+    }
     for (std::map<Key, long>::const_iterator it = batch.begin(); it != batch.end(); ++it) {
         if (fHandler) {
             fHandler->HandleRateRequest(it->first.first, (JackAlsaRateDirection)it->first.second, it->second);
