@@ -17,11 +17,11 @@ See [Automatic cards](#automatic-cards). The explicit forms below are for
 settings you want to control.
 
 ```sh
-# Primary card hw:0 (duplex); secondary USB card hw:1, capture only
-jackd -d alsa -d hw:0 --secondary "name=usb1;device=hw:1;mode=capture"
+# Primary card PCH (duplex); secondary USB card hw:1, capture only
+jackd -d alsa -d hw:CARD=PCH --secondary "name=usb1;device=hw:1;mode=capture"
 
 # Several secondary cards, one per line in a file
-jackd -d alsa -d hw:0 --secondary-file cards.conf
+jackd -d alsa -d hw:CARD=PCH --secondary-file cards.conf
 ```
 
 `--secondary` may be repeated. `--secondary-file` reads the same key/value
@@ -59,6 +59,18 @@ Each card is a `;`-separated list of `key=value` pairs. A bare device name
 | `capture_rate_ctl`, `playback_rate_ctl` | auto | Name of a native ALSA control to use as the rate control. See [Rate controls](#rate-controls). |
 | `rate_map` | none | Reserved for enumerated native controls. Not yet used. |
 
+## Primary card
+
+The primary card drives the server's clock, so it is named by its ALSA id, for
+example `-d hw:CARD=PCH`. Numeric names such as `hw:0` are refused, because the
+number of a card can change when devices come and go. Find the id with
+`cat /proc/asound/cards` or `aplay -l`. Secondary cards may still be named by
+number, as in the examples.
+
+If the primary card fails (for example, it is unplugged), the server reports
+`the primary ALSA device <name> failed` to its clients and stops, the same as on
+Ctrl-C. It does not carry on without its clock.
+
 ## Automatic cards
 
 At startup the server lists every PCM device (subdevice 0) that has a stream,
@@ -89,7 +101,7 @@ It can be repeated:
 
 ```sh
 # Real hardware only: no loopback devices
-jackd -d alsa -d hw:0 --exclude-card=Loopback
+jackd -d alsa -d hw:CARD=PCH --exclude-card=Loopback
 ```
 
 The id is the one ALSA shows in `aplay -l` or `/proc/asound/cards` (for example
@@ -260,6 +272,7 @@ jack_set_secondary_sample_rate_callback(client, on_secondary_rate, NULL);
 - **Hot-plug depends on udev events.** A device that appears while another
   application holds it is added at the next change, not when it is released.
 - **Eight secondary slots** in total, automatic and configured together.
+- **Primary card loss stops the server.** Nothing takes over from the primary.
 - **Native control types.** Only integer controls are used. Enumerated controls
   are not yet supported, so a card whose rate control is an enum falls back to a
   JACK element.
@@ -346,7 +359,7 @@ card as the secondary device:
 
 ```sh
 sudo modprobe snd-aloop
-jackd -d alsa -d hw:0 --secondary "name=loop;device=hw:Loopback,0,0;mode=duplex"
+jackd -d alsa -d hw:CARD=PCH --secondary "name=loop;device=hw:Loopback,0,0;mode=duplex"
 # In another terminal, change the rate:
 amixer -c Loopback cset name='JACK Secondary Playback Rate' 44100
 ```

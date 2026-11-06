@@ -39,6 +39,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackAlsaDriver.h"
 #include "JackAlsaEnumerate.h"
+#include "JackTools.h"
 #include "JackEngineControl.h"
 #include "JackClientControl.h"
 #include "JackPort.h"
@@ -291,6 +292,22 @@ void JackAlsaDriver::RetireCard(JackAlsaSecondaryCard* card)
     UnregisterCardPorts(card);
     delete card;   // stops the card's thread, closes its controls and stream
     UpdateSecondaryLatencies();
+}
+
+// The primary card's clock drives the server, so when it fails the server cannot
+// go on.  Clients are told why, and the server is stopped as on Ctrl-C.  Only the
+// first failure is reported.
+void JackAlsaDriver::PrimaryFailed(int status)
+{
+    if (fPrimaryFailed.exchange(true)) {
+        return;
+    }
+    const char* name = fCaptureDriverName[0] != '\0' ? fCaptureDriverName : fPlaybackDriverName;
+    std::string message = std::string("the primary ALSA device ") + name + " failed (status " +
+                          std::to_string(status) + "); the server stops";
+    jack_error("%s", message.c_str());
+    NotifyFailure(JackBackendError, message.c_str());
+    JackTools::KillServer();
 }
 
 void JackAlsaDriver::HandleCardFailure(int card_id)
@@ -1176,8 +1193,10 @@ retry:
 
     nframes = alsa_driver_wait((alsa_driver_t *)fDriver, -1, &wait_status, &fDelayedUsecs);
 
-    if (wait_status < 0)
+    if (wait_status < 0) {
+        PrimaryFailed(wait_status);
         return -1;		/* driver failed */
+    }
 
     if (nframes == 0) {
         /* we detected an xrun and restarted: notify
@@ -1218,6 +1237,7 @@ int JackAlsaDriver::Write()
 {
     int res = alsa_driver_write((alsa_driver_t *)fDriver, fEngineControl->fBufferSize);
     if (res < 0) {
+        PrimaryFailed(res);
         return res;
     }
 
@@ -1473,7 +1493,7 @@ SERVER_EXPORT const jack_driver_desc_t* driver_get_descriptor ()
 
     desc = jack_driver_descriptor_construct("alsa", JackDriverMaster, "Linux ALSA API based audio backend", &filler);
 
-    strcpy(value.str, "hw:0");
+    strcpy(value.str, "");
     jack_driver_descriptor_add_parameter(desc, &filler, "device", 'd', JackDriverParamString, &value, enum_alsa_devices(), "ALSA device name", NULL);
 
     strcpy(value.str, "none");
@@ -1563,8 +1583,8 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
     jack_nframes_t srate = 48000;
     jack_nframes_t frames_per_interrupt = 1024;
     unsigned long user_nperiods = 2;
-    const char *playback_pcm_name = "hw:0";
-    const char *capture_pcm_name = "hw:0";
+    const char *playback_pcm_name = "";
+    const char *capture_pcm_name = "";
     int hw_monitoring = FALSE;
     int hw_metering = FALSE;
     int capture = FALSE;
@@ -1715,6 +1735,16 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
     if (!capture && !playback) {
         capture = TRUE;
         playback = TRUE;
+    }
+
+    // The primary card is named by its ALSA id, so that it stays the same card
+    // when devices are added or removed.  "hw:0" would name whatever card has
+    // that number at the time.
+    if ((capture && !Jack::JackAlsaPcmNameIsById(capture_pcm_name)) ||
+        (playback && !Jack::JackAlsaPcmNameIsById(playback_pcm_name))) {
+        jack_error("the primary ALSA device must be given by card id, for example -d hw:CARD=PCH; "
+                   "numeric forms such as hw:0 are not accepted");
+        return NULL;
     }
 
     Jack::JackAlsaDriver* alsa_driver = new Jack::JackAlsaDriver("system", "alsa_pcm", engine, table);
