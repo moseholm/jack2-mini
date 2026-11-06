@@ -16,6 +16,7 @@ set(JACK_PORTS_PER_APPLICATION 2048 CACHE STRING "Maximum number of ports per ap
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ALSA REQUIRED IMPORTED_TARGET alsa>=1.0.18)
+pkg_check_modules(UDEV REQUIRED IMPORTED_TARGET libudev)
 find_package(Threads REQUIRED)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -186,6 +187,7 @@ set(JACK_ALSA_SOURCES
     linux/alsa/JackAlsaControlMonitor.cpp
     linux/alsa/JackAlsaReconfigWorker.cpp
     linux/alsa/JackAlsaEnumerate.cpp
+    linux/alsa/JackAlsaHotplug.cpp
     linux/alsa/resample/JackResampler.cpp
     linux/alsa/resample/pipewire_resample_bridge.c
     linux/alsa/resample/resample-native.c
@@ -201,7 +203,7 @@ set(JACK_ALSARAWMIDI_SOURCES
     linux/alsarawmidi/JackALSARawMidiUtil.cpp)
 
 jack_add_driver(alsa ${JACK_ALSA_SOURCES})
-target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA m ${CMAKE_DL_LIBS})
+target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA PkgConfig::UDEV m ${CMAKE_DL_LIBS})
 # The vendored PipeWire resampler is built with its precomputed filter tables
 # disabled and a small SPA compatibility shim in place of the SPA headers.
 target_include_directories(jack_alsa PRIVATE

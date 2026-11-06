@@ -27,6 +27,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaReconfigWorker.h"
 #include "JackAlsaControlMonitor.h"
 #include "JackAlsaSecondaryCard.h"
+#include "JackAlsaHotplug.h"
 #include "JackAlsaSlotTable.h"
 #include "JackAlsaSecondaryConfig.h"
 #include "alsa_driver.h"
@@ -58,6 +59,7 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         std::mutex fCardsMutex;
         int fNextCardId;
         JackAlsaControlMonitor* fControlMonitor;
+        JackAlsaHotplug* fHotplug;
         JackAlsaReconfigWorker* fReconfigWorker;
         std::vector<int> fCardLocks;
         std::atomic<uint64_t> fRTEpoch;
@@ -88,11 +90,12 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         // JackAlsaRateRequestHandler
         virtual void HandleRateRequest(int card, JackAlsaRateDirection dir, long value);
         virtual void HandleCardFailure(int card);
+        virtual void HandleSoundChanged();
 
     public:
 
         JackAlsaDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
-		: JackAudioDriver(name, alias, engine, table),fDriver(NULL),fControlMonitor(NULL),fReconfigWorker(NULL)
+		: JackAudioDriver(name, alias, engine, table),fDriver(NULL),fControlMonitor(NULL),fReconfigWorker(NULL),fHotplug(NULL)
         {
             fRTRunning.store(false);
             fRestarting.store(false);

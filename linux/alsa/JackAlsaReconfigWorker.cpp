@@ -23,7 +23,7 @@ namespace Jack
 {
 
 JackAlsaReconfigWorker::JackAlsaReconfigWorker(JackAlsaRateRequestHandler* handler)
-    : fHandler(handler), fRunning(false), fThread(this)
+    : fHandler(handler), fRunning(false), fSoundChanged(false), fThread(this)
 {}
 
 JackAlsaReconfigWorker::~JackAlsaReconfigWorker()
@@ -36,6 +36,15 @@ void JackAlsaReconfigWorker::OnRateEvent(int card, JackAlsaRateDirection dir, lo
     {
         std::lock_guard<std::mutex> lock(fMutex);
         fPending[Key(card, (int)dir)] = value;
+    }
+    fCond.notify_one();
+}
+
+void JackAlsaReconfigWorker::OnSoundChanged()
+{
+    {
+        std::lock_guard<std::mutex> lock(fMutex);
+        fSoundChanged = true;
     }
     fCond.notify_one();
 }
@@ -58,13 +67,16 @@ bool JackAlsaReconfigWorker::Execute()
 {
     std::map<Key, long> batch;
     std::vector<int> failures;
+    bool sound = false;
     {
         std::unique_lock<std::mutex> lock(fMutex);
-        fCond.wait(lock, [this] { return !fPending.empty() || !fFailures.empty() || !fRunning; });
+        fCond.wait(lock, [this] { return !fPending.empty() || !fFailures.empty() || fSoundChanged || !fRunning; });
         if (!fRunning) {
             return false;
         }
         failures.swap(fFailures);
+        sound = fSoundChanged;
+        fSoundChanged = false;
         batch.swap(fPending);
     }
 
@@ -72,6 +84,9 @@ bool JackAlsaReconfigWorker::Execute()
         if (fHandler) {
             fHandler->HandleCardFailure(failures[i]);
         }
+    }
+    if (sound && fHandler) {
+        fHandler->HandleSoundChanged();
     }
     for (std::map<Key, long>::const_iterator it = batch.begin(); it != batch.end(); ++it) {
         if (fHandler) {

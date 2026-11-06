@@ -20,6 +20,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #define __JackAlsaReconfigWorker__
 
 #include "JackAlsaCardFailureSink.h"
+#include "JackAlsaHotplug.h"
 #include "JackAlsaControl.h"
 #include "JackAlsaControlMonitor.h"
 #include "JackPlatformPlug.h"
@@ -45,6 +46,7 @@ class JackAlsaRateRequestHandler
         {}
         virtual void HandleRateRequest(int card, JackAlsaRateDirection dir, long value) = 0;
         virtual void HandleCardFailure(int card) = 0;
+        virtual void HandleSoundChanged() = 0;
 };
 
 /*!
@@ -56,7 +58,7 @@ writes results in one handler call with the latest value.  The handler runs on
 the worker thread, never on the RT thread.
 */
 
-class JackAlsaReconfigWorker : public JackRunnableInterface, public JackAlsaControlListener, public JackAlsaCardFailureSink
+class JackAlsaReconfigWorker : public JackRunnableInterface, public JackAlsaControlListener, public JackAlsaCardFailureSink, public JackAlsaHotplugListener
 {
 
     private:
@@ -68,6 +70,7 @@ class JackAlsaReconfigWorker : public JackRunnableInterface, public JackAlsaCont
         std::condition_variable fCond;
         std::map<Key, long> fPending;
         std::vector<int> fFailures;
+        bool fSoundChanged;
         bool fRunning;
         JackThread fThread;
 
@@ -84,6 +87,9 @@ class JackAlsaReconfigWorker : public JackRunnableInterface, public JackAlsaCont
 
         // JackAlsaCardFailureSink.  Failures are handled before rate requests.
         virtual void OnCardFailed(int card_id);
+
+        // JackAlsaHotplugListener.  Handled after failures, before rate requests.
+        virtual void OnSoundChanged();
 
         int Start();
         int Stop();
