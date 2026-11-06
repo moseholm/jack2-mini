@@ -1,0 +1,48 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "jackd: ALSA primary + loopback secondary",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/bin/jackd",
+            "args": [
+                "-d", "alsa",
+                "-d", "hw:0",
+                "-C",
+                "-r", "48000",
+                "-p", "1024",
+                "--secondary-file", ".vscode/secondary-loopback.conf"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                { "name": "LD_LIBRARY_PATH", "value": "${workspaceFolder}/build/lib" },
+                { "name": "JACK_DRIVER_DIR", "value": "${workspaceFolder}/build/lib/jack" },
+                { "name": "HOME", "value": "/tmp/opencode/jackhome" }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                { "description": "Enable pretty-printing for gdb", "text": "-enable-pretty-printing", "ignoreFailures": true }
+            ]
+        },
+        {
+            "name": "jackd: dummy driver (regression)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/bin/jackd",
+            "args": [ "-d", "dummy", "-r", "48000", "-p", "512" ],
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                { "name": "LD_LIBRARY_PATH", "value": "${workspaceFolder}/build/lib" },
+                { "name": "JACK_DRIVER_DIR", "value": "${workspaceFolder}/build/lib/jack" },
+                { "name": "HOME", "value": "/tmp/opencode/jackhome" }
+            ],
+            "MIMode": "gdb",
+            "setupCommands": [
+                { "description": "Enable pretty-printing for gdb", "text": "-enable-pretty-printing", "ignoreFailures": true }
+            ]
+        }
+    ]
+}
