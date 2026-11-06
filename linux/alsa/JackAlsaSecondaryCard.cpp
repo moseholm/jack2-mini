@@ -27,6 +27,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <errno.h>
 #include <math.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <thread>
 
 namespace Jack
@@ -51,6 +52,23 @@ static void FreeChannelBuffers(float** buffers, int channels)
         delete[] buffers[i];
     }
     delete[] buffers;
+}
+
+// Best-effort residency for buffers the realtime threads touch.  A failure is
+// not fatal; it only means the kernel may still fault pages in later.
+static bool LockChannelBuffers(float** buffers, int channels, unsigned int frames)
+{
+    if (buffers == NULL || channels <= 0) {
+        return true;
+    }
+
+    bool locked = mlock(buffers, sizeof(float*) * channels) == 0;
+    for (int i = 0; i < channels; i++) {
+        if (buffers[i] != NULL && frames > 0) {
+            locked = (mlock(buffers[i], sizeof(float) * frames) == 0) && locked;
+        }
+    }
+    return locked;
 }
 
 JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& config, JackResamplerFactory* factory)
@@ -78,6 +96,10 @@ JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& conf
       fConvCap(0),
       fXrunGeneration(0),
       fSeenXrunGeneration(0),
+      fCaptureDropped(0),
+      fPlaybackDropped(0),
+      fIoError(IoError::None),
+      fIoErrorStatus(0),
       fCtl(NULL),
       fCaptureTemp(NULL),
       fPlaybackTemp(NULL),
@@ -316,6 +338,30 @@ int JackAlsaSecondaryCard::BuildBuffers(jack_nframes_t primary_buffer_size,
     if (fPlaybackEnabled) {
         fPlaybackRing = new JackAlsaRingBuffer(fPlaybackChannels, ring_capacity);
         fPlaybackPorts.resize(fPlaybackChannels, 0);
+    }
+
+    // The card thread and the primary RT thread use these buffers every cycle.
+    // Keep them resident now, on the non-realtime setup path.
+    bool locked = true;
+    if (fCaptureRing) {
+        locked = fCaptureRing->LockMemory() && locked;
+    }
+    if (fPlaybackRing) {
+        locked = fPlaybackRing->LockMemory() && locked;
+    }
+    locked = LockChannelBuffers(fCaptureTemp, fCaptureChannels, fPeriod) && locked;
+    locked = LockChannelBuffers(fPlaybackTemp, fPlaybackChannels, fPeriod) && locked;
+    locked = LockChannelBuffers(fCaptureConvIn, fCaptureChannels, fConvCap) && locked;
+    locked = LockChannelBuffers(fPlaybackConvOut, fPlaybackChannels, fConvCap) && locked;
+    if (fPortScratch) {
+        locked = (mlock(fPortScratch, sizeof(float*) * std::max(scratch_channels, 1)) == 0) && locked;
+    }
+    if (fSilence) {
+        locked = (mlock(fSilence, sizeof(float) * silence_size) == 0) && locked;
+    }
+    if (!locked) {
+        jack_log("secondary card '%s': could not lock all real-time buffers",
+                 fConfig.name.c_str());
     }
 
     alsa_driver_callbacks_t callbacks;
@@ -590,6 +636,42 @@ void JackAlsaSecondaryCard::MarkFailed()
     }
 }
 
+void JackAlsaSecondaryCard::ReportDrops()
+{
+    uint64_t capture = fCaptureDropped.exchange(0, std::memory_order_relaxed);
+    uint64_t playback = fPlaybackDropped.exchange(0, std::memory_order_relaxed);
+
+    if (capture) {
+        jack_log("secondary card '%s': dropped %llu capture frames",
+                 fConfig.name.c_str(), (unsigned long long)capture);
+    }
+    if (playback) {
+        jack_log("secondary card '%s': dropped %llu playback frames",
+                 fConfig.name.c_str(), (unsigned long long)playback);
+    }
+}
+
+void JackAlsaSecondaryCard::ReportPendingIoError()
+{
+    IoError error = fIoError.exchange(IoError::None, std::memory_order_acquire);
+    int status = fIoErrorStatus.load(std::memory_order_relaxed);
+
+    switch (error) {
+    case IoError::Wait:
+        jack_error("secondary card '%s': ALSA wait failed (status %d)",
+                   fConfig.name.c_str(), status);
+        break;
+    case IoError::Read:
+        jack_error("secondary card '%s': ALSA read failed", fConfig.name.c_str());
+        break;
+    case IoError::Write:
+        jack_error("secondary card '%s': ALSA write failed", fConfig.name.c_str());
+        break;
+    case IoError::None:
+        break;
+    }
+}
+
 bool JackAlsaSecondaryCard::WaitForRTCycles(unsigned int cycles)
 {
     // A cycle that was already running when fSilent was set may finish one
@@ -690,6 +772,10 @@ int JackAlsaSecondaryCard::Stop()
     // card's own ALSA stream and rings, so joining here is safe.
     fThread.Stop();
 
+    // The RT threads have stopped: it is safe to emit their diagnostics here.
+    ReportDrops();
+    ReportPendingIoError();
+
     alsa_driver_stop(fAlsaDriver);
     return 0;
 }
@@ -721,8 +807,8 @@ bool JackAlsaSecondaryCard::Execute()
     }
 
     if (wait_status < 0) {
-        jack_error("secondary card '%s': ALSA wait failed (status %d)",
-                   fConfig.name.c_str(), wait_status);
+        fIoErrorStatus.store(wait_status, std::memory_order_relaxed);
+        fIoError.store(IoError::Wait, std::memory_order_release);
         MarkFailed();
         return false;
     }
@@ -735,21 +821,20 @@ bool JackAlsaSecondaryCard::Execute()
 
     if (fCaptureEnabled) {
         if (alsa_driver_read(fAlsaDriver, fPeriod) < 0) {
-            jack_error("secondary card '%s': ALSA read failed", fConfig.name.c_str());
+            fIoError.store(IoError::Read, std::memory_order_release);
             MarkFailed();
             return false;
         }
         jack_nframes_t written = fCaptureRing->Write((const float* const*)fCaptureTemp, fPeriod);
         if (written != fPeriod) {
-            jack_log("secondary card '%s': capture ring overflow, dropped %u frames",
-                     fConfig.name.c_str(), fPeriod - written);
+            fCaptureDropped.fetch_add(fPeriod - written, std::memory_order_relaxed);
         }
     }
 
     if (fPlaybackEnabled) {
         fPlaybackRing->Read(fPlaybackTemp, fPeriod);
         if (alsa_driver_write(fAlsaDriver, fPeriod) < 0) {
-            jack_error("secondary card '%s': ALSA write failed", fConfig.name.c_str());
+            fIoError.store(IoError::Write, std::memory_order_release);
             MarkFailed();
             return false;
         }
@@ -882,16 +967,14 @@ void JackAlsaSecondaryCard::WriteFromPorts(JackGraphManager* graph_manager, jack
                                                             fPlaybackConvOut, fConvCap);
         jack_nframes_t written = fPlaybackRing->Write((const float* const*)fPlaybackConvOut, produced);
         if (written != produced) {
-            jack_log("secondary card '%s': playback ring overflow, dropped %u frames",
-                     fConfig.name.c_str(), produced - written);
+            fPlaybackDropped.fetch_add(produced - written, std::memory_order_relaxed);
         }
         return;
     }
 
     jack_nframes_t written = fPlaybackRing->Write((const float* const*)fPortScratch, nframes);
     if (written != nframes) {
-        jack_log("secondary card '%s': playback ring overflow, dropped %u frames",
-                 fConfig.name.c_str(), nframes - written);
+        fPlaybackDropped.fetch_add(nframes - written, std::memory_order_relaxed);
     }
 }
 

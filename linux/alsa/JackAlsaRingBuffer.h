@@ -21,6 +21,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "types.h"
 #include <atomic>
+#include <cstddef>
+#include <new>
 
 namespace Jack
 {
@@ -32,6 +34,10 @@ One writer and one reader are assumed, which is exactly the relationship
 between a secondary card I/O thread and the primary RT thread.  The ring is
 non-blocking: a full producer drops frames and an empty consumer is
 zero-filled.
+
+Storage is rounded up to a power of two so the RT path can use a mask instead
+of an integer division.  The two positions live on separate cache lines to
+avoid false sharing between the card thread and the primary RT thread.
 */
 
 class JackAlsaRingBuffer
@@ -41,10 +47,11 @@ class JackAlsaRingBuffer
 
         int fChannels;
         jack_nframes_t fCapacity;
+        uint64_t fMask;
         float** fData;
 
-        std::atomic<uint64_t> fReadPos;
-        std::atomic<uint64_t> fWritePos;
+        alignas(std::hardware_destructive_interference_size) std::atomic<uint64_t> fReadPos;
+        alignas(std::hardware_destructive_interference_size) std::atomic<uint64_t> fWritePos;
 
         JackAlsaRingBuffer(const JackAlsaRingBuffer&);
         JackAlsaRingBuffer& operator=(const JackAlsaRingBuffer&);
@@ -57,20 +64,24 @@ class JackAlsaRingBuffer
         ~JackAlsaRingBuffer();
 
         bool Init(int channels, jack_nframes_t capacity);
-        void Reset();
+        void Reset() noexcept;
 
-        int Channels() const { return fChannels; }
-        jack_nframes_t Capacity() const { return fCapacity; }
-        jack_nframes_t AvailableRead() const;
-        jack_nframes_t AvailableWrite() const;
+        // Best-effort mlock() of the sample storage.  Returns false when any
+        // page could not be locked; the ring remains usable either way.
+        bool LockMemory() const noexcept;
+
+        int Channels() const noexcept { return fChannels; }
+        jack_nframes_t Capacity() const noexcept { return fCapacity; }
+        jack_nframes_t AvailableRead() const noexcept;
+        jack_nframes_t AvailableWrite() const noexcept;
 
         // Push nframes from planar source.  Returns the number of frames
         // actually stored; overflow is dropped.
-        jack_nframes_t Write(const float* const* src, jack_nframes_t nframes);
+        jack_nframes_t Write(const float* const* src, jack_nframes_t nframes) noexcept;
 
         // Pop up to nframes into planar destination.  Missing frames are
         // zero-filled.  Returns the number of frames actually available.
-        jack_nframes_t Read(float* const* dst, jack_nframes_t nframes);
+        jack_nframes_t Read(float* const* dst, jack_nframes_t nframes) noexcept;
 };
 
 } // end of namespace
