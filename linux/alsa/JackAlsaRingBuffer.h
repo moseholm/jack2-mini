@@ -22,7 +22,6 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "types.h"
 #include <atomic>
 #include <cstddef>
-#include <new>
 
 namespace Jack
 {
@@ -45,13 +44,18 @@ class JackAlsaRingBuffer
 
     private:
 
+        // Fixed rather than std::hardware_destructive_interference_size: that
+        // value depends on the compiler's tuning (it is 256 on generic AArch64
+        // builds), and every target we ship has 64-byte cache lines.
+        static constexpr std::size_t kCacheLine = 64;
+
         int fChannels;
         jack_nframes_t fCapacity;
         uint64_t fMask;
         float** fData;
 
-        alignas(std::hardware_destructive_interference_size) std::atomic<uint64_t> fReadPos;
-        alignas(std::hardware_destructive_interference_size) std::atomic<uint64_t> fWritePos;
+        alignas(kCacheLine) std::atomic<uint64_t> fReadPos;
+        alignas(kCacheLine) std::atomic<uint64_t> fWritePos;
 
         JackAlsaRingBuffer(const JackAlsaRingBuffer&);
         JackAlsaRingBuffer& operator=(const JackAlsaRingBuffer&);
