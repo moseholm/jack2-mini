@@ -12,6 +12,10 @@ limits, and how the code is tested.
 
 ## Quick start
 
+Every sound device other than the primary's is added automatically at startup.
+See [Automatic cards](#automatic-cards). The explicit forms below are for
+settings you want to control.
+
 ```sh
 # Primary card hw:0 (duplex); secondary USB card hw:1, capture only
 jackd -d alsa -d hw:0 --secondary "name=usb1;device=hw:1;mode=capture"
@@ -55,23 +59,51 @@ Each card is a `;`-separated list of `key=value` pairs. A bare device name
 | `capture_rate_ctl`, `playback_rate_ctl` | auto | Name of a native ALSA control to use as the rate control. See [Rate controls](#rate-controls). |
 | `rate_map` | none | Reserved for enumerated native controls. Not yet used. |
 
+## Automatic cards
+
+At startup the server lists every PCM device (subdevice 0) that has a stream,
+on every card, and adds each one as a secondary card, except:
+
+- the primary's own device;
+- a device configured explicitly with `--secondary` or `--secondary-file`. The
+  configured card replaces the automatic one for that device;
+- a device that cannot be opened at startup (it is busy, or has no usable
+  stream). It is logged and left out.
+
+Each automatic card:
+
+- is named after its ALSA card id in lower case, with its device number, e.g.
+  `nvidia_d3` or `loopback_d1`;
+- is duplex when its device has both directions, and is PCM-linked by the
+  card; otherwise it has the one direction it supports;
+- uses up to 12 channels per direction (7.1.4), or fewer if the device has fewer;
+- uses `clock=async`, `format=auto` and the `pipewire` resampler.
+
+Automatic cards never stop the server. Only the configured cards can do that.
+There are eight secondary slots. Devices beyond the eighth are logged and not added.
+
+Hot-plugging is not handled yet: cards are found at startup only.
+
 ## Ports
 
 The secondary ports are added to the single `system` client:
 
-- `system:capture_<name>_<n>` for capture channels, starting at 1;
-- `system:playback_<name>_<n>` for playback channels, starting at 1.
+- `system:capture_<card>_d<dev>_<n>` for capture channels, starting at 1;
+- `system:playback_<card>_d<dev>_<n>` for playback channels, starting at 1.
 
-For example, `name=usb1` with two capture channels gives `system:capture_usb1_1`
-and `system:capture_usb1_2`.
+`<card>` is the card's name (the configured `name`, or for an automatic card its
+ALSA card id in lower case), and `<dev>` is the PCM device number. For example,
+`name=usb1;device=hw:1,0` with two capture channels gives `system:capture_usb1_d0_1`
+and `system:capture_usb1_d0_2`. Each device has its own ports, so devices on one
+card never share names.
 
 ## Rate controls
 
-Each secondary card has one rate control per enabled direction, on the card's
-ALSA control device (for example `hw:1`):
+Each secondary card has one rate control per enabled direction, on its card's
+ALSA control device, named after its device number (for example `hw:1`, device 3):
 
-- `JACK Secondary Capture Rate`
-- `JACK Secondary Playback Rate`
+- `JACK Secondary Capture Rate d3`
+- `JACK Secondary Playback Rate d3`
 
 They are integer controls in Hz. Read them with `amixer -c 1 cget` to see the
 rate the card runs at. Write them to ask for a rate change. Applications can
@@ -179,9 +211,9 @@ jack_set_secondary_sample_rate_callback(client, on_secondary_rate, NULL);
 
 - **One JACK server per ALSA card.** Each card a server uses is locked for the
   server's lifetime (`flock` on `/dev/shm/jack_alsa_<card>.lock`). A second
-  server is refused, and so is a secondary card that is the primary's card or
-  another secondary's card. The primary's capture and playback may share one
-  card. The lock is released when the process exits, including after a crash.
+  server is refused for that card. Within one server, several devices of one
+  card can be used (each device has its own rate controls and ports). The lock
+  is released when the process exits, including after a crash.
 - **The period is fixed by the primary buffer size.** See
   [The period limit](#the-period-limit). Rate changes that need a different
   period fail.
@@ -191,7 +223,9 @@ jack_set_secondary_sample_rate_callback(client, on_secondary_rate, NULL);
   buffer, the ring prefill and the resampler's filter delay, in primary frames. It
   is recomputed after a rate change. The ring's fill is held at about three periods,
   so the value is a design estimate; it has not been measured against hardware.
-- **No runtime add or remove** of secondary cards. Cards are fixed at startup.
+- **No hot-plug yet.** Cards are found at startup. A card that appears later is
+  not added until the server is restarted.
+- **Eight secondary slots** in total, automatic and configured together.
 - **Native control types.** Only integer controls are used. Enumerated controls
   are not yet supported, so a card whose rate control is an enum falls back to a
   JACK element.
