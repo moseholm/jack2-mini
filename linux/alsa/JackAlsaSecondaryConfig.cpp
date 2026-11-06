@@ -37,7 +37,8 @@ JackAlsaSecondaryConfig::JackAlsaSecondaryConfig()
       follow_hw_rate(false),
       clock(SecondaryClockAsync),
       sample_format(SampleFormatAuto),
-      resampler("pipewire")
+      resampler("pipewire"),
+      automatic(false)
 {}
 
 static std::string Trim(const std::string& text)
