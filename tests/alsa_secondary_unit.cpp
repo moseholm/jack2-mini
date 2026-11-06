@@ -25,6 +25,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaRingBuffer.h"
 #include "JackAlsaSlotTable.h"
 #include "JackAlsaSecondaryConfig.h"
+#include "JackAlsaCardDiff.h"
 #include "resample/JackResampler.h"
 
 #include <math.h>
@@ -283,6 +284,31 @@ static void TestPcmDeviceNumber()
     CHECK(JackAlsaPcmDeviceNumber("hw:CARD=Loopback") == 0);
 }
 
+static void TestCardDiff()
+{
+    printf("reconcile: which cards to retire and add\n");
+    std::vector<std::string> cur, want;
+    JackAlsaCardChanges c = JackAlsaDiffCards(cur, want);
+    CHECK(c.retire.empty() && c.add.empty());
+
+    cur.push_back("nvidia_d3|p"); cur.push_back("loop_d0|cp");
+    want.push_back("loop_d0|cp"); want.push_back("nvidia_d3|p"); want.push_back("nvidia_d7|p");
+    c = JackAlsaDiffCards(cur, want);
+    CHECK(c.retire.empty());
+    CHECK(c.add.size() == 1 && c.add[0] == 2);
+
+    cur.clear(); cur.push_back("hdmi_d3|p");
+    want.clear(); want.push_back("nvidia_d7|p");
+    c = JackAlsaDiffCards(cur, want);
+    CHECK(c.retire.size() == 1 && c.retire[0] == 0);
+    CHECK(c.add.size() == 1 && c.add[0] == 0);
+
+    cur.clear(); cur.push_back("loop_d1|c");
+    want.clear(); want.push_back("loop_d1|cp");
+    c = JackAlsaDiffCards(cur, want);
+    CHECK(c.retire.size() == 1 && c.add.size() == 1);
+}
+
 static void TestConverterRates()
 {
     printf("converter: 44.1 kHz capture and 48 kHz playback keep exact counts\n");
@@ -423,6 +449,7 @@ int main()
     TestResamplerPlugin();
     TestSlotTable();
     TestPcmDeviceNumber();
+    TestCardDiff();
     TestConverterRates();
     TestDriftController();
     TestDriftLimits();

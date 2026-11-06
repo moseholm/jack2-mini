@@ -55,7 +55,19 @@ static bool HasStream(snd_ctl_t* ctl, int device, snd_pcm_stream_t stream)
     return snd_ctl_pcm_info(ctl, info) >= 0;
 }
 
-std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms()
+static const JackAlsaPcmInfo* FindKnown(const std::vector<JackAlsaPcmInfo>& known,
+                                        const std::string& card_id, int device)
+{
+    for (size_t i = 0; i < known.size(); i++) {
+        if (known[i].card_id == card_id && known[i].device == device) {
+            return &known[i];
+        }
+    }
+    return NULL;
+}
+
+std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcmInfo>& known,
+                                                   bool report)
 {
     std::vector<JackAlsaPcmInfo> result;
     int card = -1;
@@ -102,9 +114,23 @@ std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms()
             if (capture) {
                 info.capture_channels = ProbeChannels(info.pcm, SND_PCM_STREAM_CAPTURE, &error);
             }
+
+            // Busy now: use what was known.  A device in use by this server is busy by design.
+            const JackAlsaPcmInfo* old = FindKnown(known, card_id, device);
+            if (old != NULL) {
+                if (info.playback_channels == 0) {
+                    info.playback_channels = old->playback_channels;
+                }
+                if (info.capture_channels == 0) {
+                    info.capture_channels = old->capture_channels;
+                }
+            }
+
             if (info.playback_channels == 0 && info.capture_channels == 0) {
-                jack_info("ALSA device %s is not available now (%s); skipped",
-                          info.pcm.c_str(), error.c_str());
+                if (report) {
+                    jack_info("ALSA device %s is not available now (%s); skipped",
+                              info.pcm.c_str(), error.c_str());
+                }
                 continue;
             }
             info.playback = info.playback_channels > 0;
