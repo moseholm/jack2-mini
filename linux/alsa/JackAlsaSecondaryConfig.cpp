@@ -108,6 +108,23 @@ int JackAlsaPcmDeviceNumber(const std::string& pcm)
     return 0;
 }
 
+bool JackAlsaCardExcluded(const std::string& card_id, const std::vector<std::string>& excluded)
+{
+    for (size_t i = 0; i < excluded.size(); i++) {
+        if (excluded[i].size() != card_id.size()) {
+            continue;
+        }
+        bool same = true;
+        for (size_t c = 0; c < card_id.size() && same; c++) {
+            same = tolower((unsigned char)excluded[i][c]) == tolower((unsigned char)card_id[c]);
+        }
+        if (same) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::string JackAlsaSecondarySanitizeName(const std::string& name)
 {
     std::string result;

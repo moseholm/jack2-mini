@@ -69,6 +69,7 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         std::atomic<bool> fRestarting;
         std::vector<std::string> fCardLockNames;
         std::vector<JackAlsaSecondaryConfig> fConfiguredSecondaries;   // as given to Open
+        std::vector<std::string> fExcludedCards;                       // --exclude-card ids
         std::vector<JackAlsaPcmInfo> fKnownPcms;                       // the last device listing
         std::vector<std::string> fReportedFailures;                    // each logged once
 
@@ -131,7 +132,8 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
                  jack_nframes_t capture_latency,
                  jack_nframes_t playback_latency,
                  const char* midi_driver_name,
-                 const std::vector<JackAlsaSecondaryConfig>& secondaries);
+                 const std::vector<JackAlsaSecondaryConfig>& secondaries,
+                 const std::vector<std::string>& excluded_cards);
 
         int Close();
         int Attach();
