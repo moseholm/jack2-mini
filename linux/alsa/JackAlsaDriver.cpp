@@ -32,10 +32,13 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <sys/types.h>
 #include <sys/time.h>
 #include <string.h>
+#include <algorithm>
 #include <chrono>
 #include <thread>
+#include <utility>
 
 #include "JackAlsaDriver.h"
+#include "JackAlsaEnumerate.h"
 #include "JackEngineControl.h"
 #include "JackClientControl.h"
 #include "JackPort.h"
@@ -518,6 +521,107 @@ fail:
     return i;
 }
 
+// PortBase of a configuration: its name and device number.  Two devices of one
+// card have different port bases even though their card name is the same.
+static std::string PortBaseOf(const JackAlsaSecondaryConfig& cfg)
+{
+    const std::string& pcm = cfg.capture_device.empty() ? cfg.playback_device : cfg.capture_device;
+    return cfg.name + "_d" + std::to_string(JackAlsaPcmDeviceNumber(pcm));
+}
+
+// Finds the card and device of a PCM name among the enumerated devices.  Accepts
+// "hw:<index>[,n]", "hw:<id>[,n]" and "hw:CARD=<id>,DEV=<n>".
+static bool ResolvePcm(const std::string& pcm, const std::vector<JackAlsaPcmInfo>& pcms,
+                       int* card, int* device)
+{
+    std::string rest = pcm.find(':') == std::string::npos ? pcm : pcm.substr(pcm.find(':') + 1);
+    std::string key;
+    if (rest.compare(0, 5, "CARD=") == 0) {
+        key = rest.substr(5, rest.find(',') == std::string::npos ? std::string::npos : rest.find(',') - 5);
+    } else {
+        key = rest.substr(0, rest.find(','));
+    }
+    bool numeric = !key.empty() && key.find_first_not_of("0123456789") == std::string::npos;
+    *device = JackAlsaPcmDeviceNumber(pcm);
+    for (size_t i = 0; i < pcms.size(); i++) {
+        if ((numeric && pcms[i].card_num == atoi(key.c_str())) || (!numeric && pcms[i].card_id == key)) {
+            *card = pcms[i].card_num;
+            return true;
+        }
+    }
+    return false;
+}
+
+// The configured cards, followed by an automatic card for every other PCM device
+// that has a stream.  The primary's device and the devices configured explicitly
+// are not added again.  Automatic cards stop at the slot limit.
+static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
+        const std::vector<JackAlsaSecondaryConfig>& configured,
+        const char* primary_capture, const char* primary_playback)
+{
+    std::vector<JackAlsaSecondaryConfig> plan = configured;
+    std::vector<JackAlsaPcmInfo> pcms = JackAlsaEnumeratePcms();
+
+    std::vector<std::pair<int, int> > claimed;
+    const char* names[] = { primary_capture, primary_playback };
+    std::vector<std::string> used;
+    for (size_t i = 0; i < 2; i++) {
+        int card, device;
+        if (names[i] != NULL && ResolvePcm(names[i], pcms, &card, &device)) {
+            claimed.push_back(std::make_pair(card, device));
+        }
+    }
+    for (size_t i = 0; i < configured.size(); i++) {
+        int card, device;
+        const std::string pcms_for[] = { configured[i].capture_device, configured[i].playback_device };
+        for (size_t d = 0; d < 2; d++) {
+            if (!pcms_for[d].empty() && ResolvePcm(pcms_for[d], pcms, &card, &device)) {
+                claimed.push_back(std::make_pair(card, device));
+            }
+        }
+        used.push_back(PortBaseOf(configured[i]));
+    }
+
+    for (size_t i = 0; i < pcms.size(); i++) {
+        const JackAlsaPcmInfo& pcm = pcms[i];
+        if (std::find(claimed.begin(), claimed.end(), std::make_pair(pcm.card_num, pcm.device)) != claimed.end()) {
+            continue;
+        }
+        if (plan.size() >= JackAlsaCardSlots::Capacity()) {
+            jack_info("ALSA device %s is not added: all %zu secondary card slots are in use",
+                      pcm.pcm.c_str(), JackAlsaCardSlots::Capacity());
+            continue;
+        }
+
+        JackAlsaSecondaryConfig cfg;
+        cfg.name = JackAlsaSecondarySanitizeName(pcm.card_id);
+        std::transform(cfg.name.begin(), cfg.name.end(), cfg.name.begin(), ::tolower);
+        if (pcm.playback) {
+            cfg.playback_device = pcm.pcm;
+            cfg.playback_channels = pcm.playback_channels < 12 ? pcm.playback_channels : 12;
+        }
+        if (pcm.capture) {
+            cfg.capture_device = pcm.pcm;
+            cfg.capture_channels = pcm.capture_channels < 12 ? pcm.capture_channels : 12;
+        }
+        cfg.mode = (pcm.playback && pcm.capture) ? SecondaryModeDuplex
+                 : (pcm.capture ? SecondaryModeCapture : SecondaryModePlayback);
+        cfg.automatic = true;
+
+        // Two devices of one card share a card name: their port bases still differ.
+        if (std::find(used.begin(), used.end(), PortBaseOf(cfg)) != used.end()) {
+            jack_error("ALSA device %s is not added: its name %s is already used",
+                       pcm.pcm.c_str(), PortBaseOf(cfg).c_str());
+            continue;
+        }
+        used.push_back(PortBaseOf(cfg));
+        jack_info("automatic secondary card for %s: %s, %d/%d channels",
+                  pcm.pcm.c_str(), PortBaseOf(cfg).c_str(), cfg.capture_channels, cfg.playback_channels);
+        plan.push_back(cfg);
+    }
+    return plan;
+}
+
 int JackAlsaDriver::Open(jack_nframes_t nframes,
                          jack_nframes_t user_nperiods,
                          jack_nframes_t samplerate,
@@ -619,24 +723,26 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
     fPlaybackChannels = ((alsa_driver_t *)fDriver)->playback_nchannels;
 
     alsa_driver_t* primary = (alsa_driver_t*)fDriver;
-    if (!secondaries.empty()) {
+    std::vector<JackAlsaSecondaryConfig> plan = BuildSecondaryPlan(secondaries, capture_driver_name, playback_driver_name);
+
+    if (!plan.empty()) {
         fReconfigWorker = new JackAlsaReconfigWorker(this);
         fControlMonitor = new JackAlsaControlMonitor(fReconfigWorker);
     }
 
-    for (size_t i = 0; i < secondaries.size(); i++) {
-        const JackAlsaSecondaryConfig& cfg = secondaries[i];
+    for (size_t i = 0; i < plan.size(); i++) {
+        const JackAlsaSecondaryConfig& cfg = plan[i];
 
         for (size_t j = 0; j < i; j++) {
-            if (secondaries[j].name == cfg.name) {
-                jack_error("secondary ALSA card name '%s' is used more than once", cfg.name.c_str());
+            if (PortBaseOf(plan[j]) == PortBaseOf(cfg)) {
+                jack_error("secondary ALSA card '%s' is configured more than once", PortBaseOf(cfg).c_str());
                 Close();
                 return -1;
             }
         }
 
-        if (cfg.capture_device == capture_driver_name || cfg.capture_device == playback_driver_name ||
-            cfg.playback_device == capture_driver_name || cfg.playback_device == playback_driver_name) {
+        if (!cfg.automatic && (cfg.capture_device == capture_driver_name || cfg.capture_device == playback_driver_name ||
+            cfg.playback_device == capture_driver_name || cfg.playback_device == playback_driver_name)) {
             jack_error("secondary ALSA card '%s' uses a device already used by the primary card", cfg.name.c_str());
             Close();
             return -1;
@@ -645,6 +751,11 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         // One server may use several devices of one card: rate elements are named per
         // device.  Other servers are still excluded by the card lock.
         if (!LockCard(cfg.capture_device.empty() ? cfg.playback_device.c_str() : cfg.capture_device.c_str(), true)) {
+            if (cfg.automatic) {
+                jack_error("automatic secondary card '%s' is skipped: its card is held by another server",
+                           PortBaseOf(cfg).c_str());
+                continue;
+            }
             Close();
             return -1;
         }
@@ -664,8 +775,8 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         if (card->Open(primary->frames_per_cycle, primary->frame_rate, primary->user_nperiods,
                        fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
             delete card;
-            if (cfg.optional) {
-                jack_error("skipping optional secondary ALSA card '%s'", cfg.name.c_str());
+            if (cfg.optional || cfg.automatic) {
+                jack_error("skipping secondary ALSA card '%s'", PortBaseOf(cfg).c_str());
                 continue;
             }
             Close();

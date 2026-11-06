@@ -82,6 +82,10 @@ struct JackAlsaSecondaryConfig {
     // Resampler by name: "pipewire" (built in) or a plugin in JACK_RESAMPLER_PATH.
     std::string resampler;
 
+    // Added by discovery rather than configured.  A failure to open such a card is
+    // logged and the card skipped, instead of failing the server.
+    bool automatic;
+
     // Optional native ALSA control element names.  Empty means auto-probe.
     std::string capture_rate_ctl;
     std::string playback_rate_ctl;
