@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 project(jack2 VERSION 1.9.23 LANGUAGES C CXX)
 
@@ -19,9 +19,31 @@ pkg_check_modules(ALSA REQUIRED IMPORTED_TARGET alsa>=1.0.18)
 pkg_check_modules(UDEV REQUIRED IMPORTED_TARGET libudev)
 find_package(Threads REQUIRED)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
+
+# C++23 support varies by compiler release.  Fail early with a useful message
+# instead of letting a partial implementation produce confusing build errors.
+if(NOT "cxx_std_23" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    message(FATAL_ERROR
+        "The C++ compiler does not support C++23.  jack2-mini requires "
+        "GCC 13 or newer, or Clang 16 or newer.")
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
+        message(FATAL_ERROR
+            "jack2-mini requires GCC 13 or newer for C++23 "
+            "(found ${CMAKE_CXX_COMPILER_VERSION}).")
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
+        message(FATAL_ERROR
+            "jack2-mini requires Clang 16 or newer for C++23 "
+            "(found ${CMAKE_CXX_COMPILER_VERSION}).")
+    endif()
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-Wall)
