@@ -185,6 +185,7 @@ set(JACK_ALSA_SOURCES
     linux/alsa/JackAlsaControl.cpp
     linux/alsa/JackAlsaControlMonitor.cpp
     linux/alsa/JackAlsaReconfigWorker.cpp
+    linux/alsa/JackAlsaEnumerate.cpp
     linux/alsa/resample/JackResampler.cpp
     linux/alsa/resample/pipewire_resample_bridge.c
     linux/alsa/resample/resample-native.c
