@@ -33,3 +33,31 @@ jobs:
       run: cmake --build build --parallel
     - name: Install
       run: DESTDIR=$(pwd)/destdir cmake --install build
+
+  linux-aarch64:
+    # Builds and tests the AArch64 target under QEMU user emulation.  The
+    # emulated run checks correctness (including the NEON resampler kernel),
+    # not timing; performance is measured on real hardware.
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+    - uses: actions/checkout@v4
+    - name: Register QEMU
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: arm64
+    - name: Build and test
+      run: |
+        docker run --rm --platform linux/arm64 \
+          -v "$PWD:/src:ro" \
+          -w /tmp \
+          ubuntu:24.04 bash -euxo pipefail -c '
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq
+            apt-get install -y -qq build-essential cmake ninja-build pkg-config \
+              libasound2-dev libudev-dev
+            cmake -S /src -B /tmp/build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON
+            cmake --build /tmp/build --parallel
+            ctest --test-dir /tmp/build --output-on-failure
+          '
