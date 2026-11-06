@@ -11,6 +11,7 @@ endif()
 include(GNUInstallDirs)
 
 option(JACK_BUILD_TESTS "Build test programs" OFF)
+option(JACK_RESAMPLER_SIMD "Build the x86 SSE/AVX2 resampler kernels and select one at runtime" ON)
 set(JACK_MAX_CLIENTS 256 CACHE STRING "Maximum number of JACK clients")
 set(JACK_PORTS_PER_APPLICATION 2048 CACHE STRING "Maximum number of ports per application")
 
@@ -189,6 +190,36 @@ jack_add_driver(dummy common/JackDummyDriver.cpp)
 jack_add_driver(loopback common/JackLoopbackDriver.cpp)
 jack_add_driver(proxy common/JackProxyDriver.cpp)
 
+# The vendored PipeWire resampler is portable C by default.  On x86 we also
+# build its SSE and AVX2 kernels; the bridge selects one at runtime and keeps
+# the C version as the fallback.  The filter tables are still computed at
+# setup time because the precomputed table is not vendored.
+include(CheckCCompilerFlag)
+set(JACK_RESAMPLER_SIMD_SOURCES)
+set(JACK_RESAMPLER_SIMD_DEFINITIONS)
+set(JACK_RESAMPLER_SIMD_ENABLED OFF)
+if(JACK_RESAMPLER_SIMD AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64|i[3-6]86)$")
+    check_c_compiler_flag("-msse" JACK_HAVE_MSSE)
+    if(JACK_HAVE_MSSE)
+        list(APPEND JACK_RESAMPLER_SIMD_SOURCES linux/alsa/resample/resample-native-sse.c)
+        list(APPEND JACK_RESAMPLER_SIMD_DEFINITIONS HAVE_SSE)
+        set_source_files_properties(linux/alsa/resample/resample-native-sse.c
+            PROPERTIES COMPILE_OPTIONS "-msse")
+        set(JACK_RESAMPLER_SIMD_ENABLED ON)
+    endif()
+
+    check_c_compiler_flag("-mavx2" JACK_HAVE_MAVX2)
+    check_c_compiler_flag("-mfma" JACK_HAVE_MFMA)
+    if(JACK_HAVE_MAVX2 AND JACK_HAVE_MFMA)
+        list(APPEND JACK_RESAMPLER_SIMD_SOURCES linux/alsa/resample/resample-native-avx2.c)
+        list(APPEND JACK_RESAMPLER_SIMD_DEFINITIONS HAVE_AVX2 HAVE_FMA)
+        set_source_files_properties(linux/alsa/resample/resample-native-avx2.c
+            PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma")
+        set(JACK_RESAMPLER_SIMD_ENABLED ON)
+    endif()
+endif()
+message(STATUS "Resampler SIMD kernels                    : ${JACK_RESAMPLER_SIMD_ENABLED}")
+
 set(JACK_ALSA_SOURCES
     common/memops.c
     linux/alsa/JackAlsaDriver.cpp
@@ -213,7 +244,8 @@ set(JACK_ALSA_SOURCES
     linux/alsa/resample/JackResampler.cpp
     linux/alsa/resample/pipewire_resample_bridge.c
     linux/alsa/resample/resample-native.c
-    linux/alsa/resample/resample-native-c.c)
+    linux/alsa/resample/resample-native-c.c
+    ${JACK_RESAMPLER_SIMD_SOURCES})
 
 set(JACK_ALSARAWMIDI_SOURCES
     linux/alsarawmidi/JackALSARawMidiDriver.cpp
@@ -231,7 +263,7 @@ target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA PkgConfig::UDEV m ${CMAK
 target_include_directories(jack_alsa PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample"
     "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample/spa-shim")
-target_compile_definitions(jack_alsa PRIVATE RESAMPLE_DISABLE_PRECOMP)
+target_compile_definitions(jack_alsa PRIVATE RESAMPLE_DISABLE_PRECOMP ${JACK_RESAMPLER_SIMD_DEFINITIONS})
 
 jack_add_driver(alsarawmidi ${JACK_ALSARAWMIDI_SOURCES})
 target_link_libraries(jack_alsarawmidi PRIVATE PkgConfig::ALSA)
@@ -287,14 +319,17 @@ if(JACK_BUILD_TESTS)
         linux/alsa/resample/JackResampler.cpp
         linux/alsa/resample/pipewire_resample_bridge.c
         linux/alsa/resample/resample-native.c
-        linux/alsa/resample/resample-native-c.c)
+        linux/alsa/resample/resample-native-c.c
+        ${JACK_RESAMPLER_SIMD_SOURCES})
     add_executable(jack_alsa_unit ${JACK_ALSA_UNIT_SOURCES})
     target_include_directories(jack_alsa_unit PRIVATE
         ${JACK_INCLUDE_DIRS}
         "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa"
         "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample"
         "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample/spa-shim")
-    target_compile_definitions(jack_alsa_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE RESAMPLE_DISABLE_PRECOMP)
+    target_compile_definitions(jack_alsa_unit PRIVATE
+        HAVE_CONFIG_H SERVER_SIDE RESAMPLE_DISABLE_PRECOMP
+        ${JACK_RESAMPLER_SIMD_DEFINITIONS})
     target_link_libraries(jack_alsa_unit PRIVATE jackserver m)
     add_test(NAME alsa_secondary_unit COMMAND jack_alsa_unit)
 

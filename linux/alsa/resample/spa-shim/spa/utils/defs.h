@@ -1,8 +1,8 @@
 /*
  * Minimal subset of PipeWire's spa/utils/defs.h, used by the vendored
  * resampler in ../resample-native*.c.  Only the macros those files need are
- * provided.  The logging and CPU-feature hooks are no-ops because the JACK
- * build compiles only the portable C kernels.
+ * provided.  PipeWire's logging is replaced by no-ops; CPU feature flags live
+ * in spa/support/cpu.h and are selected at runtime by the bridge.
  */
 
 #ifndef JACK_SPA_SHIM_UTILS_DEFS_H

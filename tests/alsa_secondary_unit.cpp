@@ -27,6 +27,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaSecondaryConfig.h"
 #include "JackAlsaCardDiff.h"
 #include "resample/JackResampler.h"
+#include "resample/pipewire_resample_bridge.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -185,6 +186,18 @@ static void TestRing()
     float z[2][4]; float* zp[2] = { z[0], z[1] };
     CHECK(ring.Read(zp, 4) == 0);
     CHECK(z[0][0] == 0.0f && z[1][3] == 0.0f);
+
+    // A non-power-of-two request is rounded up so the RT path can use a mask.
+    JackAlsaRingBuffer odd(1, 5);
+    CHECK(odd.Capacity() == 8);
+    float s[7] = { 0, 1, 2, 3, 4, 5, 6 };
+    float d[8] = { 0 };
+    const float* sin[1] = { s };
+    float* dout[1] = { d };
+    CHECK(odd.Write(sin, 7) == 7);
+    CHECK(odd.Write(sin, 7) == 1);
+    CHECK(odd.Read(dout, 8) == 8);
+    CHECK(d[0] == 0.0f && d[6] == 6.0f && d[7] == 0.0f);
 }
 
 static void TestConverterDI()
@@ -216,6 +229,20 @@ static void TestResamplerFactories()
     JackResampler* r = JackResamplerFactory::Default()->Create(p);
     CHECK(r != NULL);
     delete r;
+
+    // The bridge picks the widest kernel the running CPU supports.  This is
+    // informational on a given machine, but it must always be a known name.
+    struct jack_pw_resampler* pw = jack_pw_resampler_new(2, 44100, 48000, -1);
+    CHECK(pw != NULL);
+    if (pw != NULL) {
+        const char* kernel = jack_pw_resampler_kernel_name(pw);
+        printf("resampler: selected '%s' kernel\n", kernel);
+        bool known = strcmp(kernel, "full_c") == 0 || strcmp(kernel, "inter_c") == 0 ||
+                     strcmp(kernel, "full_sse") == 0 || strcmp(kernel, "inter_sse") == 0 ||
+                     strcmp(kernel, "full_avx2") == 0 || strcmp(kernel, "inter_avx2") == 0;
+        CHECK(known);
+        jack_pw_resampler_free(pw);
+    }
 }
 
 static void TestResamplerPlugin()

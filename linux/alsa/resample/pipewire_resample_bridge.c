@@ -19,12 +19,48 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "pipewire_resample_bridge.h"
 #include "resample.h"
 
+#include <spa/support/cpu.h>
+
 #include <stdlib.h>
 #include <string.h>
 
 struct jack_pw_resampler {
     struct resample r;
 };
+
+/*
+ * The resampler table is ordered from the widest kernel to the portable C
+ * one, and find_resample_info() treats cpu_flags == 0 as "portable only".
+ * Ask the compiler runtime which kernels this CPU can actually execute.
+ * __builtin_cpu_supports() masks AVX/AVX2/FMA with the OS XSAVE state, so it
+ * is safe to use even when the kernel has not enabled the extended registers.
+ */
+static uint32_t jack_pw_detect_cpu_flags(void)
+{
+    uint32_t flags = 0;
+
+#if (defined(__GNUC__) || defined(__clang__)) && \
+    (defined(__x86_64__) || defined(__i386__))
+    __builtin_cpu_init();
+#ifdef HAVE_SSE
+    if (__builtin_cpu_supports("sse")) {
+        flags |= SPA_CPU_FLAG_SSE;
+    }
+#endif
+#ifdef HAVE_AVX2
+    if (__builtin_cpu_supports("avx2")) {
+        flags |= SPA_CPU_FLAG_AVX2;
+    }
+#endif
+#ifdef HAVE_FMA
+    if (__builtin_cpu_supports("fma")) {
+        flags |= SPA_CPU_FLAG_FMA3;
+    }
+#endif
+#endif
+
+    return flags;
+}
 
 struct jack_pw_resampler *jack_pw_resampler_new(unsigned int channels,
                                                 unsigned int in_rate,
@@ -44,7 +80,7 @@ struct jack_pw_resampler *jack_pw_resampler_new(unsigned int channels,
 
     res->r.log = NULL;
     res->r.options = 0;
-    res->r.cpu_flags = 0;
+    res->r.cpu_flags = jack_pw_detect_cpu_flags();
     res->r.channels = channels;
     res->r.i_rate = in_rate;
     res->r.o_rate = out_rate;
@@ -98,4 +134,12 @@ void jack_pw_resampler_process(struct jack_pw_resampler *r,
 unsigned int jack_pw_resampler_delay(struct jack_pw_resampler *r)
 {
     return resample_delay(&r->r);
+}
+
+const char *jack_pw_resampler_kernel_name(struct jack_pw_resampler *r)
+{
+    if (r == NULL || r->r.func_name == NULL) {
+        return "unknown";
+    }
+    return r->r.func_name;
 }
