@@ -53,10 +53,11 @@ and the limits are described in `docs/secondary-alsa-cards.md
 Building
 ========
 
-The build requires CMake, a C/C++ compiler, and the ALSA development headers
-and libraries. On Debian-based systems the dependencies are::
+The build requires CMake, a C/C++ compiler, the ALSA development headers
+and libraries, and libudev for sound-device hot-plug. On Debian-based systems
+the dependencies are::
 
-    sudo apt-get install build-essential cmake libasound2-dev
+    sudo apt-get install build-essential cmake libasound2-dev libudev-dev
 
 Configure and build with::
 
