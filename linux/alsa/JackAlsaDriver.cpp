@@ -34,6 +34,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <sys/time.h>
 #include <string.h>
 #include <algorithm>
+#include <string_view>
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -1576,8 +1577,8 @@ SERVER_EXPORT const jack_driver_desc_t* driver_get_descriptor ()
         "Secondary ALSA card (repeatable)",
         "Secondary ALSA card, repeatable. Keys: name, device, mode (duplex|capture|playback), channels, rate, nperiods, clock (async|sync), format (auto|float|s32|s16), resampler, optional, follow_hw_rate. Example: name=usb1;device=hw:1;mode=capture;clock=async");
     jack_driver_descriptor_add_parameter(desc, &filler, "exclude-card", 'Z', JackDriverParamString, &value, NULL,
-        "ALSA card id to leave out of automatic discovery (repeatable)",
-        "ALSA card id (for example Loopback) that automatic discovery must not add. Repeatable. Applies only to automatic cards; a card given with --secondary or --secondary-file is still used. Matching ignores case");
+        "ALSA card ids to leave out of automatic discovery",
+        "ALSA card id (for example Loopback) that automatic discovery must not add. Comma separated, for example PCH,NVidia. Applies only to automatic cards; a card given with --secondary or --secondary-file is still used. Matching ignores case");
 
     jack_driver_descriptor_add_parameter(desc, &filler, "secondary-file", 'K', JackDriverParamString, &value, NULL,
         "File with one secondary ALSA card per line",
@@ -1722,8 +1723,20 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
                 break;
 
             case 'Z':
-                if (strcmp (param->value.str, "none") != 0 && param->value.str[0] != '\0') {
-                    excluded_cards.push_back(param->value.str);
+                // The parameter holds one value, so a list is comma separated: "-Z PCH,NVidia".
+                if (strcmp (param->value.str, "none") != 0) {
+                    std::string_view list(param->value.str);
+                    while (!list.empty()) {
+                        const auto comma = list.find(',');
+                        const std::string_view id = list.substr(0, comma);
+                        if (!id.empty()) {
+                            excluded_cards.emplace_back(id);
+                        }
+                        if (comma == std::string_view::npos) {
+                            break;
+                        }
+                        list.remove_prefix(comma + 1);
+                    }
                 }
                 break;
 
