@@ -20,6 +20,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackError.h"
 
 #include <string.h>
+#include <algorithm>
 
 namespace Jack
 {
@@ -93,7 +94,7 @@ unsigned int JackAlsaRateConverter::OutputBacklog()
 
 unsigned int JackAlsaRateConverter::NeedInput(unsigned int out_frames)
 {
-    unsigned int pending = (fOutCount < out_frames) ? fOutCount : out_frames;
+    unsigned int pending = std::min(fOutCount, out_frames);
     unsigned int want = fResampler->InputLength(out_frames - pending);
     if (want <= fInCount) {
         return 0;
@@ -142,7 +143,7 @@ unsigned int JackAlsaRateConverter::Convert(const float* const* in, unsigned int
         fOutCount += out_len;
     }
 
-    unsigned int produced = (fOutCount < out_frames) ? fOutCount : out_frames;
+    unsigned int produced = std::min(fOutCount, out_frames);
     for (int c = 0; c < fChannels; c++) {
         memcpy(out[c], fOut[c], sizeof(float) * produced);
     }

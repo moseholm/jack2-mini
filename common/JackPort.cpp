@@ -232,7 +232,7 @@ void JackPort::SetName(const char* new_name)
     CopyCString(std::span<char>(colon + 1, len), new_name);
 }
 
-bool JackPort::NameEquals(const char* target)
+bool JackPort::NameEquals(std::string_view target)
 {
     std::array<char, REAL_JACK_PORT_NAME_SIZE+1> buf{};
 
@@ -243,15 +243,14 @@ bool JackPort::NameEquals(const char* target)
        state.
     */
 
-    if (strncmp(target, "ALSA:capture", 12) == 0 || strncmp(target, "ALSA:playback", 13) == 0) {
-        const auto end = std::format_to_n(buf.data(), buf.size() - 1, "alsa_pcm{}", std::string_view(target + 4));
-        *end.out = '\0';
+    if (target.starts_with("ALSA:capture") || target.starts_with("ALSA:playback")) {
+        FormatCString(buf, "alsa_pcm{}", target.substr(4));
         target = buf.data();
     }
 
-    return (strcmp(fName, target) == 0
-            || strcmp(fAlias1, target) == 0
-            || strcmp(fAlias2, target) == 0);
+    return (std::string_view(fName) == target
+            || std::string_view(fAlias1) == target
+            || std::string_view(fAlias2) == target);
 }
 
 int JackPort::GetAliases(char* const aliases[2])

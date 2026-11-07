@@ -998,7 +998,7 @@ void JackAlsaDriver::StopControlMonitoring()
 // whose device changed mode is a different card.
 static std::string CardKeyOf(const JackAlsaSecondaryConfig& cfg)
 {
-    return PortBaseOf(cfg) + "|" + std::to_string((int)cfg.mode);
+    return PortBaseOf(cfg) + "|" + std::to_string(std::to_underlying(cfg.mode));
 }
 
 // Runs on the worker thread once a burst of sound events has settled.  Cards

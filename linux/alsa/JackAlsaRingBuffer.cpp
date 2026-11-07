@@ -17,6 +17,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include "JackAlsaRingBuffer.h"
+#include <algorithm>
+#include <bit>
 #include <bit>
 #include <cstdint>
 #include <cstring>
@@ -155,7 +157,7 @@ jack_nframes_t JackAlsaRingBuffer::Read(float* const* dst, jack_nframes_t nframe
     }
 
     const jack_nframes_t available = static_cast<jack_nframes_t>(avail);
-    const jack_nframes_t to_read = (nframes < available) ? nframes : available;
+    const jack_nframes_t to_read = std::min(nframes, available);
 
     if (to_read) {
         const uint64_t offset = read & fMask;

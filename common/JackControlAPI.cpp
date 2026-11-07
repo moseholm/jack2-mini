@@ -21,6 +21,7 @@
 */
 
 #include <array>
+#include <utility>
 #include <stdint.h>
 #include <dirent.h>
 #include <pthread.h>
@@ -265,7 +266,7 @@ jackctl_add_driver_parameters(
             jackctl_value.b = descriptor_ptr->value.i;
             break;
         default:
-            jack_error("Unknown driver parameter type %i", (int)descriptor_ptr->type);
+            jack_error("Unknown driver parameter type %u", std::to_underlying(descriptor_ptr->type));
             assert(0);
             goto fail;
         }
@@ -359,7 +360,7 @@ jackctl_create_param_list(
                 retparam_ptr->value.i = param_ptr->value_ptr->b;
                 break;
             default:
-                jack_error("Unknown parameter type %i", (int)param_ptr->type);
+                jack_error("Unknown parameter type %u", std::to_underlying(param_ptr->type));
                 assert(0);
                 goto free;
             }
@@ -1159,7 +1160,7 @@ SERVER_EXPORT union jackctl_parameter_value jackctl_parameter_get_enum_constrain
         strcpy(jackctl_value.str, value_ptr->str);
         break;
     default:
-        jack_error("Bad driver parameter type %i (enum constraint)", (int)parameter_ptr->type);
+        jack_error("Bad driver parameter type %u (enum constraint)", std::to_underlying(parameter_ptr->type));
         assert(0);
     }
 
@@ -1188,7 +1189,7 @@ SERVER_EXPORT void jackctl_parameter_get_range_constraint(jackctl_parameter *par
         max_ptr->ui = parameter_ptr->constraint_ptr->constraint.range.max.ui;
         return;
     default:
-        jack_error("Bad driver parameter type %i (range constraint)", (int)parameter_ptr->type);
+        jack_error("Bad driver parameter type %u (range constraint)", std::to_underlying(parameter_ptr->type));
         assert(0);
     }
 }
