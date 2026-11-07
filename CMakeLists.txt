@@ -347,6 +347,10 @@ if(JACK_BUILD_TESTS)
     target_link_libraries(jack_message_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
     add_test(NAME message_buffer_unit COMMAND jack_message_unit)
 
+    add_executable(jack_cstring_unit tests/cstring_unit.cpp)
+    target_include_directories(jack_cstring_unit PRIVATE ${JACK_INCLUDE_DIRS})
+    add_test(NAME cstring_unit COMMAND jack_cstring_unit)
+
     # A test-only resampler plugin, loaded by name from JACK_RESAMPLER_PATH.
     add_library(passthrough_test MODULE tests/alsa_test_resampler_plugin.c)
     target_include_directories(passthrough_test PRIVATE

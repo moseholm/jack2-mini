@@ -22,8 +22,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackTools.h"
 #include "JackError.h"
 #include "promiscuous.h"
+#include "JackCString.h"
+#include <array>
+#include <format>
+#include <span>
 #include <string.h>
-#include <stdio.h>
 #include <pthread.h>
 #include <fcntl.h>
 
@@ -32,13 +35,13 @@ namespace Jack
 
 static void BuildName(const char* client_name, char* res, const char* dir, int which, int size, bool promiscuous)
 {
-    char ext_client_name[SYNC_MAX_NAME_SIZE + 1];
-    JackTools::RewriteName(client_name, ext_client_name);
-    if (promiscuous) {
-	    snprintf(res, size, "%s/jack_%s_%d", dir, ext_client_name, which);
-    } else {
-	    snprintf(res, size, "%s/jack_%s_%d_%d", dir, ext_client_name, JackTools::GetUID(), which);
-    }
+    std::array<char, SYNC_MAX_NAME_SIZE + 1> ext_client_name;
+    JackTools::RewriteName(client_name, ext_client_name.data());
+    const std::string_view ext_name = ext_client_name.data();
+    const auto end = promiscuous
+        ? std::format_to_n(res, size - 1, "{}/jack_{}_{}", dir, ext_name, which)
+        : std::format_to_n(res, size - 1, "{}/jack_{}_{}_{}", dir, ext_name, JackTools::GetUID(), which);
+    *end.out = '\0';
 }
 
 JackClientSocket::JackClientSocket(): JackClientRequestInterface(), fSocket(-1), fTimeOut(0), fNonBlocking(false)
@@ -200,7 +203,7 @@ int JackServerSocket::Bind(const char* dir, const char* name, int which) // A re
     addr.sun_family = AF_UNIX;
     // Socket name has to be kept in fName to be "unlinked".
     BuildName(name, fName, dir, which, sizeof(addr.sun_path), fPromiscuous);
-    strncpy(addr.sun_path, fName, sizeof(addr.sun_path) - 1);
+    CopyCString(addr.sun_path, fName);
    
     jack_log("JackServerSocket::Bind : addr.sun_path %s", addr.sun_path);
     unlink(fName); // Security...
@@ -229,10 +232,9 @@ error:
 
 JackClientSocket* JackServerSocket::Accept()
 {
-    struct sockaddr_un client_addr;
+    struct sockaddr_un client_addr{};
     socklen_t client_addrlen;
 
-    memset(&client_addr, 0, sizeof(client_addr));
     client_addrlen = sizeof(client_addr);
 
     int fd = accept(fSocket, (struct sockaddr*)&client_addr, &client_addrlen);
