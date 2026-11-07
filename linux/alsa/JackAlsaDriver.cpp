@@ -140,7 +140,7 @@ static void InstallAlsaCallbacks(JackAlsaDriver* driver, alsa_driver_t* alsa_dri
 {
     alsa_driver_callbacks_t callbacks;
 
-    memset(&callbacks, 0, sizeof(callbacks));
+    callbacks = {};
     callbacks.arg = driver;
     callbacks.read_input = AlsaReadInputThunk;
     callbacks.monitor_input = AlsaMonitorInputThunk;

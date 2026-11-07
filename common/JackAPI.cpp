@@ -1686,7 +1686,7 @@ LIB_EXPORT void jack_get_transport_info(jack_client_t* ext_client, jack_transpor
 
     jack_error("jack_get_transport_info: deprecated");
     if (tinfo)
-        memset(tinfo, 0, sizeof(jack_transport_info_t));
+        *tinfo = {};
 }
 
 LIB_EXPORT void jack_set_transport_info(jack_client_t* ext_client, jack_transport_info_t* tinfo)
@@ -1695,7 +1695,7 @@ LIB_EXPORT void jack_set_transport_info(jack_client_t* ext_client, jack_transpor
 
     jack_error("jack_set_transport_info: deprecated");
     if (tinfo)
-        memset(tinfo, 0, sizeof(jack_transport_info_t));
+        *tinfo = {};
 }
 
 // statistics.h

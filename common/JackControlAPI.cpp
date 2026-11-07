@@ -1139,7 +1139,7 @@ SERVER_EXPORT union jackctl_parameter_value jackctl_parameter_get_enum_constrain
     union jackctl_parameter_value jackctl_value;
 
     if (!parameter_ptr) {
-        memset(&jackctl_value, 0, sizeof(jackctl_value));
+        jackctl_value = {};
         return jackctl_value;
     }
 
@@ -1225,7 +1225,7 @@ SERVER_EXPORT union jackctl_parameter_value jackctl_parameter_get_value(jackctl_
         return *parameter_ptr->value_ptr;
     } else  {
         union jackctl_parameter_value jackctl_value;
-        memset(&jackctl_value, 0, sizeof(jackctl_value));
+        jackctl_value = {};
         return jackctl_value;
     }
 }
@@ -1266,7 +1266,7 @@ SERVER_EXPORT union jackctl_parameter_value jackctl_parameter_get_default_value(
         return *parameter_ptr->default_value_ptr;
     } else  {
         union jackctl_parameter_value jackctl_value;
-        memset(&jackctl_value, 0, sizeof(jackctl_value));
+        jackctl_value = {};
         return jackctl_value;
     }
 }

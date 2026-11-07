@@ -365,7 +365,7 @@ int JackAlsaSecondaryCard::BuildBuffers(jack_nframes_t primary_buffer_size,
     }
 
     alsa_driver_callbacks_t callbacks;
-    memset(&callbacks, 0, sizeof(callbacks));
+    callbacks = {};
     callbacks.arg = this;
     callbacks.read_input = ReadInputThunk;
     callbacks.monitor_input = MonitorInputThunk;
