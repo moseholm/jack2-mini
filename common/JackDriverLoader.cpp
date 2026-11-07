@@ -19,6 +19,12 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include <array>
+#include <expected>
+#include <filesystem>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <vector>
 #include "JackSystemDeps.h"
 #include "JackDriverLoader.h"
 #include "JackDriverInfo.h"
@@ -94,8 +100,9 @@ void jack_free_driver_params(JSList * driver_params)
 
 int jack_parse_driver_params(jack_driver_desc_t* desc, int argc, char* argv[], JSList** param_ptr)
 {
-    struct option * long_options;
-    char* options, * options_ptr;
+    std::vector<option> long_options;
+    std::vector<char> options;
+    char* options_ptr;
     unsigned long i;
     int opt;
     unsigned int param_index;
@@ -128,10 +135,10 @@ int jack_parse_driver_params(jack_driver_desc_t* desc, int argc, char* argv[], J
     }
 
     /* set up the stuff for getopt */
-    options = (char*)calloc (desc->nparams * 3 + 1, sizeof (char));
-    long_options = (option*)calloc (desc->nparams + 1, sizeof (struct option));
+    options.assign(desc->nparams * 3 + 1, '\0');
+    long_options.assign(desc->nparams + 1, option{});
 
-    options_ptr = options;
+    options_ptr = options.data();
     for (i = 0; i < desc->nparams; i++) {
         Jack::FormatCString(std::span<char>(options_ptr, 4), "{}::", desc->params[i].character);
         options_ptr += 3;
@@ -144,7 +151,7 @@ int jack_parse_driver_params(jack_driver_desc_t* desc, int argc, char* argv[], J
     /* create the params */
     optind = 0;
     opterr = 0;
-    while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, options.data(), long_options.data(), NULL)) != -1) {
 
         if (opt == ':' || opt == '?') {
             if (opt == ':') {
@@ -210,8 +217,6 @@ int jack_parse_driver_params(jack_driver_desc_t* desc, int argc, char* argv[], J
         params = jack_slist_append (params, driver_param);
     }
 
-    free (options);
-    free (long_options);
 
     if (param_ptr) {
         *param_ptr = params;
@@ -221,8 +226,9 @@ int jack_parse_driver_params(jack_driver_desc_t* desc, int argc, char* argv[], J
 
 SERVER_EXPORT int jackctl_driver_params_parse(jackctl_driver *driver_ptr, int argc, char* argv[])
 {
-    struct option* long_options;
-    char* options, * options_ptr;
+    std::vector<option> long_options;
+    std::vector<char> options;
+    char* options_ptr;
     unsigned long i;
     int opt;
     JSList* node_ptr;
@@ -261,10 +267,10 @@ SERVER_EXPORT int jackctl_driver_params_parse(jackctl_driver *driver_ptr, int ar
     }
 
    /* set up the stuff for getopt */
-    options = (char*)calloc (desc->nparams * 3 + 1, sizeof (char));
-    long_options = (option*)calloc (desc->nparams + 1, sizeof (struct option));
+    options.assign(desc->nparams * 3 + 1, '\0');
+    long_options.assign(desc->nparams + 1, option{});
 
-    options_ptr = options;
+    options_ptr = options.data();
     for (i = 0; i < desc->nparams; i++) {
         Jack::FormatCString(std::span<char>(options_ptr, 4), "{}::", desc->params[i].character);
         options_ptr += 3;
@@ -277,7 +283,7 @@ SERVER_EXPORT int jackctl_driver_params_parse(jackctl_driver *driver_ptr, int ar
     /* create the params */
     optind = 0;
     opterr = 0;
-    while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, options.data(), long_options.data(), NULL)) != -1) {
 
         if (opt == ':' || opt == '?') {
             if (opt == ':') {
@@ -347,8 +353,6 @@ SERVER_EXPORT int jackctl_driver_params_parse(jackctl_driver *driver_ptr, int ar
         }
     }
 
-    free(options);
-    free(long_options);
     return 0;
 }
 
@@ -368,6 +372,27 @@ jack_driver_desc_t* jack_find_driver_descriptor (JSList * drivers, const char* n
     }
 
     return desc;
+}
+
+/* The names of the entries in a directory, or the error that stopped the listing. */
+static std::expected<std::vector<std::string>, std::error_code> ListDirectory(const char* dir_path)
+{
+    std::vector<std::string> names;
+    std::error_code ec;
+    for (std::filesystem::directory_iterator it(dir_path, ec), end; !ec && it != end; it.increment(ec)) {
+        names.push_back(it->path().filename().string());
+    }
+    if (ec) {
+        return std::unexpected(ec);
+    }
+    return names;
+}
+
+/* true if the file name has an extension that starts with "so", as in "jack_x.so" */
+static bool HasSharedObjectExtension(std::string_view name)
+{
+    const auto dot = name.rfind('.');
+    return dot != std::string_view::npos && name.substr(dot + 1).starts_with("so");
 }
 
 static void* check_symbol(const char* sofile, const char* symbol, const char* driver_dir, void** res_dllhandle = NULL)
@@ -437,10 +462,6 @@ error:
 
 JSList* jack_drivers_load (JSList * drivers)
 {
-    struct dirent * dir_entry;
-    DIR * dir_stream;
-    const char* ptr;
-    int err;
     JSList* driver_list = NULL;
     jack_driver_desc_t* desc = NULL;
 
@@ -451,46 +472,34 @@ JSList* jack_drivers_load (JSList * drivers)
 
     /* search through the driver_dir and add get descriptors
     from the .so files in it */
-    dir_stream = opendir (driver_dir);
-    if (!dir_stream) {
+    const auto entries = ListDirectory(driver_dir);
+    if (!entries) {
         jack_error ("Could not open driver directory %s: %s",
-                    driver_dir, strerror (errno));
+                    driver_dir, entries.error().message().c_str());
         return NULL;
     }
 
-    while ((dir_entry = readdir(dir_stream))) {
+    for (const std::string& name : *entries) {
 
         /* check the filename is of the right format */
-        if (strncmp ("jack_", dir_entry->d_name, 5) != 0) {
+        if (!std::string_view(name).starts_with("jack_")) {
             continue;
         }
-
-        ptr = strrchr (dir_entry->d_name, '.');
-        if (!ptr) {
-            continue;
-        }
-        ptr++;
-        if (strncmp ("so", ptr, 2) != 0) {
+        if (!HasSharedObjectExtension(name)) {
             continue;
         }
 
         /* check if dll is an internal client */
-        if (check_symbol(dir_entry->d_name, "jack_internal_initialize", driver_dir) != NULL) {
+        if (check_symbol(name.c_str(), "jack_internal_initialize", driver_dir) != NULL) {
             continue;
         }
 
-        desc = jack_get_descriptor (drivers, dir_entry->d_name, "driver_get_descriptor", driver_dir);
+        desc = jack_get_descriptor (drivers, name.c_str(), "driver_get_descriptor", driver_dir);
         if (desc) {
             driver_list = jack_slist_append (driver_list, desc);
         } else {
-            jack_error ("jack_get_descriptor returns null for \'%s\'", dir_entry->d_name);
+            jack_error ("jack_get_descriptor returns null for \'%s\'", name.c_str());
         }
-    }
-
-    err = closedir (dir_stream);
-    if (err) {
-        jack_error ("Error closing driver directory %s: %s",
-                    driver_dir, strerror (errno));
     }
 
     if (!driver_list) {
@@ -505,10 +514,6 @@ JSList* jack_drivers_load (JSList * drivers)
 
 JSList* jack_internals_load(JSList * internals)
 {
-    struct dirent * dir_entry;
-    DIR * dir_stream;
-    const char* ptr;
-    int err;
     JSList* driver_list = NULL;
     jack_driver_desc_t* desc;
 
@@ -519,42 +524,30 @@ JSList* jack_internals_load(JSList * internals)
 
     /* search through the driver_dir and add get descriptors
     from the .so files in it */
-    dir_stream = opendir (driver_dir);
-    if (!dir_stream) {
+    const auto entries = ListDirectory(driver_dir);
+    if (!entries) {
         jack_error ("Could not open driver directory %s: %s\n",
-                    driver_dir, strerror (errno));
+                    driver_dir, entries.error().message().c_str());
         return NULL;
     }
 
-    while ((dir_entry = readdir(dir_stream))) {
+    for (const std::string& name : *entries) {
 
-        ptr = strrchr (dir_entry->d_name, '.');
-        if (!ptr) {
-            continue;
-        }
-
-        ptr++;
-        if (strncmp ("so", ptr, 2) != 0) {
+        if (!HasSharedObjectExtension(name)) {
             continue;
         }
 
         /* check if dll is an internal client */
-        if (check_symbol(dir_entry->d_name, "jack_internal_initialize", driver_dir) == NULL) {
+        if (check_symbol(name.c_str(), "jack_internal_initialize", driver_dir) == NULL) {
             continue;
         }
 
-        desc = jack_get_descriptor (internals, dir_entry->d_name, "jack_get_descriptor", driver_dir);
+        desc = jack_get_descriptor (internals, name.c_str(), "jack_get_descriptor", driver_dir);
         if (desc) {
             driver_list = jack_slist_append (driver_list, desc);
         } else {
-            jack_error ("jack_get_descriptor returns null for \'%s\'", dir_entry->d_name);
+            jack_error ("jack_get_descriptor returns null for \'%s\'", name.c_str());
         }
-    }
-
-    err = closedir (dir_stream);
-    if (err) {
-        jack_error ("Error closing internal directory %s: %s\n",
-                    driver_dir, strerror (errno));
     }
 
     if (!driver_list) {

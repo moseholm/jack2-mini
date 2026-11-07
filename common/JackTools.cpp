@@ -18,6 +18,9 @@
 */
 
 #include <array>
+#include <string>
+#include <filesystem>
+#include <system_error>
 #include "JackCString.h"
 #include "JackConstants.h"
 #include "driver_interface.h"
@@ -37,7 +40,7 @@ using namespace std;
 namespace Jack {
 
 #define DEFAULT_TMP_DIR "/tmp"
-    char* jack_tmpdir = (char*)DEFAULT_TMP_DIR;
+    std::string jack_tmpdir = DEFAULT_TMP_DIR;
 
     void JackTools::KillServer()
     {
@@ -46,7 +49,9 @@ namespace Jack {
 
     int JackTools::MkDir(const char* path)
     {
-        return mkdir(path, 0777) != 0;
+        std::error_code ec;
+        // create_directory() reports an existing directory as "not created", which is an error here.
+        return !std::filesystem::create_directory(path, ec);
     }
 
     int JackTools::GetPID()
@@ -97,8 +102,6 @@ namespace Jack {
 
     void JackTools::CleanupFiles(const char* server_name)
     {
-        DIR* dir;
-        struct dirent *dirent;
         std::array<char, JACK_PATH_MAX + 1> dir_name{};
         ServerDir(server_name, dir_name.data());
 
@@ -118,39 +121,35 @@ namespace Jack {
         * we know there is no other server actively using that name.
         */
 
+        std::error_code ec;
+        const std::filesystem::path server_dir(dir_name.data());
+
         /* nothing to do if the server directory does not exist */
-        if ((dir = opendir(dir_name.data())) == NULL) {
+        if (!std::filesystem::is_directory(server_dir, ec)) {
             return;
         }
 
-        /* unlink all the files in this directory, they are mine */
-        while ((dirent = readdir(dir)) != NULL) {
-
-            std::array<char, JACK_PATH_MAX + 1> fullpath{};
-
-            if ((strcmp(dirent->d_name, ".") == 0) || (strcmp(dirent->d_name, "..") == 0)) {
-                continue;
-            }
-
-            Jack::FormatCString(fullpath, "{}/{}", dir_name.data(), dirent->d_name);
-
-            if (unlink(fullpath.data())) {
-                jack_error("cannot unlink `%s' (%s)", fullpath.data(), strerror(errno));
+        /* remove all the files in this directory, they are mine */
+        for (std::filesystem::directory_iterator it(server_dir, ec), end; !ec && it != end; it.increment(ec)) {
+            std::error_code remove_ec;
+            std::filesystem::remove(it->path(), remove_ec);
+            if (remove_ec) {
+                jack_error("cannot unlink `%s' (%s)", it->path().c_str(), remove_ec.message().c_str());
             }
         }
 
-        closedir(dir);
-
         /* now, delete the per-server subdirectory, itself */
-        if (rmdir(dir_name.data())) {
-            jack_error("cannot remove `%s' (%s)", dir_name.data(), strerror(errno));
+        std::error_code rmdir_ec;
+        std::filesystem::remove(server_dir, rmdir_ec);
+        if (rmdir_ec) {
+            jack_error("cannot remove `%s' (%s)", dir_name.data(), rmdir_ec.message().c_str());
         }
 
         /* finally, delete the per-user subdirectory, if empty */
-        if (rmdir(UserDir())) {
-            if (errno != ENOTEMPTY) {
-                jack_error("cannot remove `%s' (%s)", UserDir(), strerror(errno));
-            }
+        std::error_code user_ec;
+        std::filesystem::remove(UserDir(), user_ec);
+        if (user_ec && user_ec != std::make_error_code(std::errc::directory_not_empty)) {
+            jack_error("cannot remove `%s' (%s)", UserDir(), user_ec.message().c_str());
         }
     }
 
@@ -177,9 +176,7 @@ namespace Jack {
             return -1;
         }
 
-        jack_tmpdir = (char *)malloc(len);
-        memcpy(jack_tmpdir, buf.data(), len - 1);
-        jack_tmpdir[len - 1] = '\0';
+        jack_tmpdir.assign(buf.data(), len - 1);
 
         pclose(in);
         return 0;
