@@ -19,7 +19,6 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include <array>
-#include <expected>
 #include <memory>
 #include <filesystem>
 #include <string>
@@ -375,16 +374,13 @@ jack_driver_desc_t* jack_find_driver_descriptor (JSList * drivers, const char* n
     return desc;
 }
 
-/* The names of the entries in a directory, or the error that stopped the listing. */
-static std::expected<std::vector<std::string>, std::error_code> ListDirectory(const char* dir_path)
+/* The names of the entries in a directory.  If the listing fails, ec is set
+ * and the names read so far are returned. */
+static std::vector<std::string> ListDirectory(const char* dir_path, std::error_code& ec)
 {
     std::vector<std::string> names;
-    std::error_code ec;
     for (std::filesystem::directory_iterator it(dir_path, ec), end; !ec && it != end; it.increment(ec)) {
         names.push_back(it->path().filename().string());
-    }
-    if (ec) {
-        return std::unexpected(ec);
     }
     return names;
 }
@@ -480,14 +476,15 @@ JSList* jack_drivers_load (JSList * drivers)
 
     /* search through the driver_dir and add get descriptors
     from the .so files in it */
-    const auto entries = ListDirectory(driver_dir);
-    if (!entries) {
+    std::error_code ec;
+    const auto entries = ListDirectory(driver_dir, ec);
+    if (ec) {
         jack_error ("Could not open driver directory %s: %s",
-                    driver_dir, entries.error().message().c_str());
+                    driver_dir, ec.message().c_str());
         return NULL;
     }
 
-    for (const std::string& name : *entries) {
+    for (const std::string& name : entries) {
 
         /* check the filename is of the right format */
         if (!std::string_view(name).starts_with("jack_")) {
@@ -532,14 +529,15 @@ JSList* jack_internals_load(JSList * internals)
 
     /* search through the driver_dir and add get descriptors
     from the .so files in it */
-    const auto entries = ListDirectory(driver_dir);
-    if (!entries) {
+    std::error_code ec;
+    const auto entries = ListDirectory(driver_dir, ec);
+    if (ec) {
         jack_error ("Could not open driver directory %s: %s\n",
-                    driver_dir, entries.error().message().c_str());
+                    driver_dir, ec.message().c_str());
         return NULL;
     }
 
-    for (const std::string& name : *entries) {
+    for (const std::string& name : entries) {
 
         if (!HasSharedObjectExtension(name)) {
             continue;
