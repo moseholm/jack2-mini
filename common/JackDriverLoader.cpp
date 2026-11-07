@@ -20,6 +20,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include <array>
 #include <expected>
+#include <memory>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -416,6 +417,15 @@ static void* check_symbol(const char* sofile, const char* symbol, const char* dr
     return res;
 }
 
+/* Unloads a driver module when the owning pointer goes out of scope. */
+struct DriverModuleCloser {
+    void operator()(void* handle) const {
+        if (handle) {
+            UnloadDriverModule(handle);
+        }
+    }
+};
+
 static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sofile, const char* symbol, const char* driver_dir)
 {
     jack_driver_desc_t* descriptor = NULL;
@@ -423,11 +433,12 @@ static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sof
     JackDriverDescFunction so_get_descriptor = NULL;
     std::array<char, 1024> filename{};
     JSList* node;
-    void* dlhandle = NULL;
+    void* raw_handle = NULL;
 
     Jack::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
     
-    so_get_descriptor = (JackDriverDescFunction)check_symbol(sofile, symbol, driver_dir, &dlhandle);
+    so_get_descriptor = (JackDriverDescFunction)check_symbol(sofile, symbol, driver_dir, &raw_handle);
+    std::unique_ptr<void, DriverModuleCloser> dlhandle(raw_handle);
 
     if (so_get_descriptor == NULL) {
         jack_error("jack_get_descriptor : dll %s is not a driver", sofile);
@@ -451,11 +462,8 @@ static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sof
     }
 
     strncpy(descriptor->file, filename.data(), JACK_PATH_MAX);
-    
+
 error:
-    if (dlhandle) {
-        UnloadDriverModule(dlhandle);
-    }
     return descriptor;
 }
 
