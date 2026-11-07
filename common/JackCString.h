@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define __JackCString__
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <charconv>
 #include <concepts>
@@ -28,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <span>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 
 namespace Jack
@@ -55,9 +57,16 @@ inline void CopyCString(std::span<char> dst, std::string_view src)
 Like snprintf(): the text is truncated to fit and the result is always
 terminated.  The format string is checked at compile time.
 */
+template <typename T>
+inline constexpr bool IsStdArray = false;
+template <typename T, std::size_t N>
+inline constexpr bool IsStdArray<std::array<T, N>> = true;
+
 template <typename... Args>
 void FormatCString(std::span<char> dst, std::format_string<Args...> fmt, Args&&... args)
 {
+    // A std::array is a range, so it would be formatted as a list, not as text.
+    static_assert((!IsStdArray<std::remove_cvref_t<Args>> && ...), "pass .data() for a std::array argument");
     if (dst.empty()) {
         return;
     }

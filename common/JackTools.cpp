@@ -132,7 +132,7 @@ namespace Jack {
                 continue;
             }
 
-            Jack::FormatCString(fullpath, "{}/{}", dir_name, dirent->d_name);
+            Jack::FormatCString(fullpath, "{}/{}", dir_name.data(), dirent->d_name);
 
             if (unlink(fullpath.data())) {
                 jack_error("cannot unlink `%s' (%s)", fullpath.data(), strerror(errno));

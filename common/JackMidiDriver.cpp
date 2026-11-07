@@ -67,7 +67,7 @@ int JackMidiDriver::Attach()
     jack_log("JackMidiDriver::Attach fBufferSize = %ld fSampleRate = %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
 
     for (i = 0; i < fCaptureChannels; i++) {
-        Jack::FormatCString(alias, "{}:{}:out{}", fAliasName, fCaptureDriverName, i + 1);
+        Jack::FormatCString(alias, "{}:{}:out{}", fAliasName.data(), fCaptureDriverName.data(), i + 1);
         Jack::FormatCString(name, "{}:capture_{}", fClientControl.fName, i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_MIDI_TYPE, CaptureDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name.data());
@@ -80,7 +80,7 @@ int JackMidiDriver::Attach()
     }
 
     for (i = 0; i < fPlaybackChannels; i++) {
-        Jack::FormatCString(alias, "{}:{}:in{}", fAliasName, fPlaybackDriverName, i + 1);
+        Jack::FormatCString(alias, "{}:{}:in{}", fAliasName.data(), fPlaybackDriverName.data(), i + 1);
         Jack::FormatCString(name, "{}:playback_{}", fClientControl.fName, i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_MIDI_TYPE, PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name.data());

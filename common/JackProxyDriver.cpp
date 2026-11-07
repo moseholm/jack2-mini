@@ -355,7 +355,7 @@ namespace Jack
         fUpstreamPlaybackPorts = new jack_port_t* [fCaptureChannels];
         fUpstreamPlaybackPortConnected = new int [fCaptureChannels];
         for (i = 0; i < fCaptureChannels; i++) {
-            Jack::FormatCString(proxy, "{}:to_client_{}", fClientName, i + 1);
+            Jack::FormatCString(proxy, "{}:to_client_{}", fClientName.data(), i + 1);
             fUpstreamPlaybackPorts[i] = jack_port_register(fClient, proxy.data(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput | JackPortIsTerminal, 0);
             if (fUpstreamPlaybackPorts[i] == NULL) {
                 jack_error("driver: cannot register upstream port %s", proxy);
@@ -367,7 +367,7 @@ namespace Jack
         fUpstreamCapturePorts = new jack_port_t* [fPlaybackChannels];
         fUpstreamCapturePortConnected = new int [fPlaybackChannels];
         for (i = 0; i < fPlaybackChannels; i++) {
-            Jack::FormatCString(proxy, "{}:from_client_{}", fClientName, i + 1);
+            Jack::FormatCString(proxy, "{}:from_client_{}", fClientName.data(), i + 1);
             fUpstreamCapturePorts[i] = jack_port_register(fClient, proxy.data(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput | JackPortIsTerminal, 0);
             if (fUpstreamCapturePorts[i] == NULL) {
                 jack_error("driver: cannot register upstream port %s", proxy);

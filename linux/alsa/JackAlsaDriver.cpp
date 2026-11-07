@@ -388,7 +388,7 @@ int JackAlsaDriver::Attach()
     jack_log("JackAlsaDriver::Attach fBufferSize %ld fSampleRate %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
 
     for (int i = 0; i < fCaptureChannels; i++) {
-        Jack::FormatCString(alias, "{}:{}:out{}", fAliasName, fCaptureDriverName, i + 1);
+        Jack::FormatCString(alias, "{}:{}:out{}", fAliasName.data(), fCaptureDriverName.data(), i + 1);
         Jack::FormatCString(name, "{}:capture_{}", fClientControl.fName, i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)port_flags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name);
@@ -403,7 +403,7 @@ int JackAlsaDriver::Attach()
     port_flags = (unsigned long)PlaybackDriverFlags;
 
     for (int i = 0; i < fPlaybackChannels; i++) {
-        Jack::FormatCString(alias, "{}:{}:in{}", fAliasName, fPlaybackDriverName, i + 1);
+        Jack::FormatCString(alias, "{}:{}:in{}", fAliasName.data(), fPlaybackDriverName.data(), i + 1);
         Jack::FormatCString(name, "{}:playback_{}", fClientControl.fName, i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)port_flags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name);
