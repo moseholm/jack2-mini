@@ -276,6 +276,11 @@ bool JackServerGlobals::Init()
             }
         }
 
+        if (master_driver_name == NULL) {
+            jack_error("jackdmp: no master driver specified");
+            goto error;
+        }
+
         drivers = jack_drivers_load(drivers);
         if (!drivers) {
             jack_error("jackdmp: no drivers found; exiting");

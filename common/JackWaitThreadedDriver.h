@@ -21,6 +21,7 @@
 #ifndef __JackWaitThreadedDriver__
 #define __JackWaitThreadedDriver__
 
+#include <atomic>
 #include "JackThreadedDriver.h"
 #include "JackTimedDriver.h"
 
@@ -44,7 +45,7 @@ class SERVER_EXPORT JackWaitThreadedDriver : public JackThreadedDriver
 
                 JackDriver* fDriver;
                 JackThread fThread;
-                volatile bool fRunning;
+                std::atomic<bool> fRunning;
 
                 JackDriverStarter(JackDriver* driver)
                     :fDriver(driver), fThread(this), fRunning(false)

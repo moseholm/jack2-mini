@@ -34,6 +34,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <sys/time.h>
 #include <string.h>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <thread>
 #include <utility>
@@ -71,7 +72,7 @@ static struct jack_constraint_enum_char_descriptor dither_constraint_descr_array
 namespace Jack
 {
 
-static volatile bool device_reservation_loop_running = false;
+static std::atomic<bool> device_reservation_loop_running{false};
 
 static void* on_device_reservation_loop(void*)
 {

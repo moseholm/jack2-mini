@@ -35,7 +35,7 @@ static bool fKeyLogFunctionInitialized = jack_tls_allocate_key(&JackGlobals::fKe
 
 JackMutex* JackGlobals::fOpenMutex = new JackMutex();
 JackMutex* JackGlobals::fSynchroMutex = new JackMutex();
-volatile bool JackGlobals::fServerRunning = false;
+std::atomic<bool> JackGlobals::fServerRunning{false};
 JackClient* JackGlobals::fClientTable[CLIENT_NUM] = {};
 
 jack_thread_creator_t JackGlobals::fJackThreadCreator = pthread_create;

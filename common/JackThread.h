@@ -21,6 +21,7 @@
 #ifndef __JackThread__
 #define __JackThread__
 
+#include <atomic>
 #include "JackCompilerDeps.h"
 #include "JackTypes.h"
 
@@ -69,7 +70,7 @@ class SERVER_EXPORT JackThreadInterface
         JackRunnableInterface* fRunnable;
         int fPriority;
         bool fRealTime;
-        volatile kThreadState fStatus;
+        std::atomic<kThreadState> fStatus;
         int fCancellation;
 
     public:

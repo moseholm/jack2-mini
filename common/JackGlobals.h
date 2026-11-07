@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackGlobals__
 #define __JackGlobals__
 
+#include <atomic>
 #include "JackPlatformPlug.h"
 #include "JackSystemDeps.h"
 #include "JackConstants.h"
@@ -35,7 +36,7 @@ struct JackGlobals {
     static jack_tls_key fKeyLogFunction;
     static JackMutex* fOpenMutex;
     static JackMutex* fSynchroMutex;
-    static volatile bool fServerRunning;
+    static std::atomic<bool> fServerRunning;
     static JackClient* fClientTable[CLIENT_NUM];
     static bool fVerbose;
     static jack_thread_creator_t fJackThreadCreator;
