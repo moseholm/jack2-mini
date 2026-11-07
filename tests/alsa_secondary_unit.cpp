@@ -91,6 +91,12 @@ static void TestConfigDefaults()
 
     CHECK(JackAlsaSecondaryConfigParse("hw:2,0", &c, &err));
     CHECK(c.name == "hw2");
+
+    // strtol() accepted leading white space and '+'; keep accepting them.
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;channels=+4", &c, &err));
+    CHECK(c.capture_channels == 4);
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;channels=\"  3\"", &c, &err));
+    CHECK(c.capture_channels == 3);
 }
 
 static void TestConfigErrors()
@@ -104,6 +110,10 @@ static void TestConfigErrors()
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;wat=1", &c, &err));
     CHECK(!JackAlsaSecondaryConfigParse("name=x", &c, &err));       // no device
     CHECK(!JackAlsaSecondaryConfigParse("", &c, &err));
+    CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;channels=2x", &c, &err));
+    CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;channels=+-2", &c, &err));
+    CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;rate=99999999999999999999", &c, &err));
+    CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;channels=\"\"", &c, &err));
 }
 
 static void TestConfigClock()

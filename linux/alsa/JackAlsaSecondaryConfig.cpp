@@ -17,12 +17,14 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include "JackAlsaSecondaryConfig.h"
-#include <ctype.h>
-#include <errno.h>
+#include <algorithm>
+#include <array>
+#include <cctype>
+#include <charconv>
+#include <format>
 #include <fstream>
-#include <limits.h>
-#include <sstream>
-#include <stdlib.h>
+#include <ranges>
+#include <string_view>
 
 namespace Jack
 {
@@ -41,21 +43,21 @@ JackAlsaSecondaryConfig::JackAlsaSecondaryConfig()
       automatic(false)
 {}
 
-static std::string Trim(const std::string& text)
+static std::string_view Trim(std::string_view text)
 {
-    size_t begin = text.find_first_not_of(" \t\r\n");
-    if (begin == std::string::npos) {
-        return std::string();
+    constexpr std::string_view whitespace = " \t\r\n";
+    const auto begin = text.find_first_not_of(whitespace);
+    if (begin == std::string_view::npos) {
+        return {};
     }
-    size_t end = text.find_last_not_of(" \t\r\n");
-    return text.substr(begin, end - begin + 1);
+    return text.substr(begin, text.find_last_not_of(whitespace) - begin + 1);
 }
 
-static std::string Unquote(const std::string& text)
+static std::string_view Unquote(std::string_view text)
 {
     if (text.size() >= 2) {
-        char first = text[0];
-        char last = text[text.size() - 1];
+        const char first = text.front();
+        const char last = text.back();
         if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
             return text.substr(1, text.size() - 2);
         }
@@ -63,127 +65,143 @@ static std::string Unquote(const std::string& text)
     return text;
 }
 
-static bool ParseBool(const std::string& value, bool* result)
+static std::string Lowercase(std::string_view text)
 {
-    std::string lower;
-    for (size_t i = 0; i < value.size(); i++) {
-        lower += (char)tolower((unsigned char)value[i]);
+    std::string result(text);
+    std::ranges::transform(result, result.begin(), [](char c) {
+        return static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    });
+    return result;
+}
+
+// Skips the prefix that strtol() accepted: leading white space and one '+'.
+// Parsing stays strict about everything after the digits.
+static std::string_view SkipNumericPrefix(std::string_view text)
+{
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front()))) {
+        text.remove_prefix(1);
     }
-    if (lower == "1" || lower == "true" || lower == "yes" || lower == "on") {
+    if (text.size() > 1 && text[0] == '+' && std::isdigit(static_cast<unsigned char>(text[1]))) {
+        text.remove_prefix(1);
+    }
+    return text;
+}
+
+static bool ParseBool(std::string_view value, bool* result)
+{
+    constexpr std::array truthy = {"1", "true", "yes", "on"};
+    constexpr std::array falsy = {"0", "false", "no", "off"};
+    const std::string lower = Lowercase(value);
+    if (std::ranges::contains(truthy, lower)) {
         *result = true;
         return true;
     }
-    if (lower == "0" || lower == "false" || lower == "no" || lower == "off") {
+    if (std::ranges::contains(falsy, lower)) {
         *result = false;
         return true;
     }
     return false;
 }
 
-static bool ParseInt(const std::string& value, int* result)
+static bool ParseInt(std::string_view value, int* result)
 {
+    value = SkipNumericPrefix(value);
     if (value.empty()) {
         return false;
     }
-    errno = 0;
-    char* end = NULL;
-    long v = strtol(value.c_str(), &end, 10);
-    if (errno != 0 || end == value.c_str() || *end != '\0' || v < INT_MIN || v > INT_MAX) {
+    int parsed = 0;
+    const char* end = value.data() + value.size();
+    const auto [ptr, ec] = std::from_chars(value.data(), end, parsed);
+    if (ec != std::errc() || ptr != end) {
         return false;
     }
-    *result = (int)v;
+    *result = parsed;
     return true;
 }
 
-int JackAlsaPcmDeviceNumber(const std::string& pcm)
+// Like atoi(): leading digits, or 0 when there are none or the value overflows.
+static int LeadingInt(std::string_view text)
 {
-    size_t dev = pcm.find("DEV=");
-    if (dev != std::string::npos) {
-        return atoi(pcm.c_str() + dev + 4);
+    text = SkipNumericPrefix(text);
+    int value = 0;
+    const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
+    return ec == std::errc() ? value : 0;
+}
+
+int JackAlsaPcmDeviceNumber(std::string_view pcm)
+{
+    if (const auto dev = pcm.find("DEV="); dev != std::string_view::npos) {
+        return LeadingInt(pcm.substr(dev + 4));
     }
-    size_t comma = pcm.rfind(',');
-    if (comma != std::string::npos) {
-        return atoi(pcm.c_str() + comma + 1);
+    if (const auto comma = pcm.rfind(','); comma != std::string_view::npos) {
+        return LeadingInt(pcm.substr(comma + 1));
     }
     return 0;
 }
 
-bool JackAlsaPcmNameIsById(const std::string& pcm)
+bool JackAlsaPcmNameIsById(std::string_view pcm)
 {
-    size_t colon = pcm.find(':');
-    if (colon == std::string::npos) {
+    const auto colon = pcm.find(':');
+    if (colon == std::string_view::npos) {
         return false;
     }
-    std::string type = pcm.substr(0, colon);
+    const auto type = pcm.substr(0, colon);
     if (type != "hw" && type != "plughw") {
         return false;
     }
-    std::string rest = pcm.substr(colon + 1);
-    if (rest.compare(0, 5, "CARD=") == 0) {
-        rest = rest.substr(5);
+    auto rest = pcm.substr(colon + 1);
+    if (rest.starts_with("CARD=")) {
+        rest.remove_prefix(5);
     }
-    size_t end = rest.find(',');
-    std::string card = (end == std::string::npos) ? rest : rest.substr(0, end);
+    const auto card = rest.substr(0, rest.find(','));
     if (card.empty()) {
         return false;
     }
-    return card.find_first_not_of("0123456789") != std::string::npos;
+    return card.find_first_not_of("0123456789") != std::string_view::npos;
 }
 
-bool JackAlsaCardExcluded(const std::string& card_id, const std::vector<std::string>& excluded)
+bool JackAlsaCardExcluded(std::string_view card_id, const std::vector<std::string>& excluded)
 {
-    for (size_t i = 0; i < excluded.size(); i++) {
-        if (excluded[i].size() != card_id.size()) {
-            continue;
-        }
-        bool same = true;
-        for (size_t c = 0; c < card_id.size() && same; c++) {
-            same = tolower((unsigned char)excluded[i][c]) == tolower((unsigned char)card_id[c]);
-        }
-        if (same) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(excluded, [card_id](const std::string& id) {
+        return std::ranges::equal(id, card_id, [](char a, char b) {
+            return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+        });
+    });
 }
 
-std::string JackAlsaSecondarySanitizeName(const std::string& name)
+std::string JackAlsaSecondarySanitizeName(std::string_view name)
 {
     std::string result;
-    for (size_t i = 0; i < name.size(); i++) {
-        unsigned char c = (unsigned char)name[i];
-        if (isalnum(c) || c == '_') {
-            result += (char)c;
-        } else if (!result.empty() && result[result.size() - 1] != '_') {
+    for (const char ch : name) {
+        const auto c = static_cast<unsigned char>(ch);
+        if (std::isalnum(c) || c == '_') {
+            result += ch;
+        } else if (!result.empty() && result.back() != '_') {
             result += '_';
         }
     }
-    while (!result.empty() && result[result.size() - 1] == '_') {
-        result.erase(result.size() - 1);
+    while (!result.empty() && result.back() == '_') {
+        result.pop_back();
     }
     return result;
 }
 
-static std::string DefaultNameForDevice(const std::string& device)
+static std::string DefaultNameForDevice(std::string_view device)
 {
     // Prefer a compact name derived from the first number in the device
     // string, so "hw:1,0" becomes "hw1" rather than "hw_1_0".
-    std::string digits;
-    for (size_t i = 0; i < device.size(); i++) {
-        if (isdigit((unsigned char)device[i])) {
-            digits += device[i];
-        } else if (!digits.empty()) {
-            break;
-        }
-    }
-    if (!digits.empty()) {
-        return "hw" + digits;
+    constexpr std::string_view digits = "0123456789";
+    const auto start = device.find_first_of(digits);
+    if (start != std::string_view::npos) {
+        auto number = device.substr(start);
+        number = number.substr(0, number.find_first_not_of(digits));
+        return std::format("hw{}", number);
     }
     std::string sanitized = JackAlsaSecondarySanitizeName(device);
     return sanitized.empty() ? "card" : sanitized;
 }
 
-static bool ParseClock(const std::string& value, JackAlsaSecondaryClock* clock)
+static bool ParseClock(std::string_view value, JackAlsaSecondaryClock* clock)
 {
     if (value == "async") {
         *clock = SecondaryClockAsync;
@@ -195,7 +213,7 @@ static bool ParseClock(const std::string& value, JackAlsaSecondaryClock* clock)
     return true;
 }
 
-static bool ParseFormat(const std::string& value, JackAlsaSampleFormat* format)
+static bool ParseFormat(std::string_view value, JackAlsaSampleFormat* format)
 {
     if (value == "auto") {
         *format = SampleFormatAuto;
@@ -211,7 +229,7 @@ static bool ParseFormat(const std::string& value, JackAlsaSampleFormat* format)
     return true;
 }
 
-static bool ParseMode(const std::string& value, JackAlsaSecondaryMode* mode)
+static bool ParseMode(std::string_view value, JackAlsaSecondaryMode* mode)
 {
     if (value == "duplex" || value == "both") {
         *mode = SecondaryModeDuplex;
@@ -226,8 +244,8 @@ static bool ParseMode(const std::string& value, JackAlsaSecondaryMode* mode)
 }
 
 static bool ApplyField(JackAlsaSecondaryConfig* config,
-                       const std::string& key,
-                       const std::string& value,
+                       std::string_view key,
+                       std::string_view value,
                        std::string* error)
 {
     if (key == "name") {
@@ -241,43 +259,43 @@ static bool ApplyField(JackAlsaSecondaryConfig* config,
         config->playback_device = value;
     } else if (key == "mode") {
         if (!ParseMode(value, &config->mode)) {
-            *error = "invalid mode '" + value + "'";
+            *error = std::format("invalid mode '{}'", value);
             return false;
         }
     } else if (key == "channels") {
         if (!ParseInt(value, &config->capture_channels) || config->capture_channels <= 0) {
-            *error = "invalid channels '" + value + "'";
+            *error = std::format("invalid channels '{}'", value);
             return false;
         }
         config->playback_channels = config->capture_channels;
     } else if (key == "capture_channels") {
         if (!ParseInt(value, &config->capture_channels) || config->capture_channels <= 0) {
-            *error = "invalid capture_channels '" + value + "'";
+            *error = std::format("invalid capture_channels '{}'", value);
             return false;
         }
     } else if (key == "playback_channels") {
         if (!ParseInt(value, &config->playback_channels) || config->playback_channels <= 0) {
-            *error = "invalid playback_channels '" + value + "'";
+            *error = std::format("invalid playback_channels '{}'", value);
             return false;
         }
     } else if (key == "rate") {
         if (!ParseInt(value, &config->rate) || config->rate <= 0) {
-            *error = "invalid rate '" + value + "'";
+            *error = std::format("invalid rate '{}'", value);
             return false;
         }
     } else if (key == "nperiods") {
         if (!ParseInt(value, &config->nperiods) || config->nperiods < 2) {
-            *error = "invalid nperiods '" + value + "'";
+            *error = std::format("invalid nperiods '{}'", value);
             return false;
         }
     } else if (key == "optional") {
         if (!ParseBool(value, &config->optional)) {
-            *error = "invalid optional value '" + value + "'";
+            *error = std::format("invalid optional value '{}'", value);
             return false;
         }
     } else if (key == "follow_hw_rate") {
         if (!ParseBool(value, &config->follow_hw_rate)) {
-            *error = "invalid follow_hw_rate value '" + value + "'";
+            *error = std::format("invalid follow_hw_rate value '{}'", value);
             return false;
         }
     } else if (key == "resampler") {
@@ -288,12 +306,12 @@ static bool ApplyField(JackAlsaSecondaryConfig* config,
         config->resampler = value;
     } else if (key == "format") {
         if (!ParseFormat(value, &config->sample_format)) {
-            *error = "invalid format '" + value + "' (use auto, float, s32 or s16)";
+            *error = std::format("invalid format '{}' (use auto, float, s32 or s16)", value);
             return false;
         }
     } else if (key == "clock") {
         if (!ParseClock(value, &config->clock)) {
-            *error = "invalid clock '" + value + "' (use async or sync)";
+            *error = std::format("invalid clock '{}' (use async or sync)", value);
             return false;
         }
     } else if (key == "capture_rate_ctl") {
@@ -303,7 +321,7 @@ static bool ApplyField(JackAlsaSecondaryConfig* config,
     } else if (key == "rate_map") {
         config->rate_map = value;
     } else {
-        *error = "unknown key '" + key + "'";
+        *error = std::format("unknown key '{}'", key);
         return false;
     }
     return true;
@@ -342,9 +360,7 @@ static bool Validate(JackAlsaSecondaryConfig* config, std::string* error)
     }
 
     if (config->rate != 0 && (config->rate < 8000 || config->rate > 768000)) {
-        std::ostringstream msg;
-        msg << "rate " << config->rate << " is outside the supported range";
-        *error = msg.str();
+        *error = std::format("rate {} is outside the supported range", config->rate);
         return false;
     }
 
@@ -363,12 +379,12 @@ static bool Validate(JackAlsaSecondaryConfig* config, std::string* error)
     return true;
 }
 
-bool JackAlsaSecondaryConfigParse(const std::string& spec,
+bool JackAlsaSecondaryConfigParse(std::string_view spec,
                                   JackAlsaSecondaryConfig* config,
                                   std::string* error)
 {
     JackAlsaSecondaryConfig parsed;
-    std::string text = Trim(spec);
+    const std::string_view text = Trim(spec);
 
     if (text.empty()) {
         *error = "empty secondary card specification";
@@ -376,36 +392,29 @@ bool JackAlsaSecondaryConfigParse(const std::string& spec,
     }
 
     // Bare device name shorthand.
-    if (text.find('=') == std::string::npos) {
+    if (text.find('=') == std::string_view::npos) {
         parsed.capture_device = text;
         parsed.playback_device = text;
     } else {
-        std::string field;
-        for (size_t i = 0; i <= text.size(); i++) {
-            if (i == text.size() || text[i] == ';') {
-                field = Trim(field);
-                if (!field.empty()) {
-                    size_t eq = field.find('=');
-                    if (eq == std::string::npos) {
-                        *error = "expected key=value in '" + field + "'";
-                        return false;
-                    }
-                    std::string key = Trim(field.substr(0, eq));
-                    std::string value = Unquote(Trim(field.substr(eq + 1)));
-                    for (size_t k = 0; k < key.size(); k++) {
-                        key[k] = (char)tolower((unsigned char)key[k]);
-                    }
-                    if (key.empty()) {
-                        *error = "empty key in '" + field + "'";
-                        return false;
-                    }
-                    if (!ApplyField(&parsed, key, value, error)) {
-                        return false;
-                    }
-                }
-                field.clear();
-            } else {
-                field += text[i];
+        for (const auto segment : text | std::views::split(';')) {
+            const std::string_view field = Trim(std::string_view(std::ranges::data(segment),
+                                                                 std::ranges::size(segment)));
+            if (field.empty()) {
+                continue;
+            }
+            const auto eq = field.find('=');
+            if (eq == std::string_view::npos) {
+                *error = std::format("expected key=value in '{}'", field);
+                return false;
+            }
+            const std::string key = Lowercase(Trim(field.substr(0, eq)));
+            const std::string_view value = Unquote(Trim(field.substr(eq + 1)));
+            if (key.empty()) {
+                *error = std::format("empty key in '{}'", field);
+                return false;
+            }
+            if (!ApplyField(&parsed, key, value, error)) {
+                return false;
             }
         }
     }
@@ -422,9 +431,9 @@ bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
                                      std::vector<JackAlsaSecondaryConfig>* configs,
                                      std::string* error)
 {
-    std::ifstream file(path.c_str());
+    std::ifstream file(path);
     if (!file.is_open()) {
-        *error = "cannot open secondary config file '" + path + "'";
+        *error = std::format("cannot open secondary config file '{}'", path);
         return false;
     }
 
@@ -432,24 +441,19 @@ bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
     int line_number = 0;
     while (std::getline(file, line)) {
         line_number++;
-        size_t comment = line.find('#');
-        if (comment != std::string::npos) {
-            line.erase(comment);
-        }
-        line = Trim(line);
-        if (line.empty()) {
+        const std::string_view content(line);
+        const std::string_view text = Trim(content.substr(0, content.find('#')));
+        if (text.empty()) {
             continue;
         }
 
         JackAlsaSecondaryConfig config;
         std::string parse_error;
-        if (!JackAlsaSecondaryConfigParse(line, &config, &parse_error)) {
-            std::ostringstream msg;
-            msg << path << ":" << line_number << ": " << parse_error;
-            *error = msg.str();
+        if (!JackAlsaSecondaryConfigParse(text, &config, &parse_error)) {
+            *error = std::format("{}:{}: {}", path, line_number, parse_error);
             return false;
         }
-        configs->push_back(config);
+        configs->push_back(std::move(config));
     }
 
     return true;
