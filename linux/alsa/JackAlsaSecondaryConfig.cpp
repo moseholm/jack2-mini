@@ -17,6 +17,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include "JackAlsaSecondaryConfig.h"
+#include "JackCString.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -74,19 +75,6 @@ static std::string Lowercase(std::string_view text)
     return result;
 }
 
-// Skips the prefix that strtol() accepted: leading white space and one '+'.
-// Parsing stays strict about everything after the digits.
-static std::string_view SkipNumericPrefix(std::string_view text)
-{
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front()))) {
-        text.remove_prefix(1);
-    }
-    if (text.size() > 1 && text[0] == '+' && std::isdigit(static_cast<unsigned char>(text[1]))) {
-        text.remove_prefix(1);
-    }
-    return text;
-}
-
 static bool ParseBool(std::string_view value, bool* result)
 {
     constexpr std::array truthy = {"1", "true", "yes", "on"};
@@ -105,6 +93,7 @@ static bool ParseBool(std::string_view value, bool* result)
 
 static bool ParseInt(std::string_view value, int* result)
 {
+    // Accepts what strtol() accepted (leading white space and '+'), but stays strict after the digits.
     value = SkipNumericPrefix(value);
     if (value.empty()) {
         return false;
@@ -119,22 +108,13 @@ static bool ParseInt(std::string_view value, int* result)
     return true;
 }
 
-// Like atoi(): leading digits, or 0 when there are none or the value overflows.
-static int LeadingInt(std::string_view text)
-{
-    text = SkipNumericPrefix(text);
-    int value = 0;
-    const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
-    return ec == std::errc() ? value : 0;
-}
-
 int JackAlsaPcmDeviceNumber(std::string_view pcm)
 {
     if (const auto dev = pcm.find("DEV="); dev != std::string_view::npos) {
-        return LeadingInt(pcm.substr(dev + 4));
+        return ParseLeadingInteger<int>(pcm.substr(dev + 4));
     }
     if (const auto comma = pcm.rfind(','); comma != std::string_view::npos) {
-        return LeadingInt(pcm.substr(comma + 1));
+        return ParseLeadingInteger<int>(pcm.substr(comma + 1));
     }
     return 0;
 }

@@ -20,6 +20,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackServerGlobals.h"
 #include "JackLockedEngine.h"
 #include "JackTools.h"
+#include "JackCString.h"
 #include "shm.h"
 #include <getopt.h>
 #include <errno.h>
@@ -209,7 +210,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 'L':
-                    loopback = atoi(optarg);
+                    loopback = Jack::ParseLeadingInteger<int>(optarg);
                     break;
 
                  case 'X':
@@ -221,7 +222,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 'p':
-                    port_max = (unsigned int)atol(optarg);
+                    port_max = static_cast<unsigned int>(Jack::ParseLeadingInteger<long>(optarg));
                     break;
 
                 case 'm':
@@ -243,7 +244,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 'P':
-                    realtime_priority = atoi(optarg);
+                    realtime_priority = Jack::ParseLeadingInteger<int>(optarg);
                     break;
 
                 case 'r':
@@ -259,7 +260,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 't':
-                    client_timeout = atoi(optarg);
+                    client_timeout = Jack::ParseLeadingInteger<int>(optarg);
                     break;
 
                 default:

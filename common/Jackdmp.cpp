@@ -34,6 +34,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "control.h"
 #include "JackConstants.h"
 #include "JackPlatformPlug.h"
+#include "JackCString.h"
 static void copyright(FILE* file)
 {
     fprintf(file, "jackdmp " JACK_VERSION "\n"
@@ -300,7 +301,7 @@ int main(int argc, char** argv)
                 break;
 
             case 'L':
-                loopback = atoi(optarg);
+                loopback = Jack::ParseLeadingInteger<int>(optarg);
                 break;
 
             case 'X':
@@ -314,7 +315,7 @@ int main(int argc, char** argv)
             case 'p':
                 param = jackctl_get_parameter(server_parameters, "port-max");
                 if (param != NULL) {
-                    value.ui = atoi(optarg);
+                    value.ui = static_cast<unsigned int>(Jack::ParseLeadingInteger<int>(optarg));
                     jackctl_parameter_set_value(param, &value);
                 }
                 break;
@@ -360,7 +361,7 @@ int main(int argc, char** argv)
             case 'P':
                 param = jackctl_get_parameter(server_parameters, "realtime-priority");
                 if (param != NULL) {
-                    value.i = atoi(optarg);
+                    value.i = Jack::ParseLeadingInteger<int>(optarg);
                     jackctl_parameter_set_value(param, &value);
                 }
                 break;
@@ -392,7 +393,7 @@ int main(int argc, char** argv)
             case 't':
                 param = jackctl_get_parameter(server_parameters, "client-timeout");
                 if (param != NULL) {
-                    value.i = atoi(optarg);
+                    value.i = Jack::ParseLeadingInteger<int>(optarg);
                     jackctl_parameter_set_value(param, &value);
                 }
                 break;

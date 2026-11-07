@@ -23,6 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackDriverInfo.h"
 #include "JackConstants.h"
 #include "JackError.h"
+#include "JackCString.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <errno.h>
@@ -173,10 +174,10 @@ int jack_parse_driver_params(jack_driver_desc_t* desc, int argc, char* argv[], J
         if (optarg) {
             switch (desc->params[param_index].type) {
                 case JackDriverParamInt:
-                    driver_param->value.i = atoi(optarg);
+                    driver_param->value.i = Jack::ParseLeadingInteger<int>(optarg);
                     break;
                 case JackDriverParamUInt:
-                    driver_param->value.ui = strtoul(optarg, NULL, 10);
+                    driver_param->value.ui = Jack::ParseLeadingInteger<unsigned int>(optarg);
                     break;
                 case JackDriverParamChar:
                     driver_param->value.c = optarg[0];
@@ -306,11 +307,11 @@ SERVER_EXPORT int jackctl_driver_params_parse(jackctl_driver *driver_ptr, int ar
         if (optarg) {
             switch (jackctl_parameter_get_type(param)) {
                 case JackDriverParamInt:
-                    value.i = atoi(optarg);
+                    value.i = Jack::ParseLeadingInteger<int>(optarg);
                     jackctl_parameter_set_value(param, &value);
                     break;
                 case JackDriverParamUInt:
-                    value.ui = strtoul(optarg, NULL, 10);
+                    value.ui = Jack::ParseLeadingInteger<unsigned int>(optarg);
                     jackctl_parameter_set_value(param, &value);
                     break;
                 case JackDriverParamChar:

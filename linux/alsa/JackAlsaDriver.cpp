@@ -39,6 +39,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackAlsaDriver.h"
 #include "JackAlsaEnumerate.h"
+#include "JackCString.h"
 #include "JackTools.h"
 #include "JackEngineControl.h"
 #include "JackClientControl.h"
@@ -561,7 +562,7 @@ static bool ResolvePcm(const std::string& pcm, const std::vector<JackAlsaPcmInfo
     bool numeric = !key.empty() && key.find_first_not_of("0123456789") == std::string::npos;
     *device = JackAlsaPcmDeviceNumber(pcm);
     for (size_t i = 0; i < pcms.size(); i++) {
-        if ((numeric && pcms[i].card_num == atoi(key.c_str())) || (!numeric && pcms[i].card_id == key)) {
+        if ((numeric && pcms[i].card_num == Jack::ParseLeadingInteger<int>(key)) || (!numeric && pcms[i].card_id == key)) {
             *card = pcms[i].card_num;
             return true;
         }

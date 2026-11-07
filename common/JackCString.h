@@ -20,9 +20,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define __JackCString__
 
 #include <algorithm>
+#include <cctype>
+#include <charconv>
+#include <concepts>
 #include <cstddef>
 #include <span>
 #include <string_view>
+#include <system_error>
 
 namespace Jack
 {
@@ -41,6 +45,36 @@ inline void CopyCString(std::span<char> dst, std::string_view src)
     const std::size_t n = std::min(src.size(), dst.size() - 1);
     std::ranges::copy(src.substr(0, n), dst.begin());
     std::ranges::fill(dst.subspan(n), '\0');
+}
+
+/*!
+\brief Skip the prefix that strtol() accepted: leading white space and one '+'.
+*/
+inline std::string_view SkipNumericPrefix(std::string_view text)
+{
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front()))) {
+        text.remove_prefix(1);
+    }
+    if (text.size() > 1 && text[0] == '+' && std::isdigit(static_cast<unsigned char>(text[1]))) {
+        text.remove_prefix(1);
+    }
+    return text;
+}
+
+/*!
+\brief Parse a leading integer the way atoi() did.
+
+Returns 0 when there are no digits or the value does not fit.  Anything after
+the digits is ignored.  Unlike strtoul(), a minus sign is not accepted for an
+unsigned type.
+*/
+template <std::integral T>
+T ParseLeadingInteger(std::string_view text)
+{
+    text = SkipNumericPrefix(text);
+    T value{};
+    const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
+    return ec == std::errc() ? value : T{};
 }
 
 }

@@ -75,6 +75,20 @@ void TestZeroFillsStaleBytes()
     }
 }
 
+void TestLeadingInteger()
+{
+    // The same answers atoi() gives for these inputs.
+    CHECK(Jack::ParseLeadingInteger<int>("42") == 42);
+    CHECK(Jack::ParseLeadingInteger<int>("  -7") == -7);
+    CHECK(Jack::ParseLeadingInteger<int>("+5") == 5);
+    CHECK(Jack::ParseLeadingInteger<int>("12abc") == 12);
+    CHECK(Jack::ParseLeadingInteger<int>("abc") == 0);
+    CHECK(Jack::ParseLeadingInteger<int>("") == 0);
+    CHECK(Jack::ParseLeadingInteger<int>("+-3") == 0);
+    CHECK(Jack::ParseLeadingInteger<int>("99999999999") == 0);
+    CHECK(Jack::ParseLeadingInteger<unsigned int>("300") == 300u);
+}
+
 void TestEmptyBuffer()
 {
     Jack::CopyCString(std::span<char>{}, "abc");
@@ -89,6 +103,7 @@ int main()
     TestExactFit();
     TestTruncates();
     TestZeroFillsStaleBytes();
+    TestLeadingInteger();
     TestEmptyBuffer();
 
     std::printf("%d checks, %d failed\n", g_checks, g_failures);
