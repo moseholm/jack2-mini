@@ -30,7 +30,7 @@ jobs:
         CXX: ${{ matrix.cxx }}
       run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON
     - name: Build
-      run: cmake --build build --parallel
+      run: cmake --build build --parallel "$(nproc)"
     - name: Install
       run: DESTDIR=$(pwd)/destdir cmake --install build
 

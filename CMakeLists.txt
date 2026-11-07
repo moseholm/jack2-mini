@@ -158,9 +158,17 @@ set_target_properties(jack PROPERTIES
     C_VISIBILITY_PRESET hidden
     CXX_VISIBILITY_PRESET hidden)
 
-add_library(jackserver SHARED ${JACK_SERVER_SOURCES})
-target_include_directories(jackserver PRIVATE ${JACK_INCLUDE_DIRS})
-target_compile_definitions(jackserver PRIVATE HAVE_CONFIG_H SERVER_SIDE)
+# The server objects are built once and shared by libjackserver and the unit
+# tests, so the sources are not compiled twice.
+add_library(jackserver_objects OBJECT ${JACK_SERVER_SOURCES})
+target_include_directories(jackserver_objects PRIVATE ${JACK_INCLUDE_DIRS})
+target_compile_definitions(jackserver_objects PRIVATE HAVE_CONFIG_H SERVER_SIDE)
+set_target_properties(jackserver_objects PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    C_VISIBILITY_PRESET hidden
+    CXX_VISIBILITY_PRESET hidden)
+
+add_library(jackserver SHARED $<TARGET_OBJECTS:jackserver_objects>)
 target_link_libraries(jackserver PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt)
 set_target_properties(jackserver PROPERTIES
     OUTPUT_NAME jackserver
@@ -339,9 +347,9 @@ if(JACK_BUILD_TESTS)
     add_test(NAME alsa_secondary_unit COMMAND jack_alsa_unit)
 
     # The realtime message buffer, run against the real singleton and flush thread.
-    # The server's internals are hidden in libjackserver, so the test is built
-    # from the same server sources instead of linking the shared library.
-    add_executable(jack_message_unit tests/message_buffer_unit.cpp ${JACK_SERVER_SOURCES})
+    # The server's internals are hidden in libjackserver, so the test links
+    # the server objects directly.
+    add_executable(jack_message_unit tests/message_buffer_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
     target_include_directories(jack_message_unit PRIVATE ${JACK_INCLUDE_DIRS})
     target_compile_definitions(jack_message_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
     target_link_libraries(jack_message_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
