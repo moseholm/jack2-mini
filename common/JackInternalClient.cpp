@@ -18,6 +18,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
+#include <array>
 #include "JackSystemDeps.h"
 #include "JackServerGlobals.h"
 #include "JackGraphManager.h"
@@ -81,12 +82,12 @@ int JackInternalClient::Open(const char* server_name, const char* name, jack_uui
         return -1; 
     }
 
-    strncpy(fServerName, server_name, sizeof(fServerName));
+    strncpy(fServerName.data(), server_name, sizeof(fServerName));
     fServerName[sizeof(fServerName) - 1] = 0;
 
     // Open server/client direct channel
-    char name_res[JACK_CLIENT_NAME_SIZE + 1];
-    fChannel->ClientCheck(name, uuid, name_res, JACK_PROTOCOL_VERSION, (int)options, (int*)status, &result, false);
+    std::array<char, JACK_CLIENT_NAME_SIZE + 1> name_res{};
+    fChannel->ClientCheck(name, uuid, name_res.data(), JACK_PROTOCOL_VERSION, (int)options, (int*)status, &result, false);
     if (result < 0) {
         int status1 = *status;
         if (status1 & JackVersionError) {
@@ -97,19 +98,19 @@ int JackInternalClient::Open(const char* server_name, const char* name, jack_uui
         goto error;
     }
 
-    strcpy(fClientControl.fName, name_res);
+    strcpy(fClientControl.fName, name_res.data());
 
     // Require new client
-    fChannel->ClientOpen(name_res, &fClientControl.fRefNum, &fEngineControl, &fGraphManager, this, &result);
+    fChannel->ClientOpen(name_res.data(), &fClientControl.fRefNum, &fEngineControl, &fGraphManager, this, &result);
     if (result < 0) {
-        jack_error("Cannot open client name = %s", name_res);
+        jack_error("Cannot open client name = %s", name_res.data());
         goto error;
     }
 
     SetupDriverSync(false);
     JackGlobals::fClientTable[fClientControl.fRefNum] = this;
     JackGlobals::fServerRunning = true;
-    jack_log("JackInternalClient::Open name = %s refnum = %ld", name_res, fClientControl.fRefNum);
+    jack_log("JackInternalClient::Open name = %s refnum = %ld", name_res.data(), fClientControl.fRefNum);
     return 0;
 
 error:
@@ -142,11 +143,11 @@ JackClientControl* JackInternalClient::GetClientControl() const
 
 int JackLoadableInternalClient::Init(const char* so_name)
 {
-    char path_to_so[JACK_PATH_MAX + 1];
-    BuildClientPath(path_to_so, sizeof(path_to_so), so_name);
+    std::array<char, JACK_PATH_MAX + 1> path_to_so{};
+    BuildClientPath(path_to_so.data(), sizeof(path_to_so), so_name);
 
-    fHandle = LoadJackModule(path_to_so);
-    jack_log("JackLoadableInternalClient::JackLoadableInternalClient path_to_so = %s", path_to_so);
+    fHandle = LoadJackModule(path_to_so.data());
+    jack_log("JackLoadableInternalClient::JackLoadableInternalClient path_to_so = %s", path_to_so.data());
 
     if (fHandle == NULL) {
         PrintLoadError(so_name);

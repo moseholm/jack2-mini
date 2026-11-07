@@ -17,6 +17,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
+#include <array>
 #include <cassert>
 #include <stdexcept>
 #include <string>
@@ -34,7 +35,7 @@ JackALSARawMidiPort::JackALSARawMidiPort(const char *client_name, snd_rawmidi_in
     int card = snd_rawmidi_info_get_card(info);
     unsigned int device = snd_rawmidi_info_get_device(info);
     unsigned int subdevice = snd_rawmidi_info_get_subdevice(info);
-    char device_id[32];
+    std::array<char, 32> device_id{};
     Jack::FormatCString(device_id, "hw:{},{},{}", card, device, subdevice);
     const char* driver_name = snd_rawmidi_info_get_name(info);
     const char *alias_suffix;
@@ -54,7 +55,7 @@ JackALSARawMidiPort::JackALSARawMidiPort(const char *client_name, snd_rawmidi_in
         out = 0;
     }
     const char *func;
-    int code = snd_rawmidi_open(in, out, device_id, SND_RAWMIDI_NONBLOCK);
+    int code = snd_rawmidi_open(in, out, device_id.data(), SND_RAWMIDI_NONBLOCK);
     if (code) {
         error_message = snd_strerror(code);
         func = "snd_rawmidi_open";

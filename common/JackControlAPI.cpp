@@ -20,6 +20,7 @@
 
 */
 
+#include <array>
 #include <stdint.h>
 #include <dirent.h>
 #include <pthread.h>
@@ -548,7 +549,7 @@ signal_handler(int sig)
        gets called unless we are already shutting down after
        another signal.
     */
-    char buf[64];
+    std::array<char, 64> buf{};
     Jack::FormatCString(buf, "Received signal {} during shutdown (ignored)\n", sig);
 }
 

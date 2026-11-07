@@ -17,6 +17,7 @@
 
 */
 
+#include <array>
 #include "JackCString.h"
 #include "JackCompilerDeps.h"
 #include "driver_interface.h"
@@ -37,10 +38,10 @@ namespace Jack
         jack_log("JackProxyDriver::JackProxyDriver upstream %s", upstream);
 
         assert(strlen(upstream) < JACK_CLIENT_NAME_SIZE);
-        strcpy(fUpstream, upstream);
+        strcpy(fUpstream.data(), upstream);
 
         assert(strlen(client_name) < JACK_CLIENT_NAME_SIZE);
-        strcpy(fClientName, client_name);
+        strcpy(fClientName.data(), client_name);
 
         if (promiscuous) {
             fPromiscuous = strdup(promiscuous);
@@ -163,7 +164,7 @@ namespace Jack
             }
 
             jack_info("JackProxyDriver connecting to %s", fUpstream);
-            fClient = jack_client_open(fClientName, static_cast<jack_options_t>(JackNoStartServer|JackServerName), &status, fUpstream);
+            fClient = jack_client_open(fClientName.data(), static_cast<jack_options_t>(JackNoStartServer|JackServerName), &status, fUpstream);
 
             if (fPromiscuous) {
                 // restore previous environment variable content
@@ -348,14 +349,14 @@ namespace Jack
     {
         jack_log("JackProxyDriver::AllocPorts fBufferSize = %ld fSampleRate = %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
 
-        char proxy[REAL_JACK_PORT_NAME_SIZE];
+        std::array<char, REAL_JACK_PORT_NAME_SIZE> proxy{};
         int i;
 
         fUpstreamPlaybackPorts = new jack_port_t* [fCaptureChannels];
         fUpstreamPlaybackPortConnected = new int [fCaptureChannels];
         for (i = 0; i < fCaptureChannels; i++) {
             Jack::FormatCString(proxy, "{}:to_client_{}", fClientName, i + 1);
-            fUpstreamPlaybackPorts[i] = jack_port_register(fClient, proxy, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput | JackPortIsTerminal, 0);
+            fUpstreamPlaybackPorts[i] = jack_port_register(fClient, proxy.data(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput | JackPortIsTerminal, 0);
             if (fUpstreamPlaybackPorts[i] == NULL) {
                 jack_error("driver: cannot register upstream port %s", proxy);
                 return -1;
@@ -367,7 +368,7 @@ namespace Jack
         fUpstreamCapturePortConnected = new int [fPlaybackChannels];
         for (i = 0; i < fPlaybackChannels; i++) {
             Jack::FormatCString(proxy, "{}:from_client_{}", fClientName, i + 1);
-            fUpstreamCapturePorts[i] = jack_port_register(fClient, proxy, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput | JackPortIsTerminal, 0);
+            fUpstreamCapturePorts[i] = jack_port_register(fClient, proxy.data(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput | JackPortIsTerminal, 0);
             if (fUpstreamCapturePorts[i] == NULL) {
                 jack_error("driver: cannot register upstream port %s", proxy);
                 return -1;
@@ -519,9 +520,9 @@ namespace Jack
 
         SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLockedEngine* engine, Jack::JackSynchro* table, const JSList* params)
         {
-            char upstream[JACK_CLIENT_NAME_SIZE + 1];
-            char promiscuous[JACK_CLIENT_NAME_SIZE + 1] = {0};
-            char client_name[JACK_CLIENT_NAME_SIZE + 1];
+            std::array<char, JACK_CLIENT_NAME_SIZE + 1> upstream{};
+            std::array<char, JACK_CLIENT_NAME_SIZE + 1> promiscuous{};
+            std::array<char, JACK_CLIENT_NAME_SIZE + 1> client_name{};
             jack_nframes_t period_size = 1024;  // to be used while waiting for master period_size
             jack_nframes_t sample_rate = 48000; // to be used while waiting for master sample_rate
             int capture_ports = -1;
@@ -534,15 +535,15 @@ namespace Jack
 
             // Possibly use env variable for upstream name
             const char* default_upstream = getenv("JACK_PROXY_UPSTREAM");
-            strcpy(upstream, (default_upstream) ? default_upstream : DEFAULT_UPSTREAM);
+            strcpy(upstream.data(), (default_upstream) ? default_upstream : DEFAULT_UPSTREAM);
 
             // Possibly use env variable for upstream promiscuous
             const char* default_promiscuous = getenv("JACK_PROXY_PROMISCUOUS");
-            strcpy(promiscuous, (default_promiscuous) ? default_promiscuous : "");
+            strcpy(promiscuous.data(), (default_promiscuous) ? default_promiscuous : "");
 
             // Possibly use env variable for client name
             const char* default_client_name = getenv("JACK_PROXY_CLIENT_NAME");
-            strcpy(client_name, (default_client_name) ? default_client_name : DEFAULT_CLIENT_NAME);
+            strcpy(client_name.data(), (default_client_name) ? default_client_name : DEFAULT_CLIENT_NAME);
 
             const char* username = getenv("LOGNAME");
 
@@ -552,12 +553,12 @@ namespace Jack
                 {
                     case 'u' :
                         assert(strlen(param->value.str) < JACK_CLIENT_NAME_SIZE);
-                        strcpy(upstream, param->value.str);
+                        strcpy(upstream.data(), param->value.str);
                         break;
                     case 'p':
                         assert(strlen(param->value.str) < JACK_CLIENT_NAME_SIZE);
                         use_promiscuous = true;
-                        strcpy(promiscuous, param->value.str);
+                        strcpy(promiscuous.data(), param->value.str);
                         break;
                     case 'C':
                         capture_ports = param->value.i;
@@ -567,12 +568,12 @@ namespace Jack
                         break;
                     case 'n' :
                         assert(strlen(param->value.str) < JACK_CLIENT_NAME_SIZE);
-                        strncpy(client_name, param->value.str, JACK_CLIENT_NAME_SIZE);
+                        strncpy(client_name.data(), param->value.str, JACK_CLIENT_NAME_SIZE);
                         break;
                     case 'U' :
                         if (username && *username) {
                             assert(strlen(username) < JACK_CLIENT_NAME_SIZE);
-                            strncpy(client_name, username, JACK_CLIENT_NAME_SIZE);
+                            strncpy(client_name.data(), username, JACK_CLIENT_NAME_SIZE);
                         }
                     case 'c':
                         auto_connect = true;
@@ -586,7 +587,7 @@ namespace Jack
             try {
 
                 Jack::JackDriverClientInterface* driver = new Jack::JackWaitCallbackDriver(
-                        new Jack::JackProxyDriver("system", "proxy_pcm", engine, table, upstream, use_promiscuous ? promiscuous : NULL, client_name, auto_connect, auto_save));
+                        new Jack::JackProxyDriver("system", "proxy_pcm", engine, table, upstream.data(), use_promiscuous ? promiscuous.data() : NULL, client_name.data(), auto_connect, auto_save));
                 if (driver->Open(period_size, sample_rate, 1, 1, capture_ports, playback_ports, false, "capture_", "playback_", 0, 0) == 0) {
                     return driver;
                 } else {

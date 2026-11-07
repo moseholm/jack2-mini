@@ -17,6 +17,7 @@
 
 */
 
+#include <array>
 #include "JackCString.h"
 #include "JackConstants.h"
 #include "driver_interface.h"
@@ -98,8 +99,8 @@ namespace Jack {
     {
         DIR* dir;
         struct dirent *dirent;
-        char dir_name[JACK_PATH_MAX + 1] = "";
-        ServerDir(server_name, dir_name);
+        std::array<char, JACK_PATH_MAX + 1> dir_name{};
+        ServerDir(server_name, dir_name.data());
 
         /* On termination, we remove all files that jackd creates so
         * subsequent attempts to start jackd will not believe that an
@@ -118,14 +119,14 @@ namespace Jack {
         */
 
         /* nothing to do if the server directory does not exist */
-        if ((dir = opendir(dir_name)) == NULL) {
+        if ((dir = opendir(dir_name.data())) == NULL) {
             return;
         }
 
         /* unlink all the files in this directory, they are mine */
         while ((dirent = readdir(dir)) != NULL) {
 
-            char fullpath[JACK_PATH_MAX + 1];
+            std::array<char, JACK_PATH_MAX + 1> fullpath{};
 
             if ((strcmp(dirent->d_name, ".") == 0) || (strcmp(dirent->d_name, "..") == 0)) {
                 continue;
@@ -133,16 +134,16 @@ namespace Jack {
 
             Jack::FormatCString(fullpath, "{}/{}", dir_name, dirent->d_name);
 
-            if (unlink(fullpath)) {
-                jack_error("cannot unlink `%s' (%s)", fullpath, strerror(errno));
+            if (unlink(fullpath.data())) {
+                jack_error("cannot unlink `%s' (%s)", fullpath.data(), strerror(errno));
             }
         }
 
         closedir(dir);
 
         /* now, delete the per-server subdirectory, itself */
-        if (rmdir(dir_name)) {
-            jack_error("cannot remove `%s' (%s)", dir_name, strerror(errno));
+        if (rmdir(dir_name.data())) {
+            jack_error("cannot remove `%s' (%s)", dir_name.data(), strerror(errno));
         }
 
         /* finally, delete the per-user subdirectory, if empty */
@@ -157,18 +158,18 @@ namespace Jack {
     {
         FILE* in;
         size_t len;
-        char buf[JACK_PATH_MAX + 2]; /* allow tmpdir to live anywhere, plus newline, plus null */
+        std::array<char, JACK_PATH_MAX + 2> buf{}; /* allow tmpdir to live anywhere, plus newline, plus null */
 
         if ((in = popen("jackd -l", "r")) == NULL) {
             return -1;
         }
 
-        if (fgets(buf, sizeof(buf), in) == NULL) {
+        if (fgets(buf.data(), sizeof(buf), in) == NULL) {
             pclose(in);
             return -1;
         }
 
-        len = strlen(buf);
+        len = strlen(buf.data());
 
         if (buf[len - 1] != '\n') {
             /* didn't get a whole line */
@@ -177,7 +178,7 @@ namespace Jack {
         }
 
         jack_tmpdir = (char *)malloc(len);
-        memcpy(jack_tmpdir, buf, len - 1);
+        memcpy(jack_tmpdir, buf.data(), len - 1);
         jack_tmpdir[len - 1] = '\0';
 
         pclose(in);

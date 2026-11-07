@@ -18,6 +18,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
+#include <array>
 #include "JackSystemDeps.h"
 #include "JackDriverLoader.h"
 #include "JackDriverInfo.h"
@@ -38,7 +39,7 @@ jack_driver_desc_t* jackctl_driver_get_desc(jackctl_driver_t * driver);
 void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file)
 {
     unsigned long i;
-    char arg_default[JACK_DRIVER_PARAM_STRING_MAX + 1];
+    std::array<char, JACK_DRIVER_PARAM_STRING_MAX + 1> arg_default{};
 
     for (i = 0; i < desc->nparams; i++) {
         switch (desc->params[i].type) {
@@ -67,7 +68,7 @@ void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file)
                  desc->params[i].character,
                  desc->params[i].name,
                  desc->params[i].long_desc,
-                 arg_default);
+                 arg_default.data());
     }
 }
 
@@ -373,11 +374,11 @@ static void* check_symbol(const char* sofile, const char* symbol, const char* dr
 {
     void* dlhandle;
     void* res = NULL;
-    char filename[1024];
-    Jack::FormatCString(std::span<char>(filename, 1022), "{}/{}", driver_dir, sofile);
+    std::array<char, 1024> filename{};
+    Jack::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
     
-    if ((dlhandle = LoadDriverModule(filename)) == NULL) {
-        jack_error ("Could not open component .so '%s': %s", filename, dlerror());
+    if ((dlhandle = LoadDriverModule(filename.data())) == NULL) {
+        jack_error ("Could not open component .so '%s': %s", filename.data(), dlerror());
     } else {
         res = (void*)GetDriverProc(dlhandle, symbol);
         if (res_dllhandle) {
@@ -395,11 +396,11 @@ static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sof
     jack_driver_desc_t* descriptor = NULL;
     jack_driver_desc_t* other_descriptor;
     JackDriverDescFunction so_get_descriptor = NULL;
-    char filename[1024];
+    std::array<char, 1024> filename{};
     JSList* node;
     void* dlhandle = NULL;
 
-    Jack::FormatCString(std::span<char>(filename, 1022), "{}/{}", driver_dir, sofile);
+    Jack::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
     
     so_get_descriptor = (JackDriverDescFunction)check_symbol(sofile, symbol, driver_dir, &dlhandle);
 
@@ -409,7 +410,7 @@ static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sof
     }
 
     if ((descriptor = so_get_descriptor ()) == NULL) {
-        jack_error("Driver from '%s' returned NULL descriptor", filename);
+        jack_error("Driver from '%s' returned NULL descriptor", filename.data());
         goto error;
     }
 
@@ -418,13 +419,13 @@ static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sof
         other_descriptor = (jack_driver_desc_t*) node->data;
         if (strcmp(descriptor->name, other_descriptor->name) == 0) {
             jack_error("The drivers in '%s' and '%s' both have the name '%s'; using the first",
-                       other_descriptor->file, filename, other_descriptor->name);
+                       other_descriptor->file, filename.data(), other_descriptor->name);
             /* FIXME: delete the descriptor */
             goto error;
         }
     }
 
-    strncpy(descriptor->file, filename, JACK_PATH_MAX);
+    strncpy(descriptor->file, filename.data(), JACK_PATH_MAX);
     
 error:
     if (dlhandle) {

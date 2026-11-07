@@ -17,6 +17,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
+#include <array>
 #include "JackServerGlobals.h"
 #include "JackLockedEngine.h"
 #include "JackTools.h"
@@ -122,8 +123,8 @@ bool JackServerGlobals::Init()
     int replace_registry = 0;
 
     FILE* fp = 0;
-    char filename[255];
-    char buffer[255];
+    std::array<char, 255> filename{};
+    std::array<char, 255> buffer{};
     int argc = 0;
     char* argv[32];
 
@@ -160,11 +161,11 @@ bool JackServerGlobals::Init()
                                    };
 
         if (const char* home = getenv("HOME")) {
-            Jack::FormatCString(std::span<char>(filename, 255), "{}/.jackdrc", home);
+            Jack::FormatCString(std::span<char>(filename.data(), 255), "{}/.jackdrc", home);
         } else {
             filename[0] = '\0';
         }
-        fp = fopen(filename, "r");
+        fp = fopen(filename.data(), "r");
 
         if (!fp) {
             fp = fopen("/etc/jackdrc", "r");
@@ -176,11 +177,11 @@ bool JackServerGlobals::Init()
 
         argc = 0;
         if (fp) {
-            res = fscanf(fp, "%s", buffer);
+            res = fscanf(fp, "%s", buffer.data());
             while (res != 0 && res != EOF) {
                 argv[argc] = (char*)malloc(64);
-                strcpy(argv[argc], buffer);
-                res = fscanf(fp, "%s", buffer);
+                strcpy(argv[argc], buffer.data());
+                res = fscanf(fp, "%s", buffer.data());
                 argc++;
             }
             fclose(fp);

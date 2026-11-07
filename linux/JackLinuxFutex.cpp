@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
+#include <array>
 #include "JackCString.h"
 #include "JackLinuxFutex.h"
 #include "JackTools.h"
@@ -47,8 +48,8 @@ JackLinuxFutex::JackLinuxFutex() : JackSynchro(), fSharedMem(-1), fFutex(NULL), 
 
 void JackLinuxFutex::BuildName(const char* client_name, const char* server_name, char* res, int size)
 {
-    char ext_client_name[SYNC_MAX_NAME_SIZE + 1];
-    JackTools::RewriteName(client_name, ext_client_name);
+    std::array<char, SYNC_MAX_NAME_SIZE + 1> ext_client_name{};
+    JackTools::RewriteName(client_name, ext_client_name.data());
     if (fPromiscuous) {
         Jack::FormatCString(std::span<char>(res, size), "jack_sem.{}_{}", server_name, ext_client_name);
     } else {

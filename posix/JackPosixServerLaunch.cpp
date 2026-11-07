@@ -17,6 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
+#include <array>
 #include "JackCString.h"
 #include "JackConstants.h"
 #include "JackChannel.h"
@@ -32,9 +33,9 @@ using namespace Jack;
 static void start_server_classic_aux(const char* server_name)
 {
     FILE* fp = 0;
-    char filename[255];
-    char arguments[255];
-    char buffer[255];
+    std::array<char, 255> filename{};
+    std::array<char, 255> arguments{};
+    std::array<char, 255> buffer{};
     char* command = 0;
     size_t pos = 0;
     size_t result = 0;
@@ -44,11 +45,11 @@ static void start_server_classic_aux(const char* server_name)
     int res;
 
     if (const char* home = getenv("HOME")) {
-        Jack::FormatCString(std::span<char>(filename, 255), "{}/.jackdrc", home);
+        Jack::FormatCString(std::span<char>(filename.data(), 255), "{}/.jackdrc", home);
     } else {
         filename[0] = '\0';
     }
-    fp = fopen(filename, "r");
+    fp = fopen(filename.data(), "r");
 
     if (!fp) {
         fp = fopen("/etc/jackdrc", "r");
@@ -60,13 +61,13 @@ static void start_server_classic_aux(const char* server_name)
 
     if (fp) {
         arguments[0] = '\0';
-        res = fscanf(fp, "%s", buffer);
+        res = fscanf(fp, "%s", buffer.data());
         while (res != 0 && res != EOF) {
-            strcat(arguments, buffer);
-            strcat(arguments, " ");
-            res = fscanf(fp, "%s", buffer);
+            strcat(arguments.data(), buffer.data());
+            strcat(arguments.data(), " ");
+            res = fscanf(fp, "%s", buffer.data());
         }
-        if (strlen(arguments) > 0) {
+        if (strlen(arguments.data()) > 0) {
             good = 1;
         }
         fclose(fp);
@@ -74,11 +75,11 @@ static void start_server_classic_aux(const char* server_name)
 
     if (!good) {
         command = (char*)(JACK_LOCATION "/jackd");
-        strncpy(arguments, JACK_LOCATION "/jackd -T -d " JACK_DEFAULT_DRIVER, 255);
+        strncpy(arguments.data(), JACK_LOCATION "/jackd -T -d " JACK_DEFAULT_DRIVER, 255);
     } else {
-        result = strcspn(arguments, " ");
+        result = strcspn(arguments.data(), " ");
         command = (char*)malloc(result + 1);
-        strncpy(command, arguments, result);
+        strncpy(command, arguments.data(), result);
         command[result] = '\0';
     }
 
@@ -99,19 +100,19 @@ static void start_server_classic_aux(const char* server_name)
         }
 
         /* skip whitespace */
-        while (pos < strlen(arguments) && arguments[pos] && arguments[pos] == ' ') {
+        while (pos < strlen(arguments.data()) && arguments[pos] && arguments[pos] == ' ') {
             ++pos;
         }
 
-        if (pos >= strlen(arguments)) {
+        if (pos >= strlen(arguments.data())) {
             break;
         }
 
         if (arguments[pos] == '\"') {
             ++pos;
-            result = strcspn(arguments + pos, "\"");
+            result = strcspn(arguments.data() + pos, "\"");
         } else {
-            result = strcspn(arguments + pos, " ");
+            result = strcspn(arguments.data() + pos, " ");
         }
 
         if (0 == result) {
@@ -119,7 +120,7 @@ static void start_server_classic_aux(const char* server_name)
         }
 
         argv[i] = (char*)malloc(result + 1);
-        strncpy(argv[i], arguments + pos, result);
+        strncpy(argv[i], arguments.data() + pos, result);
         argv[i][result] = '\0';
         pos += result + 1;
 

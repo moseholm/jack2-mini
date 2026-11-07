@@ -17,6 +17,7 @@
 
  */
 
+#include <array>
 #include "JackCString.h"
 #include "JackError.h"
 #include "JackShmMem.h"
@@ -56,17 +57,17 @@ void* JackShmMem::operator new(size_t size)
 {
     jack_shm_info_t info;
     JackShmMem* obj;
-    char name[64];
+    std::array<char, 64> name{};
 
     Jack::FormatCString(name, "/jack_shared{}", fSegmentNum++);
 
-    if (jack_shmalloc(name, size, &info)) {
+    if (jack_shmalloc(name.data(), size, &info)) {
         jack_error("Cannot create shared memory segment of size = %d", size, strerror(errno));
         goto error;
     }
 
     if (jack_attach_shm(&info)) {
-        jack_error("Cannot attach shared memory segment name = %s err = %s", name, strerror(errno));
+        jack_error("Cannot attach shared memory segment name = %s err = %s", name.data(), strerror(errno));
         jack_destroy_shm(&info);
         goto error;
     }

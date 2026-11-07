@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 #define __STDC_FORMAT_MACROS 1
+#include <array>
 #include <inttypes.h>
 #include "JackClient.h"
 #include "JackError.h"
@@ -2021,9 +2022,9 @@ LIB_EXPORT char *jack_client_get_uuid(jack_client_t* ext_client)
         jack_error("jack_client_get_uuid called with a NULL client");
         return NULL;
     } else {
-        char retval[JACK_UUID_STRING_SIZE];
-        jack_uuid_unparse(client->GetClientControl()->fSessionID, retval);
-        return strdup(retval);
+        std::array<char, JACK_UUID_STRING_SIZE> retval{};
+        jack_uuid_unparse(client->GetClientControl()->fSessionID, retval.data());
+        return strdup(retval.data());
     }
 }
 

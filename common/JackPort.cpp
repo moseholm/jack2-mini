@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
+#include <array>
 #include "JackPort.h"
 #include "JackError.h"
 #include "JackPortType.h"
@@ -233,7 +234,7 @@ void JackPort::SetName(const char* new_name)
 
 bool JackPort::NameEquals(const char* target)
 {
-    char buf[REAL_JACK_PORT_NAME_SIZE+1];
+    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> buf{};
 
     /* this nasty, nasty kludge is here because between 0.109.0 and 0.109.1,
        the ALSA audio backend had the name "ALSA", whereas as before and
@@ -243,9 +244,9 @@ bool JackPort::NameEquals(const char* target)
     */
 
     if (strncmp(target, "ALSA:capture", 12) == 0 || strncmp(target, "ALSA:playback", 13) == 0) {
-        const auto end = std::format_to_n(buf, sizeof(buf) - 1, "alsa_pcm{}", std::string_view(target + 4));
+        const auto end = std::format_to_n(buf.data(), buf.size() - 1, "alsa_pcm{}", std::string_view(target + 4));
         *end.out = '\0';
-        target = buf;
+        target = buf.data();
     }
 
     return (strcmp(fName, target) == 0

@@ -104,7 +104,7 @@ int JackLibClient::Open(const char* server_name, const char* name, jack_uuid_t u
         return -1; 
     }
     
-    strncpy(fServerName, server_name, sizeof(fServerName));
+    strncpy(fServerName.data(), server_name, sizeof(fServerName));
     fServerName[sizeof(fServerName) - 1] = 0;
 
     // Open server/client channel
@@ -129,9 +129,9 @@ int JackLibClient::Open(const char* server_name, const char* name, jack_uuid_t u
 
     try {
         // Map shared memory segments
-        JackLibGlobals::fGlobals->fEngineControl.SetShmIndex(shared_engine, fServerName);
-        JackLibGlobals::fGlobals->fGraphManager.SetShmIndex(shared_graph, fServerName);
-        fClientControl.SetShmIndex(shared_client, fServerName);
+        JackLibGlobals::fGlobals->fEngineControl.SetShmIndex(shared_engine, fServerName.data());
+        JackLibGlobals::fGlobals->fGraphManager.SetShmIndex(shared_graph, fServerName.data());
+        fClientControl.SetShmIndex(shared_client, fServerName.data());
         JackGlobals::fVerbose = GetEngineControl()->fVerbose;
     } catch (...) {
         jack_error("Map shared memory segments exception");
@@ -143,7 +143,7 @@ int JackLibClient::Open(const char* server_name, const char* name, jack_uuid_t u
     // Connect shared synchro : the synchro must be usable in I/O mode when several clients live in the same process
     assert(JackGlobals::fSynchroMutex);
     JackGlobals::fSynchroMutex->Lock();
-    res = fSynchroTable[GetClientControl()->fRefNum].Connect(name_res, fServerName);
+    res = fSynchroTable[GetClientControl()->fRefNum].Connect(name_res, fServerName.data());
     JackGlobals::fSynchroMutex->Unlock();
     if (!res) {
         jack_error("Cannot ConnectSemaphore %s client", name_res);
@@ -176,7 +176,7 @@ int JackLibClient::ClientNotifyImp(int refnum, const char* name, int notify, int
         case kAddClient:
             jack_log("JackClient::AddClient name = %s, ref = %ld ", name, refnum);
             // the synchro must be usable in I/O mode when several clients live in the same process
-            res = fSynchroTable[refnum].Connect(name, fServerName) ? 0 : -1;
+            res = fSynchroTable[refnum].Connect(name, fServerName.data()) ? 0 : -1;
             break;
 
         case kRemoveClient:

@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
+#include <array>
 #include "JackSystemDeps.h"
 #include "JackGraphManager.h"
 #include "JackClientControl.h"
@@ -315,13 +316,13 @@ int JackClient::ClientNotify(int refnum, const char* name, int notify, int sync,
                 jack_log("JackClient::kSessionCallback");
                 if (fSession) {
                     jack_session_event_t* event = (jack_session_event_t*)malloc( sizeof(jack_session_event_t));
-                    char uuid_buf[JACK_UUID_STRING_SIZE];
+                    std::array<char, JACK_UUID_STRING_SIZE> uuid_buf{};
                     event->type = (jack_session_event_type_t)value1;
                     event->session_dir = strdup(message);
                     event->command_line = NULL;
                     event->flags = (jack_session_flags_t)0;
-                    jack_uuid_unparse(GetClientControl()->fSessionID, uuid_buf);
-                    event->client_uuid = strdup(uuid_buf);
+                    jack_uuid_unparse(GetClientControl()->fSessionID, uuid_buf.data());
+                    event->client_uuid = strdup(uuid_buf.data());
                     fSessionReply = kPendingSessionReply;
                     // Session callback may change fSessionReply by directly using jack_session_reply
                     fSession(event, fSessionArg);
@@ -1241,10 +1242,10 @@ int JackClient::SetPropertyChangeCallback(JackPropertyChangeCallback callback, v
 
 char* JackClient::GetInternalClientName(int ref)
 {
-    char name_res[JACK_CLIENT_NAME_SIZE+1];
+    std::array<char, JACK_CLIENT_NAME_SIZE+1> name_res{};
     int result = -1;
-    fChannel->GetInternalClientName(GetClientControl()->fRefNum, ref, name_res, &result);
-    return (result < 0) ? NULL : strdup(name_res);
+    fChannel->GetInternalClientName(GetClientControl()->fRefNum, ref, name_res.data(), &result);
+    return (result < 0) ? NULL : strdup(name_res.data());
 }
 
 int JackClient::InternalClientHandle(const char* client_name, jack_status_t* status)
@@ -1330,18 +1331,18 @@ int JackClient::SessionReply(jack_session_event_t* ev)
 
 char* JackClient::GetUUIDForClientName(const char* client_name)
 {
-    char uuid_res[JACK_UUID_STRING_SIZE];
+    std::array<char, JACK_UUID_STRING_SIZE> uuid_res{};
     int result = -1;
-    fChannel->GetUUIDForClientName(GetClientControl()->fRefNum, client_name, uuid_res, &result);
-    return (result) ? NULL : strdup(uuid_res);
+    fChannel->GetUUIDForClientName(GetClientControl()->fRefNum, client_name, uuid_res.data(), &result);
+    return (result) ? NULL : strdup(uuid_res.data());
 }
 
 char* JackClient::GetClientNameByUUID(const char* uuid)
 {
-    char name_res[JACK_CLIENT_NAME_SIZE + 1];
+    std::array<char, JACK_CLIENT_NAME_SIZE + 1> name_res{};
     int result = -1;
-    fChannel->GetClientNameForUUID(GetClientControl()->fRefNum, uuid, name_res, &result);
-    return (result) ? NULL : strdup(name_res);
+    fChannel->GetClientNameForUUID(GetClientControl()->fRefNum, uuid, name_res.data(), &result);
+    return (result) ? NULL : strdup(name_res.data());
 }
 
 int JackClient::ReserveClientName(const char* client_name, const char* uuid)
