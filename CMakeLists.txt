@@ -338,6 +338,15 @@ if(JACK_BUILD_TESTS)
     target_link_libraries(jack_alsa_unit PRIVATE jackserver m)
     add_test(NAME alsa_secondary_unit COMMAND jack_alsa_unit)
 
+    # The realtime message buffer, run against the real singleton and flush thread.
+    # The server's internals are hidden in libjackserver, so the test is built
+    # from the same server sources instead of linking the shared library.
+    add_executable(jack_message_unit tests/message_buffer_unit.cpp ${JACK_SERVER_SOURCES})
+    target_include_directories(jack_message_unit PRIVATE ${JACK_INCLUDE_DIRS})
+    target_compile_definitions(jack_message_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
+    target_link_libraries(jack_message_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
+    add_test(NAME message_buffer_unit COMMAND jack_message_unit)
+
     # A test-only resampler plugin, loaded by name from JACK_RESAMPLER_PATH.
     add_library(passthrough_test MODULE tests/alsa_test_resampler_plugin.c)
     target_include_directories(passthrough_test PRIVATE

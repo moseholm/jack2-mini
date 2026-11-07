@@ -23,14 +23,16 @@
 #include "JackGlobals.h"
 #include "JackError.h"
 #include "JackTime.h"
+#include <algorithm>
+#include <string>
 
 namespace Jack
 {
 
-JackMessageBuffer* JackMessageBuffer::fInstance = NULL;
+JackMessageBuffer* JackMessageBuffer::fInstance = nullptr;
 
 JackMessageBuffer::JackMessageBuffer()
-    :fInit(NULL),
+    :fInit(nullptr),
     fInitArg(NULL),
     fThread(this),
     fGuard(),
@@ -81,18 +83,32 @@ bool JackMessageBuffer::Stop()
 
 void JackMessageBuffer::Flush()
 {
-    while (fOutBuffer != fInBuffer) {
-        jack_log_function(fBuffers[fOutBuffer].level, fBuffers[fOutBuffer].message);
-        fOutBuffer = MB_NEXT(fOutBuffer);
+    unsigned int out = fOutBuffer.load(std::memory_order_relaxed);
+    while (out != fInBuffer.load(std::memory_order_acquire)) {
+        const JackMessage& entry = fBuffers[out];
+        jack_log_function(entry.level, entry.message.data());
+        out = MB_NEXT(out);
+        fOutBuffer.store(out, std::memory_order_release);
     }
 }
 
-void JackMessageBuffer::AddMessage(int level, const char *message)
+void JackMessageBuffer::AddMessage(int level, std::string_view message)
 {
     if (fGuard.Trylock()) {
-        fBuffers[fInBuffer].level = level;
-        strncpy(fBuffers[fInBuffer].message, message, MB_BUFFERSIZE);
-        fInBuffer = MB_NEXT(fInBuffer);
+        const unsigned int in = fInBuffer.load(std::memory_order_relaxed);
+        const unsigned int next = MB_NEXT(in);
+        if (next == fOutBuffer.load(std::memory_order_acquire)) {
+            /* the reader has not caught up, so the ring is full */
+            fGuard.Unlock();
+            INC_ATOMIC(&fOverruns);
+            return;
+        }
+        JackMessage& entry = fBuffers[in];
+        entry.level = level;
+        const std::size_t length = std::min(message.size(), MB_BUFFERSIZE - 1);
+        std::ranges::copy(message.substr(0, length), entry.message.begin());
+        entry.message[length] = '\0';
+        fInBuffer.store(next, std::memory_order_release);
         fGuard.Signal();
         fGuard.Unlock();
     } else {            /* lock collision */
@@ -108,9 +124,9 @@ bool JackMessageBuffer::Execute()
             /* the client asked for all threads to run a thread
             initialization callback, which includes us.
             */
-            if (fInit) {
-                fInit(fInitArg);
-                fInit = NULL;
+            if (JackThreadInitCallback init = fInit) {
+                init(fInitArg);
+                fInit = nullptr;
                 /* and we're done */
                 fGuard.Signal();
             }
@@ -130,12 +146,12 @@ bool JackMessageBuffer::Execute()
 
 bool JackMessageBuffer::Create()
 {
-    if (fInstance == NULL) {
+    if (fInstance == nullptr) {
         fInstance = new JackMessageBuffer();
         if (!fInstance->Start()) {
             jack_error("JackMessageBuffer::Create cannot start thread");
             delete fInstance;
-            fInstance = NULL;
+            fInstance = nullptr;
             return false;
         }
     }
@@ -145,10 +161,10 @@ bool JackMessageBuffer::Create()
 
 bool JackMessageBuffer::Destroy()
 {
-    if (fInstance != NULL) {
+    if (fInstance != nullptr) {
         fInstance->Stop();
         delete fInstance;
-        fInstance = NULL;
+        fInstance = nullptr;
         return true;
     } else {
         return false;
@@ -157,11 +173,14 @@ bool JackMessageBuffer::Destroy()
 
 void JackMessageBufferAdd(int level, const char *message)
 {
-    if (Jack::JackMessageBuffer::fInstance == NULL) {
+    if (Jack::JackMessageBuffer::fInstance == nullptr) {
         /* Unable to print message with realtime safety. Complain and print it anyway. */
         jack_log_function(LOG_LEVEL_ERROR, "messagebuffer not initialized, skip message");
     } else {
-        Jack::JackMessageBuffer::fInstance->AddMessage(level, message);
+        /* scan at most one buffer's worth, so an unterminated input cannot run away */
+        const char* end = std::char_traits<char>::find(message, Jack::MB_BUFFERSIZE, '\0');
+        const std::size_t length = end ? static_cast<std::size_t>(end - message) : Jack::MB_BUFFERSIZE;
+        Jack::JackMessageBuffer::fInstance->AddMessage(level, std::string_view(message, length));
     }
 }
 

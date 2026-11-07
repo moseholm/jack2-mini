@@ -33,19 +33,27 @@
 #include "JackPlatformPlug.h"
 #include "JackMutex.h"
 #include "JackAtomic.h"
+#include <array>
+#include <atomic>
+#include <cstddef>
+#include <string_view>
 
 namespace Jack
 {
 
-/* MB_NEXT() relies on the fact that MB_BUFFERS is a power of two */
-#define MB_BUFFERS  128
-#define MB_NEXT(index) ((index+1) & (MB_BUFFERS-1))
-#define MB_BUFFERSIZE   256     /* message length limit */
+// The ring index wraps with a mask, so MB_BUFFERS must be a power of two.
+inline constexpr unsigned int MB_BUFFERS = 128;
+inline constexpr std::size_t MB_BUFFERSIZE = 256;     // message length limit, including the terminator
+
+constexpr unsigned int MB_NEXT(unsigned int index)
+{
+    return (index + 1) & (MB_BUFFERS - 1);
+}
 
 struct JackMessage
 {
     int level;
-    char message[MB_BUFFERSIZE];
+    std::array<char, MB_BUFFERSIZE> message;
 };
 
 /*!
@@ -57,15 +65,15 @@ class JackMessageBuffer : public JackRunnableInterface
 
     private:
 
-        volatile JackThreadInitCallback fInit;
+        std::atomic<JackThreadInitCallback> fInit;
         void* fInitArg;
-        JackMessage fBuffers[MB_BUFFERS];
+        std::array<JackMessage, MB_BUFFERS> fBuffers;
         JackThread fThread;
         JackProcessSync fGuard;
-        volatile unsigned int fInBuffer;
-        volatile unsigned int fOutBuffer;
+        std::atomic<unsigned int> fInBuffer;
+        std::atomic<unsigned int> fOutBuffer;
         alignas(SInt32) SInt32 fOverruns;
-        bool fRunning;
+        std::atomic<bool> fRunning;
 
         void Flush();
 
@@ -83,7 +91,7 @@ class JackMessageBuffer : public JackRunnableInterface
 	    bool static Create();
 	    bool static Destroy();
 
-        void AddMessage(int level, const char *message);
+        void AddMessage(int level, std::string_view message);
         int SetInitCallback(JackThreadInitCallback callback, void *arg);
 
 	    static JackMessageBuffer* fInstance;
