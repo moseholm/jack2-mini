@@ -36,19 +36,16 @@
 #include <array>
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
+#include <mutex>
 #include <string_view>
 
 namespace Jack
 {
 
 // The ring index wraps with a mask, so MB_BUFFERS must be a power of two.
-inline constexpr unsigned int MB_BUFFERS = 128;
+inline constexpr std::size_t MB_BUFFERS = 128;
 inline constexpr std::size_t MB_BUFFERSIZE = 256;     // message length limit, including the terminator
-
-constexpr unsigned int MB_NEXT(unsigned int index)
-{
-    return (index + 1) & (MB_BUFFERS - 1);
-}
 
 struct JackMessage
 {
@@ -58,6 +55,11 @@ struct JackMessage
 
 /*!
 \brief Message buffer to be used from RT threads.
+
+AddMessage() never blocks, allocates or makes a system call.  A bounded
+multi-producer ring holds the messages.  The flush thread drains the ring by
+polling, so producers never wake it.  A full ring drops the new message and
+counts it as an overrun.
 */
 
 class JackMessageBuffer : public JackRunnableInterface
@@ -65,16 +67,22 @@ class JackMessageBuffer : public JackRunnableInterface
 
     private:
 
+        struct Slot {
+            std::atomic<std::size_t> sequence;
+            JackMessage entry;
+        };
+
         std::atomic<JackThreadInitCallback> fInit;
         void* fInitArg;
-        std::array<JackMessage, MB_BUFFERS> fBuffers;
+        std::mutex fInitLock;      // serializes SetInitCallback callers, which are not realtime
+        std::array<Slot, MB_BUFFERS> fSlots;
+        alignas(64) std::atomic<std::size_t> fEnqueuePos;   // written by producers
+        alignas(64) std::atomic<std::size_t> fDequeuePos;   // written by the flush thread only
+        std::atomic<std::uint32_t> fOverruns;
         JackThread fThread;
-        JackProcessSync fGuard;
-        std::atomic<unsigned int> fInBuffer;
-        std::atomic<unsigned int> fOutBuffer;
-        alignas(SInt32) SInt32 fOverruns;
         std::atomic<bool> fRunning;
 
+        bool Enqueue(int level, std::string_view message);
         void Flush();
 
         bool Start();
@@ -93,6 +101,7 @@ class JackMessageBuffer : public JackRunnableInterface
 
         void AddMessage(int level, std::string_view message);
         int SetInitCallback(JackThreadInitCallback callback, void *arg);
+        std::uint32_t Overruns() const;
 
 	    static JackMessageBuffer* fInstance;
 };

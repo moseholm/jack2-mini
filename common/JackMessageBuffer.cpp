@@ -24,25 +24,33 @@
 #include "JackError.h"
 #include "JackTime.h"
 #include <algorithm>
+#include <chrono>
 #include <string>
+#include <thread>
 
 namespace Jack
 {
+
+namespace
+{
+// How often the flush thread drains the ring.  Producers never wake it.
+constexpr auto kPollInterval = std::chrono::milliseconds(5);
+}
 
 JackMessageBuffer* JackMessageBuffer::fInstance = nullptr;
 
 JackMessageBuffer::JackMessageBuffer()
     :fInit(nullptr),
     fInitArg(NULL),
-    fThread(this),
-    fGuard(),
-    fInBuffer(0),
-    fOutBuffer(0),
+    fEnqueuePos(0),
+    fDequeuePos(0),
     fOverruns(0),
+    fThread(this),
     fRunning(false)
 {
-    static_assert(offsetof(JackMessageBuffer, fOverruns) % sizeof(fOverruns) == 0,
-                  "fOverruns must be aligned within JackMessageBuffer");
+    for (std::size_t i = 0; i < MB_BUFFERS; i++) {
+        fSlots[i].sequence.store(i, std::memory_order_relaxed);
+    }
 }
 
 JackMessageBuffer::~JackMessageBuffer()
@@ -62,86 +70,90 @@ bool JackMessageBuffer::Start()
 
 bool JackMessageBuffer::Stop()
 {
-    if (fOverruns > 0) {
-        jack_error("WARNING: %d message buffer overruns!", fOverruns);
+    const std::uint32_t overruns = fOverruns.load(std::memory_order_relaxed);
+    if (overruns > 0) {
+        jack_error("WARNING: %u message buffer overruns!", overruns);
     } else {
         jack_log("no message buffer overruns");
     }
 
-    if (fGuard.Lock()) {
-        fRunning = false;
-        fGuard.Signal();
-        fGuard.Unlock();
-        fThread.Stop();
-    } else {
-        fThread.Kill();
-    }
-
+    fRunning = false;
+    fThread.Stop();
     Flush();
     return true;
 }
 
+// Vyukov-style bounded queue.  Each slot's sequence says whether it is free for
+// the position currently being claimed (producer) or holds data for it (consumer).
+bool JackMessageBuffer::Enqueue(int level, std::string_view message)
+{
+    std::size_t pos = fEnqueuePos.load(std::memory_order_relaxed);
+    Slot* slot = nullptr;
+    for (;;) {
+        slot = &fSlots[pos & (MB_BUFFERS - 1)];
+        const std::size_t seq = slot->sequence.load(std::memory_order_acquire);
+        const auto diff = static_cast<std::ptrdiff_t>(seq - pos);
+        if (diff == 0) {
+            if (fEnqueuePos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed)) {
+                break;
+            }
+        } else if (diff < 0) {
+            // The reader has not freed this slot yet, so the ring is full.
+            return false;
+        } else {
+            pos = fEnqueuePos.load(std::memory_order_relaxed);
+        }
+    }
+
+    slot->entry.level = level;
+    const std::size_t length = std::min(message.size(), MB_BUFFERSIZE - 1);
+    std::ranges::copy(message.substr(0, length), slot->entry.message.begin());
+    slot->entry.message[length] = '\0';
+    slot->sequence.store(pos + 1, std::memory_order_release);
+    return true;
+}
+
+// Only the flush thread (or Stop() after it has been joined) calls this.
 void JackMessageBuffer::Flush()
 {
-    unsigned int out = fOutBuffer.load(std::memory_order_relaxed);
-    while (out != fInBuffer.load(std::memory_order_acquire)) {
-        const JackMessage& entry = fBuffers[out];
-        jack_log_function(entry.level, entry.message.data());
-        out = MB_NEXT(out);
-        fOutBuffer.store(out, std::memory_order_release);
+    for (;;) {
+        const std::size_t pos = fDequeuePos.load(std::memory_order_relaxed);
+        Slot& slot = fSlots[pos & (MB_BUFFERS - 1)];
+        const std::size_t seq = slot.sequence.load(std::memory_order_acquire);
+        if (static_cast<std::ptrdiff_t>(seq - (pos + 1)) < 0) {
+            return;     // empty
+        }
+        fDequeuePos.store(pos + 1, std::memory_order_relaxed);
+        jack_log_function(slot.entry.level, slot.entry.message.data());
+        slot.sequence.store(pos + MB_BUFFERS, std::memory_order_release);
     }
 }
 
 void JackMessageBuffer::AddMessage(int level, std::string_view message)
 {
-    if (fGuard.Trylock()) {
-        const unsigned int in = fInBuffer.load(std::memory_order_relaxed);
-        const unsigned int next = MB_NEXT(in);
-        if (next == fOutBuffer.load(std::memory_order_acquire)) {
-            /* the reader has not caught up, so the ring is full */
-            fGuard.Unlock();
-            INC_ATOMIC(&fOverruns);
-            return;
-        }
-        JackMessage& entry = fBuffers[in];
-        entry.level = level;
-        const std::size_t length = std::min(message.size(), MB_BUFFERSIZE - 1);
-        std::ranges::copy(message.substr(0, length), entry.message.begin());
-        entry.message[length] = '\0';
-        fInBuffer.store(next, std::memory_order_release);
-        fGuard.Signal();
-        fGuard.Unlock();
-    } else {            /* lock collision */
-        INC_ATOMIC(&fOverruns);
+    if (!Enqueue(level, message)) {
+        fOverruns.fetch_add(1, std::memory_order_relaxed);
     }
+}
+
+std::uint32_t JackMessageBuffer::Overruns() const
+{
+    return fOverruns.load(std::memory_order_relaxed);
 }
 
 bool JackMessageBuffer::Execute()
 {
-    if (fGuard.Lock()) {
-        while (fRunning) {
-            fGuard.Wait();
-            /* the client asked for all threads to run a thread
-            initialization callback, which includes us.
-            */
-            if (JackThreadInitCallback init = fInit) {
-                init(fInitArg);
-                fInit = nullptr;
-                /* and we're done */
-                fGuard.Signal();
-            }
-            
-            /* releasing the mutex reduces contention */
-            fGuard.Unlock();
-            Flush();
-            fGuard.Lock();
-        }
-        fGuard.Unlock();
-    } else {
-        jack_error("JackMessageBuffer::Execute lock cannot be taken");
+    if (JackThreadInitCallback init = fInit.load(std::memory_order_acquire)) {
+        /* the client asked for all threads to run a thread
+        initialization callback, which includes us.
+        */
+        init(fInitArg);
+        fInit.store(nullptr, std::memory_order_release);
     }
 
-    return false;
+    Flush();
+    std::this_thread::sleep_for(kPollInterval);
+    return true;
 }
 
 bool JackMessageBuffer::Create()
@@ -186,17 +198,15 @@ void JackMessageBufferAdd(int level, const char *message)
 
 int JackMessageBuffer::SetInitCallback(JackThreadInitCallback callback, void *arg)
 {
-    if (fInstance && callback && fRunning && fGuard.Lock()) {
+    if (fInstance && callback && fRunning.load(std::memory_order_acquire)) {
+        std::lock_guard<std::mutex> guard(fInitLock);
         /* set up the callback */
         fInitArg = arg;
-        fInit = callback;
-        
-        // wake msg buffer thread
-        fGuard.Signal();
-        // wait for it to be done
-        fGuard.Wait();
-        // and we're done
-        fGuard.Unlock();
+        fInit.store(callback, std::memory_order_release);
+        /* wait for the flush thread to run it, or for shutdown */
+        while (fInit.load(std::memory_order_acquire) != nullptr && fRunning.load(std::memory_order_acquire)) {
+            std::this_thread::sleep_for(kPollInterval);
+        }
         return 0;
     }
     jack_error("JackMessageBuffer::SetInitCallback : callback could not be executed");
@@ -204,4 +214,3 @@ int JackMessageBuffer::SetInitCallback(JackThreadInitCallback callback, void *ar
 }
 
 };
-

@@ -17,16 +17,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 // Unit tests for the realtime message buffer.  They run the real singleton
-// and its flush thread, and check ordering, truncation and shutdown.
+// and its flush thread, with several producers, and check that every message
+// is either delivered in per-producer order or counted as an overrun.
 
 #include "JackError.h"
 #include "JackMessageBuffer.h"
 
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace
@@ -58,34 +61,59 @@ std::vector<std::string> Snapshot()
     return g_received;
 }
 
-void TestOrderedDelivery()
+// Producer messages look like "t<producer>:<sequence>".  Anything else is
+// the buffer's own report and is not counted.
+bool IsProducerMessage(const std::string& text)
 {
-    constexpr int count = 50000;
-    for (int i = 0; i < count; i++) {
-        Jack::JackMessageBufferAdd(LOG_LEVEL_ERROR, std::to_string(i).c_str());
+    return text.size() > 1 && text[0] == 't' && std::isdigit(static_cast<unsigned char>(text[1]));
+}
+
+void TestConcurrentProducers()
+{
+    constexpr int producers = 4;
+    constexpr long per_producer = 20000;
+
+    CHECK(Jack::JackMessageBuffer::Create());
+    g_received.clear();
+
+    std::vector<std::thread> threads;
+    for (int id = 0; id < producers; id++) {
+        threads.emplace_back([id] {
+            for (long i = 0; i < per_producer; i++) {
+                const std::string text = "t" + std::to_string(id) + ":" + std::to_string(i);
+                Jack::JackMessageBufferAdd(LOG_LEVEL_ERROR, text.c_str());
+            }
+        });
     }
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    // Read the overrun count before Destroy() drains the ring and logs it.
+    const std::uint64_t dropped = Jack::JackMessageBuffer::fInstance->Overruns();
     CHECK(Jack::JackMessageBuffer::Destroy());
 
-    // Dropped messages are allowed when the flush thread falls behind.  What is
-    // delivered must be whole messages in strictly increasing order.  The
-    // buffer's own shutdown report ("WARNING: ... overruns") is not a message.
-    const auto received = Snapshot();
-    long previous = -1;
-    long delivered = 0;
+    std::vector<long> last(producers, -1);
+    std::uint64_t delivered = 0;
     bool ordered = true;
-    for (const auto& text : received) {
-        if (text.empty() || !std::isdigit(static_cast<unsigned char>(text[0]))) {
+    for (const auto& text : Snapshot()) {
+        if (!IsProducerMessage(text)) {
             continue;
         }
-        const long value = std::strtol(text.c_str(), nullptr, 10);
-        if (std::to_string(value) != text || value <= previous) {
+        const auto colon = text.find(':');
+        const int id = std::atoi(text.c_str() + 1);
+        const long seq = std::strtol(text.c_str() + colon + 1, nullptr, 10);
+        if (id < 0 || id >= producers || seq <= last[id] || text != "t" + std::to_string(id) + ":" + std::to_string(seq)) {
             ordered = false;
             break;
         }
-        previous = value;
+        last[id] = seq;
         delivered++;
     }
+
     CHECK(ordered);
+    // Every message was either delivered or counted, and nothing else was.
+    CHECK(delivered + dropped == static_cast<std::uint64_t>(producers) * per_producer);
     CHECK(delivered > 0);
 }
 
@@ -113,8 +141,7 @@ int main()
 {
     jack_error_callback = CaptureError;
 
-    CHECK(Jack::JackMessageBuffer::Create());
-    TestOrderedDelivery();
+    TestConcurrentProducers();
     TestTruncation();
 
     std::printf("%d checks, %d failed\n", g_checks, g_failures);
