@@ -28,11 +28,11 @@ namespace Jack
 
 bool JackActivationCount::Signal(JackSynchro* synchro, JackClientControl* control)
 {
-    if (fValue == 0) {
+    if (GetValue() == 0) {
         // Transfer activation to next clients
         jack_log("JackActivationCount::Signal value = 0 ref = %ld", control->fRefNum);
         return synchro->Signal();
-    } else if (DEC_ATOMIC(&fValue) == 1) {
+    } else if (DEC_ATOMIC(ValuePtr()) == 1) {
         return synchro->Signal();
     } else {
         return true;

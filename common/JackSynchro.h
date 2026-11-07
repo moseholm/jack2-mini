@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackSynchro__
 #define __JackSynchro__
 
+#include <atomic>
 #include "JackConstants.h"
 
 namespace Jack
@@ -38,7 +39,7 @@ class JackSynchro
     protected:
 
         char fName[SYNC_MAX_NAME_SIZE];
-        bool fFlush; // If true, signal are "flushed" : used for drivers that do no consume the signal
+        std::atomic<bool> fFlush; // If true, signal are "flushed" : used for drivers that do no consume the signal
 
     public:
 

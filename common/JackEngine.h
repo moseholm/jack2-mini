@@ -20,6 +20,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef __JackEngine__
 #define __JackEngine__
 
+#include <atomic>
 #include "JackConstants.h"
 #include "JackGraphManager.h"
 #include "JackSynchro.h"
@@ -50,7 +51,9 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         JackGraphManager* fGraphManager;
         JackEngineControl* fEngineControl;
         char fSelfConnectMode;
-        JackClientInterface* fClientTable[CLIENT_NUM];
+        std::atomic<JackClientInterface*> fClientTable[CLIENT_NUM];
+        // Set by client open and close, cleared by the engine thread, which owns the rolling CPU statistics
+        std::atomic<bool> fRollingResetPending;
         JackSynchro* fSynchroTable;
         JackServerNotifyChannel fChannel;              /*! To communicate between the RT thread and server */
         JackProcessSync fSignal;

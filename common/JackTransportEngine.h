@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackTransportEngine__
 #define __JackTransportEngine__
 
+#include <atomic>
 #include "JackAtomicArrayState.h"
 #include "JackCompilerDeps.h"
 #include "types.h"
@@ -106,10 +107,10 @@ class SERVER_EXPORT JackTransportEngine : public JackAtomicArrayState<jack_posit
         bool fConditionnal;
         alignas(SInt32) SInt32 fWriteCounter;
 
-        bool CheckAllRolling(JackClientInterface** table);
-        void MakeAllStartingLocating(JackClientInterface** table);
-        void MakeAllStopping(JackClientInterface** table);
-        void MakeAllLocating(JackClientInterface** table);
+        bool CheckAllRolling(std::atomic<JackClientInterface*>* table);
+        void MakeAllStartingLocating(std::atomic<JackClientInterface*>* table);
+        void MakeAllStopping(std::atomic<JackClientInterface*>* table);
+        void MakeAllLocating(std::atomic<JackClientInterface*>* table);
 
         void SyncTimeout(jack_nframes_t frame_rate, jack_nframes_t buffer_size);
 
@@ -159,7 +160,7 @@ class SERVER_EXPORT JackTransportEngine : public JackAtomicArrayState<jack_posit
         /*
         	\brief
         */
-        void CycleEnd(JackClientInterface** table, jack_nframes_t frame_rate, jack_nframes_t buffer_size);
+        void CycleEnd(std::atomic<JackClientInterface*>* table, jack_nframes_t frame_rate, jack_nframes_t buffer_size);
 
         /*
         	\brief

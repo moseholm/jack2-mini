@@ -91,7 +91,7 @@ int JackTransportEngine::SetTimebaseMaster(int refnum, bool conditionnal)
 }
 
 // RT
-bool JackTransportEngine::CheckAllRolling(JackClientInterface** table)
+bool JackTransportEngine::CheckAllRolling(std::atomic<JackClientInterface*>* table)
 {
     for (int i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
         JackClientInterface* client = table[i];
@@ -105,7 +105,7 @@ bool JackTransportEngine::CheckAllRolling(JackClientInterface** table)
 }
 
 // RT
-void JackTransportEngine::MakeAllStartingLocating(JackClientInterface** table)
+void JackTransportEngine::MakeAllStartingLocating(std::atomic<JackClientInterface*>* table)
 {
     for (int i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
         JackClientInterface* client = table[i];
@@ -121,7 +121,7 @@ void JackTransportEngine::MakeAllStartingLocating(JackClientInterface** table)
 }
 
 // RT
-void JackTransportEngine::MakeAllStopping(JackClientInterface** table)
+void JackTransportEngine::MakeAllStopping(std::atomic<JackClientInterface*>* table)
 {
     for (int i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
         JackClientInterface* client = table[i];
@@ -136,7 +136,7 @@ void JackTransportEngine::MakeAllStopping(JackClientInterface** table)
 }
 
 // RT
-void JackTransportEngine::MakeAllLocating(JackClientInterface** table)
+void JackTransportEngine::MakeAllLocating(std::atomic<JackClientInterface*>* table)
 {
     for (int i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
         JackClientInterface* client = table[i];
@@ -160,7 +160,7 @@ void JackTransportEngine::CycleBegin(jack_nframes_t frame_rate, jack_time_t time
 }
 
 // RT
-void JackTransportEngine::CycleEnd(JackClientInterface** table, jack_nframes_t frame_rate, jack_nframes_t buffer_size)
+void JackTransportEngine::CycleEnd(std::atomic<JackClientInterface*>* table, jack_nframes_t frame_rate, jack_nframes_t buffer_size)
 {
     TrySwitchState(1);	// Switch from "pending" to "current", it always works since there is always a pending state
 

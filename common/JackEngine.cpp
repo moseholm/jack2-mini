@@ -57,6 +57,7 @@ JackEngine::JackEngine(JackGraphManager* manager,
     for (int i = 0; i < CLIENT_NUM; i++) {
         fClientTable[i] = NULL;
     }
+    fRollingResetPending = false;
     fLastSwitchUsecs = 0;
     fSessionPendingReplies = 0;
     fSessionTransaction = NULL;
@@ -86,12 +87,13 @@ int JackEngine::Close()
 
     // Close remaining clients (RT is stopped)
     for (int i = fEngineControl->fDriverNum; i < CLIENT_NUM; i++) {
-        if (JackLoadableInternalClient* loadable_client = dynamic_cast<JackLoadableInternalClient*>(fClientTable[i])) {
+        JackClientInterface* client = fClientTable[i];
+        if (JackLoadableInternalClient* loadable_client = dynamic_cast<JackLoadableInternalClient*>(client)) {
             jack_log("JackEngine::Close loadable client = %s", loadable_client->GetClientControl()->fName);
             loadable_client->Close();
             fClientTable[i] = NULL;
             delete loadable_client;
-        } else if (JackExternalClient* external_client = dynamic_cast<JackExternalClient*>(fClientTable[i])) {
+        } else if (JackExternalClient* external_client = dynamic_cast<JackExternalClient*>(client)) {
             jack_log("JackEngine::Close external client = %s", external_client->GetClientControl()->fName);
             external_client->Close();
             fClientTable[i] = NULL;
@@ -169,6 +171,9 @@ bool JackEngine::Process(jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end
     bool res = true;
 
     // Cycle  begin
+    if (fRollingResetPending.exchange(false)) {
+        fEngineControl->ResetRollingUsecs();
+    }
     fEngineControl->CycleBegin(fClientTable, fGraphManager, cur_cycle_begin, prev_cycle_end);
 
     // Graph
@@ -666,7 +671,7 @@ int JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, 
     }
 
     fGraphManager->InitRefNum(refnum);
-    fEngineControl->ResetRollingUsecs();
+    fRollingResetPending = true;
     *shared_engine = fEngineControl->GetShmIndex();
     *shared_graph_manager = fGraphManager->GetShmIndex();
     *ref = refnum;
@@ -711,7 +716,7 @@ int JackEngine::ClientInternalOpen(const char* name, int* ref, JackEngineControl
     }
 
     fGraphManager->InitRefNum(refnum);
-    fEngineControl->ResetRollingUsecs();
+    fRollingResetPending = true;
     *shared_engine = fEngineControl;
     *shared_manager = fGraphManager;
     *ref = refnum;
@@ -792,7 +797,7 @@ int JackEngine::ClientCloseAux(int refnum, bool wait)
 
     // Cleanup...
     fSynchroTable[refnum].Destroy();
-    fEngineControl->ResetRollingUsecs();
+    fRollingResetPending = true;
     return 0;
 }
 

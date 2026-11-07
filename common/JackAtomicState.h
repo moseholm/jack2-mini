@@ -23,7 +23,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackAtomic.h"
 #include "JackCompilerDeps.h"
 #include <string.h> // for memcpy
+#include <atomic>
+#include <cassert>
 #include <cstddef>
+#include <cstdint>
 
 namespace Jack
 {
@@ -49,6 +52,10 @@ struct AtomicCounter
         info.fLongVal = 0;
     }
 
+	AtomicCounter(const AtomicCounter& obj)
+	{
+	    info.fLongVal = obj.info.fLongVal;
+	}
 	AtomicCounter(volatile const AtomicCounter& obj)
 	{
 		info.fLongVal = obj.info.fLongVal;
@@ -59,6 +66,11 @@ struct AtomicCounter
 		info.fLongVal = obj.info.fLongVal;
 	}
 
+    AtomicCounter& operator=(const AtomicCounter& obj)
+    {
+        info.fLongVal = obj.info.fLongVal;
+        return *this;
+    }
  	AtomicCounter& operator=(AtomicCounter& obj)
     {
         info.fLongVal = obj.info.fLongVal;
@@ -81,6 +93,16 @@ struct AtomicCounter
 #define NextArrayIndex(e) ((CurIndex(e) + 1) & 0x0001)
 
 /*!
+\brief Loads a shared counter atomically.  Every read of the counter goes through this, so the 16-bit fields are never read separately from the 32-bit update.
+*/
+static inline AtomicCounter LoadCounter(const AtomicCounter& counter)
+{
+    AtomicCounter result;
+    Counter(result) = std::atomic_ref<UInt32>(const_cast<UInt32&>(counter.info.fLongVal)).load();
+    return result;
+}
+
+/*!
 \brief A class to handle two states (switching from one to the other) in a lock-free manner
 */
 
@@ -94,7 +116,7 @@ class JackAtomicState
     protected:
 
         T fState[2];
-        alignas(UInt32) alignas(AtomicCounter) volatile AtomicCounter fCounter;
+        alignas(UInt32) alignas(AtomicCounter) AtomicCounter fCounter;
         SInt32 fCallWriteCounter;
 
         UInt32 WriteNextStateStartAux()
@@ -105,7 +127,7 @@ class JackAtomicState
             UInt32 next_index;
             bool need_copy;
             do {
-                old_val = fCounter;
+                old_val = LoadCounter(fCounter);
                 new_val = old_val;
                 cur_index = CurArrayIndex(new_val);
                 next_index = NextArrayIndex(new_val);
@@ -122,7 +144,7 @@ class JackAtomicState
             AtomicCounter old_val;
             AtomicCounter new_val;
             do {
-                old_val = fCounter;
+                old_val = LoadCounter(fCounter);
                 new_val = old_val;
                 NextIndex(new_val)++; // Set next index
             } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
@@ -134,6 +156,7 @@ class JackAtomicState
         {
             static_assert(offsetof(JackAtomicState, fCounter) % sizeof(fCounter) == 0,
                           "fCounter must be aligned within JackAtomicState");
+            assert(reinterpret_cast<std::uintptr_t>(&fCounter) % alignof(UInt32) == 0);
             Counter(fCounter) = 0;
             fCallWriteCounter = 0;
         }
@@ -146,7 +169,7 @@ class JackAtomicState
         */
         T* ReadCurrentState()
         {
-            return &fState[CurArrayIndex(fCounter)];
+            return &fState[CurArrayIndex(LoadCounter(fCounter))];
         }
 
         /*!
@@ -154,7 +177,7 @@ class JackAtomicState
         */
         UInt16 GetCurrentIndex()
         {
-            return CurIndex(fCounter);
+            return CurIndex(LoadCounter(fCounter));
         }
 
         /*!
@@ -165,11 +188,11 @@ class JackAtomicState
             AtomicCounter old_val;
             AtomicCounter new_val;
             do {
-                old_val = fCounter;
+                old_val = LoadCounter(fCounter);
                 new_val = old_val;
                 CurIndex(new_val) = NextIndex(new_val);	// Prepare switch
             } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
-            return &fState[CurArrayIndex(fCounter)];	// Read the counter again
+            return &fState[CurArrayIndex(LoadCounter(fCounter))];	// Read the counter again
         }
 
         /*!
@@ -180,12 +203,12 @@ class JackAtomicState
             AtomicCounter old_val;
             AtomicCounter new_val;
             do {
-                old_val = fCounter;
+                old_val = LoadCounter(fCounter);
                 new_val = old_val;
                 *result = (CurIndex(new_val) != NextIndex(new_val));
                 CurIndex(new_val) = NextIndex(new_val);  // Prepare switch
             } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
-            return &fState[CurArrayIndex(fCounter)];	// Read the counter again
+            return &fState[CurArrayIndex(LoadCounter(fCounter))];	// Read the counter again
         }
 
         /*!
@@ -195,7 +218,7 @@ class JackAtomicState
         {
             UInt32 next_index = (fCallWriteCounter++ == 0)
                                 ? WriteNextStateStartAux()
-                                : NextArrayIndex(fCounter); // We are inside a wrapping WriteNextStateStart call, NextArrayIndex can be read safely
+                                : NextArrayIndex(LoadCounter(fCounter)); // We are inside a wrapping WriteNextStateStart call, NextArrayIndex can be read safely
             return &fState[next_index];
         }
 
@@ -210,7 +233,8 @@ class JackAtomicState
 
         bool IsPendingChange()
         {
-            return CurIndex(fCounter) != NextIndex(fCounter);
+            const AtomicCounter counter = LoadCounter(fCounter);
+            return CurIndex(counter) != NextIndex(counter);
         }
 
         /*

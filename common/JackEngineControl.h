@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackEngineControl__
 #define __JackEngineControl__
 
+#include <atomic>
 #include "JackShmMem.h"
 #include "JackFrameTimer.h"
 #include "JackTransportEngine.h"
@@ -141,13 +142,13 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
         fFrameTimer.IncFrameTime(fBufferSize, callback_usecs, fPeriodUsecs);
     }
 
-    void CycleBegin(JackClientInterface** table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end)
+    void CycleBegin(std::atomic<JackClientInterface*>* table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end)
     {
         fTransport.CycleBegin(fSampleRate, cur_cycle_begin);
         CalcCPULoad(table, manager, cur_cycle_begin, prev_cycle_end);
     }
 
-    void CycleEnd(JackClientInterface** table)
+    void CycleEnd(std::atomic<JackClientInterface*>* table)
     {
         fTransport.CycleEnd(table, fSampleRate, fBufferSize);
     }
@@ -176,7 +177,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
     }
 
     // Private
-    void CalcCPULoad(JackClientInterface** table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end);
+    void CalcCPULoad(std::atomic<JackClientInterface*>* table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end);
     void ResetRollingUsecs();
 
 } POST_PACKED_STRUCTURE;

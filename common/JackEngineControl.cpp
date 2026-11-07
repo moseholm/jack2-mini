@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 namespace Jack
 {
 
-void JackEngineControl::CalcCPULoad(JackClientInterface** table,
+void JackEngineControl::CalcCPULoad(std::atomic<JackClientInterface*>* table,
                                     JackGraphManager* manager,
                                     jack_time_t cur_cycle_begin,
                                     jack_time_t prev_cycle_end)
