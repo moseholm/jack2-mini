@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 #define __STDC_FORMAT_MACROS 1
+#include <array>
 #include <inttypes.h>
 #include "JackClient.h"
 #include "JackError.h"
@@ -27,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackClientControl.h"
 #include "JackGlobals.h"
 #include "JackTime.h"
+#include "JackCString.h"
 #include "JackPortType.h"
 #include "JackMetadata.h"
 #include <math.h>
@@ -1684,7 +1686,7 @@ LIB_EXPORT void jack_get_transport_info(jack_client_t* ext_client, jack_transpor
 
     jack_error("jack_get_transport_info: deprecated");
     if (tinfo)
-        memset(tinfo, 0, sizeof(jack_transport_info_t));
+        *tinfo = {};
 }
 
 LIB_EXPORT void jack_set_transport_info(jack_client_t* ext_client, jack_transport_info_t* tinfo)
@@ -1693,7 +1695,7 @@ LIB_EXPORT void jack_set_transport_info(jack_client_t* ext_client, jack_transpor
 
     jack_error("jack_set_transport_info: deprecated");
     if (tinfo)
-        memset(tinfo, 0, sizeof(jack_transport_info_t));
+        *tinfo = {};
 }
 
 // statistics.h
@@ -2020,9 +2022,9 @@ LIB_EXPORT char *jack_client_get_uuid(jack_client_t* ext_client)
         jack_error("jack_client_get_uuid called with a NULL client");
         return NULL;
     } else {
-        char retval[JACK_UUID_STRING_SIZE];
-        jack_uuid_unparse(client->GetClientControl()->fSessionID, retval);
-        return strdup(retval);
+        std::array<char, JACK_UUID_STRING_SIZE> retval{};
+        jack_uuid_unparse(client->GetClientControl()->fSessionID, retval.data());
+        return strdup(retval.data());
     }
 }
 
@@ -2156,22 +2158,25 @@ LIB_EXPORT void jack_uuid_clear(jack_uuid_t* u)
 
 LIB_EXPORT int jack_uuid_parse(const char* b, jack_uuid_t* u)
 {
-    if (sscanf (b, "%" PRIu64, u) == 1) {
-
-        if (*u < (0x1LL << 32)) {
-            /* has not type bits set - not legal */
-            return -1;
-        }
-
-        return 0;
+    const std::string_view text = SkipNumericPrefix(b);
+    uint64_t value = 0;
+    const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
+    if (ec != std::errc()) {
+        return -1;
     }
 
-    return -1;
+    *u = value;
+    if (*u < (0x1LL << 32)) {
+        /* has not type bits set - not legal */
+        return -1;
+    }
+
+    return 0;
 }
 
 LIB_EXPORT void jack_uuid_unparse(jack_uuid_t u, char b[JACK_UUID_STRING_SIZE])
 {
-    snprintf (b, JACK_UUID_STRING_SIZE, "%" PRIu64, u);
+    Jack::FormatCString(std::span<char>(b, JACK_UUID_STRING_SIZE), "{}", static_cast<uint64_t>(u));
 }
 
 LIB_EXPORT int jack_uuid_empty(jack_uuid_t u)

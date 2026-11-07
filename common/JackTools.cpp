@@ -17,6 +17,11 @@
 
 */
 
+#include <array>
+#include <string>
+#include <filesystem>
+#include <system_error>
+#include "JackCString.h"
 #include "JackConstants.h"
 #include "driver_interface.h"
 #include "JackTools.h"
@@ -35,7 +40,7 @@ using namespace std;
 namespace Jack {
 
 #define DEFAULT_TMP_DIR "/tmp"
-    char* jack_tmpdir = (char*)DEFAULT_TMP_DIR;
+    std::string jack_tmpdir = DEFAULT_TMP_DIR;
 
     void JackTools::KillServer()
     {
@@ -44,7 +49,9 @@ namespace Jack {
 
     int JackTools::MkDir(const char* path)
     {
-        return mkdir(path, 0777) != 0;
+        std::error_code ec;
+        // create_directory() reports an existing directory as "not created", which is an error here.
+        return !std::filesystem::create_directory(path, ec);
     }
 
     int JackTools::GetPID()
@@ -74,9 +81,9 @@ namespace Jack {
         /* format the path name on the first call */
         if (user_dir[0] == '\0') {
             if (getenv("JACK_PROMISCUOUS_SERVER")) {
-                snprintf(user_dir, sizeof(user_dir), "%s/jack", jack_tmpdir);
+                Jack::FormatCString(user_dir, "{}/jack", jack_tmpdir);
             } else {
-                snprintf(user_dir, sizeof(user_dir), "%s/jack-%d", jack_tmpdir, GetUID());
+                Jack::FormatCString(user_dir, "{}/jack-{}", jack_tmpdir, GetUID());
             }
         }
 
@@ -89,16 +96,14 @@ namespace Jack {
         /* format the path name into the suppled server_dir char array,
         * assuming that server_dir is at least as large as JACK_PATH_MAX + 1 */
 
-        snprintf(server_dir, JACK_PATH_MAX + 1, "%s/%s", UserDir(), server_name);
+        Jack::FormatCString(std::span<char>(server_dir, JACK_PATH_MAX + 1), "{}/{}", UserDir(), server_name);
         return server_dir;
     }
 
     void JackTools::CleanupFiles(const char* server_name)
     {
-        DIR* dir;
-        struct dirent *dirent;
-        char dir_name[JACK_PATH_MAX + 1] = "";
-        ServerDir(server_name, dir_name);
+        std::array<char, JACK_PATH_MAX + 1> dir_name{};
+        ServerDir(server_name, dir_name.data());
 
         /* On termination, we remove all files that jackd creates so
         * subsequent attempts to start jackd will not believe that an
@@ -116,39 +121,35 @@ namespace Jack {
         * we know there is no other server actively using that name.
         */
 
+        std::error_code ec;
+        const std::filesystem::path server_dir(dir_name.data());
+
         /* nothing to do if the server directory does not exist */
-        if ((dir = opendir(dir_name)) == NULL) {
+        if (!std::filesystem::is_directory(server_dir, ec)) {
             return;
         }
 
-        /* unlink all the files in this directory, they are mine */
-        while ((dirent = readdir(dir)) != NULL) {
-
-            char fullpath[JACK_PATH_MAX + 1];
-
-            if ((strcmp(dirent->d_name, ".") == 0) || (strcmp(dirent->d_name, "..") == 0)) {
-                continue;
-            }
-
-            snprintf(fullpath, sizeof(fullpath), "%s/%s", dir_name, dirent->d_name);
-
-            if (unlink(fullpath)) {
-                jack_error("cannot unlink `%s' (%s)", fullpath, strerror(errno));
+        /* remove all the files in this directory, they are mine */
+        for (std::filesystem::directory_iterator it(server_dir, ec), end; !ec && it != end; it.increment(ec)) {
+            std::error_code remove_ec;
+            std::filesystem::remove(it->path(), remove_ec);
+            if (remove_ec) {
+                jack_error("cannot unlink `%s' (%s)", it->path().c_str(), remove_ec.message().c_str());
             }
         }
 
-        closedir(dir);
-
         /* now, delete the per-server subdirectory, itself */
-        if (rmdir(dir_name)) {
-            jack_error("cannot remove `%s' (%s)", dir_name, strerror(errno));
+        std::error_code rmdir_ec;
+        std::filesystem::remove(server_dir, rmdir_ec);
+        if (rmdir_ec) {
+            jack_error("cannot remove `%s' (%s)", dir_name.data(), rmdir_ec.message().c_str());
         }
 
         /* finally, delete the per-user subdirectory, if empty */
-        if (rmdir(UserDir())) {
-            if (errno != ENOTEMPTY) {
-                jack_error("cannot remove `%s' (%s)", UserDir(), strerror(errno));
-            }
+        std::error_code user_ec;
+        std::filesystem::remove(UserDir(), user_ec);
+        if (user_ec && user_ec != std::make_error_code(std::errc::directory_not_empty)) {
+            jack_error("cannot remove `%s' (%s)", UserDir(), user_ec.message().c_str());
         }
     }
 
@@ -156,18 +157,18 @@ namespace Jack {
     {
         FILE* in;
         size_t len;
-        char buf[JACK_PATH_MAX + 2]; /* allow tmpdir to live anywhere, plus newline, plus null */
+        std::array<char, JACK_PATH_MAX + 2> buf{}; /* allow tmpdir to live anywhere, plus newline, plus null */
 
         if ((in = popen("jackd -l", "r")) == NULL) {
             return -1;
         }
 
-        if (fgets(buf, sizeof(buf), in) == NULL) {
+        if (fgets(buf.data(), sizeof(buf), in) == NULL) {
             pclose(in);
             return -1;
         }
 
-        len = strlen(buf);
+        len = strlen(buf.data());
 
         if (buf[len - 1] != '\n') {
             /* didn't get a whole line */
@@ -175,9 +176,7 @@ namespace Jack {
             return -1;
         }
 
-        jack_tmpdir = (char *)malloc(len);
-        memcpy(jack_tmpdir, buf, len - 1);
-        jack_tmpdir[len - 1] = '\0';
+        jack_tmpdir.assign(buf.data(), len - 1);
 
         pclose(in);
         return 0;
@@ -210,7 +209,7 @@ namespace Jack {
             }
         }
 
-        snprintf(path_to_so, path_len, "%s/%s.so", internal_dir, so_name);
+        Jack::FormatCString(std::span<char>(path_to_so, path_len), "{}/{}.so", internal_dir, so_name);
     }
 
 }  // end of namespace

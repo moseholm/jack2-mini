@@ -88,6 +88,20 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         std::atomic<unsigned int> fXrunGeneration;
         unsigned int fSeenXrunGeneration;
 
+        // Counters for the realtime threads.  The audio callbacks only bump
+        // these; the messages are emitted later from a non-realtime thread.
+        std::atomic<uint64_t> fCaptureDropped;
+        std::atomic<uint64_t> fPlaybackDropped;
+
+        enum class IoError : int {
+            None = 0,
+            Wait,
+            Read,
+            Write
+        };
+        std::atomic<IoError> fIoError;
+        std::atomic<int> fIoErrorStatus;
+
         snd_ctl_t* fCtl;
         std::string fCtlName;
         JackAlsaRateElement fRateElem[2];
@@ -120,6 +134,9 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
 
         // Stops the card after an I/O error and tells the driver.
         void MarkFailed();
+        // Non-realtime reporting of conditions collected by the RT threads.
+        void ReportDrops();
+        void ReportPendingIoError();
         void UpdateDrift(bool capture_side);
         void CloseControls();
 

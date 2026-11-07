@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 project(jack2 VERSION 1.9.23 LANGUAGES C CXX)
 
@@ -11,6 +11,7 @@ endif()
 include(GNUInstallDirs)
 
 option(JACK_BUILD_TESTS "Build test programs" OFF)
+option(JACK_RESAMPLER_SIMD "Build the x86 SSE/AVX2 resampler kernels and select one at runtime" ON)
 set(JACK_MAX_CLIENTS 256 CACHE STRING "Maximum number of JACK clients")
 set(JACK_PORTS_PER_APPLICATION 2048 CACHE STRING "Maximum number of ports per application")
 
@@ -19,9 +20,31 @@ pkg_check_modules(ALSA REQUIRED IMPORTED_TARGET alsa>=1.0.18)
 pkg_check_modules(UDEV REQUIRED IMPORTED_TARGET libudev)
 find_package(Threads REQUIRED)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
+
+# C++23 support varies by compiler release.  Fail early with a useful message
+# instead of letting a partial implementation produce confusing build errors.
+if(NOT "cxx_std_23" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    message(FATAL_ERROR
+        "The C++ compiler does not support C++23.  jack2-mini requires "
+        "GCC 13 or newer, or Clang 16 or newer.")
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
+        message(FATAL_ERROR
+            "jack2-mini requires GCC 13 or newer for C++23 "
+            "(found ${CMAKE_CXX_COMPILER_VERSION}).")
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
+        message(FATAL_ERROR
+            "jack2-mini requires Clang 16 or newer for C++23 "
+            "(found ${CMAKE_CXX_COMPILER_VERSION}).")
+    endif()
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-Wall)
@@ -135,9 +158,17 @@ set_target_properties(jack PROPERTIES
     C_VISIBILITY_PRESET hidden
     CXX_VISIBILITY_PRESET hidden)
 
-add_library(jackserver SHARED ${JACK_SERVER_SOURCES})
-target_include_directories(jackserver PRIVATE ${JACK_INCLUDE_DIRS})
-target_compile_definitions(jackserver PRIVATE HAVE_CONFIG_H SERVER_SIDE)
+# The server objects are built once and shared by libjackserver and the unit
+# tests, so the sources are not compiled twice.
+add_library(jackserver_objects OBJECT ${JACK_SERVER_SOURCES})
+target_include_directories(jackserver_objects PRIVATE ${JACK_INCLUDE_DIRS})
+target_compile_definitions(jackserver_objects PRIVATE HAVE_CONFIG_H SERVER_SIDE)
+set_target_properties(jackserver_objects PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    C_VISIBILITY_PRESET hidden
+    CXX_VISIBILITY_PRESET hidden)
+
+add_library(jackserver SHARED $<TARGET_OBJECTS:jackserver_objects>)
 target_link_libraries(jackserver PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt)
 set_target_properties(jackserver PROPERTIES
     OUTPUT_NAME jackserver
@@ -167,6 +198,41 @@ jack_add_driver(dummy common/JackDummyDriver.cpp)
 jack_add_driver(loopback common/JackLoopbackDriver.cpp)
 jack_add_driver(proxy common/JackProxyDriver.cpp)
 
+# The vendored PipeWire resampler is portable C by default.  On x86 we also
+# build its SSE and AVX2 kernels, and on AArch64 its NEON kernel; the bridge
+# selects one at runtime (x86) or statically (AArch64, where NEON is baseline)
+# and keeps the C version as the fallback.  The filter tables are still
+# computed at setup time because the precomputed table is not vendored.
+include(CheckCCompilerFlag)
+set(JACK_RESAMPLER_SIMD_SOURCES)
+set(JACK_RESAMPLER_SIMD_DEFINITIONS)
+set(JACK_RESAMPLER_SIMD_ENABLED OFF)
+if(JACK_RESAMPLER_SIMD AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
+    list(APPEND JACK_RESAMPLER_SIMD_SOURCES linux/alsa/resample/resample-native-neon.c)
+    list(APPEND JACK_RESAMPLER_SIMD_DEFINITIONS HAVE_NEON)
+    set(JACK_RESAMPLER_SIMD_ENABLED ON)
+elseif(JACK_RESAMPLER_SIMD AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64|i[3-6]86)$")
+    check_c_compiler_flag("-msse" JACK_HAVE_MSSE)
+    if(JACK_HAVE_MSSE)
+        list(APPEND JACK_RESAMPLER_SIMD_SOURCES linux/alsa/resample/resample-native-sse.c)
+        list(APPEND JACK_RESAMPLER_SIMD_DEFINITIONS HAVE_SSE)
+        set_source_files_properties(linux/alsa/resample/resample-native-sse.c
+            PROPERTIES COMPILE_OPTIONS "-msse")
+        set(JACK_RESAMPLER_SIMD_ENABLED ON)
+    endif()
+
+    check_c_compiler_flag("-mavx2" JACK_HAVE_MAVX2)
+    check_c_compiler_flag("-mfma" JACK_HAVE_MFMA)
+    if(JACK_HAVE_MAVX2 AND JACK_HAVE_MFMA)
+        list(APPEND JACK_RESAMPLER_SIMD_SOURCES linux/alsa/resample/resample-native-avx2.c)
+        list(APPEND JACK_RESAMPLER_SIMD_DEFINITIONS HAVE_AVX2 HAVE_FMA)
+        set_source_files_properties(linux/alsa/resample/resample-native-avx2.c
+            PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma")
+        set(JACK_RESAMPLER_SIMD_ENABLED ON)
+    endif()
+endif()
+message(STATUS "Resampler SIMD kernels                    : ${JACK_RESAMPLER_SIMD_ENABLED}")
+
 set(JACK_ALSA_SOURCES
     common/memops.c
     linux/alsa/JackAlsaDriver.cpp
@@ -191,7 +257,8 @@ set(JACK_ALSA_SOURCES
     linux/alsa/resample/JackResampler.cpp
     linux/alsa/resample/pipewire_resample_bridge.c
     linux/alsa/resample/resample-native.c
-    linux/alsa/resample/resample-native-c.c)
+    linux/alsa/resample/resample-native-c.c
+    ${JACK_RESAMPLER_SIMD_SOURCES})
 
 set(JACK_ALSARAWMIDI_SOURCES
     linux/alsarawmidi/JackALSARawMidiDriver.cpp
@@ -209,7 +276,7 @@ target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA PkgConfig::UDEV m ${CMAK
 target_include_directories(jack_alsa PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample"
     "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample/spa-shim")
-target_compile_definitions(jack_alsa PRIVATE RESAMPLE_DISABLE_PRECOMP)
+target_compile_definitions(jack_alsa PRIVATE RESAMPLE_DISABLE_PRECOMP ${JACK_RESAMPLER_SIMD_DEFINITIONS})
 
 jack_add_driver(alsarawmidi ${JACK_ALSARAWMIDI_SOURCES})
 target_link_libraries(jack_alsarawmidi PRIVATE PkgConfig::ALSA)
@@ -265,16 +332,32 @@ if(JACK_BUILD_TESTS)
         linux/alsa/resample/JackResampler.cpp
         linux/alsa/resample/pipewire_resample_bridge.c
         linux/alsa/resample/resample-native.c
-        linux/alsa/resample/resample-native-c.c)
+        linux/alsa/resample/resample-native-c.c
+        ${JACK_RESAMPLER_SIMD_SOURCES})
     add_executable(jack_alsa_unit ${JACK_ALSA_UNIT_SOURCES})
     target_include_directories(jack_alsa_unit PRIVATE
         ${JACK_INCLUDE_DIRS}
         "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa"
         "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample"
         "${CMAKE_CURRENT_SOURCE_DIR}/linux/alsa/resample/spa-shim")
-    target_compile_definitions(jack_alsa_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE RESAMPLE_DISABLE_PRECOMP)
+    target_compile_definitions(jack_alsa_unit PRIVATE
+        HAVE_CONFIG_H SERVER_SIDE RESAMPLE_DISABLE_PRECOMP
+        ${JACK_RESAMPLER_SIMD_DEFINITIONS})
     target_link_libraries(jack_alsa_unit PRIVATE jackserver m)
     add_test(NAME alsa_secondary_unit COMMAND jack_alsa_unit)
+
+    # The realtime message buffer, run against the real singleton and flush thread.
+    # The server's internals are hidden in libjackserver, so the test links
+    # the server objects directly.
+    add_executable(jack_message_unit tests/message_buffer_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
+    target_include_directories(jack_message_unit PRIVATE ${JACK_INCLUDE_DIRS})
+    target_compile_definitions(jack_message_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
+    target_link_libraries(jack_message_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
+    add_test(NAME message_buffer_unit COMMAND jack_message_unit)
+
+    add_executable(jack_cstring_unit tests/cstring_unit.cpp)
+    target_include_directories(jack_cstring_unit PRIVATE ${JACK_INCLUDE_DIRS})
+    add_test(NAME cstring_unit COMMAND jack_cstring_unit)
 
     # A test-only resampler plugin, loaded by name from JACK_RESAMPLER_PATH.
     add_library(passthrough_test MODULE tests/alsa_test_resampler_plugin.c)

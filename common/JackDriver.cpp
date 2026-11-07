@@ -18,6 +18,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
+#include <array>
 #include "JackSystemDeps.h"
 #include "JackDriver.h"
 #include "JackTime.h"
@@ -45,7 +46,7 @@ JackDriver::JackDriver(const char* name, const char* alias, JackLockedEngine* en
 {
     assert(strlen(name) < JACK_CLIENT_NAME_SIZE);
     fSynchroTable = table;
-    strcpy(fAliasName, alias);
+    strcpy(fAliasName.data(), alias);
     fEngine = engine;
     fGraphManager = NULL;
     fBeginDateUst = 0;
@@ -92,15 +93,15 @@ int JackDriver::Open(jack_nframes_t buffer_size,
     jack_log("JackDriver::Open capture_driver_name = %s", capture_driver_name);
     jack_log("JackDriver::Open playback_driver_name = %s", playback_driver_name);
     int refnum = -1;
-    char name_res[JACK_CLIENT_NAME_SIZE + 1];
+    std::array<char, JACK_CLIENT_NAME_SIZE + 1> name_res{};
     int status;
 
     // Check name and possibly rename
-    if (fEngine->ClientCheck(fClientControl.fName, -1, name_res, JACK_PROTOCOL_VERSION, (int)JackNullOption, (int*)&status) < 0) {
+    if (fEngine->ClientCheck(fClientControl.fName, -1, name_res.data(), JACK_PROTOCOL_VERSION, (int)JackNullOption, (int*)&status) < 0) {
         jack_error("Client name = %s conflits with another running client", fClientControl.fName);
         return -1;
     }
-    strcpy(fClientControl.fName, name_res);
+    strcpy(fClientControl.fName, name_res.data());
 
     if (fEngine->ClientInternalOpen(fClientControl.fName, &refnum, &fEngineControl, &fGraphManager, this, false) != 0) {
         jack_error("Cannot allocate internal client for driver");
@@ -122,8 +123,8 @@ int JackDriver::Open(jack_nframes_t buffer_size,
     assert(strlen(capture_driver_name) < JACK_CLIENT_NAME_SIZE);
     assert(strlen(playback_driver_name) < JACK_CLIENT_NAME_SIZE);
 
-    strcpy(fCaptureDriverName, capture_driver_name);
-    strcpy(fPlaybackDriverName, playback_driver_name);
+    strcpy(fCaptureDriverName.data(), capture_driver_name);
+    strcpy(fPlaybackDriverName.data(), playback_driver_name);
 
     fEngineControl->UpdateTimeOut();
 
@@ -429,18 +430,18 @@ static string RemoveLast(const string& name)
 void JackDriver::SaveConnections(int alias)
 {
     const char** connections;
-    char alias1[REAL_JACK_PORT_NAME_SIZE+1];
-    char alias2[REAL_JACK_PORT_NAME_SIZE+1];
-    char system_alias1[REAL_JACK_PORT_NAME_SIZE+1];
-    char system_alias2[REAL_JACK_PORT_NAME_SIZE+1];
+    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> alias1{};
+    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> alias2{};
+    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> system_alias1{};
+    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> system_alias2{};
     char* aliases[2];
     char* system_aliases[2];
 
-    aliases[0] = alias1;
-    aliases[1] = alias2;
+    aliases[0] = alias1.data();
+    aliases[1] = alias2.data();
     
-    system_aliases[0] = system_alias1;
-    system_aliases[1] = system_alias2;
+    system_aliases[0] = system_alias1.data();
+    system_aliases[1] = system_alias2.data();
     
     fConnections.clear();
    
@@ -513,12 +514,12 @@ void JackDriver::SaveConnections(int alias)
 
 string JackDriver::MatchPortName(const char* name, const char** ports, int alias, const std::string& type)
 {
-    char alias1[REAL_JACK_PORT_NAME_SIZE+1];
-    char alias2[REAL_JACK_PORT_NAME_SIZE+1];
+    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> alias1{};
+    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> alias2{};
     char* aliases[2];
   
-    aliases[0] = alias1;
-    aliases[1] = alias2;
+    aliases[0] = alias1.data();
+    aliases[1] = alias2.data();
   
     for (int i = 0; ports && ports[i]; ++i) {
         

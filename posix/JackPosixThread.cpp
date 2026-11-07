@@ -128,7 +128,7 @@ int JackPosixThread::StartImp(jack_native_thread_t* thread, int priority, int re
             return -1;
         }
 
-        memset(&rt_param, 0, sizeof(rt_param));
+        rt_param = {};
         rt_param.sched_priority = priority;
 
         if ((res = pthread_attr_setschedparam(&attributes, &rt_param))) {
@@ -236,7 +236,7 @@ int JackPosixThread::AcquireRealTimeImp(jack_native_thread_t thread, int priorit
 {
     struct sched_param rtparam;
     int res;
-    memset(&rtparam, 0, sizeof(rtparam));
+    rtparam = {};
     rtparam.sched_priority = priority;
 
     jack_log("JackPosixThread::AcquireRealTimeImp priority = %d", priority);
@@ -270,7 +270,7 @@ int JackPosixThread::DropRealTimeImp(jack_native_thread_t thread)
 {
     struct sched_param rtparam;
     int res;
-    memset(&rtparam, 0, sizeof(rtparam));
+    rtparam = {};
     rtparam.sched_priority = 0;
 
     if ((res = pthread_setschedparam(thread, SCHED_OTHER, &rtparam)) != 0) {

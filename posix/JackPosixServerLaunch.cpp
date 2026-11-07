@@ -17,6 +17,11 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
+#include <format>
+#include <fstream>
+#include <string>
+#include <string_view>
+#include <vector>
 #include "JackConstants.h"
 #include "JackChannel.h"
 #include "JackLibGlobals.h"
@@ -27,108 +32,94 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 using namespace Jack;
 
+/* Split a command line into words.  Words are separated by spaces, and a word
+ * that starts with a double quote runs to the closing quote. */
+static std::vector<std::string> SplitCommandLine(std::string_view text)
+{
+    std::vector<std::string> words;
+    size_t pos = 0;
+    while (true) {
+        while (pos < text.size() && text[pos] == ' ') {
+            pos++;
+        }
+        if (pos >= text.size()) {
+            break;
+        }
+
+        const std::string_view rest = text.substr(pos);
+        size_t length;
+        if (rest[0] == '"') {
+            pos++;
+            length = text.substr(pos).find('"');
+        } else {
+            length = rest.find(' ');
+        }
+        if (length == std::string_view::npos) {
+            length = text.size() - pos;
+        }
+        if (length == 0) {
+            break;
+        }
+        words.emplace_back(text.substr(pos, length));
+        pos += length + 1;
+    }
+    return words;
+}
+
+/* The words of the first .jackdrc that exists, joined by single spaces. */
+static std::string ReadJackdrc()
+{
+    std::vector<std::string> candidates;
+    if (const char* home = getenv("HOME")) {
+        candidates.push_back(std::format("{}/.jackdrc", home));
+    }
+    candidates.emplace_back("/etc/jackdrc");
+
+    for (const std::string& path : candidates) {
+        std::ifstream file(path);
+        if (!file.is_open()) {
+            continue;
+        }
+        std::string joined;
+        for (std::string word; file >> word;) {
+            if (!joined.empty()) {
+                joined += ' ';
+            }
+            joined += word;
+        }
+        return joined;
+    }
+    return {};
+}
+
 /* Exec the JACK server in this process.  Does not return. */
 static void start_server_classic_aux(const char* server_name)
 {
-    FILE* fp = 0;
-    char filename[255];
-    char arguments[255];
-    char buffer[255];
-    char* command = 0;
-    size_t pos = 0;
-    size_t result = 0;
-    char** argv = 0;
-    int i = 0;
-    int good = 0;
-    int res;
-
-    snprintf(filename, 255, "%s/.jackdrc", getenv("HOME"));
-    fp = fopen(filename, "r");
-
-    if (!fp) {
-        fp = fopen("/etc/jackdrc", "r");
-    }
-    /* if still not found, check old config name for backwards compatibility */
-    if (!fp) {
-        fp = fopen("/etc/jackd.conf", "r");
+    std::vector<std::string> words = SplitCommandLine(ReadJackdrc());
+    if (words.empty()) {
+        words = SplitCommandLine(std::format("{}/jackd -T -d {}", JACK_LOCATION, JACK_DEFAULT_DRIVER));
     }
 
-    if (fp) {
-        arguments[0] = '\0';
-        res = fscanf(fp, "%s", buffer);
-        while (res != 0 && res != EOF) {
-            strcat(arguments, buffer);
-            strcat(arguments, " ");
-            res = fscanf(fp, "%s", buffer);
-        }
-        if (strlen(arguments) > 0) {
-            good = 1;
-        }
-        fclose(fp);
+    /* insert -T and -nserver_name in front of arguments */
+    std::vector<std::string> argv_words;
+    argv_words.push_back(words[0]);
+    argv_words.emplace_back("-T");
+    if (server_name) {
+        argv_words.push_back(std::format("-n{}", server_name));
     }
+    argv_words.insert(argv_words.end(), words.begin() + 1, words.end());
 
-    if (!good) {
-        command = (char*)(JACK_LOCATION "/jackd");
-        strncpy(arguments, JACK_LOCATION "/jackd -T -d " JACK_DEFAULT_DRIVER, 255);
-    } else {
-        result = strcspn(arguments, " ");
-        command = (char*)malloc(result + 1);
-        strncpy(command, arguments, result);
-        command[result] = '\0';
+    std::vector<char*> argv;
+    for (std::string& word : argv_words) {
+        argv.push_back(word.data());
     }
+    argv.push_back(nullptr);
 
-    argv = (char**)malloc(255);
-
-    while (1) {
-        /* insert -T and -nserver_name in front of arguments */
-        if (i == 1) {
-            argv[i] = (char*)malloc(strlen ("-T") + 1);
-            strcpy (argv[i++], "-T");
-            if (server_name) {
-                size_t optlen = strlen("-n");
-                char* buf = (char*)malloc(optlen + strlen(server_name) + 1);
-                strcpy(buf, "-n");
-                strcpy(buf + optlen, server_name);
-                argv[i++] = buf;
-            }
-        }
-
-        /* skip whitespace */
-        while (pos < strlen(arguments) && arguments[pos] && arguments[pos] == ' ') {
-            ++pos;
-        }
-
-        if (pos >= strlen(arguments)) {
-            break;
-        }
-
-        if (arguments[pos] == '\"') {
-            ++pos;
-            result = strcspn(arguments + pos, "\"");
-        } else {
-            result = strcspn(arguments + pos, " ");
-        }
-
-        if (0 == result) {
-            break;
-        }
-
-        argv[i] = (char*)malloc(result + 1);
-        strncpy(argv[i], arguments + pos, result);
-        argv[i][result] = '\0';
-        pos += result + 1;
-
-        if (++i > 253) {
-            break;
-        }
-    }
-
-    argv[i] = 0;
-    execv(command, argv);
+    execv(argv[0], argv.data());
 
     /* If execv() succeeds, it does not return. There's no point
      * in calling jack_error() here in the child process. */
-    fprintf(stderr, "exec of JACK server (command = \"%s\") failed: %s\n", command, strerror(errno));
+    fprintf(stderr, "exec of JACK server (command = \"%s\") failed: %s\n", argv[0], strerror(errno));
 }
 
 static int start_server_classic(const char* server_name)

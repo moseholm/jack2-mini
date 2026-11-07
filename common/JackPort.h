@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "types.h"
 #include "JackConstants.h"
 #include "JackCompilerDeps.h"
+#include <string_view>
 
 namespace Jack
 {
@@ -82,7 +83,7 @@ class SERVER_EXPORT JackPort
         int GetAliases(char* const aliases[2]);
         int SetAlias(const char* alias);
         int UnsetAlias(const char* alias);
-        bool NameEquals(const char* target);
+        bool NameEquals(std::string_view target);
 
         int	GetFlags() const;
         const char* GetType() const;

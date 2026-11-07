@@ -19,9 +19,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackPosixProcessSync.h"
 #include "JackError.h"
+#include <chrono>
 
 namespace Jack
 {
+
+// pthread_cond_timedwait() takes an absolute CLOCK_REALTIME deadline, which is
+// what std::chrono::system_clock is on Linux.
+static timespec RealtimeDeadline(long usec)
+{
+    const auto deadline = std::chrono::system_clock::now() + std::chrono::microseconds(usec);
+    const auto secs = std::chrono::time_point_cast<std::chrono::seconds>(deadline);
+    const auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(deadline - secs);
+    return timespec{static_cast<time_t>(secs.time_since_epoch().count()), static_cast<long>(nanos.count())};
+}
 
 void JackPosixProcessSync::Signal()
 {
@@ -108,29 +119,21 @@ bool JackPosixProcessSync::TimedWait(long usec)
     ThrowIf(!pthread_equal(pthread_self(), fOwner), JackException("JackPosixProcessSync::TimedWait: a thread has to have locked a mutex before it can wait"));
     fOwner = 0;
 
-    struct timeval T0, T1;
-    timespec time;
-    struct timeval now;
     int res;
 
     jack_log("JackPosixProcessSync::TimedWait time out = %ld", usec);
-    gettimeofday(&T0, 0);
+    const auto start = std::chrono::steady_clock::now();
 
-    gettimeofday(&now, 0);
-    unsigned int next_date_usec = now.tv_usec + usec;
-    time.tv_sec = now.tv_sec + (next_date_usec / 1000000);
-    time.tv_nsec = (next_date_usec % 1000000) * 1000;
-
-    res = pthread_cond_timedwait(&fCond, &fMutex, &time);
+    const timespec deadline = RealtimeDeadline(usec);
+    res = pthread_cond_timedwait(&fCond, &fMutex, &deadline);
     if (res != 0 && res != ETIMEDOUT) {
         jack_error("JackPosixProcessSync::TimedWait error usec = %ld err = %s", usec, strerror(res));
     } else {
         fOwner = pthread_self();
     }
 
-    gettimeofday(&T1, 0);
     jack_log("JackPosixProcessSync::TimedWait finished delta = %5.1lf",
-             (1e6 * T1.tv_sec - 1e6 * T0.tv_sec + T1.tv_usec - T0.tv_usec));
+             std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count());
 
     return (res == 0);
 }
@@ -138,9 +141,6 @@ bool JackPosixProcessSync::TimedWait(long usec)
 // TO DO : check thread consistency?
 bool JackPosixProcessSync::LockedTimedWait(long usec)
 {
-    struct timeval T0, T1;
-    timespec time;
-    struct timeval now;
     int res1, res2;
 
     res1 = pthread_mutex_lock(&fMutex);
@@ -149,25 +149,21 @@ bool JackPosixProcessSync::LockedTimedWait(long usec)
     }
 
     jack_log("JackPosixProcessSync::TimedWait time out = %ld", usec);
-    gettimeofday(&T0, 0);
+    const auto start = std::chrono::steady_clock::now();
 
-    gettimeofday(&now, 0);
-    unsigned int next_date_usec = now.tv_usec + usec;
-    time.tv_sec = now.tv_sec + (next_date_usec / 1000000);
-    time.tv_nsec = (next_date_usec % 1000000) * 1000;
-    res2 = pthread_cond_timedwait(&fCond, &fMutex, &time);
+    const timespec deadline = RealtimeDeadline(usec);
+    res2 = pthread_cond_timedwait(&fCond, &fMutex, &deadline);
     if (res2 != 0) {
         jack_error("JackPosixProcessSync::LockedTimedWait error usec = %ld err = %s", usec, strerror(res2));
     }
 
-    gettimeofday(&T1, 0);
     res1 = pthread_mutex_unlock(&fMutex);
     if (res1 != 0) {
         jack_error("JackPosixProcessSync::LockedTimedWait error err = %s", usec, strerror(res1));
     }
 
     jack_log("JackPosixProcessSync::TimedWait finished delta = %5.1lf",
-             (1e6 * T1.tv_sec - 1e6 * T0.tv_sec + T1.tv_usec - T0.tv_usec));
+             std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count());
 
     return (res2 == 0);
 }

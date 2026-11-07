@@ -19,6 +19,7 @@
 
  */
 
+#include <array>
 #include <stdarg.h>
 #include <stdio.h>
 #include "JackError.h"
@@ -59,19 +60,19 @@ void jack_log_function(int level, const char *message)
 
 static void jack_format_and_log(int level, const char *prefix, const char *fmt, va_list ap)
 {
-    char buffer[256];
+    std::array<char, 256> buffer{};
     size_t len;
     jack_log_function_t log_function;
 
     if (prefix != NULL) {
         len = strlen(prefix);
         assert(len < 256);
-        memcpy(buffer, prefix, len);
+        memcpy(buffer.data(), prefix, len);
     } else {
         len = 0;
     }
 
-    vsnprintf(buffer + len, sizeof(buffer) - len, fmt, ap);
+    vsnprintf(buffer.data() + len, sizeof(buffer) - len, fmt, ap);
 
     log_function = (jack_log_function_t)jack_tls_get(JackGlobals::fKeyLogFunction);
 
@@ -86,7 +87,7 @@ static void jack_format_and_log(int level, const char *prefix, const char *fmt, 
         //log_function(LOG_LEVEL_INFO, "++++++ Using thread-specific log function");
     }
 
-    log_function(level, buffer);
+    log_function(level, buffer.data());
 }
 
 SERVER_EXPORT void jack_error(const char *fmt, ...)

@@ -44,6 +44,9 @@ void jack_pw_resampler_process(struct jack_pw_resampler *r,
                                float *const *dst, unsigned int *out_len);
 unsigned int jack_pw_resampler_delay(struct jack_pw_resampler *r);
 
+/* Name of the kernel selected at creation time ("c", "sse", "avx2", ...). */
+const char *jack_pw_resampler_kernel_name(struct jack_pw_resampler *r);
+
 #ifdef __cplusplus
 }
 #endif

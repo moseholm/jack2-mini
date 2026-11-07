@@ -17,12 +17,14 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
+#include <array>
 #include <memory>
 #include <new>
 #include <stdexcept>
 
 #include <alsa/asoundlib.h>
 
+#include "JackCString.h"
 #include "JackALSARawMidiDriver.h"
 #include "JackALSARawMidiUtil.h"
 #include "JackEngineControl.h"
@@ -373,10 +375,10 @@ JackALSARawMidiDriver::Open(bool capturing, bool playing, int in_channels,
         if (card == -1) {
             break;
         }
-        char name[32];
-        snprintf(name, sizeof(name), "hw:%d", card);
+        std::array<char, 32> name{};
+        Jack::FormatCString(name, "hw:{}", card);
         snd_ctl_t *control;
-        code = snd_ctl_open(&control, name, SND_CTL_NONBLOCK);
+        code = snd_ctl_open(&control, name.data(), SND_CTL_NONBLOCK);
         if (code) {
             HandleALSAError("Open", "snd_ctl_open", code);
             continue;

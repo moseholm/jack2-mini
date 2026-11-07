@@ -20,10 +20,13 @@
 
 */
 
+#include <array>
+#include <utility>
 #include <stdint.h>
 #include <dirent.h>
 #include <pthread.h>
 
+#include "JackCString.h"
 #include "types.h"
 #include <string.h>
 #include <errno.h>
@@ -263,7 +266,7 @@ jackctl_add_driver_parameters(
             jackctl_value.b = descriptor_ptr->value.i;
             break;
         default:
-            jack_error("Unknown driver parameter type %i", (int)descriptor_ptr->type);
+            jack_error("Unknown driver parameter type %u", std::to_underlying(descriptor_ptr->type));
             assert(0);
             goto fail;
         }
@@ -357,7 +360,7 @@ jackctl_create_param_list(
                 retparam_ptr->value.i = param_ptr->value_ptr->b;
                 break;
             default:
-                jack_error("Unknown parameter type %i", (int)param_ptr->type);
+                jack_error("Unknown parameter type %u", std::to_underlying(param_ptr->type));
                 assert(0);
                 goto free;
             }
@@ -547,8 +550,8 @@ signal_handler(int sig)
        gets called unless we are already shutting down after
        another signal.
     */
-    char buf[64];
-    snprintf(buf, sizeof(buf), "Received signal %d during shutdown (ignored)\n", sig);
+    std::array<char, 64> buf{};
+    Jack::FormatCString(buf, "Received signal {} during shutdown (ignored)\n", sig);
 }
 
 SERVER_EXPORT jackctl_sigmask_t *
@@ -1136,7 +1139,7 @@ SERVER_EXPORT union jackctl_parameter_value jackctl_parameter_get_enum_constrain
     union jackctl_parameter_value jackctl_value;
 
     if (!parameter_ptr) {
-        memset(&jackctl_value, 0, sizeof(jackctl_value));
+        jackctl_value = {};
         return jackctl_value;
     }
 
@@ -1157,7 +1160,7 @@ SERVER_EXPORT union jackctl_parameter_value jackctl_parameter_get_enum_constrain
         strcpy(jackctl_value.str, value_ptr->str);
         break;
     default:
-        jack_error("Bad driver parameter type %i (enum constraint)", (int)parameter_ptr->type);
+        jack_error("Bad driver parameter type %u (enum constraint)", std::to_underlying(parameter_ptr->type));
         assert(0);
     }
 
@@ -1186,7 +1189,7 @@ SERVER_EXPORT void jackctl_parameter_get_range_constraint(jackctl_parameter *par
         max_ptr->ui = parameter_ptr->constraint_ptr->constraint.range.max.ui;
         return;
     default:
-        jack_error("Bad driver parameter type %i (range constraint)", (int)parameter_ptr->type);
+        jack_error("Bad driver parameter type %u (range constraint)", std::to_underlying(parameter_ptr->type));
         assert(0);
     }
 }
@@ -1222,7 +1225,7 @@ SERVER_EXPORT union jackctl_parameter_value jackctl_parameter_get_value(jackctl_
         return *parameter_ptr->value_ptr;
     } else  {
         union jackctl_parameter_value jackctl_value;
-        memset(&jackctl_value, 0, sizeof(jackctl_value));
+        jackctl_value = {};
         return jackctl_value;
     }
 }
@@ -1263,7 +1266,7 @@ SERVER_EXPORT union jackctl_parameter_value jackctl_parameter_get_default_value(
         return *parameter_ptr->default_value_ptr;
     } else  {
         union jackctl_parameter_value jackctl_value;
-        memset(&jackctl_value, 0, sizeof(jackctl_value));
+        jackctl_value = {};
         return jackctl_value;
     }
 }

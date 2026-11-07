@@ -18,11 +18,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
+#include <array>
 #include "JackPort.h"
 #include "JackError.h"
 #include "JackPortType.h"
-#include <stdio.h>
+#include "JackCString.h"
 #include <assert.h>
+#include <format>
+#include <span>
+#include <string_view>
 
 namespace Jack
 {
@@ -42,7 +46,7 @@ bool JackPort::Allocate(int refnum, const char* port_name, const char* port_type
     fTypeId = id;
     fFlags = flags;
     fRefNum = refnum;
-    strcpy(fName, port_name);
+    CopyCString(fName, port_name);
     fInUse = true;
     fLatency = 0;
     fTotalLatency = 0;
@@ -225,12 +229,12 @@ void JackPort::SetName(const char* new_name)
 {
     char* colon = strchr(fName, ':');
     int len = sizeof(fName) - ((int) (colon - fName)) - 2;
-    snprintf(colon + 1, len, "%s", new_name);
+    CopyCString(std::span<char>(colon + 1, len), new_name);
 }
 
-bool JackPort::NameEquals(const char* target)
+bool JackPort::NameEquals(std::string_view target)
 {
-    char buf[REAL_JACK_PORT_NAME_SIZE+1];
+    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> buf{};
 
     /* this nasty, nasty kludge is here because between 0.109.0 and 0.109.1,
        the ALSA audio backend had the name "ALSA", whereas as before and
@@ -239,14 +243,14 @@ bool JackPort::NameEquals(const char* target)
        state.
     */
 
-    if (strncmp(target, "ALSA:capture", 12) == 0 || strncmp(target, "ALSA:playback", 13) == 0) {
-        snprintf(buf, sizeof(buf), "alsa_pcm%s", target + 4);
-        target = buf;
+    if (target.starts_with("ALSA:capture") || target.starts_with("ALSA:playback")) {
+        FormatCString(buf, "alsa_pcm{}", target.substr(4));
+        target = buf.data();
     }
 
-    return (strcmp(fName, target) == 0
-            || strcmp(fAlias1, target) == 0
-            || strcmp(fAlias2, target) == 0);
+    return (std::string_view(fName) == target
+            || std::string_view(fAlias1) == target
+            || std::string_view(fAlias2) == target);
 }
 
 int JackPort::GetAliases(char* const aliases[2])
@@ -254,12 +258,12 @@ int JackPort::GetAliases(char* const aliases[2])
     int cnt = 0;
 
     if (fAlias1[0] != '\0') {
-        strncpy(aliases[0], fAlias1, REAL_JACK_PORT_NAME_SIZE);
+        CopyCString(std::span<char>(aliases[0], REAL_JACK_PORT_NAME_SIZE), fAlias1);
         cnt++;
     }
 
     if (fAlias2[0] != '\0') {
-        strncpy(aliases[1], fAlias2, REAL_JACK_PORT_NAME_SIZE);
+        CopyCString(std::span<char>(aliases[1], REAL_JACK_PORT_NAME_SIZE), fAlias2);
         cnt++;
     }
 
@@ -269,9 +273,9 @@ int JackPort::GetAliases(char* const aliases[2])
 int JackPort::SetAlias(const char* alias)
 {
     if (fAlias1[0] == '\0') {
-        strncpy(fAlias1, alias, sizeof(fAlias1));
+        CopyCString(fAlias1, alias);
     } else if (fAlias2[0] == '\0') {
-        strncpy(fAlias2, alias, sizeof(fAlias2));
+        CopyCString(fAlias2, alias);
     } else {
         return -1;
     }

@@ -17,12 +17,19 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
+#include <array>
+#include <format>
+#include <fstream>
+#include <string>
+#include <vector>
 #include "JackServerGlobals.h"
 #include "JackLockedEngine.h"
 #include "JackTools.h"
+#include "JackCString.h"
 #include "shm.h"
 #include <getopt.h>
 #include <errno.h>
+#include <span>
 
 static char* server_name = NULL;
 
@@ -107,7 +114,7 @@ bool JackServerGlobals::Init()
     int opt = 0;
     int option_index = 0;
     char *master_driver_name = NULL;
-    char **master_driver_args = NULL;
+    std::vector<char*> master_driver_args;
     JSList* master_driver_params = NULL;
     jack_driver_desc_t* driver_desc;
     jack_timer_type_t clock_source = JACK_TIMER_SYSTEM_CLOCK;
@@ -119,11 +126,11 @@ bool JackServerGlobals::Init()
     int res;
     int replace_registry = 0;
 
-    FILE* fp = 0;
-    char filename[255];
-    char buffer[255];
-    int argc = 0;
-    char* argv[32];
+    // True once this process has registered the server name, so that errors know what to undo.
+    bool server_registered = false;
+    // The arguments from the first .jackdrc found, the first being the program name.
+    std::vector<std::string> rc_tokens;
+    std::vector<char*> argv;
 
     // First user starts the server
     if (fUserCount++ == 0) {
@@ -157,34 +164,35 @@ bool JackServerGlobals::Init()
                                        { 0, 0, 0, 0 }
                                    };
 
-        snprintf(filename, 255, "%s/.jackdrc", getenv("HOME"));
-        fp = fopen(filename, "r");
-
-        if (!fp) {
-            fp = fopen("/etc/jackdrc", "r");
+        std::vector<std::string> rc_files;
+        if (const char* home = getenv("HOME")) {
+            rc_files.push_back(std::format("{}/.jackdrc", home));
         }
-        // if still not found, check old config name for backwards compatibility
-        if (!fp) {
-            fp = fopen("/etc/jackd.conf", "r");
-        }
+        rc_files.emplace_back("/etc/jackdrc");
+        rc_files.emplace_back("/etc/jackd.conf");
 
-        argc = 0;
-        if (fp) {
-            res = fscanf(fp, "%s", buffer);
-            while (res != 0 && res != EOF) {
-                argv[argc] = (char*)malloc(64);
-                strcpy(argv[argc], buffer);
-                res = fscanf(fp, "%s", buffer);
-                argc++;
+        for (const std::string& path : rc_files) {
+            std::ifstream rc(path);
+            if (!rc.is_open()) {
+                continue;
             }
-            fclose(fp);
+            for (std::string token; rc >> token;) {
+                rc_tokens.push_back(token);
+            }
+            break;
         }
+
+        for (std::string& token : rc_tokens) {
+            argv.push_back(token.data());
+        }
+        const int argc = static_cast<int>(argv.size());
+
 
         opterr = 0;
         optind = 1; // Important : to reset argv parsing
 
         while (!master_driver_name &&
-                (opt = getopt_long(argc, argv, options, long_options, &option_index)) != EOF) {
+                (opt = getopt_long(argc, argv.data(), options, long_options, &option_index)) != EOF) {
 
             switch (opt) {
 
@@ -209,7 +217,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 'L':
-                    loopback = atoi(optarg);
+                    loopback = Jack::ParseLeadingInteger<int>(optarg);
                     break;
 
                  case 'X':
@@ -221,7 +229,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 'p':
-                    port_max = (unsigned int)atol(optarg);
+                    port_max = static_cast<unsigned int>(Jack::ParseLeadingInteger<long>(optarg));
                     break;
 
                 case 'm':
@@ -243,7 +251,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 'P':
-                    realtime_priority = atoi(optarg);
+                    realtime_priority = Jack::ParseLeadingInteger<int>(optarg);
                     break;
 
                 case 'r':
@@ -259,7 +267,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 't':
-                    client_timeout = atoi(optarg);
+                    client_timeout = Jack::ParseLeadingInteger<int>(optarg);
                     break;
 
                 default:
@@ -292,14 +300,14 @@ bool JackServerGlobals::Init()
             goto error;
         }
 
-        master_driver_args = (char**)malloc(sizeof(char*) * driver_nargs);
+        master_driver_args.assign(driver_nargs, nullptr);
         master_driver_args[0] = master_driver_name;
 
         for (i = 1; i < driver_nargs; i++) {
             master_driver_args[i] = argv[optind++];
         }
 
-        if (jack_parse_driver_params(driver_desc, driver_nargs, master_driver_args, &master_driver_params)) {
+        if (jack_parse_driver_params(driver_desc, driver_nargs, master_driver_args.data(), &master_driver_params)) {
             goto error;
         }
 
@@ -321,6 +329,7 @@ bool JackServerGlobals::Init()
             default:
                 jack_info("server `%s' registered", server_name);
         }
+        server_registered = true;
 
         /* clean up shared memory and files from any previous instance of this server name */
         jack_cleanup_shm();
@@ -330,10 +339,6 @@ bool JackServerGlobals::Init()
             client_timeout = 500; /* 0.5 sec; usable when non realtime. */
         }
 
-        for (i = 0; i < argc; i++) {
-            free(argv[i]);
-        }
-
         int res = Start(server_name, driver_desc, master_driver_params, sync, temporary, client_timeout, realtime, realtime_priority, port_max, verbose_aux, clock_source, JACK_DEFAULT_SELF_CONNECT_MODE);
         if (res < 0) {
             jack_error("Cannot start server... exit");
@@ -341,6 +346,7 @@ bool JackServerGlobals::Init()
             jack_cleanup_shm();
             JackTools::CleanupFiles(server_name);
             jack_unregister_server(server_name);
+            server_registered = false;
             goto error;
         }
 
@@ -386,7 +392,12 @@ error:
     if (master_driver_params) {
         jack_free_driver_params(master_driver_params);
     }
-    Destroy();
+    if (server_registered) {
+        Destroy();
+    } else {
+        // Nothing was set up yet, so only this user's count needs to be undone.
+        --fUserCount;
+    }
     return false;
 }
 
@@ -394,7 +405,10 @@ void JackServerGlobals::Destroy()
 {
     if (--fUserCount == 0) {
         jack_log("JackServerGlobals Destroy");
-        Stop();
+        // Init() can fail before the server exists, so there may be nothing to stop.
+        if (fInstance != nullptr) {
+            Stop();
+        }
         Delete();
         jack_cleanup_shm();
         JackTools::CleanupFiles(server_name);

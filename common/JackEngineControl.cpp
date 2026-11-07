@@ -28,11 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 namespace Jack
 {
 
-static inline jack_time_t JACK_MAX(jack_time_t a, jack_time_t b)
-{
-    return (a < b) ? b : a;
-}
-
 void JackEngineControl::CalcCPULoad(JackClientInterface** table,
                                     JackGraphManager* manager,
                                     jack_time_t cur_cycle_begin,
@@ -48,7 +43,7 @@ void JackEngineControl::CalcCPULoad(JackClientInterface** table,
             JackClientInterface* client = table[i];
             JackClientTiming* timing = manager->GetClientTiming(i);
             if (client && client->GetClientControl()->fActive && timing->fStatus == Finished) {
-                last_cycle_end = JACK_MAX(last_cycle_end, timing->fFinishedAt);
+                last_cycle_end = std::max(last_cycle_end, timing->fFinishedAt);
             }
         }
     }
@@ -69,10 +64,10 @@ void JackEngineControl::CalcCPULoad(JackClientInterface** table,
 
         for (int i = 0; i < JACK_ENGINE_ROLLING_COUNT; i++) {
             avg_usecs += fRollingClientUsecs[i]; // This is really a running total to be averaged later
-            max_usecs = JACK_MAX(fRollingClientUsecs[i], max_usecs);
+            max_usecs = std::max(fRollingClientUsecs[i], max_usecs);
         }
 
-        fMaxUsecs = JACK_MAX(fMaxUsecs, max_usecs);
+        fMaxUsecs = std::max(fMaxUsecs, max_usecs);
 
         if (fRollingClientUsecsCnt == fRollingInterval)
         {

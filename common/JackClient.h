@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackClient__
 #define __JackClient__
 
+#include <array>
 #include "JackClientInterface.h"
 #include "JackThread.h"
 #include "JackConstants.h"
@@ -92,7 +93,7 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         void* fLatencyArg;
         void* fPropertyChangeArg;
 
-        char fServerName[JACK_SERVER_NAME_SIZE+1];
+        std::array<char, JACK_SERVER_NAME_SIZE+1> fServerName{};
 
         JackThread fThread;    /*! Thread to execute the Process function */
         detail::JackClientChannelInterface* fChannel;
@@ -132,7 +133,7 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         JackClient(JackSynchro* table);
         virtual ~JackClient();
         
-        char* GetServerName() { return fServerName; }
+        char* GetServerName() { return fServerName.data(); }
 
         virtual int Open(const char* server_name, const char* name, jack_uuid_t uuid, jack_options_t options, jack_status_t* status) = 0;
         virtual int Close();

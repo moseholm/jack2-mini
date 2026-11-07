@@ -20,6 +20,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #define __JackAlsaSecondaryConfig__
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Jack
@@ -106,7 +107,7 @@ The syntax is a semicolon separated list of key=value pairs:
 A bare value without '=' is treated as device=<value>.  Values may be quoted.
 Returns false and fills error on failure.
 */
-bool JackAlsaSecondaryConfigParse(const std::string& spec,
+bool JackAlsaSecondaryConfigParse(std::string_view spec,
                                   JackAlsaSecondaryConfig* config,
                                   std::string* error);
 
@@ -124,16 +125,16 @@ bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
 \brief Turn an arbitrary string into a valid JACK port name component.
 */
 // Device number of a PCM name: "hw:2,3" -> 3, "hw:CARD=X,DEV=7" -> 7, "hw:X" -> 0.
-int JackAlsaPcmDeviceNumber(const std::string& pcm);
+int JackAlsaPcmDeviceNumber(std::string_view pcm);
 
 // True if a PCM name names the card by its ALSA id: "hw:CARD=PCH", "hw:PCH,0",
 // "plughw:CARD=PCH,DEV=0".  Numeric forms ("hw:0", "hw:2,0") are false.
-bool JackAlsaPcmNameIsById(const std::string& pcm);
+bool JackAlsaPcmNameIsById(std::string_view pcm);
 
 // True if an ALSA card id is in the --exclude-card list.  Ids are compared without case.
-bool JackAlsaCardExcluded(const std::string& card_id, const std::vector<std::string>& excluded);
+bool JackAlsaCardExcluded(std::string_view card_id, const std::vector<std::string>& excluded);
 
-std::string JackAlsaSecondarySanitizeName(const std::string& name);
+std::string JackAlsaSecondarySanitizeName(std::string_view name);
 
 } // end of namespace
 

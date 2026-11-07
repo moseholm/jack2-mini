@@ -20,6 +20,7 @@
 #ifndef __JackProxyDriver__
 #define __JackProxyDriver__
 
+#include <array>
 #include "JackTimedDriver.h"
 
 #define DEFAULT_UPSTREAM "default" /*!< Default upstream Jack server to connect to */
@@ -52,8 +53,8 @@ namespace Jack
 
         private:
 
-            char fUpstream[JACK_CLIENT_NAME_SIZE+1];    /*<! the upstream server name */
-            char fClientName[JACK_CLIENT_NAME_SIZE+1];  /*<! client name to use when connecting */
+            std::array<char, JACK_CLIENT_NAME_SIZE+1> fUpstream{};    /*<! the upstream server name */
+            std::array<char, JACK_CLIENT_NAME_SIZE+1> fClientName{};  /*<! client name to use when connecting */
             const char* fPromiscuous;                   /*<! if not null, group or gid to use for promiscuous mode */
 
             //jack data

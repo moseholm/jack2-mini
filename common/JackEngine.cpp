@@ -17,12 +17,14 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
+#include <array>
 #include <iostream>
 #include <fstream>
 #include <set>
 #include <assert.h>
 #include <ctype.h>
 
+#include "JackCString.h"
 #include "JackSystemDeps.h"
 #include "JackLockedEngine.h"
 #include "JackExternalClient.h"
@@ -270,9 +272,9 @@ int JackEngine::PropertyChangeNotify(jack_uuid_t subject, const char* key, jack_
     for (int i = 0; i < CLIENT_NUM; i++) {
         JackClientInterface* client = fClientTable[i];
         if (client) {
-            char buf[JACK_UUID_STRING_SIZE];
-            jack_uuid_unparse(subject, buf);
-            client->ClientNotify(i, buf, kPropertyChangeCallback, false, key, change, 0);
+            std::array<char, JACK_UUID_STRING_SIZE> buf{};
+            jack_uuid_unparse(subject, buf.data());
+            client->ClientNotify(i, buf.data(), kPropertyChangeCallback, false, key, change, 0);
         }
     }
 
@@ -614,23 +616,23 @@ int JackEngine::GetClientRefNum(const char* name)
 // Used for external clients
 int JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, int* shared_engine, int* shared_client, int* shared_graph_manager)
 {
-    char real_name[JACK_CLIENT_NAME_SIZE + 1];
+    std::array<char, JACK_CLIENT_NAME_SIZE + 1> real_name{};
 
     if (jack_uuid_empty(uuid)) {
         uuid = jack_client_uuid_generate();
-        strncpy(real_name, name, JACK_CLIENT_NAME_SIZE);
+        strncpy(real_name.data(), name, JACK_CLIENT_NAME_SIZE);
     } else {
         std::map<int, std::string>::iterator res = fReservationMap.find(uuid);
         if (res != fReservationMap.end()) {
-            strncpy(real_name, res->second.c_str(), JACK_CLIENT_NAME_SIZE);
+            strncpy(real_name.data(), res->second.c_str(), JACK_CLIENT_NAME_SIZE);
             fReservationMap.erase(uuid);
         } else {
-            strncpy(real_name, name, JACK_CLIENT_NAME_SIZE);
+            strncpy(real_name.data(), name, JACK_CLIENT_NAME_SIZE);
         }
         EnsureUUID(uuid);
     }
 
-    jack_log("JackEngine::ClientExternalOpen: uuid = %d, name = %s", uuid, real_name);
+    jack_log("JackEngine::ClientExternalOpen: uuid = %d, name = %s", uuid, real_name.data());
 
     int refnum = AllocateRefnum();
     if (refnum < 0) {
@@ -640,12 +642,12 @@ int JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, 
 
     JackExternalClient* client = new JackExternalClient();
 
-    if (!fSynchroTable[refnum].Allocate(real_name, fEngineControl->fServerName, 0)) {
+    if (!fSynchroTable[refnum].Allocate(real_name.data(), fEngineControl->fServerName, 0)) {
         jack_error("Cannot allocate synchro");
         goto error;
     }
 
-    if (client->Open(real_name, pid, refnum, uuid, shared_client) < 0) {
+    if (client->Open(real_name.data(), pid, refnum, uuid, shared_client) < 0) {
         jack_error("Cannot open client");
         goto error;
     }
@@ -658,7 +660,7 @@ int JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, 
 
     fClientTable[refnum] = client;
 
-    if (NotifyAddClient(client, real_name, refnum) < 0) {
+    if (NotifyAddClient(client, real_name.data(), refnum) < 0) {
         jack_error("Cannot notify add client");
         goto error;
     }
@@ -1084,10 +1086,10 @@ int JackEngine::PortDisconnect(int refnum, jack_port_id_t src, jack_port_id_t ds
 
 int JackEngine::PortRename(int refnum, jack_port_id_t port, const char* name)
 {
-    char old_name[REAL_JACK_PORT_NAME_SIZE+1];
-    strcpy(old_name, fGraphManager->GetPort(port)->GetName());
+    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> old_name{};
+    strcpy(old_name.data(), fGraphManager->GetPort(port)->GetName());
     fGraphManager->GetPort(port)->SetName(name);
-    NotifyPortRename(port, old_name);
+    NotifyPortRename(port, old_name.data());
     return 0;
 }
 
@@ -1143,24 +1145,24 @@ void JackEngine::SessionNotify(int refnum, const char *target, jack_session_even
                 }
             }
 
-            char path_buf[JACK_PORT_NAME_SIZE];
+            std::array<char, JACK_PORT_NAME_SIZE> path_buf{};
             if (path[strlen(path) - 1] == DIR_SEPARATOR) {
-               snprintf(path_buf, sizeof path_buf, "%s%s%c", path, client->GetClientControl()->fName, DIR_SEPARATOR);
+               Jack::FormatCString(path_buf, "{}{}{}", path, client->GetClientControl()->fName, DIR_SEPARATOR);
             } else {
-               snprintf(path_buf, sizeof path_buf, "%s%c%s%c", path, DIR_SEPARATOR, client->GetClientControl()->fName, DIR_SEPARATOR);
+               Jack::FormatCString(path_buf, "{}{}{}{}", path, DIR_SEPARATOR, client->GetClientControl()->fName, DIR_SEPARATOR);
             }
 
-            int res = JackTools::MkDir(path_buf);
-            if (res) jack_error("JackEngine::SessionNotify: can not create session directory '%s'", path_buf);
+            int res = JackTools::MkDir(path_buf.data());
+            if (res) jack_error("JackEngine::SessionNotify: can not create session directory '%s'", path_buf.data());
 
-            int result = client->ClientNotify(i, client->GetClientControl()->fName, kSessionCallback, true, path_buf, (int)type, 0);
+            int result = client->ClientNotify(i, client->GetClientControl()->fName, kSessionCallback, true, path_buf.data(), (int)type, 0);
 
             if (result == kPendingSessionReply) {
                 fSessionPendingReplies += 1;
             } else if (result == kImmediateSessionReply) {
-                char uuid_buf[JACK_UUID_STRING_SIZE];
-                jack_uuid_unparse(client->GetClientControl()->fSessionID, uuid_buf);
-                fSessionResult->fCommandList.push_back(JackSessionCommand(uuid_buf,
+                std::array<char, JACK_UUID_STRING_SIZE> uuid_buf{};
+                jack_uuid_unparse(client->GetClientControl()->fSessionID, uuid_buf.data());
+                fSessionResult->fCommandList.push_back(JackSessionCommand(uuid_buf.data(),
                                                                         client->GetClientControl()->fName,
                                                                         client->GetClientControl()->fSessionCommand,
                                                                         client->GetClientControl()->fSessionFlags));
@@ -1183,9 +1185,9 @@ int JackEngine::SessionReply(int refnum)
 {
     JackClientInterface* client = fClientTable[refnum];
     assert(client);
-    char uuid_buf[JACK_UUID_STRING_SIZE];
-    jack_uuid_unparse(client->GetClientControl()->fSessionID, uuid_buf);
-    fSessionResult->fCommandList.push_back(JackSessionCommand(uuid_buf,
+    std::array<char, JACK_UUID_STRING_SIZE> uuid_buf{};
+    jack_uuid_unparse(client->GetClientControl()->fSessionID, uuid_buf.data());
+    fSessionResult->fCommandList.push_back(JackSessionCommand(uuid_buf.data(),
                                                             client->GetClientControl()->fName,
                                                             client->GetClientControl()->fSessionCommand,
                                                             client->GetClientControl()->fSessionFlags));

@@ -21,6 +21,7 @@
 #ifndef __JackDriver__
 #define __JackDriver__
 
+#include <array>
 #include "types.h"
 #include "JackClientInterface.h"
 #include "JackConstants.h"
@@ -129,9 +130,9 @@ class SERVER_EXPORT JackDriver : public JackDriverClientInterface
 
     protected:
 
-        char fCaptureDriverName[JACK_CLIENT_NAME_SIZE+1];
-        char fPlaybackDriverName[JACK_CLIENT_NAME_SIZE+1];
-        char fAliasName[JACK_CLIENT_NAME_SIZE+1];
+        std::array<char, JACK_CLIENT_NAME_SIZE+1> fCaptureDriverName{};
+        std::array<char, JACK_CLIENT_NAME_SIZE+1> fPlaybackDriverName{};
+        std::array<char, JACK_CLIENT_NAME_SIZE+1> fAliasName{};
 
         jack_nframes_t fCaptureLatency;
         jack_nframes_t fPlaybackLatency;
