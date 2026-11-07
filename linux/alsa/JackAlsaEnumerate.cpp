@@ -16,6 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include "JackCString.h"
 #include "JackAlsaEnumerate.h"
 #include "JackError.h"
 
@@ -74,7 +75,7 @@ std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcm
 
     while (snd_card_next(&card) >= 0 && card >= 0) {
         char ctl_name[32];
-        snprintf(ctl_name, sizeof(ctl_name), "hw:%d", card);
+        Jack::FormatCString(ctl_name, "hw:{}", card);
 
         snd_ctl_t* ctl;
         if (snd_ctl_open(&ctl, ctl_name, 0) < 0) {

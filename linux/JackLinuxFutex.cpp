@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
+#include "JackCString.h"
 #include "JackLinuxFutex.h"
 #include "JackTools.h"
 #include "JackConstants.h"
@@ -49,9 +50,9 @@ void JackLinuxFutex::BuildName(const char* client_name, const char* server_name,
     char ext_client_name[SYNC_MAX_NAME_SIZE + 1];
     JackTools::RewriteName(client_name, ext_client_name);
     if (fPromiscuous) {
-        snprintf(res, size, "jack_sem.%s_%s", server_name, ext_client_name);
+        Jack::FormatCString(std::span<char>(res, size), "jack_sem.{}_{}", server_name, ext_client_name);
     } else {
-        snprintf(res, size, "jack_sem.%d_%s_%s", JackTools::GetUID(), server_name, ext_client_name);
+        Jack::FormatCString(std::span<char>(res, size), "jack_sem.{}_{}_{}", JackTools::GetUID(), server_name, ext_client_name);
     }
 }
 

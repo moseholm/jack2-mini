@@ -24,6 +24,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "shm.h"
 #include <getopt.h>
 #include <errno.h>
+#include <span>
 
 static char* server_name = NULL;
 
@@ -158,7 +159,11 @@ bool JackServerGlobals::Init()
                                        { 0, 0, 0, 0 }
                                    };
 
-        snprintf(filename, 255, "%s/.jackdrc", getenv("HOME"));
+        if (const char* home = getenv("HOME")) {
+            Jack::FormatCString(std::span<char>(filename, 255), "{}/.jackdrc", home);
+        } else {
+            filename[0] = '\0';
+        }
         fp = fopen(filename, "r");
 
         if (!fp) {

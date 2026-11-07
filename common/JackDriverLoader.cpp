@@ -24,6 +24,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackConstants.h"
 #include "JackError.h"
 #include "JackCString.h"
+#include <span>
 #include <getopt.h>
 #include <stdio.h>
 #include <errno.h>
@@ -42,23 +43,23 @@ void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file)
     for (i = 0; i < desc->nparams; i++) {
         switch (desc->params[i].type) {
             case JackDriverParamInt:
-                sprintf (arg_default, "%" "i", desc->params[i].value.i);
+                Jack::FormatCString(arg_default, "{}", desc->params[i].value.i);
                 break;
             case JackDriverParamUInt:
-                sprintf (arg_default, "%" "u", desc->params[i].value.ui);
+                Jack::FormatCString(arg_default, "{}", desc->params[i].value.ui);
                 break;
             case JackDriverParamChar:
-                sprintf (arg_default, "%c", desc->params[i].value.c);
+                Jack::FormatCString(arg_default, "{}", desc->params[i].value.c);
                 break;
             case JackDriverParamString:
                 if (desc->params[i].value.str && strcmp (desc->params[i].value.str, "") != 0) {
-                    sprintf (arg_default, "%s", desc->params[i].value.str);
+                    Jack::FormatCString(arg_default, "{}", desc->params[i].value.str);
                 } else {
-                    sprintf (arg_default, "none");
+                    Jack::FormatCString(arg_default, "none");
                 }
                 break;
             case JackDriverParamBool:
-                sprintf (arg_default, "%s", desc->params[i].value.i ? "true" : "false");
+                Jack::FormatCString(arg_default, "{}", desc->params[i].value.i ? "true" : "false");
                 break;
         }
 
@@ -131,7 +132,7 @@ int jack_parse_driver_params(jack_driver_desc_t* desc, int argc, char* argv[], J
 
     options_ptr = options;
     for (i = 0; i < desc->nparams; i++) {
-        sprintf (options_ptr, "%c::", desc->params[i].character);
+        Jack::FormatCString(std::span<char>(options_ptr, 4), "{}::", desc->params[i].character);
         options_ptr += 3;
         long_options[i].name = desc->params[i].name;
         long_options[i].flag = NULL;
@@ -264,7 +265,7 @@ SERVER_EXPORT int jackctl_driver_params_parse(jackctl_driver *driver_ptr, int ar
 
     options_ptr = options;
     for (i = 0; i < desc->nparams; i++) {
-        sprintf(options_ptr, "%c::", desc->params[i].character);
+        Jack::FormatCString(std::span<char>(options_ptr, 4), "{}::", desc->params[i].character);
         options_ptr += 3;
         long_options[i].name = desc->params[i].name;
         long_options[i].flag = NULL;
@@ -373,7 +374,7 @@ static void* check_symbol(const char* sofile, const char* symbol, const char* dr
     void* dlhandle;
     void* res = NULL;
     char filename[1024];
-    snprintf(filename, 1022, "%s/%s", driver_dir, sofile);
+    Jack::FormatCString(std::span<char>(filename, 1022), "{}/{}", driver_dir, sofile);
     
     if ((dlhandle = LoadDriverModule(filename)) == NULL) {
         jack_error ("Could not open component .so '%s': %s", filename, dlerror());
@@ -398,7 +399,7 @@ static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sof
     JSList* node;
     void* dlhandle = NULL;
 
-    snprintf(filename, 1022, "%s/%s", driver_dir, sofile);
+    Jack::FormatCString(std::span<char>(filename, 1022), "{}/{}", driver_dir, sofile);
     
     so_get_descriptor = (JackDriverDescFunction)check_symbol(sofile, symbol, driver_dir, &dlhandle);
 

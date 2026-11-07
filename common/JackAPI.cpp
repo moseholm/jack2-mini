@@ -2175,7 +2175,7 @@ LIB_EXPORT int jack_uuid_parse(const char* b, jack_uuid_t* u)
 
 LIB_EXPORT void jack_uuid_unparse(jack_uuid_t u, char b[JACK_UUID_STRING_SIZE])
 {
-    snprintf (b, JACK_UUID_STRING_SIZE, "%" PRIu64, u);
+    Jack::FormatCString(std::span<char>(b, JACK_UUID_STRING_SIZE), "{}", static_cast<uint64_t>(u));
 }
 
 LIB_EXPORT int jack_uuid_empty(jack_uuid_t u)

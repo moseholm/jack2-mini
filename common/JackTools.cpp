@@ -17,6 +17,7 @@
 
 */
 
+#include "JackCString.h"
 #include "JackConstants.h"
 #include "driver_interface.h"
 #include "JackTools.h"
@@ -74,9 +75,9 @@ namespace Jack {
         /* format the path name on the first call */
         if (user_dir[0] == '\0') {
             if (getenv("JACK_PROMISCUOUS_SERVER")) {
-                snprintf(user_dir, sizeof(user_dir), "%s/jack", jack_tmpdir);
+                Jack::FormatCString(user_dir, "{}/jack", jack_tmpdir);
             } else {
-                snprintf(user_dir, sizeof(user_dir), "%s/jack-%d", jack_tmpdir, GetUID());
+                Jack::FormatCString(user_dir, "{}/jack-{}", jack_tmpdir, GetUID());
             }
         }
 
@@ -89,7 +90,7 @@ namespace Jack {
         /* format the path name into the suppled server_dir char array,
         * assuming that server_dir is at least as large as JACK_PATH_MAX + 1 */
 
-        snprintf(server_dir, JACK_PATH_MAX + 1, "%s/%s", UserDir(), server_name);
+        Jack::FormatCString(std::span<char>(server_dir, JACK_PATH_MAX + 1), "{}/{}", UserDir(), server_name);
         return server_dir;
     }
 
@@ -130,7 +131,7 @@ namespace Jack {
                 continue;
             }
 
-            snprintf(fullpath, sizeof(fullpath), "%s/%s", dir_name, dirent->d_name);
+            Jack::FormatCString(fullpath, "{}/{}", dir_name, dirent->d_name);
 
             if (unlink(fullpath)) {
                 jack_error("cannot unlink `%s' (%s)", fullpath, strerror(errno));
@@ -210,7 +211,7 @@ namespace Jack {
             }
         }
 
-        snprintf(path_to_so, path_len, "%s/%s.so", internal_dir, so_name);
+        Jack::FormatCString(std::span<char>(path_to_so, path_len), "{}/{}.so", internal_dir, so_name);
     }
 
 }  // end of namespace

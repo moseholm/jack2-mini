@@ -24,9 +24,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <charconv>
 #include <concepts>
 #include <cstddef>
+#include <format>
 #include <span>
 #include <string_view>
 #include <system_error>
+#include <utility>
 
 namespace Jack
 {
@@ -45,6 +47,22 @@ inline void CopyCString(std::span<char> dst, std::string_view src)
     const std::size_t n = std::min(src.size(), dst.size() - 1);
     std::ranges::copy(src.substr(0, n), dst.begin());
     std::ranges::fill(dst.subspan(n), '\0');
+}
+
+/*!
+\brief Format into a fixed-size C string buffer.
+
+Like snprintf(): the text is truncated to fit and the result is always
+terminated.  The format string is checked at compile time.
+*/
+template <typename... Args>
+void FormatCString(std::span<char> dst, std::format_string<Args...> fmt, Args&&... args)
+{
+    if (dst.empty()) {
+        return;
+    }
+    const auto result = std::format_to_n(dst.data(), dst.size() - 1, fmt, std::forward<Args>(args)...);
+    *result.out = '\0';
 }
 
 /*!

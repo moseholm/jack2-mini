@@ -17,6 +17,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
+#include "JackCString.h"
 #include "JackSystemDeps.h"
 #include "JackMidiDriver.h"
 #include "JackTime.h"
@@ -65,8 +66,8 @@ int JackMidiDriver::Attach()
     jack_log("JackMidiDriver::Attach fBufferSize = %ld fSampleRate = %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
 
     for (i = 0; i < fCaptureChannels; i++) {
-        snprintf(alias, sizeof(alias), "%s:%s:out%d", fAliasName, fCaptureDriverName, i + 1);
-        snprintf(name, sizeof(name), "%s:capture_%d", fClientControl.fName, i + 1);
+        Jack::FormatCString(alias, "{}:{}:out{}", fAliasName, fCaptureDriverName, i + 1);
+        Jack::FormatCString(name, "{}:capture_{}", fClientControl.fName, i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name, JACK_DEFAULT_MIDI_TYPE, CaptureDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name);
             return -1;
@@ -78,8 +79,8 @@ int JackMidiDriver::Attach()
     }
 
     for (i = 0; i < fPlaybackChannels; i++) {
-        snprintf(alias, sizeof(alias), "%s:%s:in%d", fAliasName, fPlaybackDriverName, i + 1);
-        snprintf(name, sizeof(name), "%s:playback_%d", fClientControl.fName, i + 1);
+        Jack::FormatCString(alias, "{}:{}:in{}", fAliasName, fPlaybackDriverName, i + 1);
+        Jack::FormatCString(name, "{}:playback_{}", fClientControl.fName, i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name, JACK_DEFAULT_MIDI_TYPE, PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name);
             return -1;

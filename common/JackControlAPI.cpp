@@ -24,6 +24,7 @@
 #include <dirent.h>
 #include <pthread.h>
 
+#include "JackCString.h"
 #include "types.h"
 #include <string.h>
 #include <errno.h>
@@ -548,7 +549,7 @@ signal_handler(int sig)
        another signal.
     */
     char buf[64];
-    snprintf(buf, sizeof(buf), "Received signal %d during shutdown (ignored)\n", sig);
+    Jack::FormatCString(buf, "Received signal {} during shutdown (ignored)\n", sig);
 }
 
 SERVER_EXPORT jackctl_sigmask_t *

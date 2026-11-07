@@ -17,6 +17,7 @@
 
  */
 
+#include "JackCString.h"
 #include "JackError.h"
 #include "JackShmMem.h"
 #include <stdio.h>
@@ -57,7 +58,7 @@ void* JackShmMem::operator new(size_t size)
     JackShmMem* obj;
     char name[64];
 
-    snprintf(name, sizeof(name), "/jack_shared%d", fSegmentNum++);
+    Jack::FormatCString(name, "/jack_shared{}", fSegmentNum++);
 
     if (jack_shmalloc(name, size, &info)) {
         jack_error("Cannot create shared memory segment of size = %d", size, strerror(errno));

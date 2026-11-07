@@ -17,6 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
+#include "JackCString.h"
 #include "JackConstants.h"
 #include "JackChannel.h"
 #include "JackLibGlobals.h"
@@ -42,7 +43,11 @@ static void start_server_classic_aux(const char* server_name)
     int good = 0;
     int res;
 
-    snprintf(filename, 255, "%s/.jackdrc", getenv("HOME"));
+    if (const char* home = getenv("HOME")) {
+        Jack::FormatCString(std::span<char>(filename, 255), "{}/.jackdrc", home);
+    } else {
+        filename[0] = '\0';
+    }
     fp = fopen(filename, "r");
 
     if (!fp) {

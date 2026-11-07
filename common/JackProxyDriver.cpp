@@ -17,6 +17,7 @@
 
 */
 
+#include "JackCString.h"
 #include "JackCompilerDeps.h"
 #include "driver_interface.h"
 #include "JackEngineControl.h"
@@ -353,7 +354,7 @@ namespace Jack
         fUpstreamPlaybackPorts = new jack_port_t* [fCaptureChannels];
         fUpstreamPlaybackPortConnected = new int [fCaptureChannels];
         for (i = 0; i < fCaptureChannels; i++) {
-            snprintf(proxy, sizeof(proxy), "%s:to_client_%d", fClientName, i + 1);
+            Jack::FormatCString(proxy, "{}:to_client_{}", fClientName, i + 1);
             fUpstreamPlaybackPorts[i] = jack_port_register(fClient, proxy, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput | JackPortIsTerminal, 0);
             if (fUpstreamPlaybackPorts[i] == NULL) {
                 jack_error("driver: cannot register upstream port %s", proxy);
@@ -365,7 +366,7 @@ namespace Jack
         fUpstreamCapturePorts = new jack_port_t* [fPlaybackChannels];
         fUpstreamCapturePortConnected = new int [fPlaybackChannels];
         for (i = 0; i < fPlaybackChannels; i++) {
-            snprintf(proxy, sizeof(proxy), "%s:from_client_%d", fClientName, i + 1);
+            Jack::FormatCString(proxy, "{}:from_client_{}", fClientName, i + 1);
             fUpstreamCapturePorts[i] = jack_port_register(fClient, proxy, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput | JackPortIsTerminal, 0);
             if (fUpstreamCapturePorts[i] == NULL) {
                 jack_error("driver: cannot register upstream port %s", proxy);

@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackRequest__
 #define __JackRequest__
 
+#include "JackCString.h"
 #include "JackConstants.h"
 #include "JackError.h"
 #include "JackPlatformPlug.h"
@@ -275,7 +276,7 @@ struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 +
         : JackRequestImpl(kClientCheck), fProtocol(protocol), fOptions(options), fOpen(open), fUUID(uuid)
     {
         memset(fName, 0, sizeof(fName));
-        snprintf(fName, sizeof(fName), "%s", name);
+        CopyCString(fName, name);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -321,7 +322,7 @@ struct JackClientCheckResult : public JackResult
             : JackResult(result), fStatus(status)
     {
         memset(fName, 0, sizeof(fName));
-        snprintf(fName, sizeof(fName), "%s", name);
+        CopyCString(fName, name);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -363,7 +364,7 @@ struct JackClientOpenRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_
         : JackRequestImpl(kClientOpen)
     {
         memset(fName, 0, sizeof(fName));
-        snprintf(fName, sizeof(fName), "%s", name);
+        CopyCString(fName, name);
         fPID = pid;
         fUUID = uuid;
     }
@@ -1063,7 +1064,7 @@ struct JackGetInternalClientNameResult : public JackResult
             : JackResult(result)
     {
         memset(fName, 0, sizeof(fName));
-        snprintf(fName, sizeof(fName), "%s", name);
+        CopyCString(fName, name);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -1103,7 +1104,7 @@ struct JackInternalClientHandleRequest : public JackRequestImpl<sizeof(int) + JA
         : JackRequestImpl(kInternalClientHandle), fRefNum(refnum)
     {
         memset(fName, 0, sizeof(fName));
-        snprintf(fName, sizeof(fName), "%s", client_name);
+        CopyCString(fName, client_name);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override

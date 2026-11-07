@@ -23,6 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <assert.h>
 #include <ctype.h>
 
+#include "JackCString.h"
 #include "JackSystemDeps.h"
 #include "JackLockedEngine.h"
 #include "JackExternalClient.h"
@@ -1145,9 +1146,9 @@ void JackEngine::SessionNotify(int refnum, const char *target, jack_session_even
 
             char path_buf[JACK_PORT_NAME_SIZE];
             if (path[strlen(path) - 1] == DIR_SEPARATOR) {
-               snprintf(path_buf, sizeof path_buf, "%s%s%c", path, client->GetClientControl()->fName, DIR_SEPARATOR);
+               Jack::FormatCString(path_buf, "{}{}{}", path, client->GetClientControl()->fName, DIR_SEPARATOR);
             } else {
-               snprintf(path_buf, sizeof path_buf, "%s%c%s%c", path, DIR_SEPARATOR, client->GetClientControl()->fName, DIR_SEPARATOR);
+               Jack::FormatCString(path_buf, "{}{}{}{}", path, DIR_SEPARATOR, client->GetClientControl()->fName, DIR_SEPARATOR);
             }
 
             int res = JackTools::MkDir(path_buf);
