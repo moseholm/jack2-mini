@@ -353,22 +353,6 @@ class SERVER_EXPORT JackLockedEngine
             CATCH_EXCEPTION
         }
 
-        void SessionNotify(int refnum, const char* target, jack_session_event_type_t type, const char *path, detail::JackChannelTransactionInterface *socket, JackSessionNotifyResult** result)
-        {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            fEngine.SessionNotify(refnum, target, type, path, socket, result);
-            CATCH_EXCEPTION
-        }
-
-        int SessionReply(int refnum)
-        {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.SessionReply(refnum);
-            CATCH_EXCEPTION_RETURN
-        }
-
         int GetUUIDForClientName(const char *client_name, char *uuid_res)
         {
             TRY_CALL
@@ -392,21 +376,6 @@ class SERVER_EXPORT JackLockedEngine
             CATCH_EXCEPTION_RETURN
         }
 
-        int ClientHasSessionCallback(const char *name)
-        {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.ClientHasSessionCallback(name);
-            CATCH_EXCEPTION_RETURN
-        }
-
-        int PropertyChangeNotify(jack_uuid_t subject, const char* key, jack_property_change_t change)
-        {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.PropertyChangeNotify(subject, key, change);
-            CATCH_EXCEPTION_RETURN
-        }
 };
 
 } // end of namespace

@@ -62,9 +62,7 @@ JackClient::JackClient(JackSynchro* table):fThread(this)
     fTimebase = NULL;
     fSync = NULL;
     fThreadFun = NULL;
-    fSession = NULL;
     fLatency = NULL;
-    fPropertyChange = NULL;
 
     fProcessArg = NULL;
     fGraphOrderArg = NULL;
@@ -81,11 +79,8 @@ JackClient::JackClient(JackSynchro* table):fThread(this)
     fSyncArg = NULL;
     fTimebaseArg = NULL;
     fThreadFunArg = NULL;
-    fSessionArg = NULL;
     fLatencyArg = NULL;
-    fPropertyChangeArg = NULL;
 
-    fSessionReply = kPendingSessionReply;
 }
 
 JackClient::~JackClient()
@@ -312,38 +307,10 @@ int JackClient::ClientNotify(int refnum, const char* name, int notify, int sync,
                 ShutDown(jack_status_t(value1), message);
                 break;
 
-            case kSessionCallback:
-                jack_log("JackClient::kSessionCallback");
-                if (fSession) {
-                    jack_session_event_t* event = (jack_session_event_t*)malloc( sizeof(jack_session_event_t));
-                    std::array<char, JACK_UUID_STRING_SIZE> uuid_buf{};
-                    event->type = (jack_session_event_type_t)value1;
-                    event->session_dir = strdup(message);
-                    event->command_line = NULL;
-                    event->flags = (jack_session_flags_t)0;
-                    jack_uuid_unparse(GetClientControl()->fSessionID, uuid_buf.data());
-                    event->client_uuid = strdup(uuid_buf.data());
-                    fSessionReply = kPendingSessionReply;
-                    // Session callback may change fSessionReply by directly using jack_session_reply
-                    fSession(event, fSessionArg);
-                    res = fSessionReply;
-                }
-                break;
-
             case kLatencyCallback:
                 res = HandleLatencyCallback(value1);
                 break;
 
-            case kPropertyChangeCallback: {
-                jack_uuid_t subject;
-                jack_uuid_parse(name, &subject);
-                const char* key = message;
-                jack_property_change_t change = (jack_property_change_t)value1;
-                jack_log("JackClient::kPropertyChangeCallback subject = %x key = %s change = %x", subject, key, change);
-                if (fPropertyChange)
-                    fPropertyChange(subject, key, change, fPropertyChangeArg);
-                break;
-            }
         }
     }
 
@@ -1198,19 +1165,6 @@ int JackClient::SetProcessThread(JackThreadCallback fun, void *arg)
     }
 }
 
-int JackClient::SetSessionCallback(JackSessionCallback callback, void *arg)
-{
-    if (IsActive()) {
-        jack_error("You cannot set callbacks on an active client");
-        return -1;
-    } else {
-        GetClientControl()->fCallback[kSessionCallback] = (callback != NULL);
-        fSessionArg = arg;
-        fSession = callback;
-        return 0;
-    }
-}
-
 int JackClient::SetLatencyCallback(JackLatencyCallback callback, void *arg)
 {
     if (IsActive()) {
@@ -1220,18 +1174,6 @@ int JackClient::SetLatencyCallback(JackLatencyCallback callback, void *arg)
         // fCallback[kLatencyCallback] must always be 'true'
         fLatencyArg = arg;
         fLatency = callback;
-        return 0;
-    }
-}
-
-int JackClient::SetPropertyChangeCallback(JackPropertyChangeCallback callback, void *arg)
-{
-    if (IsActive()) {
-        jack_error("You cannot set callbacks on an active client");
-        return -1;
-    } else {
-        fPropertyChangeArg = arg;
-        fPropertyChange = callback;
         return 0;
     }
 }
@@ -1293,42 +1235,6 @@ void JackClient::InternalClientUnload(int ref, jack_status_t* status)
     fChannel->InternalClientUnload(GetClientControl()->fRefNum, ref, (int*)status, &result);
 }
 
-//------------------
-// Session API
-//------------------
-
-jack_session_command_t* JackClient::SessionNotify(const char* target, jack_session_event_type_t type, const char* path)
-{
-    jack_session_command_t* res;
-    fChannel->SessionNotify(GetClientControl()->fRefNum, target, type, path, &res);
-    return res;
-}
-
-int JackClient::SessionReply(jack_session_event_t* ev)
-{
-    if (ev->command_line) {
-        strncpy(GetClientControl()->fSessionCommand, ev->command_line, sizeof(GetClientControl()->fSessionCommand));
-    } else {
-        GetClientControl()->fSessionCommand[0] = '\0';
-    }
-
-    GetClientControl()->fSessionFlags = ev->flags;
-
-    jack_log("JackClient::SessionReply... we are here");
-    if (fChannel->IsChannelThread()) {
-        jack_log("JackClient::SessionReply... in callback reply");
-        // OK, immediate reply...
-        fSessionReply = kImmediateSessionReply;
-        return 0;
-    }
-
-    jack_log("JackClient::SessionReply... out of cb");
-
-    int result = -1;
-    fChannel->SessionReply(GetClientControl()->fRefNum, &result);
-    return result;
-}
-
 char* JackClient::GetUUIDForClientName(const char* client_name)
 {
     std::array<char, JACK_UUID_STRING_SIZE> uuid_res{};
@@ -1352,23 +1258,9 @@ int JackClient::ReserveClientName(const char* client_name, const char* uuid)
     return result;
 }
 
-int JackClient::ClientHasSessionCallback(const char* client_name)
-{
-    int result = -1;
-    fChannel->ClientHasSessionCallback(client_name, &result);
-    return result;
-}
-
 //------------------
 // Metadata API
 //------------------
-
-int JackClient::PropertyChangeNotify(jack_uuid_t subject, const char* key, jack_property_change_t change)
-{
-    int result = -1;
-    fChannel->PropertyChangeNotify(subject, key, change, &result);
-    return result;
-}
 
 
 } // end of namespace

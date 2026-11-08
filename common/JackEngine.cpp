@@ -60,9 +60,6 @@ JackEngine::JackEngine(JackGraphManager* manager,
     fRollingResetPending = false;
     fLastSwitchUsecs = 0;
     fSwitchCount = 0;
-    fSessionPendingReplies = 0;
-    fSessionTransaction = NULL;
-    fSessionResult = NULL;
 }
 
 JackEngine::~JackEngine()
@@ -286,22 +283,6 @@ int JackEngine::ComputeTotalLatencies()
 //--------------
 // Metadata API
 //--------------
-
-int JackEngine::PropertyChangeNotify(jack_uuid_t subject, const char* key, jack_property_change_t change)
-{
-    jack_log("JackEngine::PropertyChangeNotify: subject = %x key = %s change = %x", subject, key, change);
-
-    for (int i = 0; i < CLIENT_NUM; i++) {
-        JackClientInterface* client = fClientTable[i];
-        if (client) {
-            std::array<char, JACK_UUID_STRING_SIZE> buf{};
-            jack_uuid_unparse(subject, buf.data());
-            client->ClientNotify(i, buf.data(), kPropertyChangeCallback, false, key, change, 0);
-        }
-    }
-
-    return 0;
-}
 
 //---------------
 // Notifications
@@ -807,7 +788,6 @@ int JackEngine::ClientCloseAux(int refnum, bool wait)
         /* have to do the notification ourselves, since the client argument
           to fMetadata->RemoveProperties() was NULL
         */
-        PropertyChangeNotify(uuid, NULL, PropertyDeleted);
     }
 
     // Notify running clients
@@ -934,7 +914,6 @@ int JackEngine::PortUnRegister(int refnum, jack_port_id_t port_index)
                 /* have to do the notification ourselves, since the client argument
                    to fMetadata->RemoveProperties() was NULL
                 */
-                PropertyChangeNotify(uuid, NULL, PropertyDeleted);
             }
         }
 
@@ -1123,96 +1102,7 @@ int JackEngine::PortSetDefaultMetadata(jack_port_id_t port, const char* pretty_n
 }
 
 //--------------------
-// Session management
 //--------------------
-
-void JackEngine::SessionNotify(int refnum, const char *target, jack_session_event_type_t type, const char *path, detail::JackChannelTransactionInterface *socket, JackSessionNotifyResult** result)
-{
-    if (fSessionPendingReplies != 0) {
-        JackSessionNotifyResult res(-1);
-        res.Write(socket);
-        jack_log("JackEngine::SessionNotify ... busy");
-        if (result != NULL) *result = NULL;
-        return;
-    }
-
-    for (int i = 0; i < CLIENT_NUM; i++) {
-        JackClientInterface* client = fClientTable[i];
-        if (client && jack_uuid_empty(client->GetClientControl()->fSessionID)) {
-            client->GetClientControl()->fSessionID = jack_client_uuid_generate();
-        }
-    }
-    fSessionResult = new JackSessionNotifyResult();
-
-    for (int i = 0; i < CLIENT_NUM; i++) {
-        JackClientInterface* client = fClientTable[i];
-        if (client && client->GetClientControl()->fCallback[kSessionCallback]) {
-
-            // check if this is a notification to a specific client.
-            if (target != NULL && strlen(target) != 0) {
-                if (strcmp(target, client->GetClientControl()->fName)) {
-                    continue;
-                }
-            }
-
-            std::array<char, JACK_PORT_NAME_SIZE> path_buf{};
-            if (path[strlen(path) - 1] == DIR_SEPARATOR) {
-               Jack::FormatCString(path_buf, "{}{}{}", path, client->GetClientControl()->fName, DIR_SEPARATOR);
-            } else {
-               Jack::FormatCString(path_buf, "{}{}{}{}", path, DIR_SEPARATOR, client->GetClientControl()->fName, DIR_SEPARATOR);
-            }
-
-            int res = JackTools::MkDir(path_buf.data());
-            if (res) jack_error("JackEngine::SessionNotify: can not create session directory '%s'", path_buf.data());
-
-            int result = client->ClientNotify(i, client->GetClientControl()->fName, kSessionCallback, true, path_buf.data(), (int)type, 0);
-
-            if (result == kPendingSessionReply) {
-                fSessionPendingReplies += 1;
-            } else if (result == kImmediateSessionReply) {
-                std::array<char, JACK_UUID_STRING_SIZE> uuid_buf{};
-                jack_uuid_unparse(client->GetClientControl()->fSessionID, uuid_buf.data());
-                fSessionResult->fCommandList.push_back(JackSessionCommand(uuid_buf.data(),
-                                                                        client->GetClientControl()->fName,
-                                                                        client->GetClientControl()->fSessionCommand,
-                                                                        client->GetClientControl()->fSessionFlags));
-            }
-        }
-    }
-
-    if (result != NULL) *result = fSessionResult;
-
-    if (fSessionPendingReplies == 0) {
-        fSessionResult->Write(socket);
-        if (result == NULL) delete fSessionResult;
-        fSessionResult = NULL;
-    } else {
-        fSessionTransaction = socket;
-    }
-}
-
-int JackEngine::SessionReply(int refnum)
-{
-    JackClientInterface* client = fClientTable[refnum];
-    assert(client);
-    std::array<char, JACK_UUID_STRING_SIZE> uuid_buf{};
-    jack_uuid_unparse(client->GetClientControl()->fSessionID, uuid_buf.data());
-    fSessionResult->fCommandList.push_back(JackSessionCommand(uuid_buf.data(),
-                                                            client->GetClientControl()->fName,
-                                                            client->GetClientControl()->fSessionCommand,
-                                                            client->GetClientControl()->fSessionFlags));
-    fSessionPendingReplies -= 1;
-
-    if (fSessionPendingReplies == 0) {
-        fSessionResult->Write(fSessionTransaction);
-        if (fSessionTransaction != NULL) {
-            delete fSessionResult;
-        }
-        fSessionResult = NULL;
-    }
-
-    return 0;
-}
 
 int JackEngine::GetUUIDForClientName(const char *client_name, char *uuid_res)
 {
@@ -1268,23 +1158,6 @@ int JackEngine::ReserveClientName(const char *name, const char *uuidstr)
     EnsureUUID(uuid);
     fReservationMap[uuid] = name;
     return 0;
-}
-
-int JackEngine::ClientHasSessionCallback(const char *name)
-{
-    JackClientInterface* client = NULL;
-    for (int i = 0; i < CLIENT_NUM; i++) {
-        client = fClientTable[i];
-        if (client && (strcmp(client->GetClientControl()->fName, name) == 0)) {
-            break;
-        }
-    }
-
-    if (client) {
-        return client->GetClientControl()->fCallback[kSessionCallback];
-     } else {
-        return -1;
-    }
 }
 
 } // end of namespace

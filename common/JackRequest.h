@@ -58,16 +58,6 @@ namespace Jack
 }
 
 
-/*!
-\brief Session API constants.
-*/
-
-enum JackSessionReply {
-
-    kImmediateSessionReply = 1,
-    kPendingSessionReply = 2
-
-};
 
 /*!
 \brief Request from client to server.
@@ -90,27 +80,23 @@ struct JackRequest
         kGetPortNConnections = 11,
         kReleaseTimebase = 12,
         kSetTimebaseCallback = 13,
-        kSetBufferSize = 20,
-        kSetFreeWheel = 21,
-        kClientCheck = 22,
-        kClientOpen = 23,
-        kClientClose = 24,
-        kConnectNamePorts = 25,
-        kDisconnectNamePorts = 26,
-        kGetInternalClientName = 27,
-        kInternalClientHandle = 28,
-        kInternalClientLoad = 29,
-        kInternalClientUnload = 30,
-        kPortRename = 31,
-        kNotification = 32,
-        kSessionNotify = 33,
-        kSessionReply  = 34,
-        kGetClientByUUID = 35,
-        kReserveClientName = 36,
-        kGetUUIDByClient = 37,
-        kClientHasSessionCallback = 38,
-        kComputeTotalLatencies = 39,
-        kPropertyChangeNotify = 40
+        kSetBufferSize = 14,
+        kSetFreeWheel = 15,
+        kClientCheck = 16,
+        kClientOpen = 17,
+        kClientClose = 18,
+        kConnectNamePorts = 19,
+        kDisconnectNamePorts = 20,
+        kGetInternalClientName = 21,
+        kInternalClientHandle = 22,
+        kInternalClientLoad = 23,
+        kInternalClientUnload = 24,
+        kPortRename = 25,
+        kNotification = 26,
+        kGetClientByUUID = 27,
+        kReserveClientName = 28,
+        kGetUUIDByClient = 29,
+        kComputeTotalLatencies = 30
     };
 
     RequestType fType;
@@ -1377,193 +1363,9 @@ struct JackClientNotificationRequest : public JackRequestImpl<3 * sizeof(int)>
 
 };
 
-struct JackSessionCommand
-{
-    char fUUID[JACK_UUID_STRING_SIZE];
-    char fClientName[JACK_CLIENT_NAME_SIZE+1];
-    char fCommand[JACK_SESSION_COMMAND_SIZE+1];
-    jack_session_flags_t fFlags;
-
-    JackSessionCommand() : fFlags(JackSessionSaveError)
-    {
-        memset(fUUID, 0, sizeof(fUUID));
-        memset(fClientName, 0, sizeof(fClientName));
-        memset(fCommand, 0, sizeof(fCommand));
-    }
-    JackSessionCommand(const char *uuid, const char *clientname, const char *command, jack_session_flags_t flags)
-    {
-        memset(fUUID, 0, sizeof(fUUID));
-        memset(fClientName, 0, sizeof(fClientName));
-        memset(fCommand, 0, sizeof(fCommand));
-        strncpy(fUUID, uuid, sizeof(fUUID)-1);
-        strncpy(fClientName, clientname, sizeof(fClientName)-1);
-        strncpy(fCommand, command, sizeof(fCommand)-1);
-        fFlags = flags;
-    }
-};
-
-struct JackSessionNotifyResult : public JackResult
-{
-
-    std::list<JackSessionCommand> fCommandList;
-    bool fDone;
-
-    JackSessionNotifyResult(): JackResult(), fDone(false)
-    {}
-    JackSessionNotifyResult(int32_t result)
-            : JackResult(result), fDone(false)
-    {}
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        if (trans == NULL)
-        {
-            return 0;
-        }
-
-        CheckRes(JackResult::Read(trans));
-        while (true) {
-            JackSessionCommand buffer;
-
-            CheckRes(trans->Read(buffer.fUUID, sizeof(buffer.fUUID)));
-            if (buffer.fUUID[0] == '\0')
-                break;
-
-            CheckRes(trans->Read(buffer.fClientName, sizeof(buffer.fClientName)));
-            CheckRes(trans->Read(buffer.fCommand, sizeof(buffer.fCommand)));
-            CheckRes(trans->Read(&(buffer.fFlags), sizeof(buffer.fFlags)));
-
-            fCommandList.push_back(buffer);
-        }
-
-        fDone = true;
-
-        return 0;
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        if (trans == NULL)
-        {
-            fDone = true;
-            return 0;
-        }
-
-        char terminator[JACK_UUID_STRING_SIZE];
-        memset(terminator, 0, sizeof(terminator));
-
-        CheckRes(JackResult::Write(trans));
-        for (std::list<JackSessionCommand>::iterator i = fCommandList.begin(); i != fCommandList.end(); i++) {
-            CheckRes(trans->Write(i->fUUID, sizeof(i->fUUID)));
-            CheckRes(trans->Write(i->fClientName, sizeof(i->fClientName)));
-            CheckRes(trans->Write(i->fCommand, sizeof(i->fCommand)));
-            CheckRes(trans->Write(&(i->fFlags), sizeof(i->fFlags)));
-        }
-        CheckRes(trans->Write(terminator, sizeof(terminator)));
-        return 0;
-    }
-
-    jack_session_command_t* GetCommands()
-    {
-        /* TODO: some kind of signal should be used instead */
-        while (!fDone)
-        {
-            JackSleep(50000);    /* 50 ms */
-        }
-
-        jack_session_command_t* session_command = (jack_session_command_t *)malloc(sizeof(jack_session_command_t) * (fCommandList.size() + 1));
-        int i = 0;
-
-        for (std::list<JackSessionCommand>::iterator ci = fCommandList.begin(); ci != fCommandList.end(); ci++) {
-            session_command[i].uuid = strdup(ci->fUUID);
-            session_command[i].client_name = strdup(ci->fClientName);
-            session_command[i].command = strdup(ci->fCommand);
-            session_command[i].flags = ci->fFlags;
-            i += 1;
-        }
-
-        session_command[i].uuid = NULL;
-        session_command[i].client_name = NULL;
-        session_command[i].command = NULL;
-        session_command[i].flags = (jack_session_flags_t)0;
-
-        return session_command;
-    }
-};
-
 /*!
 \brief SessionNotify request.
 */
-
-struct JackSessionNotifyRequest : public JackRequestImpl<JACK_MESSAGE_SIZE_1 + JACK_CLIENT_NAME_SIZE_1 + sizeof(jack_session_event_type_t) + sizeof(int)>
-{
-    char fPath[JACK_MESSAGE_SIZE_1];
-    char fDst[JACK_CLIENT_NAME_SIZE_1];
-    jack_session_event_type_t fEventType;
-    int fRefNum;
-
-    JackSessionNotifyRequest()
-        : JackRequestImpl(kSessionNotify), fEventType(JackSessionSave), fRefNum(0)
-    {}
-
-    JackSessionNotifyRequest(int refnum, const char* path, jack_session_event_type_t type, const char* dst)
-        : JackRequestImpl(kSessionNotify), fEventType(type), fRefNum(refnum)
-    {
-        memset(fPath, 0, sizeof(fPath));
-        memset(fDst, 0, sizeof(fDst));
-        strncpy(fPath, path, sizeof(fPath)-1);
-        if (dst) {
-            strncpy(fDst, dst, sizeof(fDst)-1);
-        }
-    }
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(trans->Read(&fRefNum, sizeof(fRefNum)));
-        CheckRes(trans->Read(&fPath, sizeof(fPath)));
-        CheckRes(trans->Read(&fDst, sizeof(fDst)));
-        CheckRes(trans->Read(&fEventType, sizeof(fEventType)));
-        return 0;
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(WritePacketInit());
-        CheckRes(WritePacket(&fRefNum, sizeof(fRefNum)));
-        CheckRes(WritePacket(&fPath, sizeof(fPath)));
-        CheckRes(WritePacket(&fDst, sizeof(fDst)));
-        CheckRes(WritePacket(&fEventType, sizeof(fEventType)));
-        return JackRequestImpl::Write(trans);
-    }
-
-};
-
-struct JackSessionReplyRequest : public JackRequestImpl<sizeof(int)>
-{
-    int fRefNum;
-
-    JackSessionReplyRequest()
-        : JackRequestImpl(kSessionReply), fRefNum(0)
-    {}
-
-    JackSessionReplyRequest(int refnum)
-        : JackRequestImpl(kSessionReply), fRefNum(refnum)
-    {}
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(trans->Read(&fRefNum, sizeof(int)));
-        return 0;
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(WritePacketInit());
-        CheckRes(WritePacket(&fRefNum, sizeof(int)));
-        return JackRequestImpl::Write(trans);
-    }
-
-};
 
 struct JackClientNameResult : public JackResult
 {
@@ -1732,79 +1534,6 @@ struct JackReserveNameRequest : public JackRequestImpl<sizeof(int) + JACK_CLIENT
 
 };
 
-struct JackClientHasSessionCallbackRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1>
-{
-    char fName[JACK_CLIENT_NAME_SIZE_1];
-
-    JackClientHasSessionCallbackRequest()
-        : JackRequestImpl(kClientHasSessionCallback)
-    {
-        memset(fName, 0, sizeof(fName));
-    }
-
-    JackClientHasSessionCallbackRequest(const char *name)
-        : JackRequestImpl(kClientHasSessionCallback)
-    {
-        memset(fName, 0, sizeof(fName));
-        strncpy(fName, name, sizeof(fName)-1);
-    }
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(trans->Read(&fName, sizeof(fName)));
-        return 0;
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(WritePacketInit());
-        CheckRes(WritePacket(&fName, sizeof(fName)));
-        return JackRequestImpl::Write(trans);
-    }
-
-};
-
-
-struct JackPropertyChangeNotifyRequest : public JackRequestImpl<sizeof(jack_uuid_t) + MAX_PATH_1 + sizeof(jack_property_change_t)>
-{
-    jack_uuid_t fSubject;
-    char fKey[MAX_PATH_1];
-    jack_property_change_t fChange;
-
-    JackPropertyChangeNotifyRequest()
-        : JackRequestImpl(kPropertyChangeNotify), fChange((jack_property_change_t)0)
-    {
-        jack_uuid_clear(&fSubject);
-        memset(fKey, 0, sizeof(fKey));
-    }
-
-    JackPropertyChangeNotifyRequest(jack_uuid_t subject, const char* key, jack_property_change_t change)
-        : JackRequestImpl(kPropertyChangeNotify), fChange(change)
-    {
-        jack_uuid_copy(&fSubject, subject);
-        memset(fKey, 0, sizeof(fKey));
-        if (key)
-            strncpy(fKey, key, sizeof(fKey)-1);
-    }
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(trans->Read(&fSubject, sizeof(fSubject)));
-        CheckRes(trans->Read(&fKey, sizeof(fKey)));
-        CheckRes(trans->Read(&fChange, sizeof(fChange)));
-        return 0;
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(WritePacketInit());
-        CheckRes(WritePacket(&fSubject, sizeof(fSubject)));
-        CheckRes(WritePacket(&fKey, sizeof(fKey)));
-        CheckRes(WritePacket(&fChange, sizeof(fChange)));
-        return JackRequestImpl::Write(trans);
-    }
-
-};
 
 /*!
 \brief ClientNotification.

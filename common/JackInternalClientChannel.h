@@ -138,24 +138,6 @@ class JackInternalClientChannel : public detail::JackClientChannelInterface
             *result = fEngine->InternalClientUnload(int_ref, status);
         }
 
-        void SessionNotify(int refnum, const char *target, jack_session_event_type_t type, const char *path, jack_session_command_t** result)
-        {
-            JackSessionNotifyResult* res;
-            fEngine->SessionNotify(refnum, target, type, path, NULL, &res);
-            if (res == NULL) {
-                *result = NULL;
-                return;
-            }
-
-            *result = res->GetCommands();
-            delete(res);
-        }
-
-        void SessionReply(int refnum, int* result)
-        {
-            *result = fEngine->SessionReply(refnum);
-        }
-
         void GetUUIDForClientName(int refnum, const char* client_name, char* uuid_res, int* result)
         {
             *result = fEngine->GetUUIDForClientName(client_name, uuid_res);
@@ -169,11 +151,6 @@ class JackInternalClientChannel : public detail::JackClientChannelInterface
         void ReserveClientName(int refnum, const char* client_name, const char *uuid, int* result)
         {
             *result = fEngine->ReserveClientName(client_name, uuid);
-        }
-
-        void ClientHasSessionCallback(const char* client_name, int* result)
-        {
-            *result = fEngine->ClientHasSessionCallback(client_name);
         }
 
 

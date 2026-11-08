@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define __JackChannel__
 
 #include "types.h"
-#include "JackSession.h"
 #include "JackMetadata.h"
 #include "JackFdSegment.h"
 
@@ -184,22 +183,12 @@ class JackClientChannelInterface
         virtual void InternalClientUnload(int refnum, int int_ref, int* status, int* result)
         {}
 
-        virtual void SessionNotify(int refnum, const char* target, jack_session_event_type_t type, const char* path, jack_session_command_t** result)
-        {}
-        virtual void SessionReply(int refnum, int* result)
-        {}
         virtual void GetUUIDForClientName(int refnum, const char* client_name, char* uuid_res, int* result)
         {}
         virtual void GetClientNameForUUID(int refnum, const char* uuid, char* name_res, int* result)
         {}
         virtual void ReserveClientName(int refnum, const char* client_name, const char *uuid, int* result)
         {}
-        virtual void ClientHasSessionCallback(const char* client_name, int* result)
-        {}
-
-        virtual void PropertyChangeNotify(jack_uuid_t subject, const char* key, jack_property_change_t change, int* result)
-        {}
-
         virtual bool IsChannelThread()
         {
             return false;

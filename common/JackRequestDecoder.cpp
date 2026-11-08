@@ -294,23 +294,7 @@ int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* s
             break;
         }
 
-        case JackRequest::kSessionNotify: {
-            jack_log("JackRequest::SessionNotify");
-            JackSessionNotifyRequest req;
-            CheckRead(req, socket);
-            fServer->GetEngine()->SessionNotify(req.fRefNum, req.fDst, req.fEventType, req.fPath, socket, NULL);
-            break;
-        }
 
-        case JackRequest::kSessionReply: {
-            jack_log("JackRequest::SessionReply");
-            JackSessionReplyRequest req;
-            JackResult res;
-            CheckRead(req, socket);
-            res.fResult = fServer->GetEngine()->SessionReply(req.fRefNum);
-            CheckWrite("JackRequest::SessionReply", socket);
-            break;
-        }
 
         case JackRequest::kGetClientByUUID: {
             jack_log("JackRequest::GetClientByUUID");
@@ -342,23 +326,7 @@ int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* s
             break;
         }
 
-        case JackRequest::kClientHasSessionCallback: {
-            jack_log("JackRequest::ClientHasSessionCallback");
-            JackClientHasSessionCallbackRequest req;
-            JackResult res;
-            CheckRead(req, socket);
-            res.fResult = fServer->GetEngine()->ClientHasSessionCallback(req.fName);
-            CheckWrite("JackRequest::ClientHasSessionCallback", socket);
-            break;
-        }
 
-        case JackRequest::kPropertyChangeNotify: {
-            jack_log("JackRequest::PropertyChangeNotify");
-            JackPropertyChangeNotifyRequest req;
-            CheckRead(req, socket);
-            fServer->GetEngine()->PropertyChangeNotify(req.fSubject, req.fKey, req.fChange);
-            break;
-        }
 
         default:
             jack_error("Unknown request %d", header.type);

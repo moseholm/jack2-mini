@@ -35,7 +35,6 @@ extern "C"
         char *server_name;              /* server name */
         char *load_name;                /* load module name */
         char *load_init;                /* initialization string */
-        jack_uuid_t session_id;         /* requested session_id */
     }
     jack_varargs_t;
 
@@ -67,14 +66,6 @@ extern "C"
             va->load_name = va_arg(ap, char *);
         if ((options & JackLoadInit))
             va->load_init = va_arg(ap, char *);
-        if ((options & JackSessionID)) {
-            char *sid = va_arg(ap, char *);
-            if (sid) {
-                const long long id = atoll( sid );
-                if (id > 0)
-                    va->session_id = id;
-            }
-        }
     }
 
 #ifdef __cplusplus

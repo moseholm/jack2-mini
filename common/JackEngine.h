@@ -62,9 +62,6 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         jack_time_t fLastSwitchUsecs;
         JackMetadata fMetadata;
 
-        int fSessionPendingReplies;
-        detail::JackChannelTransactionInterface* fSessionTransaction;
-        JackSessionNotifyResult* fSessionResult;
         std::map<int,std::string> fReservationMap;
 
         int ClientCloseAux(int refnum, bool wait);
@@ -151,8 +148,6 @@ class SERVER_EXPORT JackEngine : public JackLockAble
 
         int ComputeTotalLatencies();
 
-        int PropertyChangeNotify(jack_uuid_t subject, const char* key,jack_property_change_t change);
-
         // Graph
         bool Process(jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end);
 
@@ -167,14 +162,9 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         void NotifyFreewheel(bool onoff);
         void NotifyQuit();
 
-        // Session management
-        void SessionNotify(int refnum, const char *target, jack_session_event_type_t type, const char *path, detail::JackChannelTransactionInterface *socket, JackSessionNotifyResult** result);
-        int SessionReply(int refnum);
-
         int GetUUIDForClientName(const char *client_name, char *uuid_res);
         int GetClientNameForUUID(const char *uuid, char *name_res);
         int ReserveClientName(const char *name, const char *uuid);
-        int ClientHasSessionCallback(const char *name);
 };
 
 

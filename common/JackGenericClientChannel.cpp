@@ -209,22 +209,6 @@ void JackGenericClientChannel::ComputeTotalLatencies(int* result)
     ServerSyncCall(&req, &res, result);
 }
 
-void JackGenericClientChannel::SessionNotify(int refnum, const char* target, jack_session_event_type_t type, const char* path, jack_session_command_t** result)
-{
-    JackSessionNotifyRequest req(refnum, path, type, target);
-    JackSessionNotifyResult res;
-    int intresult;
-    ServerSyncCall(&req, &res, &intresult);
-    *result = res.GetCommands();
-}
-
-void JackGenericClientChannel::SessionReply(int refnum, int* result)
-{
-    JackSessionReplyRequest req(refnum);
-    JackResult res;
-    ServerSyncCall(&req, &res, result);
-}
-
 void JackGenericClientChannel::GetUUIDForClientName(int refnum, const char* client_name, char* uuid_res, int* result)
 {
     JackGetUUIDRequest req(client_name);
@@ -239,13 +223,6 @@ void JackGenericClientChannel::GetClientNameForUUID(int refnum, const char* uuid
     JackClientNameResult res;
     ServerSyncCall(&req, &res, result);
     strncpy(name_res, res.fName, JACK_CLIENT_NAME_SIZE);
-}
-
-void JackGenericClientChannel::ClientHasSessionCallback(const char* client_name, int* result)
-{
-    JackClientHasSessionCallbackRequest req(client_name);
-    JackResult res;
-    ServerSyncCall(&req, &res, result);
 }
 
 void JackGenericClientChannel::ReserveClientName(int refnum, const char* client_name, const char* uuid, int* result)
@@ -301,13 +278,6 @@ void JackGenericClientChannel::InternalClientUnload(int refnum, int int_ref, int
     JackInternalClientUnloadResult res;
     ServerSyncCall(&req, &res, result);
     *status = res.fStatus;
-}
-
-void JackGenericClientChannel::PropertyChangeNotify(jack_uuid_t subject, const char* key, jack_property_change_t change, int* result)
-{
-    JackPropertyChangeNotifyRequest req(subject, key, change);
-    JackResult res;
-    ServerAsyncCall(&req, &res, result);
 }
 
 } // end of namespace

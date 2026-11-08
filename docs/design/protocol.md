@@ -83,7 +83,9 @@ each:
 | kSessionNotify, kSessionReply, kClientHasSessionCallback | **drop** | session API is dropped |
 | kPropertyChangeNotify | **drop** | metadata is dropped |
 
-The 40 current types become about 30. The numbers are reassigned.
+The 40 current types became 30 (done). The request numbers are reassigned in order, 1 to 30, and the protocol
+version is 11. The session requests and the property change request are gone, with their server and client code
+(the metadata store stays inside the server: the ALSA drivers set pretty port names through it).
 
 ### 3.2 Notifications
 
@@ -100,7 +102,7 @@ Server → client, on the notification socket. Current kinds (`NotificationType`
 | kRealTimeCallback, kShutDownCallback, kQUIT | keep | |
 | kLatencyCallback | keep | |
 | kSecondarySampleRateCallback | keep | |
-| kSessionCallback, kPropertyChangeCallback | **drop** | |
+| kSessionCallback, kPropertyChangeCallback | **drop** (done) | |
 
 Notifications are sent with a bounded per-client queue. If a client does not
 read them, the server drops the oldest one and counts the drop. A client

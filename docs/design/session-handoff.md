@@ -161,6 +161,11 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
+- **Protocol item 4b done.** The session requests and the property change request are removed, with their
+  notifications (`kSessionCallback`, `kPropertyChangeCallback`) and the server and client code. The requests are
+  renumbered 1 to 30. `JACK_PROTOCOL_VERSION` is 11. The metadata store stays inside the server (the ALSA drivers set
+  pretty port names through it; no client can read them now). Checked: unit suite; end-to-end and graph tests in
+  freewheel and real time; cpu; rtbench.
 - **Benchmarks ported to jackmini** (`tests/cpu.cpp`, `tests/iodelay.cpp`, `tests/external_metro.cpp`,
   `tests/perf/rtbench.cpp` as `jack_rtbench`). Durations are counted in cycles (`WaitUntil` / `WaitCycles`
   in `tests/jackmini_wait.hpp`), no sleeps. `run-baseline.sh` uses `jack_rtbench` and no fixed delay.

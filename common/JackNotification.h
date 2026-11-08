@@ -45,9 +45,7 @@ enum NotificationType {
     kRealTimeCallback = 14,
     kShutDownCallback = 15,
     kQUIT = 16,
-    kSessionCallback = 17,
     kLatencyCallback = 18,
-    kPropertyChangeCallback = 19,
     kSecondarySampleRateCallback = 20,
     kDropped = 21,          // the server dropped notifications for this client; value1 is how many
     kMaxNotification = 64  // To keep some room in JackClientControl fCallback table

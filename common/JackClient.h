@@ -68,9 +68,7 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         JackTimebaseCallback fTimebase;
         JackSyncCallback fSync;
         JackThreadCallback fThreadFun;
-        JackSessionCallback fSession;
         JackLatencyCallback fLatency;
-        JackPropertyChangeCallback fPropertyChange;
 
         void* fProcessArg;
         void* fGraphOrderArg;
@@ -89,9 +87,7 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         void* fTimebaseArg;
         void* fSyncArg;
         void* fThreadFunArg;
-        void* fSessionArg;
         void* fLatencyArg;
-        void* fPropertyChangeArg;
 
         std::array<char, JACK_SERVER_NAME_SIZE+1> fServerName{};
 
@@ -100,7 +96,6 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         JackSynchro* fSynchroTable;
         std::list<jack_port_id_t> fPortList;
 
-        JackSessionReply fSessionReply;
 
         int StartThread();
         void SetupDriverSync(bool freewheel);
@@ -192,10 +187,7 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         virtual int SetPortRegistrationCallback(JackPortRegistrationCallback callback, void* arg);
         virtual int SetPortConnectCallback(JackPortConnectCallback callback, void *arg);
         virtual int SetPortRenameCallback(JackPortRenameCallback callback, void *arg);
-        virtual int SetSessionCallback(JackSessionCallback callback, void *arg);
         virtual int SetLatencyCallback(JackLatencyCallback callback, void *arg);
-        virtual int SetPropertyChangeCallback(JackPropertyChangeCallback callback, void* arg);
-
         // Internal clients
         virtual char* GetInternalClientName(int ref);
         virtual int InternalClientHandle(const char* client_name, jack_status_t* status);
@@ -207,17 +199,10 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         void CycleSignal(int status);
         virtual int SetProcessThread(JackThreadCallback fun, void *arg);
 
-        // Session API
-        virtual jack_session_command_t* SessionNotify(const char* target, jack_session_event_type_t type, const char* path);
-        virtual int SessionReply(jack_session_event_t* ev);
         virtual char* GetUUIDForClientName(const char* client_name);
         virtual char* GetClientNameByUUID(const char* uuid);
         virtual int ReserveClientName(const char* client_name, const char* uuid);
-        virtual int ClientHasSessionCallback(const char* client_name);
-
         // Metadata API
-        virtual int PropertyChangeNotify(jack_uuid_t subject, const char* key, jack_property_change_t change);
-
         // JackRunnableInterface interface
         bool Init();
         bool Execute();
