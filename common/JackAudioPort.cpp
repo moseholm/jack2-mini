@@ -30,7 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <arm_neon.h>
 #endif
 
-namespace Jack
+namespace jackmini
 {
 
 static void AudioBufferInit(void* buffer, size_t buffer_size, jack_nframes_t)
@@ -161,5 +161,5 @@ const JackPortType gAudioPortType =
     AudioBufferMixdown
 };
 
-} // namespace Jack
+} // namespace jackmini
 

@@ -26,7 +26,7 @@
 #include <iostream>
 #include <string>
 
-namespace Jack
+namespace jackmini
 {
 
 #define	ThrowIf(inCondition, inException)                                               \

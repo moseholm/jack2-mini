@@ -24,7 +24,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackClientInterface.h"
 #include "JackPlatformPlug.h"
 
-namespace Jack
+namespace jackmini
 {
 
 struct JackClientControl;

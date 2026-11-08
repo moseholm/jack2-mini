@@ -42,7 +42,7 @@ int g_checks = 0;
     } \
 } while (0)
 
-using namespace Jack;
+using namespace jackmini;
 
 void SocketPair(int (&pair)[2])
 {

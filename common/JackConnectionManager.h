@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <vector>
 #include <assert.h>
 
-namespace Jack
+namespace jackmini
 {
 
 struct JackClientControl;

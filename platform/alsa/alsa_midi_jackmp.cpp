@@ -20,7 +20,7 @@
 #include "JackPort.h"
 #include "alsa_midi_impl.h"
 
-using Jack::JackAlsaDriver;
+using jackmini::JackAlsaDriver;
 
 struct fake_port_t
 {

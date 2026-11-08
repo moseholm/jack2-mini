@@ -70,7 +70,7 @@ static struct jack_constraint_enum_char_descriptor dither_constraint_descr_array
     { 0 }
 };
 
-namespace Jack
+namespace jackmini
 {
 
 static std::atomic<bool> device_reservation_loop_running{false};
@@ -203,7 +203,7 @@ bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
     std::vector<jack_port_id_t>& playback_ports = card->PlaybackPorts();
 
     for (int i = 0; i < card->CaptureChannels(); i++) {
-        Jack::FormatCString(name, "{}:capture_{}_{}", fClientControl.fName, card->PortBase().c_str(), i + 1);
+        jackmini::FormatCString(name, "{}:capture_{}_{}", fClientControl.fName, card->PortBase().c_str(), i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)CaptureDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name);
             UnregisterCardPorts(card);
@@ -213,7 +213,7 @@ bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
     }
 
     for (int i = 0; i < card->PlaybackChannels(); i++) {
-        Jack::FormatCString(name, "{}:playback_{}_{}", fClientControl.fName, card->PortBase().c_str(), i + 1);
+        jackmini::FormatCString(name, "{}:playback_{}_{}", fClientControl.fName, card->PortBase().c_str(), i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name);
             UnregisterCardPorts(card);
@@ -390,8 +390,8 @@ int JackAlsaDriver::Attach()
     jack_log("JackAlsaDriver::Attach fBufferSize %ld fSampleRate %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
 
     for (int i = 0; i < fCaptureChannels; i++) {
-        Jack::FormatCString(alias, "{}:{}:out{}", fAliasName.data(), fCaptureDriverName.data(), i + 1);
-        Jack::FormatCString(name, "{}:capture_{}", fClientControl.fName, i + 1);
+        jackmini::FormatCString(alias, "{}:{}:out{}", fAliasName.data(), fCaptureDriverName.data(), i + 1);
+        jackmini::FormatCString(name, "{}:capture_{}", fClientControl.fName, i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)port_flags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name);
             return -1;
@@ -405,8 +405,8 @@ int JackAlsaDriver::Attach()
     port_flags = (unsigned long)PlaybackDriverFlags;
 
     for (int i = 0; i < fPlaybackChannels; i++) {
-        Jack::FormatCString(alias, "{}:{}:in{}", fAliasName.data(), fPlaybackDriverName.data(), i + 1);
-        Jack::FormatCString(name, "{}:playback_{}", fClientControl.fName, i + 1);
+        jackmini::FormatCString(alias, "{}:{}:in{}", fAliasName.data(), fPlaybackDriverName.data(), i + 1);
+        jackmini::FormatCString(name, "{}:playback_{}", fClientControl.fName, i + 1);
         if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)port_flags, fEngineControl->fBufferSize, &port_index) < 0) {
             jack_error("driver: cannot register port for %s", name);
             return -1;
@@ -419,7 +419,7 @@ int JackAlsaDriver::Attach()
         // Monitor ports
         if (fWithMonitorPorts) {
             jack_log("Create monitor port");
-            Jack::FormatCString(name, "{}:monitor_{}", fClientControl.fName, i + 1);
+            jackmini::FormatCString(name, "{}:monitor_{}", fClientControl.fName, i + 1);
             if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, MonitorDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
                 jack_error("ALSA: cannot register monitor port for %s", name);
             } else {
@@ -565,7 +565,7 @@ static bool ResolvePcm(const std::string& pcm, const std::vector<JackAlsaPcmInfo
     bool numeric = !key.empty() && key.find_first_not_of("0123456789") == std::string::npos;
     *device = JackAlsaPcmDeviceNumber(pcm);
     for (size_t i = 0; i < pcms.size(); i++) {
-        if ((numeric && pcms[i].card_num == Jack::ParseLeadingInteger<int>(key)) || (!numeric && pcms[i].card_id == key)) {
+        if ((numeric && pcms[i].card_num == jackmini::ParseLeadingInteger<int>(key)) || (!numeric && pcms[i].card_id == key)) {
             *card = pcms[i].card_num;
             return true;
         }
@@ -697,7 +697,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         std::array<char, 32> audio_name{};
 
         if (capture_card >= 0) {
-            Jack::FormatCString(audio_name, "Audio{}", capture_card);
+            jackmini::FormatCString(audio_name, "Audio{}", capture_card);
             if (!JackServerGlobals::on_device_acquire(audio_name.data())) {
                 jack_error("Audio device %s cannot be acquired...", capture_driver_name);
                 return -1;
@@ -705,11 +705,11 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         }
 
         if (playback_card >= 0 && playback_card != capture_card) {
-            Jack::FormatCString(audio_name, "Audio{}", playback_card);
+            jackmini::FormatCString(audio_name, "Audio{}", playback_card);
             if (!JackServerGlobals::on_device_acquire(audio_name.data())) {
                 jack_error("Audio device %s cannot be acquired...", playback_driver_name);
                 if (capture_card >= 0) {
-                    Jack::FormatCString(audio_name, "Audio{}", capture_card);
+                    jackmini::FormatCString(audio_name, "Audio{}", capture_card);
                     JackServerGlobals::on_device_release(audio_name.data());
                 }
                 return -1;
@@ -917,13 +917,13 @@ int JackAlsaDriver::Close()
         std::array<char, 32> audio_name{};
         int capture_card = card_to_num(fCaptureDriverName.data());
         if (capture_card >= 0) {
-            Jack::FormatCString(audio_name, "Audio{}", capture_card);
+            jackmini::FormatCString(audio_name, "Audio{}", capture_card);
             JackServerGlobals::on_device_release(audio_name.data());
         }
 
         int playback_card = card_to_num(fPlaybackDriverName.data());
         if (playback_card >= 0 && playback_card != capture_card) {
-            Jack::FormatCString(audio_name, "Audio{}", playback_card);
+            jackmini::FormatCString(audio_name, "Audio{}", playback_card);
             JackServerGlobals::on_device_release(audio_name.data());
         }
     }
@@ -1402,12 +1402,12 @@ enum_alsa_devices()
 
     while(snd_card_next(&card_no) >= 0 && card_no >= 0)
     {
-        Jack::FormatCString(std::span<char>(card_id.str, sizeof(card_id.str)), "hw:{}", card_no);
+        jackmini::FormatCString(std::span<char>(card_id.str, sizeof(card_id.str)), "hw:{}", card_no);
 
         if (snd_ctl_open(&handle, card_id.str, 0) >= 0 &&
             snd_ctl_card_info(handle, info) >= 0)
         {
-            Jack::FormatCString(std::span<char>(card_id.str, sizeof(card_id.str)), "hw:{}", snd_ctl_card_info_get_id(info));
+            jackmini::FormatCString(std::span<char>(card_id.str, sizeof(card_id.str)), "hw:{}", snd_ctl_card_info_get_id(info));
             if (!jack_constraint_add_enum(
                     &constraint_ptr,
                     &array_size,
@@ -1419,7 +1419,7 @@ enum_alsa_devices()
 
             while (snd_ctl_pcm_next_device(handle, &device_no) >= 0 && device_no != -1)
             {
-                Jack::FormatCString(std::span<char>(device_id.str, sizeof(device_id.str)), "{},{}", card_id.str, device_no);
+                jackmini::FormatCString(std::span<char>(device_id.str, sizeof(device_id.str)), "{},{}", card_id.str, device_no);
 
                 snd_pcm_info_set_device(pcminfo_capture, device_no);
                 snd_pcm_info_set_subdevice(pcminfo_capture, 0);
@@ -1433,15 +1433,15 @@ enum_alsa_devices()
 
                 if (has_capture && has_playback)
                 {
-                    Jack::FormatCString(description, "{} (duplex)", snd_pcm_info_get_name(pcminfo_capture));
+                    jackmini::FormatCString(description, "{} (duplex)", snd_pcm_info_get_name(pcminfo_capture));
                 }
                 else if (has_capture)
                 {
-                    Jack::FormatCString(description, "{} (capture)", snd_pcm_info_get_name(pcminfo_capture));
+                    jackmini::FormatCString(description, "{} (capture)", snd_pcm_info_get_name(pcminfo_capture));
                 }
                 else if (has_playback)
                 {
-                    Jack::FormatCString(description, "{} (playback)", snd_pcm_info_get_name(pcminfo_playback));
+                    jackmini::FormatCString(description, "{} (playback)", snd_pcm_info_get_name(pcminfo_playback));
                 }
                 else
                 {
@@ -1587,7 +1587,7 @@ SERVER_EXPORT const jack_driver_desc_t* driver_get_descriptor ()
     return desc;
 }
 
-SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLockedEngine* engine, Jack::JackSynchro* table, const JSList* params)
+SERVER_EXPORT jackmini::JackDriverClientInterface* driver_initialize(jackmini::JackLockedEngine* engine, jackmini::JackSynchro* table, const JSList* params)
 {
     jack_nframes_t srate = 48000;
     jack_nframes_t frames_per_interrupt = 1024;
@@ -1609,7 +1609,7 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
     const JSList * node;
     const jack_driver_param_t * param;
     const char *midi_driver = "none";
-    std::vector<Jack::JackAlsaSecondaryConfig> secondaries;
+    std::vector<jackmini::JackAlsaSecondaryConfig> secondaries;
     std::vector<std::string> excluded_cards;
 
     for (node = params; node; node = jack_slist_next (node)) {
@@ -1712,9 +1712,9 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
 
             case 'Y':
                 if (strcmp (param->value.str, "none") != 0) {
-                    Jack::JackAlsaSecondaryConfig config;
+                    jackmini::JackAlsaSecondaryConfig config;
                     std::string error;
-                    if (!Jack::JackAlsaSecondaryConfigParse(param->value.str, &config, &error)) {
+                    if (!jackmini::JackAlsaSecondaryConfigParse(param->value.str, &config, &error)) {
                         jack_error("invalid --secondary \"%s\": %s", param->value.str, error.c_str());
                         return NULL;
                     }
@@ -1743,7 +1743,7 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
             case 'K':
                 if (strcmp (param->value.str, "none") != 0) {
                     std::string error;
-                    if (!Jack::JackAlsaSecondaryConfigLoadFile(param->value.str, &secondaries, &error)) {
+                    if (!jackmini::JackAlsaSecondaryConfigLoadFile(param->value.str, &secondaries, &error)) {
                         jack_error("%s", error.c_str());
                         return NULL;
                     }
@@ -1761,15 +1761,15 @@ SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLocke
     // The primary card is named by its ALSA id, so that it stays the same card
     // when devices are added or removed.  "hw:0" would name whatever card has
     // that number at the time.
-    if ((capture && !Jack::JackAlsaPcmNameIsById(capture_pcm_name)) ||
-        (playback && !Jack::JackAlsaPcmNameIsById(playback_pcm_name))) {
+    if ((capture && !jackmini::JackAlsaPcmNameIsById(capture_pcm_name)) ||
+        (playback && !jackmini::JackAlsaPcmNameIsById(playback_pcm_name))) {
         jack_error("the primary ALSA device must be given by card id, for example -d hw:CARD=PCH; "
                    "numeric forms such as hw:0 are not accepted");
         return NULL;
     }
 
-    Jack::JackAlsaDriver* alsa_driver = new Jack::JackAlsaDriver("system", "alsa_pcm", engine, table);
-    Jack::JackDriverClientInterface* threaded_driver = new Jack::JackThreadedDriver(alsa_driver);
+    jackmini::JackAlsaDriver* alsa_driver = new jackmini::JackAlsaDriver("system", "alsa_pcm", engine, table);
+    jackmini::JackDriverClientInterface* threaded_driver = new jackmini::JackThreadedDriver(alsa_driver);
     // Special open for ALSA driver...
     if (alsa_driver->Open(frames_per_interrupt, user_nperiods, srate, hw_monitoring, hw_metering, capture, playback, dither, soft_mode, monitor,
                           user_capture_nchnls, user_playback_nchnls, shorts_first, capture_pcm_name, playback_pcm_name,

@@ -23,7 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackMidiUtil.h"
 #include "JackError.h"
 
-using Jack::JackALSARawMidiSendQueue;
+using jackmini::JackALSARawMidiSendQueue;
 
 JackALSARawMidiSendQueue::JackALSARawMidiSendQueue(snd_rawmidi_t *rawmidi,
                                                    size_t bytes_per_poll)
@@ -35,7 +35,7 @@ JackALSARawMidiSendQueue::JackALSARawMidiSendQueue(snd_rawmidi_t *rawmidi,
     bytes_available = bytes_per_poll;
 }
 
-Jack::JackMidiWriteQueue::EnqueueResult
+jackmini::JackMidiWriteQueue::EnqueueResult
 JackALSARawMidiSendQueue::EnqueueEvent(jack_nframes_t time, size_t size,
                                        jack_midi_data_t *buffer)
 {

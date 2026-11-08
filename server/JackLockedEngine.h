@@ -25,7 +25,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackTools.h"
 #include "JackException.h"
 
-namespace Jack
+namespace jackmini
 {
 
 #define TRY_CALL    \

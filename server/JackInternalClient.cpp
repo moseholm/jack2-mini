@@ -32,7 +32,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackTools.h"
 #include <assert.h>
 
-namespace Jack
+namespace jackmini
 {
 
 JackGraphManager* JackInternalClient::fGraphManager = NULL;

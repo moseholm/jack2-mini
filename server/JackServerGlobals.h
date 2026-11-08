@@ -26,7 +26,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackServer.h"
 #include <map>
 
-namespace Jack
+namespace jackmini
 {
 
 class JackClient;

@@ -38,7 +38,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 struct _alsa_driver;
 typedef struct _alsa_driver alsa_driver_t;
 
-namespace Jack
+namespace jackmini
 {
 
 class JackGraphManager;

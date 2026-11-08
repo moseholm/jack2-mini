@@ -27,7 +27,7 @@
 #include "JackPlatformPlug.h"
 
 
-namespace Jack
+namespace jackmini
 {
 /*!
 \brief Base class for "lockable" objects.

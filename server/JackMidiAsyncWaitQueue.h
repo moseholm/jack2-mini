@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackMidiAsyncQueue.h"
 
-namespace Jack {
+namespace jackmini {
 
     /**
      * This is an asynchronous wait queue that allows a thread to wait for a

@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 using namespace std;
 
-namespace Jack
+namespace jackmini
 {
 
 #define CheckRead(req, socket)          { if (header.length != static_cast<std::uint32_t>(req.Size()) || req.Read(socket) < 0) { jack_error("CheckRead error"); return -1; } }

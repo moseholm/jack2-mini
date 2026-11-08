@@ -22,7 +22,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <alsa/asoundlib.h>
 #include <string>
 
-namespace Jack
+namespace jackmini
 {
 
 enum JackAlsaRateDirection {

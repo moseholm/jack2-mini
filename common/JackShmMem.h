@@ -37,7 +37,7 @@
 #define CHECK_MLOCKALL() (mlockall(MCL_CURRENT | MCL_FUTURE) == 0)
 #define CHECK_MUNLOCKALL() (munlockall() == 0)
 
-namespace Jack
+namespace jackmini
 {
 
 void LockMemoryImp(void* ptr, size_t size);

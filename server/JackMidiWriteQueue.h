@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackMidiPort.h"
 
-namespace Jack {
+namespace jackmini {
 
     /**
      * Interface for classes that act as write queues for MIDI messages.  Write

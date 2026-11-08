@@ -8,7 +8,7 @@
 #include "JackALSARawMidiUtil.h"
 
 void
-Jack::CreateNonBlockingPipe(int *fds)
+jackmini::CreateNonBlockingPipe(int *fds)
 {
     if (pipe(fds) == -1) {
         throw std::runtime_error(strerror(errno));
@@ -24,14 +24,14 @@ Jack::CreateNonBlockingPipe(int *fds)
 }
 
 void
-Jack::DestroyNonBlockingPipe(int *fds)
+jackmini::DestroyNonBlockingPipe(int *fds)
 {
     close(fds[1]);
     close(fds[0]);
 }
 
 void
-Jack::SetNonBlocking(int fd)
+jackmini::SetNonBlocking(int fd)
 {
     int flags = fcntl(fd, F_GETFL);
     if (flags == -1) {

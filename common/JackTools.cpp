@@ -37,7 +37,7 @@
 
 using namespace std;
 
-namespace Jack {
+namespace jackmini {
 
 #define DEFAULT_TMP_DIR "/tmp"
     std::string jack_tmpdir = DEFAULT_TMP_DIR;
@@ -81,9 +81,9 @@ namespace Jack {
         /* format the path name on the first call */
         if (user_dir[0] == '\0') {
             if (getenv("JACK_PROMISCUOUS_SERVER")) {
-                Jack::FormatCString(user_dir, "{}/jack", jack_tmpdir);
+                jackmini::FormatCString(user_dir, "{}/jack", jack_tmpdir);
             } else {
-                Jack::FormatCString(user_dir, "{}/jack-{}", jack_tmpdir, GetUID());
+                jackmini::FormatCString(user_dir, "{}/jack-{}", jack_tmpdir, GetUID());
             }
         }
 
@@ -96,7 +96,7 @@ namespace Jack {
         /* format the path name into the suppled server_dir char array,
         * assuming that server_dir is at least as large as JACK_PATH_MAX + 1 */
 
-        Jack::FormatCString(std::span<char>(server_dir, JACK_PATH_MAX + 1), "{}/{}", UserDir(), server_name);
+        jackmini::FormatCString(std::span<char>(server_dir, JACK_PATH_MAX + 1), "{}/{}", UserDir(), server_name);
         return server_dir;
     }
 
@@ -209,7 +209,7 @@ namespace Jack {
             }
         }
 
-        Jack::FormatCString(std::span<char>(path_to_so, path_len), "{}/{}.so", internal_dir, so_name);
+        jackmini::FormatCString(std::span<char>(path_to_so, path_len), "{}/{}.so", internal_dir, so_name);
     }
 
 }  // end of namespace

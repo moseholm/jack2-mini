@@ -39,7 +39,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <cstddef>
 #include <cstdint>
 
-using namespace Jack;
+using namespace jackmini;
 
 // Each shared structure has natural alignment: its size is a multiple of its
 // alignment, so an array of them stays aligned.

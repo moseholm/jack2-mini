@@ -28,7 +28,7 @@
 #include <string>
 #include <thread>
 
-namespace Jack
+namespace jackmini
 {
 
 namespace
@@ -185,14 +185,14 @@ bool JackMessageBuffer::Destroy()
 
 void JackMessageBufferAdd(int level, const char *message)
 {
-    if (Jack::JackMessageBuffer::fInstance == nullptr) {
+    if (jackmini::JackMessageBuffer::fInstance == nullptr) {
         /* Unable to print message with realtime safety. Complain and print it anyway. */
         jack_log_direct(LOG_LEVEL_ERROR, "messagebuffer not initialized, skip message");
     } else {
         /* scan at most one buffer's worth, so an unterminated input cannot run away */
-        const char* end = std::char_traits<char>::find(message, Jack::MB_BUFFERSIZE, '\0');
-        const std::size_t length = end ? static_cast<std::size_t>(end - message) : Jack::MB_BUFFERSIZE;
-        Jack::JackMessageBuffer::fInstance->AddMessage(level, std::string_view(message, length));
+        const char* end = std::char_traits<char>::find(message, jackmini::MB_BUFFERSIZE, '\0');
+        const std::size_t length = end ? static_cast<std::size_t>(end - message) : jackmini::MB_BUFFERSIZE;
+        jackmini::JackMessageBuffer::fInstance->AddMessage(level, std::string_view(message, length));
     }
 }
 

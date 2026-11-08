@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackConstants.h"
 #include <stddef.h>
 
-namespace Jack
+namespace jackmini
 {
 
 extern const jack_port_type_id_t PORT_TYPES_MAX;
@@ -43,6 +43,6 @@ extern const struct JackPortType* GetPortType(jack_port_type_id_t port_type_id);
 extern const struct JackPortType gAudioPortType;
 extern const struct JackPortType gMidiPortType;
 
-} // namespace Jack
+} // namespace jackmini
 
 #endif

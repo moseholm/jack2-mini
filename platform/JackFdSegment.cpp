@@ -25,7 +25,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <sys/socket.h>
 #include <unistd.h>
 
-namespace Jack
+namespace jackmini
 {
 
 namespace
@@ -173,4 +173,4 @@ void UnmapSegment(void* address, std::size_t size) noexcept
     munmap(address, size);
 }
 
-} // namespace Jack
+} // namespace jackmini

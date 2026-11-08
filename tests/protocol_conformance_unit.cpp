@@ -34,7 +34,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <thread>
 #include <unistd.h>
 
-using namespace Jack;
+using namespace jackmini;
 
 namespace
 {

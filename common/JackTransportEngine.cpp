@@ -31,7 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 using namespace std;
 
-namespace Jack
+namespace jackmini
 {
 
 JackTransportEngine::JackTransportEngine(): JackAtomicArrayState<jack_position_t>()

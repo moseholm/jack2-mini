@@ -25,7 +25,7 @@
 #include "JackGlobals.h"
 #include "JackEngineControl.h"
 
-namespace Jack
+namespace jackmini
 {
 
 JackThreadedDriver::JackThreadedDriver(JackDriver* driver):fThread(this),fDriver(driver)

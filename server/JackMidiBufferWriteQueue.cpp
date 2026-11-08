@@ -21,14 +21,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackMidiUtil.h"
 #include "JackError.h"
 
-using Jack::JackMidiBufferWriteQueue;
+using jackmini::JackMidiBufferWriteQueue;
 
 JackMidiBufferWriteQueue::JackMidiBufferWriteQueue()
 {
     // Empty
 }
 
-Jack::JackMidiWriteQueue::EnqueueResult
+jackmini::JackMidiWriteQueue::EnqueueResult
 JackMidiBufferWriteQueue::EnqueueEvent(jack_nframes_t time, size_t size,
                                        jack_midi_data_t *data)
 {

@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackClientControl.h"
 #include "JackError.h"
 
-namespace Jack
+namespace jackmini
 {
 
 bool JackActivationCount::Signal(std::atomic<SInt32>& live, JackSynchro* synchro, JackClientControl* control)

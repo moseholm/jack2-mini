@@ -24,7 +24,7 @@
 #include "JackDriver.h"
 #include "JackPlatformPlug.h"
 
-namespace Jack
+namespace jackmini
 {
 
 /*!

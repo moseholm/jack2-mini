@@ -32,7 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 # define SCHED_RESET_ON_FORK 0x40000000
 #endif
 
-namespace Jack
+namespace jackmini
 {
 
 void* JackPosixThread::ThreadHandler(void* arg)

@@ -27,7 +27,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <cstring>
 #include <string>
 
-using namespace Jack;
+using namespace jackmini;
 
 namespace
 {
@@ -153,12 +153,12 @@ void TestReplyWriter()
 void TestNotificationRoundTrip()
 {
     BufferTransport wire;
-    JackClientNotification sent("system", 3, Jack::kXRunCallback, 1, "msg", 5, 6);
+    JackClientNotification sent("system", 3, jackmini::kXRunCallback, 1, "msg", 5, 6);
     CHECK(sent.Write(&wire, 91) == 0);
 
     JackMsgHeader got{};
     CHECK(ReadJackMsgHeader(&wire, got) == 0);
-    CHECK(got.type == Jack::kXRunCallback);
+    CHECK(got.type == jackmini::kXRunCallback);
     CHECK(got.request == 91);
     CHECK(got.length == JackClientNotification::PayloadSize);
 
@@ -168,7 +168,7 @@ void TestNotificationRoundTrip()
     CHECK(body.Done());
     CHECK(std::strcmp(back.fName, "system") == 0);
     CHECK(back.fRefNum == 3);
-    CHECK(back.fNotify == Jack::kXRunCallback);
+    CHECK(back.fNotify == jackmini::kXRunCallback);
     CHECK(back.fSync == 1);
     CHECK(back.fValue1 == 5 && back.fValue2 == 6);
     CHECK(std::strcmp(back.fMessage, "msg") == 0);
@@ -178,7 +178,7 @@ void TestSyncReplyEchoesRequest()
 {
     BufferTransport wire;
     JackResult res(42);
-    CHECK(SendJackReply(&wire, res, MakeJackMsgHeader(Jack::kXRunCallback, 0, 91)) == 0);
+    CHECK(SendJackReply(&wire, res, MakeJackMsgHeader(jackmini::kXRunCallback, 0, 91)) == 0);
 
     class ReplySocket : public detail::JackClientRequestInterface
     {
@@ -191,15 +191,15 @@ void TestSyncReplyEchoesRequest()
     } socket(wire);
 
     JackResult back;
-    CHECK(ReadJackReply(&socket, Jack::kXRunCallback, 91, back) == 0);
+    CHECK(ReadJackReply(&socket, jackmini::kXRunCallback, 91, back) == 0);
     CHECK(back.fResult == 42);
 
     BufferTransport again;
     JackResult other(1);
-    SendJackReply(&again, other, MakeJackMsgHeader(Jack::kXRunCallback, 0, 91));
+    SendJackReply(&again, other, MakeJackMsgHeader(jackmini::kXRunCallback, 0, 91));
     ReplySocket socket2(again);
     JackResult wrong;
-    CHECK(ReadJackReply(&socket2, Jack::kXRunCallback, 92, wrong) < 0);
+    CHECK(ReadJackReply(&socket2, jackmini::kXRunCallback, 92, wrong) < 0);
 }
 
 void TestRequestIdsAreDistinct()

@@ -19,7 +19,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaReconfigWorker.h"
 #include "JackError.h"
 
-namespace Jack
+namespace jackmini
 {
 
 JackAlsaReconfigWorker::JackAlsaReconfigWorker(JackAlsaRateRequestHandler* handler)

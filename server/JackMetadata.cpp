@@ -37,7 +37,7 @@ LIB_EXPORT const char* JACK_METADATA_PRETTY_NAME = JACK_METADATA_PREFIX "pretty-
 LIB_EXPORT const char* JACK_METADATA_SIGNAL_TYPE = JACK_METADATA_PREFIX "signal-type";
 #undef JACK_METADATA_PREFIX
 
-namespace Jack
+namespace jackmini
 {
 
 JackMetadata::JackMetadata()

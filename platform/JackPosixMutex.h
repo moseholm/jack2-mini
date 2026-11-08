@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-namespace Jack
+namespace jackmini
 {
 /*!
 \brief Mutex abstraction.

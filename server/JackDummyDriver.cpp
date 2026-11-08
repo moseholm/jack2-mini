@@ -58,7 +58,7 @@ extern "C"
         return desc;
     }
 
-    SERVER_EXPORT Jack::JackDriverClientInterface* driver_initialize(Jack::JackLockedEngine* engine, Jack::JackSynchro* table, const JSList* params) {
+    SERVER_EXPORT jackmini::JackDriverClientInterface* driver_initialize(jackmini::JackLockedEngine* engine, jackmini::JackSynchro* table, const JSList* params) {
         jack_nframes_t sample_rate = 48000;
         jack_nframes_t buffer_size = 1024;
         unsigned int capture_ports = 2;
@@ -108,7 +108,7 @@ extern "C"
             jack_error("Buffer size set to %d", BUFFER_SIZE_MAX);
         }
 
-        Jack::JackDriverClientInterface* driver = new Jack::JackThreadedDriver(new Jack::JackDummyDriver("system", "dummy_pcm", engine, table));
+        jackmini::JackDriverClientInterface* driver = new jackmini::JackThreadedDriver(new jackmini::JackDummyDriver("system", "dummy_pcm", engine, table));
         if (driver->Open(buffer_size, sample_rate, 1, 1, capture_ports, playback_ports, monitor, "dummy", "dummy", 0, 0) == 0) {
             return driver;
         } else {

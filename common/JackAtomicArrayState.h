@@ -28,7 +28,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace Jack
+namespace jackmini
 {
 
 /*!

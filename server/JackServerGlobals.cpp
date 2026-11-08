@@ -33,7 +33,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 static char* server_name = NULL;
 
-namespace Jack
+namespace jackmini
 {
 
 JackServer* JackServerGlobals::fInstance;
@@ -214,7 +214,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 'L':
-                    loopback = Jack::ParseLeadingInteger<int>(optarg);
+                    loopback = jackmini::ParseLeadingInteger<int>(optarg);
                     break;
 
                  case 'X':
@@ -226,7 +226,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 'p':
-                    port_max = static_cast<unsigned int>(Jack::ParseLeadingInteger<long>(optarg));
+                    port_max = static_cast<unsigned int>(jackmini::ParseLeadingInteger<long>(optarg));
                     break;
 
                 case 'm':
@@ -248,7 +248,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 'P':
-                    realtime_priority = Jack::ParseLeadingInteger<int>(optarg);
+                    realtime_priority = jackmini::ParseLeadingInteger<int>(optarg);
                     break;
 
                 case 'r':
@@ -264,7 +264,7 @@ bool JackServerGlobals::Init()
                     break;
 
                 case 't':
-                    client_timeout = Jack::ParseLeadingInteger<int>(optarg);
+                    client_timeout = jackmini::ParseLeadingInteger<int>(optarg);
                     break;
 
                 default:

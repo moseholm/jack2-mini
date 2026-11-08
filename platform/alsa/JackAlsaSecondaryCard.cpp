@@ -30,7 +30,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <sys/mman.h>
 #include <thread>
 
-namespace Jack
+namespace jackmini
 {
 
 static float** AllocChannelBuffers(int channels, unsigned int frames)

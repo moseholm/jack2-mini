@@ -20,7 +20,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef __JackALSARawMidiUtil__
 #define __JackALSARawMidiUtil__
 
-namespace Jack {
+namespace jackmini {
 
     void
     CreateNonBlockingPipe(int *fds);

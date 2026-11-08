@@ -29,7 +29,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <span>
 #include <vector>
 
-namespace Jack
+namespace jackmini
 {
 
 // Every message on the control socket (requests and replies) starts with this 16-byte header (protocol.md section 2).
@@ -161,6 +161,6 @@ class JackPayloadReader : public detail::JackChannelTransactionInterface
         std::vector<UniqueFd> fFds;
 };
 
-} // namespace Jack
+} // namespace jackmini
 
 #endif

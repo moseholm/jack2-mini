@@ -50,23 +50,23 @@ void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file)
     for (i = 0; i < desc->nparams; i++) {
         switch (desc->params[i].type) {
             case JackDriverParamInt:
-                Jack::FormatCString(arg_default, "{}", desc->params[i].value.i);
+                jackmini::FormatCString(arg_default, "{}", desc->params[i].value.i);
                 break;
             case JackDriverParamUInt:
-                Jack::FormatCString(arg_default, "{}", desc->params[i].value.ui);
+                jackmini::FormatCString(arg_default, "{}", desc->params[i].value.ui);
                 break;
             case JackDriverParamChar:
-                Jack::FormatCString(arg_default, "{}", desc->params[i].value.c);
+                jackmini::FormatCString(arg_default, "{}", desc->params[i].value.c);
                 break;
             case JackDriverParamString:
                 if (desc->params[i].value.str && strcmp (desc->params[i].value.str, "") != 0) {
-                    Jack::FormatCString(arg_default, "{}", desc->params[i].value.str);
+                    jackmini::FormatCString(arg_default, "{}", desc->params[i].value.str);
                 } else {
-                    Jack::FormatCString(arg_default, "none");
+                    jackmini::FormatCString(arg_default, "none");
                 }
                 break;
             case JackDriverParamBool:
-                Jack::FormatCString(arg_default, "{}", desc->params[i].value.i ? "true" : "false");
+                jackmini::FormatCString(arg_default, "{}", desc->params[i].value.i ? "true" : "false");
                 break;
         }
 
@@ -140,7 +140,7 @@ int jack_parse_driver_params(jack_driver_desc_t* desc, int argc, char* argv[], J
 
     options_ptr = options.data();
     for (i = 0; i < desc->nparams; i++) {
-        Jack::FormatCString(std::span<char>(options_ptr, 4), "{}::", desc->params[i].character);
+        jackmini::FormatCString(std::span<char>(options_ptr, 4), "{}::", desc->params[i].character);
         options_ptr += 3;
         long_options[i].name = desc->params[i].name;
         long_options[i].flag = NULL;
@@ -183,10 +183,10 @@ int jack_parse_driver_params(jack_driver_desc_t* desc, int argc, char* argv[], J
         if (optarg) {
             switch (desc->params[param_index].type) {
                 case JackDriverParamInt:
-                    driver_param->value.i = Jack::ParseLeadingInteger<int>(optarg);
+                    driver_param->value.i = jackmini::ParseLeadingInteger<int>(optarg);
                     break;
                 case JackDriverParamUInt:
-                    driver_param->value.ui = Jack::ParseLeadingInteger<unsigned int>(optarg);
+                    driver_param->value.ui = jackmini::ParseLeadingInteger<unsigned int>(optarg);
                     break;
                 case JackDriverParamChar:
                     driver_param->value.c = optarg[0];
@@ -272,7 +272,7 @@ SERVER_EXPORT int jackctl_driver_params_parse(jackctl_driver *driver_ptr, int ar
 
     options_ptr = options.data();
     for (i = 0; i < desc->nparams; i++) {
-        Jack::FormatCString(std::span<char>(options_ptr, 4), "{}::", desc->params[i].character);
+        jackmini::FormatCString(std::span<char>(options_ptr, 4), "{}::", desc->params[i].character);
         options_ptr += 3;
         long_options[i].name = desc->params[i].name;
         long_options[i].flag = NULL;
@@ -315,11 +315,11 @@ SERVER_EXPORT int jackctl_driver_params_parse(jackctl_driver *driver_ptr, int ar
         if (optarg) {
             switch (jackctl_parameter_get_type(param)) {
                 case JackDriverParamInt:
-                    value.i = Jack::ParseLeadingInteger<int>(optarg);
+                    value.i = jackmini::ParseLeadingInteger<int>(optarg);
                     jackctl_parameter_set_value(param, &value);
                     break;
                 case JackDriverParamUInt:
-                    value.ui = Jack::ParseLeadingInteger<unsigned int>(optarg);
+                    value.ui = jackmini::ParseLeadingInteger<unsigned int>(optarg);
                     jackctl_parameter_set_value(param, &value);
                     break;
                 case JackDriverParamChar:
@@ -397,7 +397,7 @@ static void* check_symbol(const char* sofile, const char* symbol, const char* dr
     void* dlhandle;
     void* res = NULL;
     std::array<char, 1024> filename{};
-    Jack::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
+    jackmini::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
     
     if ((dlhandle = LoadDriverModule(filename.data())) == NULL) {
         jack_error ("Could not open component .so '%s': %s", filename.data(), dlerror());
@@ -431,7 +431,7 @@ static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sof
     JSList* node;
     void* raw_handle = NULL;
 
-    Jack::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
+    jackmini::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
     
     so_get_descriptor = (JackDriverDescFunction)check_symbol(sofile, symbol, driver_dir, &raw_handle);
     std::unique_ptr<void, DriverModuleCloser> dlhandle(raw_handle);
@@ -565,9 +565,9 @@ JSList* jack_internals_load(JSList * internals)
 }
 
 
-Jack::JackDriverClientInterface* JackDriverInfo::Open(jack_driver_desc_t* driver_desc,
-                                                    Jack::JackLockedEngine* engine,
-                                                    Jack::JackSynchro* synchro,
+jackmini::JackDriverClientInterface* JackDriverInfo::Open(jack_driver_desc_t* driver_desc,
+                                                    jackmini::JackLockedEngine* engine,
+                                                    jackmini::JackSynchro* synchro,
                                                     const JSList* params)
 {
     const char* errstr;

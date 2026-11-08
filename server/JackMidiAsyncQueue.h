@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackMidiWriteQueue.h"
 #include "ringbuffer.h"
 
-namespace Jack {
+namespace jackmini {
 
     /**
      * This is a MIDI message queue designed to allow one thread to pass MIDI

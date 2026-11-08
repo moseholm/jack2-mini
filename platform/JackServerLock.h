@@ -22,7 +22,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <expected>
 #include <system_error>
 
-namespace Jack
+namespace jackmini
 {
 
 // The single-instance rule of a server: one server per user.  It is an flock() on a file in dir, named after the user,
@@ -34,6 +34,6 @@ namespace Jack
 std::expected<void, std::error_code> AcquireServerLock(const char* dir);
 void ReleaseServerLock() noexcept;
 
-} // namespace Jack
+} // namespace jackmini
 
 #endif

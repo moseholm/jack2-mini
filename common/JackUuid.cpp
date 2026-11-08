@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <string.h>
 #include <string_view>
 
-using namespace Jack;
+using namespace jackmini;
 
 jack_uuid_t jack_client_uuid_generate()
 {
@@ -91,7 +91,7 @@ int jack_uuid_parse(const char* b, jack_uuid_t* u)
 
 void jack_uuid_unparse(jack_uuid_t u, char b[JACK_UUID_STRING_SIZE])
 {
-    Jack::FormatCString(std::span<char>(b, JACK_UUID_STRING_SIZE), "{}", static_cast<uint64_t>(u));
+    jackmini::FormatCString(std::span<char>(b, JACK_UUID_STRING_SIZE), "{}", static_cast<uint64_t>(u));
 }
 
 int jack_uuid_empty(jack_uuid_t u)

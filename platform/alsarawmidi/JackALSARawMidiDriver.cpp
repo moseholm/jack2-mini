@@ -32,7 +32,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackMidiUtil.h"
 #include "driver_interface.h"
 
-using Jack::JackALSARawMidiDriver;
+using jackmini::JackALSARawMidiDriver;
 
 JackALSARawMidiDriver::JackALSARawMidiDriver(const char *name,
                                              const char *alias,
@@ -376,7 +376,7 @@ JackALSARawMidiDriver::Open(bool capturing, bool playing, int in_channels,
             break;
         }
         std::array<char, 32> name{};
-        Jack::FormatCString(name, "hw:{}", card);
+        jackmini::FormatCString(name, "hw:{}", card);
         snd_ctl_t *control;
         code = snd_ctl_open(&control, name.data(), SND_CTL_NONBLOCK);
         if (code) {
@@ -633,7 +633,7 @@ extern "C" {
 #endif
     
     // singleton kind of driver
-    static Jack::JackALSARawMidiDriver* driver = NULL;
+    static jackmini::JackALSARawMidiDriver* driver = NULL;
 
     SERVER_EXPORT jack_driver_desc_t *
     driver_get_descriptor()
@@ -645,13 +645,13 @@ extern "C" {
         return jack_driver_descriptor_construct("alsarawmidi", JackDriverSlave, "Alternative ALSA raw MIDI backend.", NULL);
     }
 
-    SERVER_EXPORT Jack::JackDriverClientInterface *
-    driver_initialize(Jack::JackLockedEngine *engine, Jack::JackSynchro *table,
+    SERVER_EXPORT jackmini::JackDriverClientInterface *
+    driver_initialize(jackmini::JackLockedEngine *engine, jackmini::JackSynchro *table,
                       const JSList *params)
     {
         // singleton kind of driver
         if (!driver) {
-            driver = new Jack::JackALSARawMidiDriver("system_midi", "alsarawmidi", engine, table);
+            driver = new jackmini::JackALSARawMidiDriver("system_midi", "alsarawmidi", engine, table);
             if (driver->Open(1, 1, 0, 0, false, "midi in", "midi out", 0, 0) == 0) {
                 return driver;
             } else {

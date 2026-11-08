@@ -30,7 +30,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #define RESAMPLE_DEFAULT_QUALITY 4
 #endif
 
-namespace Jack
+namespace jackmini
 {
 
 class JackPipeWireResampler : public JackResampler

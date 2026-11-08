@@ -33,7 +33,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 // Defined in JackAlsaDriver.cpp.
 extern "C" char* get_control_device_name(const char* device_name);
 
-namespace Jack
+namespace jackmini
 {
 
 std::string JackAlsaControlDeviceName(const std::string& pcm)

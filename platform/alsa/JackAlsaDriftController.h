@@ -19,7 +19,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef __JackAlsaDriftController__
 #define __JackAlsaDriftController__
 
-namespace Jack
+namespace jackmini
 {
 
 /*!

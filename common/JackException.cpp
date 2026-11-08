@@ -20,7 +20,7 @@
 #include "JackException.h"
 #include "JackError.h"
 
-namespace Jack
+namespace jackmini
 {
 
     void JackException::PrintMessage()

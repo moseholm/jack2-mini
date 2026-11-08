@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackCompilerDeps.h"
 #include <string_view>
 
-namespace Jack
+namespace jackmini
 {
 
 #define ALL_PORTS	0xFFFF

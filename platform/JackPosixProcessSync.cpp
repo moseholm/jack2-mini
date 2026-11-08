@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackError.h"
 #include <chrono>
 
-namespace Jack
+namespace jackmini
 {
 
 // pthread_cond_timedwait() takes an absolute CLOCK_REALTIME deadline, which is

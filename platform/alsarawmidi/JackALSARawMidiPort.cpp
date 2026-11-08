@@ -27,7 +27,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackALSARawMidiUtil.h"
 #include "JackError.h"
 
-using Jack::JackALSARawMidiPort;
+using jackmini::JackALSARawMidiPort;
 
 JackALSARawMidiPort::JackALSARawMidiPort(const char *client_name, snd_rawmidi_info_t *info,
                                          size_t index, unsigned short io_mask)
@@ -36,7 +36,7 @@ JackALSARawMidiPort::JackALSARawMidiPort(const char *client_name, snd_rawmidi_in
     unsigned int device = snd_rawmidi_info_get_device(info);
     unsigned int subdevice = snd_rawmidi_info_get_subdevice(info);
     std::array<char, 32> device_id{};
-    Jack::FormatCString(device_id, "hw:{},{},{}", card, device, subdevice);
+    jackmini::FormatCString(device_id, "hw:{},{},{}", card, device, subdevice);
     const char* driver_name = snd_rawmidi_info_get_name(info);
     const char *alias_suffix;
     const char *error_message;
@@ -115,8 +115,8 @@ JackALSARawMidiPort::JackALSARawMidiPort(const char *client_name, snd_rawmidi_in
         func = "CreateNonBlockingPipe";
         goto close;
     }
-    Jack::FormatCString(alias, "system:{}-{} {} {} {}", card + 1, device + 1, driver_name, subdevice + 1, alias_suffix);
-    Jack::FormatCString(name, "{}:{}{}", client_name, port_name, index + 1);
+    jackmini::FormatCString(alias, "system:{}-{} {} {} {}", card + 1, device + 1, driver_name, subdevice + 1, alias_suffix);
+    jackmini::FormatCString(name, "{}:{}{}", client_name, port_name, index + 1);
     strncpy(device_name, driver_name, sizeof(device_name) - 1);
     this->io_mask = io_mask;
     return;

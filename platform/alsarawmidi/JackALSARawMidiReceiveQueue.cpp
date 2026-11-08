@@ -21,7 +21,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackError.h"
 #include "JackMidiUtil.h"
 
-using Jack::JackALSARawMidiReceiveQueue;
+using jackmini::JackALSARawMidiReceiveQueue;
 
 JackALSARawMidiReceiveQueue::
 JackALSARawMidiReceiveQueue(snd_rawmidi_t *rawmidi, size_t buffer_size)

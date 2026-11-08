@@ -29,7 +29,7 @@
 #include "JackClientControl.h"
 #include <list>
 
-namespace Jack
+namespace jackmini
 {
 
 class JackLockedEngine;

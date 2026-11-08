@@ -25,7 +25,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-namespace Jack
+namespace jackmini
 {
 
 JackAlsaControlMonitor::JackAlsaControlMonitor(JackAlsaControlListener* listener)

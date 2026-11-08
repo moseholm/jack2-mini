@@ -23,7 +23,7 @@
 #include "JackShmMem.h"
 #include <stdio.h>
 
-namespace Jack
+namespace jackmini
 {
 
 static unsigned int fSegmentNum = 0;
@@ -59,7 +59,7 @@ void* JackShmMem::operator new(size_t size)
 {
     std::array<char, 64> name{};
 
-    Jack::FormatCString(name, "jack-shared{}", fSegmentNum++);
+    jackmini::FormatCString(name, "jack-shared{}", fSegmentNum++);
 
     auto segment = CreateSegment(size, name.data());
     if (!segment) {

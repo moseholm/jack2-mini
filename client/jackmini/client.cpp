@@ -216,7 +216,7 @@ struct ClientBridge {
             cycle.current_usecs = current_usecs;
             cycle.next_usecs = next_usecs;
         }
-        Jack::JackEngineControl* control = Jack::GetEngineControl();
+        jackmini::JackEngineControl* control = jackmini::GetEngineControl();
         cycle.freewheel = control != nullptr && control->fFreewheel.load();
         return impl->process(cycle) ? 0 : -1;
     }

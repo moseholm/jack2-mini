@@ -18,7 +18,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackAlsaDriftController.h"
 
-namespace Jack
+namespace jackmini
 {
 
 static double Clamp(double v, double limit)

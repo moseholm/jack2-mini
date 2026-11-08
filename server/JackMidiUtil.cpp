@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackTime.h"
 
 jack_midi_data_t
-Jack::ApplyRunningStatus(size_t *size, jack_midi_data_t **buffer,
+jackmini::ApplyRunningStatus(size_t *size, jack_midi_data_t **buffer,
                          jack_midi_data_t running_status)
 {
 
@@ -45,7 +45,7 @@ Jack::ApplyRunningStatus(size_t *size, jack_midi_data_t **buffer,
 }
 
 jack_midi_data_t
-Jack::ApplyRunningStatus(jack_midi_event_t *event,
+jackmini::ApplyRunningStatus(jack_midi_event_t *event,
                          jack_midi_data_t running_status)
 {
     return ApplyRunningStatus(&(event->size), &(event->buffer),
@@ -53,7 +53,7 @@ Jack::ApplyRunningStatus(jack_midi_event_t *event,
 }
 
 jack_nframes_t
-Jack::GetCurrentFrame()
+jackmini::GetCurrentFrame()
 {
     jack_time_t time = GetMicroSeconds();
     JackEngineControl *control = GetEngineControl();
@@ -63,7 +63,7 @@ Jack::GetCurrentFrame()
 }
 
 jack_nframes_t
-Jack::GetFramesFromTime(jack_time_t time)
+jackmini::GetFramesFromTime(jack_time_t time)
 {
     JackEngineControl* control = GetEngineControl();
     JackTimer timer;
@@ -72,13 +72,13 @@ Jack::GetFramesFromTime(jack_time_t time)
 }
 
 jack_nframes_t
-Jack::GetLastFrame()
+jackmini::GetLastFrame()
 {
     return GetEngineControl()->fFrameTimer.ReadCurrentState()->CurFrame();
 }
 
 int
-Jack::GetMessageLength(jack_midi_data_t status_byte)
+jackmini::GetMessageLength(jack_midi_data_t status_byte)
 {
     switch (status_byte & 0xf0) {
     case 0x80:
@@ -112,7 +112,7 @@ Jack::GetMessageLength(jack_midi_data_t status_byte)
 }
 
 jack_time_t
-Jack::GetTimeFromFrames(jack_nframes_t frames)
+jackmini::GetTimeFromFrames(jack_nframes_t frames)
 {
     JackEngineControl* control = GetEngineControl();
     JackTimer timer;

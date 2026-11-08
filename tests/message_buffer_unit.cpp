@@ -73,7 +73,7 @@ void TestConcurrentProducers()
     constexpr int producers = 4;
     constexpr long per_producer = 20000;
 
-    CHECK(Jack::JackMessageBuffer::Create());
+    CHECK(jackmini::JackMessageBuffer::Create());
     g_received.clear();
 
     std::vector<std::thread> threads;
@@ -81,7 +81,7 @@ void TestConcurrentProducers()
         threads.emplace_back([id] {
             for (long i = 0; i < per_producer; i++) {
                 const std::string text = "t" + std::to_string(id) + ":" + std::to_string(i);
-                Jack::JackMessageBufferAdd(LOG_LEVEL_ERROR, text.c_str());
+                jackmini::JackMessageBufferAdd(LOG_LEVEL_ERROR, text.c_str());
             }
         });
     }
@@ -90,8 +90,8 @@ void TestConcurrentProducers()
     }
 
     // Read the overrun count before Destroy() drains the ring and logs it.
-    const std::uint64_t dropped = Jack::JackMessageBuffer::fInstance->Overruns();
-    CHECK(Jack::JackMessageBuffer::Destroy());
+    const std::uint64_t dropped = jackmini::JackMessageBuffer::fInstance->Overruns();
+    CHECK(jackmini::JackMessageBuffer::Destroy());
 
     std::vector<long> last(producers, -1);
     std::uint64_t delivered = 0;
@@ -119,12 +119,12 @@ void TestConcurrentProducers()
 
 void TestTruncation()
 {
-    CHECK(Jack::JackMessageBuffer::Create());
+    CHECK(jackmini::JackMessageBuffer::Create());
     g_received.clear();
 
     const std::string long_message = "L:" + std::string(400, 'x');
-    Jack::JackMessageBufferAdd(LOG_LEVEL_ERROR, long_message.c_str());
-    CHECK(Jack::JackMessageBuffer::Destroy());
+    jackmini::JackMessageBufferAdd(LOG_LEVEL_ERROR, long_message.c_str());
+    CHECK(jackmini::JackMessageBuffer::Destroy());
 
     const auto received = Snapshot();
     CHECK(received.size() == 1);

@@ -30,7 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <sys/wait.h>
 
-using namespace Jack;
+using namespace jackmini;
 
 /* Split a command line into words.  Words are separated by spaces, and a word
  * that starts with a double quote runs to the closing quote. */

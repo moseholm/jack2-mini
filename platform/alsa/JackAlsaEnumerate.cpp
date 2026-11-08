@@ -24,7 +24,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <alsa/asoundlib.h>
 #include <stdio.h>
 
-namespace Jack
+namespace jackmini
 {
 
 // Maximum channels a stream of this device supports, or 0 if it cannot be opened.
@@ -76,7 +76,7 @@ std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcm
 
     while (snd_card_next(&card) >= 0 && card >= 0) {
         std::array<char, 32> ctl_name{};
-        Jack::FormatCString(ctl_name, "hw:{}", card);
+        jackmini::FormatCString(ctl_name, "hw:{}", card);
 
         snd_ctl_t* ctl;
         if (snd_ctl_open(&ctl, ctl_name.data(), 0) < 0) {

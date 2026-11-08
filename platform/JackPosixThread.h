@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackThread.h"
 #include <pthread.h>
 
-namespace Jack
+namespace jackmini
 {
 
 /* use 512KB stack per thread - the default is way too high to be feasible

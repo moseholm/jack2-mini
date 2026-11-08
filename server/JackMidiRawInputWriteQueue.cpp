@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackMidiRawInputWriteQueue.h"
 #include "JackError.h"
 
-using Jack::JackMidiRawInputWriteQueue;
+using jackmini::JackMidiRawInputWriteQueue;
 
 JackMidiRawInputWriteQueue::
 JackMidiRawInputWriteQueue(JackMidiWriteQueue *write_queue,
@@ -56,7 +56,7 @@ JackMidiRawInputWriteQueue::Clear()
     unbuffered_bytes = 0;
 }
 
-Jack::JackMidiWriteQueue::EnqueueResult
+jackmini::JackMidiWriteQueue::EnqueueResult
 JackMidiRawInputWriteQueue::EnqueueEvent(jack_nframes_t time, size_t size,
                                          jack_midi_data_t *buffer)
 {

@@ -26,7 +26,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <unistd.h>
 #include <math.h>
 
-namespace Jack
+namespace jackmini
 {
 
 int JackTimedDriver::FirstCycle(jack_time_t cur_time_usec)

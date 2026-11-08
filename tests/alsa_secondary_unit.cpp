@@ -34,7 +34,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <stdlib.h>
 #include <string.h>
 
-using namespace Jack;
+using namespace jackmini;
 
 static int g_failures = 0;
 static int g_checks = 0;

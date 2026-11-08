@@ -25,7 +25,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <climits>
 #include <sys/mman.h>
 
-namespace Jack
+namespace jackmini
 {
 
 JackAlsaRingBuffer::JackAlsaRingBuffer(int channels, jack_nframes_t capacity)

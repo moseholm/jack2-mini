@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackMidiWriteQueue.h"
 
-namespace Jack {
+namespace jackmini {
 
     /**
      * Wrapper class to present a JackMidiBuffer in a write queue interface.

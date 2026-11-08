@@ -25,7 +25,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackLockedEngine.h"
 #include "ringbuffer.h"
 
-namespace Jack
+namespace jackmini
 {
 
 /*!

@@ -25,7 +25,7 @@
 #include "JackGlobals.h"
 #include "JackMessageBuffer.h"
 
-using namespace Jack;
+using namespace jackmini;
 
 static bool change_thread_log_function(jack_log_function_t log_function)
 {

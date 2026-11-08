@@ -23,7 +23,7 @@
 
 #include "JackDriver.h"
 
-namespace Jack
+namespace jackmini
 {
 
 /*!

@@ -22,7 +22,7 @@
 #include "JackPosixMutex.h"
 #include "JackError.h"
 
-namespace Jack
+namespace jackmini
 {
 
     JackBasePosixMutex::JackBasePosixMutex(const char* name)

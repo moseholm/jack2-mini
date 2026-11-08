@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackLockedEngine.h"
 
 
-namespace Jack
+namespace jackmini
 {
 
 JackInternalSessionLoader::JackInternalSessionLoader(JackServer* const server) :

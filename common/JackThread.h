@@ -25,7 +25,7 @@
 #include "JackCompilerDeps.h"
 #include "JackTypes.h"
 
-namespace Jack
+namespace jackmini
 {
 
 /*!

@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackMidiAsyncQueue.h"
 #include "JackMidiSendQueue.h"
 
-namespace Jack {
+namespace jackmini {
 
     /**
      * This queue enqueues valid MIDI events and modifies them for raw output

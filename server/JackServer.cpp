@@ -37,7 +37,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 const char * jack_get_self_connect_mode_description(char mode);
 
-namespace Jack
+namespace jackmini
 {
 
 //----------------

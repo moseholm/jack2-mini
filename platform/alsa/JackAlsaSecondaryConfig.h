@@ -23,7 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <string_view>
 #include <vector>
 
-namespace Jack
+namespace jackmini
 {
 
 enum JackAlsaSecondaryMode {

@@ -27,7 +27,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <ranges>
 #include <string_view>
 
-namespace Jack
+namespace jackmini
 {
 
 JackAlsaSecondaryConfig::JackAlsaSecondaryConfig()

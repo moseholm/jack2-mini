@@ -25,7 +25,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <system_error>
 #include <vector>
 
-namespace Jack
+namespace jackmini
 {
 
 // A file descriptor that is closed when it goes out of scope.  Moving it
@@ -73,6 +73,6 @@ std::expected<UniqueFd, std::error_code> CreateSegment(std::size_t size, const c
 std::expected<void*, std::error_code> MapSegment(int fd, std::size_t size);
 void UnmapSegment(void* address, std::size_t size) noexcept;
 
-} // namespace Jack
+} // namespace jackmini
 
 #endif

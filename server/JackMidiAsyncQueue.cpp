@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackMidiAsyncQueue.h"
 
-using Jack::JackMidiAsyncQueue;
+using jackmini::JackMidiAsyncQueue;
 
 JackMidiAsyncQueue::JackMidiAsyncQueue(size_t max_bytes, size_t max_messages)
 {
@@ -68,7 +68,7 @@ JackMidiAsyncQueue::DequeueEvent()
     return event;
 }
 
-Jack::JackMidiWriteQueue::EnqueueResult
+jackmini::JackMidiWriteQueue::EnqueueResult
 JackMidiAsyncQueue::EnqueueEvent(jack_nframes_t time, size_t size,
                                  jack_midi_data_t *buffer)
 {

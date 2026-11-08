@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <assert.h>
 #include <string.h>
 
-namespace Jack
+namespace jackmini
 {
 
 LIB_EXPORT void JackMidiBuffer::Reset(jack_nframes_t nframes)
@@ -95,7 +95,7 @@ static void MidiBufferMixdown(void* mixbuffer, void** src_buffers, int src_count
 {
     JackMidiBuffer* mix = static_cast<JackMidiBuffer*>(mixbuffer);
     if (!mix->IsValid()) {
-        jack_error("Jack::MidiBufferMixdown - invalid mix buffer");
+        jack_error("jackmini::MidiBufferMixdown - invalid mix buffer");
         return;
     }
     mix->Reset(nframes);
@@ -105,7 +105,7 @@ static void MidiBufferMixdown(void* mixbuffer, void** src_buffers, int src_count
     for (int i = 0; i < src_count; ++i) {
         JackMidiBuffer* buf = static_cast<JackMidiBuffer*>(src_buffers[i]);
         if (!buf->IsValid()) {
-            jack_error("Jack::MidiBufferMixdown - invalid source buffer");
+            jack_error("jackmini::MidiBufferMixdown - invalid source buffer");
             return;
         }
         mix_index[i] = 0;
@@ -132,7 +132,7 @@ static void MidiBufferMixdown(void* mixbuffer, void** src_buffers, int src_count
             }
         }
         if (next_event == 0) {
-            jack_error("Jack::MidiBufferMixdown - got invalid next event");
+            jack_error("jackmini::MidiBufferMixdown - got invalid next event");
             break;
         }
 
@@ -159,4 +159,4 @@ const JackPortType gMidiPortType =
     MidiBufferMixdown
 };
 
-} // namespace Jack
+} // namespace jackmini

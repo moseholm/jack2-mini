@@ -36,7 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define SYS_futex SYS_futex_time64
 #endif
 
-namespace Jack
+namespace jackmini
 {
 
 JackLinuxFutex::JackLinuxFutex() : JackSynchro(), fSharedMem(-1), fFutex(NULL), fPrivate(false)
@@ -51,9 +51,9 @@ void JackLinuxFutex::BuildName(const char* client_name, const char* server_name,
     std::array<char, SYNC_MAX_NAME_SIZE + 1> ext_client_name{};
     JackTools::RewriteName(client_name, ext_client_name.data());
     if (fPromiscuous) {
-        Jack::FormatCString(std::span<char>(res, size), "jack_sem.{}_{}", server_name, ext_client_name.data());
+        jackmini::FormatCString(std::span<char>(res, size), "jack_sem.{}_{}", server_name, ext_client_name.data());
     } else {
-        Jack::FormatCString(std::span<char>(res, size), "jack_sem.{}_{}_{}", JackTools::GetUID(), server_name, ext_client_name.data());
+        jackmini::FormatCString(std::span<char>(res, size), "jack_sem.{}_{}_{}", JackTools::GetUID(), server_name, ext_client_name.data());
     }
 }
 

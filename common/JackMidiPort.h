@@ -59,7 +59,7 @@ extern "C"
 /** A Jack MIDI port type. */
 #define JACK_DEFAULT_MIDI_TYPE "8 bit raw midi"
 
-namespace Jack
+namespace jackmini
 {
 
 struct LIB_EXPORT JackMidiEvent
@@ -117,6 +117,6 @@ struct LIB_EXPORT JackMidiBuffer
 
 void MidiBufferInit(void* buffer, size_t buffer_size, jack_nframes_t nframes);
 
-} // namespace Jack
+} // namespace jackmini
 
 #endif

@@ -56,7 +56,7 @@ typedef void (*JackPropertyChangeCallback)(jack_uuid_t            subject,
 #endif
 
 
-namespace Jack
+namespace jackmini
 {
 
 class JackClient;

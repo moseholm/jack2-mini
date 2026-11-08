@@ -30,7 +30,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackMidiDriver.h"
 #include "JackThread.h"
 
-namespace Jack {
+namespace jackmini {
 
     class JackALSARawMidiDriver:
         public JackMidiDriver, public JackRunnableInterface {

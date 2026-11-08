@@ -31,7 +31,7 @@
 #include "JackServerLaunch.h"
 #include "JackMidiPort.h"
 
-namespace Jack
+namespace jackmini
 {
 JackLibGlobals* JackLibGlobals::fGlobals = NULL;
 int JackLibGlobals::fClientCount = 0;
@@ -39,7 +39,7 @@ int JackLibGlobals::fClientCount = 0;
 
 namespace jackmini::lib
 {
-using namespace Jack;
+using namespace jackmini;
 
 static inline bool CheckPort(jack_port_id_t port_index)
 {

@@ -26,7 +26,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackMidiBufferWriteQueue.h"
 #include "JackMidiRawInputWriteQueue.h"
 
-namespace Jack {
+namespace jackmini {
 
     class JackALSARawMidiInputPort: public JackALSARawMidiPort {
 

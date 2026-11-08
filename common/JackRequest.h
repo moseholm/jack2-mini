@@ -38,7 +38,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <list>
 #include <vector>
 
-namespace Jack
+namespace jackmini
 {
 
 #define JACK_CLIENT_NAME_SIZE_1 (JACK_CLIENT_NAME_SIZE + 1)

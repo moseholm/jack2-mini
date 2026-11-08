@@ -24,7 +24,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackChannel.h"
 #include "JackError.h"
 
-namespace Jack
+namespace jackmini
 {
 
 JackExternalClient::JackExternalClient(): fClientControl(NULL)

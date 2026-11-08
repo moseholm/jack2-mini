@@ -23,7 +23,7 @@
 #include "JackEngineControl.h"
 #include "JackLockedEngine.h"
 
-namespace Jack
+namespace jackmini
 {
 
 // When used in "master" mode

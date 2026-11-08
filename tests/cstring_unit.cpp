@@ -41,7 +41,7 @@ int g_checks = 0;
 void TestFits()
 {
     char buf[8];
-    Jack::CopyCString(buf, "abc");
+    jackmini::CopyCString(buf, "abc");
     CHECK(std::strcmp(buf, "abc") == 0);
     for (int i = 4; i < 8; i++) {
         CHECK(buf[i] == '\0');
@@ -51,7 +51,7 @@ void TestFits()
 void TestExactFit()
 {
     char buf[4];
-    Jack::CopyCString(buf, "abc");
+    jackmini::CopyCString(buf, "abc");
     CHECK(std::strncmp(buf, "abc", 4) == 0);
     CHECK(buf[3] == '\0');
 }
@@ -59,7 +59,7 @@ void TestExactFit()
 void TestTruncates()
 {
     char buf[4];
-    Jack::CopyCString(buf, "abcdef");
+    jackmini::CopyCString(buf, "abcdef");
     CHECK(std::strncmp(buf, "abc", 4) == 0);
     CHECK(buf[3] == '\0');
 }
@@ -68,7 +68,7 @@ void TestZeroFillsStaleBytes()
 {
     char buf[8];
     std::memset(buf, 'x', sizeof(buf));
-    Jack::CopyCString(buf, "ab");
+    jackmini::CopyCString(buf, "ab");
     CHECK(buf[0] == 'a' && buf[1] == 'b');
     for (int i = 2; i < 8; i++) {
         CHECK(buf[i] == '\0');
@@ -78,20 +78,20 @@ void TestZeroFillsStaleBytes()
 void TestLeadingInteger()
 {
     // The same answers atoi() gives for these inputs.
-    CHECK(Jack::ParseLeadingInteger<int>("42") == 42);
-    CHECK(Jack::ParseLeadingInteger<int>("  -7") == -7);
-    CHECK(Jack::ParseLeadingInteger<int>("+5") == 5);
-    CHECK(Jack::ParseLeadingInteger<int>("12abc") == 12);
-    CHECK(Jack::ParseLeadingInteger<int>("abc") == 0);
-    CHECK(Jack::ParseLeadingInteger<int>("") == 0);
-    CHECK(Jack::ParseLeadingInteger<int>("+-3") == 0);
-    CHECK(Jack::ParseLeadingInteger<int>("99999999999") == 0);
-    CHECK(Jack::ParseLeadingInteger<unsigned int>("300") == 300u);
+    CHECK(jackmini::ParseLeadingInteger<int>("42") == 42);
+    CHECK(jackmini::ParseLeadingInteger<int>("  -7") == -7);
+    CHECK(jackmini::ParseLeadingInteger<int>("+5") == 5);
+    CHECK(jackmini::ParseLeadingInteger<int>("12abc") == 12);
+    CHECK(jackmini::ParseLeadingInteger<int>("abc") == 0);
+    CHECK(jackmini::ParseLeadingInteger<int>("") == 0);
+    CHECK(jackmini::ParseLeadingInteger<int>("+-3") == 0);
+    CHECK(jackmini::ParseLeadingInteger<int>("99999999999") == 0);
+    CHECK(jackmini::ParseLeadingInteger<unsigned int>("300") == 300u);
 }
 
 void TestEmptyBuffer()
 {
-    Jack::CopyCString(std::span<char>{}, "abc");
+    jackmini::CopyCString(std::span<char>{}, "abc");
     CHECK(true);
 }
 

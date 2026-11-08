@@ -27,7 +27,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <string>
 #include <sys/file.h>
 
-namespace Jack
+namespace jackmini
 {
 
 namespace
@@ -69,4 +69,4 @@ void ReleaseServerLock() noexcept
     gLockFd.reset();
 }
 
-} // namespace Jack
+} // namespace jackmini

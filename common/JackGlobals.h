@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackSystemDeps.h"
 #include "JackConstants.h"
 
-namespace Jack
+namespace jackmini
 {
 
 // Globals used for client management on server or library side.

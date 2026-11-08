@@ -46,7 +46,7 @@
 #include "JackServerGlobals.h"
 #include "JackServerLock.h"
 
-using namespace Jack;
+using namespace jackmini;
 
 /* JackEngine::CheckPortsConnect() has some assumptions about char values */
 static struct jack_constraint_enum_char_descriptor self_connect_mode_constraint_descr_array[] =
@@ -553,7 +553,7 @@ signal_handler(int sig)
        another signal.
     */
     std::array<char, 64> buf{};
-    Jack::FormatCString(buf, "Received signal {} during shutdown (ignored)\n", sig);
+    jackmini::FormatCString(buf, "Received signal {} during shutdown (ignored)\n", sig);
 }
 
 SERVER_EXPORT jackctl_sigmask_t *

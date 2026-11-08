@@ -30,7 +30,7 @@
 #include "JackCompilerDeps.h"
 #include "JackError.h"
 
-namespace Jack
+namespace jackmini
 {
 
     /*!

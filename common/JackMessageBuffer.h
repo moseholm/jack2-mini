@@ -40,7 +40,7 @@
 #include <mutex>
 #include <string_view>
 
-namespace Jack
+namespace jackmini
 {
 
 // The ring index wraps with a mask, so MB_BUFFERS must be a power of two.

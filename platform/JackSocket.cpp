@@ -30,7 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <pthread.h>
 #include <fcntl.h>
 
-namespace Jack
+namespace jackmini
 {
 
 static void BuildName(const char* client_name, char* res, const char* dir, int which, int size, bool promiscuous)

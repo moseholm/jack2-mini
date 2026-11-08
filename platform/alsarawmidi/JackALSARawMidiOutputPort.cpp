@@ -23,7 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackALSARawMidiOutputPort.h"
 #include "JackError.h"
 
-using Jack::JackALSARawMidiOutputPort;
+using jackmini::JackALSARawMidiOutputPort;
 
 JackALSARawMidiOutputPort::JackALSARawMidiOutputPort(const char* client_name,
                                                      snd_rawmidi_info_t *info,

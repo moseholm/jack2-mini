@@ -300,7 +300,7 @@ int main(int argc, char** argv)
                 break;
 
             case 'L':
-                loopback = Jack::ParseLeadingInteger<int>(optarg);
+                loopback = jackmini::ParseLeadingInteger<int>(optarg);
                 break;
 
             case 'X':
@@ -314,7 +314,7 @@ int main(int argc, char** argv)
             case 'p':
                 param = jackctl_get_parameter(server_parameters, "port-max");
                 if (param != NULL) {
-                    value.ui = static_cast<unsigned int>(Jack::ParseLeadingInteger<int>(optarg));
+                    value.ui = static_cast<unsigned int>(jackmini::ParseLeadingInteger<int>(optarg));
                     jackctl_parameter_set_value(param, &value);
                 }
                 break;
@@ -360,7 +360,7 @@ int main(int argc, char** argv)
             case 'P':
                 param = jackctl_get_parameter(server_parameters, "realtime-priority");
                 if (param != NULL) {
-                    value.i = Jack::ParseLeadingInteger<int>(optarg);
+                    value.i = jackmini::ParseLeadingInteger<int>(optarg);
                     jackctl_parameter_set_value(param, &value);
                 }
                 break;
@@ -400,7 +400,7 @@ int main(int argc, char** argv)
             case 't':
                 param = jackctl_get_parameter(server_parameters, "client-timeout");
                 if (param != NULL) {
-                    value.i = Jack::ParseLeadingInteger<int>(optarg);
+                    value.i = jackmini::ParseLeadingInteger<int>(optarg);
                     jackctl_parameter_set_value(param, &value);
                 }
                 break;

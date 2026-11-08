@@ -51,7 +51,7 @@ extern "C"
 }
 #endif
 
-using namespace Jack;
+using namespace jackmini;
 
 LIB_EXPORT
 uint32_t jack_midi_get_event_count(void* port_buffer)
