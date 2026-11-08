@@ -47,15 +47,8 @@ typedef struct {
 }
 jack_ringbuffer_data_t ;
 
-typedef struct {
-    char	*buf;
-    size_t	write_ptr;
-    size_t	read_ptr;
-    size_t	size;
-    size_t	size_mask;
-    int	mlocked;
-}
-jack_ringbuffer_t ;
+/** An opaque ringbuffer. Use the functions below; the fields are private. */
+typedef struct jack_ringbuffer_t jack_ringbuffer_t;
 
 /**
  * Allocates a ringbuffer data structure of a specified size. The

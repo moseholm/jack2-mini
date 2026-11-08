@@ -143,7 +143,7 @@ set(JACK_SERVER_SOURCES
     platform/JackServerLock.cpp)
 
 # The ring buffer is a library of its own: the client and server libraries and the ALSA drivers use it.
-add_library(jackring SHARED common/ringbuffer.c)
+add_library(jackring SHARED common/ringbuffer.cpp)
 target_include_directories(jackring PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
 set_target_properties(jackring PROPERTIES VERSION "${JACK_API_VERSION}" SOVERSION 0)
 
@@ -376,6 +376,12 @@ if(JACK_BUILD_TESTS)
     add_executable(jack_cstring_unit tests/cstring_unit.cpp)
     target_include_directories(jack_cstring_unit PRIVATE ${JACK_INCLUDE_DIRS})
     add_test(NAME cstring_unit COMMAND jack_cstring_unit)
+
+    # The byte ringbuffer behind jack_ringbuffer_*: sizes, wrap-around, vectors, and a transfer between two threads.
+    add_executable(jack_ringbuffer_unit tests/ringbuffer_unit.cpp)
+    target_include_directories(jack_ringbuffer_unit PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/common")
+    target_link_libraries(jack_ringbuffer_unit PRIVATE jackring Threads::Threads)
+    add_test(NAME ringbuffer_unit COMMAND jack_ringbuffer_unit)
 
     # Compile-time checks of the jackmini client API headers.  No implementation is linked.
     add_executable(jack_api_unit tests/jackmini_api_unit.cpp)
