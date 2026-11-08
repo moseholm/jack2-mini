@@ -290,9 +290,11 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
 
 1. **Registry removal (section 4.1).** Decided: remove it.
 2. **Port count (section 4.4).** Decided: fixed maximum, `PORT_NUM`.
-3. **Notification queue size.** The bound is not chosen. It should be large
-   enough for a burst of port registrations during startup, and that is to be
-   measured.
+3. **Notification queue size.** Chosen: 256 per client (`JackSocketNotifyChannel::kQueueSize`).
+   Measured with a client that stops reading for two seconds while another registers ports:
+   bursts of 100 and 250 registrations lose nothing; 500 lose 75; 1000 lose 575. So the queue
+   and the socket buffer together hold about 425 notifications. A startup burst of a typical
+   application is far below that. The size stays until a real application shows otherwise.
 
 ## 10. Order of work
 

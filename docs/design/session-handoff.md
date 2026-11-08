@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `c3ab712e` (client API: buffers and transport). `origin/develop` is `5c926a55`.
+  `(this commit)`. `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -156,15 +156,16 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-Waiting for a decision (see `docs/design/client-api.md`, step 3):
-- Remove the C client library now (the client side rewritten natively under jackmini),
-  or keep it as a compatibility layer on top of the new API for now?
-- Port the test programs now (`test.cpp`, `cpu.c`, `rtbench.c`, `external_metro.cpp`,
-  `iodelay.cpp`), or after the measurements, since `cpu.c` and `rtbench.c` are the P0
-  baseline tools?
+Decided (user): keep the C client library for now, as the reference for the original
+implementation. Do not port the test programs until they are needed.
 
-Also open: item 4b (protocol: drop session and metadata), which waits for the C library
-removal. Measure the notification queue size (256 now).
+Blocked until then: client-API step 3's removal of the C client library, and protocol
+item 4b (drop session and metadata), which needs that removal. Nothing else in the plan is
+open except the hardware measurements at the end.
+
+Done this round: the notification queue size is measured and kept at 256 (protocol
+section 9, item 3). The TSAN findings below are the same statements as in `origin/develop`,
+so they predate this branch (verified by the source, not by running TSAN on the old tree).
 
 - **Open TSAN findings, outside the counters** (not fixed; verify on the base before
   attributing): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing fields
