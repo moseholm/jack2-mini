@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `e082dfe7` (client API, lifecycle area). `origin/develop` is `5c926a55`.
+  `c3ab712e` (client API: buffers and transport). `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -68,6 +68,10 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `c3ab712e` Client API step 3, third area: audio and MIDI buffers and transport on
+  `jackmini::Client`; the port table is lock-free for the realtime thread; a header fix
+  (the MIDI buffer's friend). Checked by `tests/jackmini_client_e2e.cpp` (with a server).
+- `f92385ed` Client API step 3, second area: ports and connections.
 - `e082dfe7` Client API step 3, first area: `jackmini::Client` lifecycle, callbacks and
   identity on the C library (`common/jackmini/client.cpp`). Not yet: ports, connections,
   buffers, transport (declared, not implemented: a program that calls them does not
@@ -152,13 +156,16 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-- **Client API step 3, next areas:** ports and connections on `jackmini::Client`, then
-  the buffers (audio, MIDI) and transport, then the `tests/*.cpp` programs ported and the
-  C client library removed. See `docs/design/client-api.md`.
-- **4b (protocol: drop session and metadata messages):** unblocked by the client-API
-  port, which removes the C exports that use them. Do it when the client side is off the
-  C library.
-- **Measure the notification queue size** (protocol section 9, item 3); 256 now.
+Waiting for a decision (see `docs/design/client-api.md`, step 3):
+- Remove the C client library now (the client side rewritten natively under jackmini),
+  or keep it as a compatibility layer on top of the new API for now?
+- Port the test programs now (`test.cpp`, `cpu.c`, `rtbench.c`, `external_metro.cpp`,
+  `iodelay.cpp`), or after the measurements, since `cpu.c` and `rtbench.c` are the P0
+  baseline tools?
+
+Also open: item 4b (protocol: drop session and metadata), which waits for the C library
+removal. Measure the notification queue size (256 now).
+
 - **Open TSAN findings, outside the counters** (not fixed; verify on the base before
   attributing): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing fields
   in `ResumeRefNum`; the client library's `JackClient::Activate`, `Deactivate`,

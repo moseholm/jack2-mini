@@ -115,9 +115,11 @@ Rules that follow from this:
    - Done: the lifecycle (open, activate, deactivate, close), the callbacks, and the
      identity (name, uuid, sample rate, buffer size, cpu load). `common/jackmini/client.cpp`,
      checked by `tests/jackmini_client_e2e.cpp` (run with a server).
-   - Next: ports (register, unregister, names, find, flags, type) and connections.
-   - Then: the buffers (audio, MIDI) and transport.
-   - Then: the `tests/*.cpp` programs ported to the new API, and the C library removed
-     from the client side, which also makes item 4b of the protocol possible.
+   - Done: ports (register, unregister, names, find, flags, type) and connections. The
+     port table is safe for the realtime thread.
+   - Done: the buffers (audio, MIDI) and transport.
+   - Open, needs a decision: the `tests/*.cpp` programs ported to the new API (`test.cpp`,
+     `cpu.c`, `rtbench.c`, `external_metro.cpp`, `iodelay.cpp`), and the C client library
+     removed from the client side, which also makes item 4b of the protocol possible.
    The implementation sits on the C library for now; each area moves off it as it is
    ported.
