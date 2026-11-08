@@ -334,7 +334,7 @@ int main(int argc, char** argv)
                 break;
 
             case 's':
-                jack_set_error_function(silent_jack_error_callback);
+                jack_error_callback = silent_jack_error_callback;
                 break;
 
             case 'S':

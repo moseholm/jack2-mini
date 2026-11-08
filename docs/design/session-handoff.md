@@ -196,9 +196,18 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   `freewheel`): frames advance by exactly the buffer size in both modes; in real time the next cycle is one
   period after the current one (within 2 us). In freewheel the period is measured, not nominal (it varies
   per cycle), so the period check is skipped there.
-- **Next: remove the C client library.** `common/jackmini/client.cpp` is still built on the C library
-  (`jack_client_open`, `jack_connect`, ...). Removing the C exports needs the jackmini client rebuilt on the
-  internal client (JackLibClient) or the new protocol first. That is the next large step.
+- **C client library removed (step 2 done).** The client API exports are gone: `common/JackAPI.cpp`,
+  `common/JackLibAPI.cpp` and their wrapper bodies. The jackmini client calls `jackmini::lib`
+  (`common/jackmini/lib.hpp`, `lib.cpp`), which holds the former bodies, not exported. The UUID functions
+  the server uses moved to `common/JackUuid.cpp`. `jackd` assigns `jack_error_callback` directly.
+  Exports left in libjack (24 `jack_` symbols): the `jack_midi_*` functions (the ALSA drivers use them as
+  their interface), the `jack_ringbuffer_*` functions, and the `jack_error_callback`/`jack_info_callback`
+  variables. Checked: unit suite; end-to-end and graph tests in freewheel and real time; cpu; rtbench.
+- **Open (decisions):** the public headers `common/jack/*.h` are still installed, and `jack.pc` still
+  describes the client library. `Jackdmp.cpp` and `linux/alsa/alsa_midi_impl.h` still include `jack/jack.h`
+  and the ALSA drivers use the `jack_midi_*` functions. Options: stop installing the client headers and
+  `jack.pc`; move the MIDI functions into the drivers (`JackMidiBuffer`), and remove the ring buffer and
+  error variables if nothing uses them.
 - Then: protocol item 4b (drop session and metadata messages).
 - Open TSAN findings, outside the counters (verified to be the same statements as in
   `origin/develop`): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing

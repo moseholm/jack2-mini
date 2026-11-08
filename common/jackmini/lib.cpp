@@ -31,6 +31,12 @@
 #include "JackServerLaunch.h"
 #include "JackMidiPort.h"
 
+namespace Jack
+{
+JackLibGlobals* JackLibGlobals::fGlobals = NULL;
+int JackLibGlobals::fClientCount = 0;
+}
+
 namespace jackmini::lib
 {
 using namespace Jack;
