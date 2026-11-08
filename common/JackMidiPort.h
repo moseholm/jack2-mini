@@ -43,7 +43,7 @@ struct jack_midi_event_t
 namespace Jack
 {
 
-struct SERVER_EXPORT JackMidiEvent
+struct LIB_EXPORT JackMidiEvent
 {
     // Most MIDI events are < 4 bytes in size, so we can save a lot, storing them inplace.
     enum { INLINE_SIZE_MAX = sizeof(jack_shmsize_t) };
@@ -72,7 +72,7 @@ struct SERVER_EXPORT JackMidiEvent
  * but their data (if not inlined) is stored from the end of the same buffer.
  */
 
-struct SERVER_EXPORT JackMidiBuffer
+struct LIB_EXPORT JackMidiBuffer
 {
     enum { MAGIC = 0x900df00d };
 

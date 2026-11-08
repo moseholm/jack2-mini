@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 namespace Jack
 {
 
-SERVER_EXPORT void JackMidiBuffer::Reset(jack_nframes_t nframes)
+LIB_EXPORT void JackMidiBuffer::Reset(jack_nframes_t nframes)
 {
     /* This line ate 1 hour of my life... dsbaikov */
     this->nframes = nframes;
@@ -37,7 +37,7 @@ SERVER_EXPORT void JackMidiBuffer::Reset(jack_nframes_t nframes)
     lost_events = 0;
 }
 
-SERVER_EXPORT jack_shmsize_t JackMidiBuffer::MaxEventSize() const
+LIB_EXPORT jack_shmsize_t JackMidiBuffer::MaxEventSize() const
 {
     assert (((jack_shmsize_t) - 1) < 0); // jack_shmsize_t should be signed
     jack_shmsize_t left = buffer_size - (sizeof(JackMidiBuffer) + sizeof(JackMidiEvent) * (event_count + 1) + write_pos);
@@ -50,7 +50,7 @@ SERVER_EXPORT jack_shmsize_t JackMidiBuffer::MaxEventSize() const
     return left;
 }
 
-SERVER_EXPORT jack_midi_data_t* JackMidiBuffer::ReserveEvent(jack_nframes_t time, jack_shmsize_t size)
+LIB_EXPORT jack_midi_data_t* JackMidiBuffer::ReserveEvent(jack_nframes_t time, jack_shmsize_t size)
 {
     jack_shmsize_t space = MaxEventSize();
     if (space == 0 || size > space) {
