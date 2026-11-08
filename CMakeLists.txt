@@ -152,10 +152,14 @@ set(JACK_SERVER_SOURCES
 add_library(jackring SHARED common/ringbuffer.c)
 target_include_directories(jackring PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
 
+# The basic logging (errors and messages, and where they go): a library of its own, with no dependencies.
+add_library(jacklog SHARED common/JackLog.cpp)
+target_include_directories(jacklog PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
+
 add_library(jack SHARED ${JACK_CLIENT_SOURCES})
 target_include_directories(jack PRIVATE ${JACK_INCLUDE_DIRS})
 target_compile_definitions(jack PRIVATE HAVE_CONFIG_H)
-target_link_libraries(jack PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt jackring)
+target_link_libraries(jack PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt jackring jacklog)
 set_target_properties(jack PROPERTIES
     OUTPUT_NAME jack
     VERSION "${JACK_API_VERSION}"
@@ -174,7 +178,7 @@ set_target_properties(jackserver_objects PROPERTIES
     CXX_VISIBILITY_PRESET hidden)
 
 add_library(jackserver SHARED $<TARGET_OBJECTS:jackserver_objects>)
-target_link_libraries(jackserver PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt jackring)
+target_link_libraries(jackserver PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt jackring jacklog)
 set_target_properties(jackserver PROPERTIES
     OUTPUT_NAME jackserver
     VERSION "${JACK_API_VERSION}"
@@ -185,13 +189,13 @@ set_target_properties(jackserver PROPERTIES
 add_executable(jackd common/Jackdmp.cpp)
 target_include_directories(jackd PRIVATE ${JACK_INCLUDE_DIRS})
 target_compile_definitions(jackd PRIVATE HAVE_CONFIG_H SERVER_SIDE)
-target_link_libraries(jackd PRIVATE jackserver Threads::Threads ${CMAKE_DL_LIBS} rt m)
+target_link_libraries(jackd PRIVATE jackserver jacklog Threads::Threads ${CMAKE_DL_LIBS} rt m)
 
 function(jack_add_driver name)
     add_library(jack_${name} MODULE ${ARGN})
     target_include_directories(jack_${name} PRIVATE ${JACK_INCLUDE_DIRS})
     target_compile_definitions(jack_${name} PRIVATE HAVE_CONFIG_H SERVER_SIDE)
-    target_link_libraries(jack_${name} PRIVATE jackserver)
+    target_link_libraries(jack_${name} PRIVATE jackserver jacklog)
     set_target_properties(jack_${name} PROPERTIES
         PREFIX ""
         OUTPUT_NAME jack_${name}
@@ -275,7 +279,7 @@ set(JACK_ALSARAWMIDI_SOURCES
     linux/alsarawmidi/JackALSARawMidiUtil.cpp)
 
 jack_add_driver(alsa ${JACK_ALSA_SOURCES})
-target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA PkgConfig::UDEV m ${CMAKE_DL_LIBS} jackring)
+target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA PkgConfig::UDEV m ${CMAKE_DL_LIBS} jackring jacklog)
 # The vendored PipeWire resampler is built with its precomputed filter tables
 # disabled and a small SPA compatibility shim in place of the SPA headers.
 target_include_directories(jack_alsa PRIVATE
@@ -284,9 +288,9 @@ target_include_directories(jack_alsa PRIVATE
 target_compile_definitions(jack_alsa PRIVATE RESAMPLE_DISABLE_PRECOMP ${JACK_RESAMPLER_SIMD_DEFINITIONS})
 
 jack_add_driver(alsarawmidi ${JACK_ALSARAWMIDI_SOURCES})
-target_link_libraries(jack_alsarawmidi PRIVATE PkgConfig::ALSA jackring)
+target_link_libraries(jack_alsarawmidi PRIVATE PkgConfig::ALSA jackring jacklog)
 
-install(TARGETS jack jackserver jackring
+install(TARGETS jack jackserver jackring jacklog
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -355,7 +359,7 @@ if(JACK_BUILD_TESTS)
     # The server's internals are hidden in libjackserver, so the test links
     # the server objects directly.
     add_executable(jack_message_unit tests/message_buffer_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
-    target_link_libraries(jack_message_unit PRIVATE jackring)
+    target_link_libraries(jack_message_unit PRIVATE jackring jacklog)
     target_include_directories(jack_message_unit PRIVATE ${JACK_INCLUDE_DIRS})
     target_compile_definitions(jack_message_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
     target_link_libraries(jack_message_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
@@ -384,14 +388,14 @@ if(JACK_BUILD_TESTS)
 
     # Message framing of the control socket: the header, the exact payload length, and the reply writer and reader.
     add_executable(jack_message_frame_unit tests/message_frame_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
-    target_link_libraries(jack_message_frame_unit PRIVATE jackring)
+    target_link_libraries(jack_message_frame_unit PRIVATE jackring jacklog)
     target_include_directories(jack_message_frame_unit PRIVATE ${JACK_INCLUDE_DIRS})
     target_compile_definitions(jack_message_frame_unit PRIVATE HAVE_CONFIG_H)
     add_test(NAME message_frame_unit COMMAND jack_message_frame_unit)
 
     # Activation counters under concurrency: the cycle and the connection changes (protocol.md section 4.5).  Run it under TSAN.
     add_executable(jack_counter_unit tests/counter_tsan_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
-    target_link_libraries(jack_counter_unit PRIVATE jackring)
+    target_link_libraries(jack_counter_unit PRIVATE jackring jacklog)
     target_include_directories(jack_counter_unit PRIVATE ${JACK_INCLUDE_DIRS})
     target_compile_definitions(jack_counter_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
     target_link_libraries(jack_counter_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
@@ -399,7 +403,7 @@ if(JACK_BUILD_TESTS)
 
     # Deactivation keeps the connections: silence for an inactive client, and the connection is still there (protocol.md section 6).
     add_executable(jack_deactivate_graph_unit tests/deactivate_graph_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
-    target_link_libraries(jack_deactivate_graph_unit PRIVATE jackring)
+    target_link_libraries(jack_deactivate_graph_unit PRIVATE jackring jacklog)
     target_include_directories(jack_deactivate_graph_unit PRIVATE ${JACK_INCLUDE_DIRS})
     target_compile_definitions(jack_deactivate_graph_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
     target_link_libraries(jack_deactivate_graph_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
@@ -407,7 +411,7 @@ if(JACK_BUILD_TESTS)
 
     # Conformance of the control socket: requests, replies, malformed and version-mismatched messages, with a fake server.
     add_executable(jack_protocol_conformance_unit tests/protocol_conformance_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
-    target_link_libraries(jack_protocol_conformance_unit PRIVATE jackring)
+    target_link_libraries(jack_protocol_conformance_unit PRIVATE jackring jacklog)
     target_include_directories(jack_protocol_conformance_unit PRIVATE ${JACK_INCLUDE_DIRS})
     target_compile_definitions(jack_protocol_conformance_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
     target_link_libraries(jack_protocol_conformance_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)

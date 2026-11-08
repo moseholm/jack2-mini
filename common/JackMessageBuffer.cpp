@@ -124,7 +124,7 @@ void JackMessageBuffer::Flush()
             return;     // empty
         }
         fDequeuePos.store(pos + 1, std::memory_order_relaxed);
-        jack_log_function(slot.entry.level, slot.entry.message.data());
+        jack_log_direct(slot.entry.level, slot.entry.message.data());
         slot.sequence.store(pos + MB_BUFFERS, std::memory_order_release);
     }
 }
@@ -187,7 +187,7 @@ void JackMessageBufferAdd(int level, const char *message)
 {
     if (Jack::JackMessageBuffer::fInstance == nullptr) {
         /* Unable to print message with realtime safety. Complain and print it anyway. */
-        jack_log_function(LOG_LEVEL_ERROR, "messagebuffer not initialized, skip message");
+        jack_log_direct(LOG_LEVEL_ERROR, "messagebuffer not initialized, skip message");
     } else {
         /* scan at most one buffer's worth, so an unterminated input cannot run away */
         const char* end = std::char_traits<char>::find(message, Jack::MB_BUFFERSIZE, '\0');

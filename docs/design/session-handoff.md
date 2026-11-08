@@ -203,6 +203,10 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   Exports left in libjack (24 `jack_` symbols): the `jack_midi_*` functions (the ALSA drivers use them as
   their interface), the `jack_ringbuffer_*` functions, and the `jack_error_callback`/`jack_info_callback`
   variables. Checked: unit suite; end-to-end and graph tests in freewheel and real time; cpu; rtbench.
+- **Basic logging split (step 2 done).** `libjacklog` (`common/JackLog.cpp`, `common/JackLog.h`): the
+  callbacks, `jack_error`, `jack_info`, `jack_log_direct`, and the routing hook `jack_log_router`. It has no
+  dependencies. The host (`common/JackError.cpp`) keeps `jack_log` (verbose only) and the per-thread routing, and
+  installs its routing into the hook at load time. Every module that logs links `libjacklog`.
 - **Libraries split (step 1 done).** The ring buffer is `libjackring` (`common/ringbuffer.c`), linked by
   `jack`, `jackserver`, the ALSA drivers, and the unit tests that build the server objects; installed with them.
   Next: `libjacklog` (basic logging), then `libjackmidi` (MIDI buffer), then the jackmini client on `JackMidiBuffer`,
