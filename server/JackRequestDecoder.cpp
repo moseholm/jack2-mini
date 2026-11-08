@@ -241,45 +241,9 @@ int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* s
             break;
         }
 
-        case JackRequest::kGetInternalClientName: {
-            jack_log("JackRequest::GetInternalClientName");
-            JackGetInternalClientNameRequest req;
-            JackGetInternalClientNameResult res;
-            CheckRead(req, socket);
-            res.fResult = fServer->GetEngine()->GetInternalClientName(req.fIntRefNum, res.fName);
-            CheckWriteRefNum("JackRequest::GetInternalClientName", socket);
-            break;
-        }
 
-        case JackRequest::kInternalClientHandle: {
-            jack_log("JackRequest::InternalClientHandle");
-            JackInternalClientHandleRequest req;
-            JackInternalClientHandleResult res;
-            CheckRead(req, socket);
-            res.fResult = fServer->GetEngine()->InternalClientHandle(req.fName, &res.fStatus, &res.fIntRefNum);
-            CheckWriteRefNum("JackRequest::InternalClientHandle", socket);
-            break;
-        }
 
-        case JackRequest::kInternalClientLoad: {
-            jack_log("JackRequest::InternalClientLoad");
-            JackInternalClientLoadRequest req;
-            JackInternalClientLoadResult res;
-            CheckRead(req, socket);
-            res.fResult = fServer->InternalClientLoad1(req.fName, req.fDllName, req.fLoadInitName, req.fOptions, &res.fIntRefNum, req.fUUID, &res.fStatus);
-            CheckWriteName("JackRequest::InternalClientLoad", socket);
-            break;
-        }
 
-        case JackRequest::kInternalClientUnload: {
-            jack_log("JackRequest::InternalClientUnload");
-            JackInternalClientUnloadRequest req;
-            JackInternalClientUnloadResult res;
-            CheckRead(req, socket);
-            res.fResult = fServer->GetEngine()->InternalClientUnload(req.fIntRefNum, &res.fStatus);
-            CheckWriteRefNum("JackRequest::InternalClientUnload", socket);
-            break;
-        }
 
         case JackRequest::kNotification: {
             jack_log("JackRequest::Notification");

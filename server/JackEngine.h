@@ -115,10 +115,10 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         int ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, int protocol, int options, int* status);
 
         int ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager);
-        int ClientInternalOpen(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait);
+        int RegisterDriver(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait);
 
         int ClientExternalClose(int refnum);
-        int ClientInternalClose(int refnum, bool wait);
+        int UnregisterDriver(int refnum, bool wait);
 
         int ClientActivate(int refnum, bool is_real_time, bool wait);
         int ClientDeactivate(int refnum, bool wait);
@@ -128,10 +128,6 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         int GetClientPID(const char* name);
         int GetClientRefNum(const char* name);
 
-        // Internal client management
-        int GetInternalClientName(int int_ref, char* name_res);
-        int InternalClientHandle(const char* client_name, int* status, int* int_ref);
-        int InternalClientUnload(int refnum, int* status);
 
         // Port management
         int PortRegister(int refnum, const char* name, const char *type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port);

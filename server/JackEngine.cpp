@@ -28,10 +28,10 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackSystemDeps.h"
 #include "JackLockedEngine.h"
 #include "JackExternalClient.h"
-#include "JackInternalClient.h"
 #include "JackEngineControl.h"
 #include "JackClientControl.h"
 #include "JackServerGlobals.h"
+#include "JackServer.h"
 #include "JackGlobals.h"
 #include "JackChannel.h"
 #include "JackError.h"
@@ -86,12 +86,7 @@ int JackEngine::Close()
     // Close remaining clients (RT is stopped)
     for (int i = fEngineControl->fDriverNum; i < CLIENT_NUM; i++) {
         JackClientInterface* client = fClientTable[i];
-        if (JackLoadableInternalClient* loadable_client = dynamic_cast<JackLoadableInternalClient*>(client)) {
-            jack_log("JackEngine::Close loadable client = %s", loadable_client->GetClientControl()->fName);
-            loadable_client->Close();
-            fClientTable[i] = NULL;
-            delete loadable_client;
-        } else if (JackExternalClient* external_client = dynamic_cast<JackExternalClient*>(client)) {
+        if (JackExternalClient* external_client = dynamic_cast<JackExternalClient*>(client)) {
             jack_log("JackEngine::Close external client = %s", external_client->GetClientControl()->fName);
             external_client->Close();
             fClientTable[i] = NULL;
@@ -442,50 +437,6 @@ void JackEngine::NotifyActivate(int refnum)
     NotifyClient(refnum, kActivateClient, true, "", 0, 0);
 }
 
-//----------------------------
-// Loadable client management
-//----------------------------
-
-int JackEngine::GetInternalClientName(int refnum, char* name_res)
-{
-    JackClientInterface* client = fClientTable[refnum];
-    assert(client);
-    strncpy(name_res, client->GetClientControl()->fName, JACK_CLIENT_NAME_SIZE);
-    return 0;
-}
-
-int JackEngine::InternalClientHandle(const char* client_name, int* status, int* int_ref)
-{
-    // Clear status
-    *status = 0;
-
-    for (int i = 0; i < CLIENT_NUM; i++) {
-        JackClientInterface* client = fClientTable[i];
-        if (client && dynamic_cast<JackLoadableInternalClient*>(client) && (strcmp(client->GetClientControl()->fName, client_name) == 0)) {
-            jack_log("InternalClientHandle found client name = %s ref = %ld",  client_name, i);
-            *int_ref = i;
-            return 0;
-        }
-    }
-
-    *status |= (JackNoSuchClient | JackFailure);
-    return -1;
-}
-
-int JackEngine::InternalClientUnload(int refnum, int* status)
-{
-    JackClientInterface* client = fClientTable[refnum];
-    if (client) {
-        int res = client->Close();
-        delete client;
-        *status = 0;
-        return res;
-    } else {
-        *status = (JackNoSuchClient | JackFailure);
-        return -1;
-    }
-}
-
 //-------------------
 // Client management
 //-------------------
@@ -686,9 +637,9 @@ error:
 }
 
 // Used for server driver clients
-int JackEngine::ClientInternalOpen(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait)
+int JackEngine::RegisterDriver(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait)
 {
-    jack_log("JackEngine::ClientInternalOpen: name = %s", name);
+    jack_log("JackEngine::RegisterDriver: name = %s", name);
 
     int refnum = AllocateRefnum();
     if (refnum < 0) {
@@ -741,9 +692,9 @@ int JackEngine::ClientExternalClose(int refnum)
 }
 
 // Used for server internal clients or drivers when the RT thread is stopped
-int JackEngine::ClientInternalClose(int refnum, bool wait)
+int JackEngine::UnregisterDriver(int refnum, bool wait)
 {
-    jack_log("JackEngine::ClientInternalClose ref = %ld", refnum);
+    jack_log("JackEngine::UnregisterDriver ref = %ld", refnum);
     return ClientCloseAux(refnum, wait);
 }
 

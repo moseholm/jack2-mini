@@ -167,7 +167,7 @@ int JackClient::ClientNotify(int refnum, const char* name, int notify, int sync,
 
     jack_log("JackClient::ClientNotify ref = %ld name = %s notify = %ld", refnum, name, notify);
 
-    // Done all time: redirected on subclass implementation JackLibClient and JackInternalClient
+    // Done all time: redirected on subclass implementation JackLibClient
     switch (notify) {
 
         case kAddClient:
@@ -1179,62 +1179,6 @@ int JackClient::SetLatencyCallback(JackLatencyCallback callback, void *arg)
 }
 
 //------------------
-// Internal clients
-//------------------
-
-char* JackClient::GetInternalClientName(int ref)
-{
-    std::array<char, JACK_CLIENT_NAME_SIZE+1> name_res{};
-    int result = -1;
-    fChannel->GetInternalClientName(GetClientControl()->fRefNum, ref, name_res.data(), &result);
-    return (result < 0) ? NULL : strdup(name_res.data());
-}
-
-int JackClient::InternalClientHandle(const char* client_name, jack_status_t* status)
-{
-    int int_ref, result = -1;
-    fChannel->InternalClientHandle(GetClientControl()->fRefNum, client_name, (int*)status, &int_ref, &result);
-    return int_ref;
-}
-
-int JackClient::InternalClientLoad(const char* client_name, jack_options_t options, jack_status_t* status, jack_varargs_t* va)
-{
-    if (strlen(client_name) >= JACK_CLIENT_NAME_SIZE) {
-        jack_error ("\"%s\" is too long for a JACK client name.\n"
-                    "Please use %lu characters or less.",
-                    client_name, JACK_CLIENT_NAME_SIZE);
-        return 0;
-    }
-
-    if (va->load_name && (strlen(va->load_name) >= JACK_PATH_MAX)) {
-        jack_error("\"%s\" is too long for a shared object name.\n"
-                   "Please use %lu characters or less.",
-                   va->load_name, JACK_PATH_MAX);
-        int my_status1 = *status | (JackFailure | JackInvalidOption);
-        *status = (jack_status_t)my_status1;
-        return 0;
-    }
-
-    if (va->load_init && (strlen(va->load_init) >= JACK_LOAD_INIT_LIMIT)) {
-        jack_error ("\"%s\" is too long for internal client init "
-                    "string.\nPlease use %lu characters or less.",
-                    va->load_init, JACK_LOAD_INIT_LIMIT);
-        int my_status1 = *status | (JackFailure | JackInvalidOption);
-        *status = (jack_status_t)my_status1;
-        return 0;
-    }
-
-    int int_ref, result = -1;
-    fChannel->InternalClientLoad(GetClientControl()->fRefNum, client_name, va->load_name, va->load_init, options, (int*)status, &int_ref, -1, &result);
-    return int_ref;
-}
-
-void JackClient::InternalClientUnload(int ref, jack_status_t* status)
-{
-    int result = -1;
-    fChannel->InternalClientUnload(GetClientControl()->fRefNum, ref, (int*)status, &result);
-}
-
 char* JackClient::GetUUIDForClientName(const char* client_name)
 {
     std::array<char, JACK_UUID_STRING_SIZE> uuid_res{};

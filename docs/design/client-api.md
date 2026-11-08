@@ -19,7 +19,7 @@ primitives are futexes.
 | Namespace | `jackmini` |
 | Control API (`jackctl_*`) | Kept, as `jackmini::control`. An application can start and manage the server with it, instead of running `jackd`. |
 | Session API | Dropped. |
-| Internal clients | Use the same client API as external clients. |
+| Internal clients | Removed. Drivers register with the engine directly, and there is no plug-in loading in the server. |
 | Metadata | Dropped. The current functions are stubs that return `-1`, and there is no database build. |
 | Lifecycle | Opened, active, inactive. See below. |
 | Connections across deactivate | Kept. This is a server change, planned for P2, with a risk noted below. |

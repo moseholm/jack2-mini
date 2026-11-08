@@ -119,8 +119,6 @@ set(JACK_SERVER_SOURCES
     server/JackEngine.cpp
     server/JackExternalClient.cpp
     server/JackFreewheelDriver.cpp
-    server/JackInternalClient.cpp
-    server/JackInternalSessionLoader.cpp
     server/JackServer.cpp
     server/JackThreadedDriver.cpp
     server/JackDriverLoader.cpp

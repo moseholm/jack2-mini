@@ -62,7 +62,6 @@ static struct jack_constraint_enum_char_descriptor self_connect_mode_constraint_
 struct jackctl_server
 {
     JSList * drivers;
-    JSList * internals;
     JSList * parameters;
 
     class JackServer * engine;
@@ -119,13 +118,6 @@ struct jackctl_driver
     jack_driver_desc_t * desc_ptr;
     JSList * parameters;
     JSList * infos;
-};
-
-struct jackctl_internal
-{
-    jack_driver_desc_t * desc_ptr;
-    JSList * parameters;
-    int refnum;
 };
 
 struct jackctl_parameter
@@ -451,75 +443,6 @@ jackctl_server_free_drivers(
     }
 }
 
-static int
-jackctl_internals_load(
-    struct jackctl_server * server_ptr)
-{
-    struct jackctl_internal * internal_ptr;
-    JSList *node_ptr;
-    JSList *descriptor_node_ptr;
-
-    descriptor_node_ptr = jack_internals_load(NULL);
-    if (descriptor_node_ptr == NULL)
-    {
-        jack_error("Could not find any internals in driver directory!");
-        return false;
-    }
-
-    while (descriptor_node_ptr != NULL)
-    {
-        internal_ptr = (struct jackctl_internal *)malloc(sizeof(struct jackctl_internal));
-        if (internal_ptr == NULL)
-        {
-            jack_error("Memory allocation of jackctl_driver structure failed.");
-            goto next;
-        }
-
-        internal_ptr->desc_ptr = (jack_driver_desc_t *)descriptor_node_ptr->data;
-        internal_ptr->parameters = NULL;
-        internal_ptr->refnum = -1;
-
-        if (!jackctl_add_driver_parameters((struct jackctl_driver *)internal_ptr))
-        {
-            assert(internal_ptr->parameters == NULL);
-            free(internal_ptr);
-            goto next;
-        }
-
-        server_ptr->internals = jack_slist_append(server_ptr->internals, internal_ptr);
-
-    next:
-        node_ptr = descriptor_node_ptr;
-        descriptor_node_ptr = descriptor_node_ptr->next;
-        free(node_ptr);
-    }
-
-    return true;
-}
-
-static
-void
-jackctl_server_free_internals(
-    struct jackctl_server * server_ptr)
-{
-    JSList * next_node_ptr;
-    struct jackctl_internal * internal_ptr;
-
-    while (server_ptr->internals)
-    {
-        next_node_ptr = server_ptr->internals->next;
-        internal_ptr = (struct jackctl_internal *)server_ptr->internals->data;
-
-        jackctl_free_driver_parameters((struct jackctl_driver *)internal_ptr);
-        free(internal_ptr->desc_ptr->params);
-        free(internal_ptr->desc_ptr);
-        free(internal_ptr);
-
-        free(server_ptr->internals);
-        server_ptr->internals = next_node_ptr;
-    }
-}
-
 static
 void
 jackctl_server_free_parameters(
@@ -718,7 +641,6 @@ SERVER_EXPORT jackctl_server_t * jackctl_server_create2(
     }
 
     server_ptr->drivers = NULL;
-    server_ptr->internals = NULL;
     server_ptr->parameters = NULL;
     server_ptr->engine = NULL;
 
@@ -890,7 +812,6 @@ SERVER_EXPORT jackctl_server_t * jackctl_server_create2(
     }
 
     /* Allowed to fail */
-    jackctl_internals_load(server_ptr);
 
     return server_ptr;
 
@@ -907,7 +828,6 @@ SERVER_EXPORT void jackctl_server_destroy(jackctl_server *server_ptr)
 {
     if (server_ptr) {
         jackctl_server_free_drivers(server_ptr);
-        jackctl_server_free_internals(server_ptr);
         jackctl_server_free_parameters(server_ptr);
         free(server_ptr);
     }
@@ -1256,71 +1176,6 @@ SERVER_EXPORT union jackctl_parameter_value jackctl_parameter_get_default_value(
         jackctl_value = {};
         return jackctl_value;
     }
-}
-
-// Internals clients
-
-SERVER_EXPORT const JSList * jackctl_server_get_internals_list(jackctl_server *server_ptr)
-{
-    return (server_ptr) ? server_ptr->internals : NULL;
-}
-
-SERVER_EXPORT const char * jackctl_internal_get_name(jackctl_internal *internal_ptr)
-{
-    return (internal_ptr) ? internal_ptr->desc_ptr->name : NULL;
-}
-
-SERVER_EXPORT const JSList * jackctl_internal_get_parameters(jackctl_internal *internal_ptr)
-{
-    return (internal_ptr) ? internal_ptr->parameters : NULL;
-}
-
-SERVER_EXPORT bool jackctl_server_load_internal(
-    jackctl_server * server_ptr,
-    jackctl_internal * internal)
-{
-    if (!server_ptr || !internal) {
-        return false;
-    }
-
-    int status;
-    if (server_ptr->engine != NULL) {
-        JSList * paramlist;
-        if (!jackctl_create_param_list(internal->parameters, &paramlist)) return false;
-        server_ptr->engine->InternalClientLoad2(internal->desc_ptr->name, internal->desc_ptr->name, paramlist, JackNullOption, &internal->refnum, -1, &status);
-        jackctl_destroy_param_list(paramlist);
-        return (internal->refnum > 0);
-    } else {
-        return false;
-    }
-}
-
-SERVER_EXPORT bool jackctl_server_unload_internal(
-    jackctl_server * server_ptr,
-    jackctl_internal * internal)
-{
-    if (!server_ptr || !internal) {
-        return false;
-    }
-
-    int status;
-    if (server_ptr->engine != NULL && internal->refnum > 0) {
-        // Client object is internally kept in JackEngine, and will be deallocated in InternalClientUnload
-        return ((server_ptr->engine->GetEngine()->InternalClientUnload(internal->refnum, &status)) == 0);
-    } else {
-        return false;
-    }
-}
-
-SERVER_EXPORT bool jackctl_server_load_session_file(
-    jackctl_server * server_ptr,
-    const char * file)
-{
-    if (!server_ptr || !file || !server_ptr->engine) {
-        return false;
-    }
-
-    return (server_ptr->engine->LoadInternalSessionFile(file) >= 0);
 }
 
 SERVER_EXPORT bool jackctl_server_add_slave(jackctl_server * server_ptr, jackctl_driver * driver_ptr)

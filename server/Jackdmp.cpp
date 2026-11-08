@@ -60,20 +60,6 @@ static jackctl_driver_t * jackctl_server_get_driver(jackctl_server_t *server, co
     return NULL;
 }
 
-static jackctl_internal_t * jackctl_server_get_internal(jackctl_server_t *server, const char *internal_name)
-{
-    const JSList * node_ptr = jackctl_server_get_internals_list(server);
-
-    while (node_ptr) {
-        if (strcmp(jackctl_internal_get_name((jackctl_internal_t *)node_ptr->data), internal_name) == 0) {
-            return (jackctl_internal_t *)node_ptr->data;
-        }
-        node_ptr = jack_slist_next(node_ptr);
-    }
-
-    return NULL;
-}
-
 static jackctl_parameter_t * jackctl_get_parameter(const JSList * parameters_list, const char * parameter_name)
 {
     while (parameters_list) {
@@ -100,20 +86,6 @@ static void print_server_drivers(jackctl_server_t *server, FILE* file)
     fprintf(file, "\n");
 }
 
-static void print_server_internals(jackctl_server_t *server, FILE* file)
-{
-    const JSList * node_ptr = jackctl_server_get_internals_list(server);
-
-    fprintf(file, "Available internals:\n");
-
-    while (node_ptr) {
-        jackctl_internal_t* internal = (jackctl_internal_t *)node_ptr->data;
-        fprintf(file, "      %s\n", jackctl_internal_get_name(internal));
-        node_ptr = jack_slist_next(node_ptr);
-    }
-    fprintf(file, "\n");
-}
-
 static void usage(FILE* file, jackctl_server_t *server, bool full = true)
 {
     jackctl_parameter_t * param;
@@ -130,8 +102,6 @@ static void usage(FILE* file, jackctl_server_t *server, bool full = true)
             "               [ --loopback OR -L loopback-port-number ]\n"
             "               [ --port-max OR -p maximum-number-of-ports]\n"
             "               [ --slave-backend OR -X slave-backend-name ]\n"
-            "               [ --internal-client OR -I internal-client-name ]\n"
-            "               [ --internal-session-file OR -C internal-session-file ]\n"
             "               [ --verbose OR -v ]\n"
             "               [ --clocksource OR -c [ h(pet) | s(ystem) ]\n"
             "               [ --autoconnect OR -a <modechar>]\n");
@@ -163,7 +133,6 @@ static void usage(FILE* file, jackctl_server_t *server, bool full = true)
 
     if (full) {
         print_server_drivers(server, file);
-        print_server_internals(server, file);
     }
 }
 
@@ -195,11 +164,9 @@ int main(int argc, char** argv)
 
     struct option long_options[] = {
                                        { "clock-source", 1, 0, 'c' },
-                                       { "internal-session-file", 1, 0, 'C' },
                                        { "loopback-driver", 1, 0, 'L' },
                                        { "audio-driver", 1, 0, 'd' },
                                        { "midi-driver", 1, 0, 'X' },
-                                       { "internal-client", 1, 0, 'I' },
                                        { "verbose", 0, 0, 'v' },
                                        { "help", 0, 0, 'h' },
                                        { "port-max", 1, 0, 'p' },
@@ -221,7 +188,6 @@ int main(int argc, char** argv)
 
     int i,opt = 0;
     int option_index = 0;
-    char* internal_session_file = NULL;
     char* master_driver_name = NULL;
     char** master_driver_args = NULL;
     int master_driver_nargs = 1;
@@ -230,7 +196,6 @@ int main(int argc, char** argv)
     jackctl_parameter_t* param;
     union jackctl_parameter_value value;
 
-    std::list<char*> internals_list;
     std::list<char*> slaves_list;
     std::list<char*>::iterator it;
 
@@ -307,10 +272,6 @@ int main(int argc, char** argv)
                 slaves_list.push_back(optarg);
                 break;
 
-            case 'I':
-                internals_list.push_back(optarg);
-                break;
-
             case 'p':
                 param = jackctl_get_parameter(server_parameters, "port-max");
                 if (param != NULL) {
@@ -351,10 +312,6 @@ int main(int argc, char** argv)
                     strncpy(value.str, optarg, JACK_PARAM_STRING_MAX);
                     jackctl_parameter_set_value(param, &value);
                 }
-                break;
-
-            case 'C':
-                internal_session_file = optarg;
                 break;
 
             case 'P':
@@ -504,26 +461,6 @@ int main(int argc, char** argv)
         }
     }
 
-    // Internal clients
-    for (it = internals_list.begin(); it != internals_list.end(); it++) {
-        jackctl_internal_t * internal_driver_ctl = jackctl_server_get_internal(server_ctl, *it);
-        if (internal_driver_ctl == NULL) {
-            fprintf(stderr, "Unknown internal \"%s\"\n", *it);
-            goto close_server;
-        }
-        if (!jackctl_server_load_internal(server_ctl, internal_driver_ctl)) {
-            fprintf(stderr, "Internal client \"%s\" cannot be loaded\n", *it);
-            goto close_server;
-        }
-    }
-
-    if (internal_session_file != NULL) {
-        if (!jackctl_server_load_session_file(server_ctl, internal_session_file)) {
-            fprintf(stderr, "Internal session file %s cannot be loaded!\n", internal_session_file);
-            goto close_server;
-        }
-    }
-
     // Start the server
     if (!jackctl_server_start(server_ctl)) {
         fprintf(stderr, "Failed to start server\n");
@@ -551,13 +488,6 @@ int main(int argc, char** argv)
         }
     }
 
-    // Internal clients
-    for (it = internals_list.begin(); it != internals_list.end(); it++) {
-        jackctl_internal_t * internal_driver_ctl = jackctl_server_get_internal(server_ctl, *it);
-        if (internal_driver_ctl) {
-            jackctl_server_unload_internal(server_ctl, internal_driver_ctl);
-        }
-    }
     jackctl_server_close(server_ctl);
 
  destroy_server:

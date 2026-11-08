@@ -87,16 +87,12 @@ struct JackRequest
         kClientClose = 18,
         kConnectNamePorts = 19,
         kDisconnectNamePorts = 20,
-        kGetInternalClientName = 21,
-        kInternalClientHandle = 22,
-        kInternalClientLoad = 23,
-        kInternalClientUnload = 24,
-        kPortRename = 25,
-        kNotification = 26,
-        kGetClientByUUID = 27,
-        kReserveClientName = 28,
-        kGetUUIDByClient = 29,
-        kComputeTotalLatencies = 30
+        kPortRename = 21,
+        kNotification = 22,
+        kGetClientByUUID = 23,
+        kReserveClientName = 24,
+        kGetUUIDByClient = 25,
+        kComputeTotalLatencies = 26
     };
 
     RequestType fType;
@@ -1017,146 +1013,17 @@ struct JackSetTimebaseCallbackRequest : public JackRequestImpl<sizeof(int) + siz
 \brief GetInternalClientName request.
 */
 
-struct JackGetInternalClientNameRequest : public JackRequestImpl<sizeof(int) + sizeof(int)>
-{
-
-    int fRefNum;
-    int fIntRefNum;
-
-    JackGetInternalClientNameRequest()
-        : JackRequestImpl(kGetInternalClientName), fRefNum(0), fIntRefNum(0)
-    {}
-
-    JackGetInternalClientNameRequest(int refnum, int int_ref)
-        : JackRequestImpl(kGetInternalClientName), fRefNum(refnum), fIntRefNum(int_ref)
-    {}
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(trans->Read(&fRefNum, sizeof(int)));
-        return trans->Read(&fIntRefNum, sizeof(int));
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(WritePacketInit());
-        CheckRes(WritePacket(&fRefNum, sizeof(int)));
-        CheckRes(WritePacket(&fIntRefNum, sizeof(int)));
-        return JackRequestImpl::Write(trans);
-    }
-
-};
-
 /*!
 \brief GetInternalClient result.
 */
-
-struct JackGetInternalClientNameResult : public JackResult
-{
-
-    char fName[JACK_CLIENT_NAME_SIZE+1];
-
-    JackGetInternalClientNameResult(): JackResult()
-    {
-        memset(fName, 0, sizeof(fName));
-    }
-    JackGetInternalClientNameResult(int32_t result, const char* name)
-            : JackResult(result)
-    {
-        memset(fName, 0, sizeof(fName));
-        CopyCString(fName, name);
-    }
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(JackResult::Read(trans));
-        CheckRes(trans->Read(&fName, sizeof(fName)));
-        return 0;
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(JackResult::Write(trans));
-        CheckRes(trans->Write(&fName, sizeof(fName)));
-        return 0;
-    }
-
-    int Size() const { return sizeof(fName); }
-};
 
 /*!
 \brief InternalClientHandle request.
 */
 
-struct JackInternalClientHandleRequest : public JackRequestImpl<sizeof(int) + JACK_CLIENT_NAME_SIZE_1>
-{
-
-    int fRefNum;
-    char fName[JACK_CLIENT_NAME_SIZE_1];
-
-    JackInternalClientHandleRequest()
-        : JackRequestImpl(kInternalClientHandle), fRefNum(0)
-    {
-        memset(fName, 0, sizeof(fName));
-    }
-
-    JackInternalClientHandleRequest(int refnum, const char* client_name)
-        : JackRequestImpl(kInternalClientHandle), fRefNum(refnum)
-    {
-        memset(fName, 0, sizeof(fName));
-        CopyCString(fName, client_name);
-    }
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(trans->Read(&fRefNum, sizeof(int)));
-        return trans->Read(&fName, sizeof(fName));
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(WritePacketInit());
-        CheckRes(WritePacket(&fRefNum, sizeof(int)));
-        CheckRes(WritePacket(&fName, sizeof(fName)));
-        return JackRequestImpl::Write(trans);
-    }
-
-};
-
 /*!
 \brief InternalClientHandle result.
 */
-
-struct JackInternalClientHandleResult : public JackResult
-{
-
-    int fStatus;
-    int fIntRefNum;
-
-    JackInternalClientHandleResult(): JackResult(), fStatus(0), fIntRefNum(0)
-    {}
-    JackInternalClientHandleResult(int32_t result, int status, int int_ref)
-            : JackResult(result), fStatus(status), fIntRefNum(int_ref)
-    {}
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(JackResult::Read(trans));
-        CheckRes(trans->Read(&fStatus, sizeof(int)));
-        CheckRes(trans->Read(&fIntRefNum, sizeof(int)));
-        return 0;
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(JackResult::Write(trans));
-        CheckRes(trans->Write(&fStatus, sizeof(int)));
-        CheckRes(trans->Write(&fIntRefNum, sizeof(int)));
-        return 0;
-    }
-
-    int Size() const { return sizeof(int) + sizeof(int); }
-};
 
 /*!
 \brief InternalClientLoad request.
@@ -1167,163 +1034,17 @@ struct JackInternalClientHandleResult : public JackResult
 #endif
 #define MAX_PATH_1 (MAX_PATH + 1)
 
-struct JackInternalClientLoadRequest : public JackRequestImpl<sizeof(int) + JACK_CLIENT_NAME_SIZE_1 + MAX_PATH_1 + JACK_LOAD_INIT_LIMIT_1 + sizeof(int) + sizeof(jack_uuid_t)>
-{
-
-    int fRefNum;
-    char fName[JACK_CLIENT_NAME_SIZE_1];
-    char fDllName[MAX_PATH_1];
-    char fLoadInitName[JACK_LOAD_INIT_LIMIT_1];
-    int fOptions;
-    jack_uuid_t fUUID;
-
-    JackInternalClientLoadRequest()
-        : JackRequestImpl(kInternalClientLoad), fRefNum(0), fOptions(0), fUUID(JACK_UUID_EMPTY_INITIALIZER)
-    {
-        memset(fName, 0, sizeof(fName));
-        memset(fDllName, 0, sizeof(fDllName));
-        memset(fLoadInitName, 0, sizeof(fLoadInitName));
-    }
-
-    JackInternalClientLoadRequest(int refnum, const char* client_name, const char* so_name, const char* objet_data, int options, jack_uuid_t uuid )
-        : JackRequestImpl(kInternalClientLoad), fRefNum(refnum), fOptions(options), fUUID(uuid)
-    {
-        memset(fName, 0, sizeof(fName));
-        memset(fDllName, 0, sizeof(fDllName));
-        memset(fLoadInitName, 0, sizeof(fLoadInitName));
-        strncpy(fName, client_name, sizeof(fName)-1);
-        if (so_name) {
-            strncpy(fDllName, so_name, sizeof(fDllName)-1);
-        }
-        if (objet_data) {
-            strncpy(fLoadInitName, objet_data, sizeof(fLoadInitName)-1);
-        }
-    }
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(trans->Read(&fRefNum, sizeof(int)));
-        CheckRes(trans->Read(&fName, sizeof(fName)));
-        CheckRes(trans->Read(&fDllName, sizeof(fDllName)));
-        CheckRes(trans->Read(&fLoadInitName, sizeof(fLoadInitName)));
-        CheckRes(trans->Read(&fUUID, sizeof(jack_uuid_t)));
-        return trans->Read(&fOptions, sizeof(int));
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(WritePacketInit());
-        CheckRes(WritePacket(&fRefNum, sizeof(int)));
-        CheckRes(WritePacket(&fName, sizeof(fName)));
-        CheckRes(WritePacket(&fDllName, sizeof(fDllName)));
-        CheckRes(WritePacket(&fLoadInitName, sizeof(fLoadInitName)));
-        CheckRes(WritePacket(&fUUID, sizeof(jack_uuid_t)));
-        CheckRes(WritePacket(&fOptions, sizeof(int)));
-        return JackRequestImpl::Write(trans);
-    }
-
-};
-
 /*!
 \brief InternalClientLoad result.
 */
-
-struct JackInternalClientLoadResult : public JackResult
-{
-
-    int fStatus;
-    int fIntRefNum;
-
-    JackInternalClientLoadResult(): JackResult(), fStatus(0), fIntRefNum(0)
-    {}
-    JackInternalClientLoadResult(int32_t result, int status, int int_ref)
-            : JackResult(result), fStatus(status), fIntRefNum(int_ref)
-    {}
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(JackResult::Read(trans));
-        CheckRes(trans->Read(&fStatus, sizeof(int)));
-        CheckRes(trans->Read(&fIntRefNum, sizeof(int)));
-        return 0;
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(JackResult::Write(trans));
-        CheckRes(trans->Write(&fStatus, sizeof(int)));
-        CheckRes(trans->Write(&fIntRefNum, sizeof(int)));
-        return 0;
-    }
-
-    int Size() const { return sizeof(int) + sizeof(int); }
-};
 
 /*!
 \brief InternalClientUnload request.
 */
 
-struct JackInternalClientUnloadRequest : public JackRequestImpl<sizeof(int) + sizeof(int)>
-{
-
-    int fRefNum;
-    int fIntRefNum;
-
-    JackInternalClientUnloadRequest()
-        : JackRequestImpl(kInternalClientUnload), fRefNum(0), fIntRefNum(0)
-    {}
-
-    JackInternalClientUnloadRequest(int refnum, int int_ref)
-        : JackRequestImpl(kInternalClientUnload), fRefNum(refnum), fIntRefNum(int_ref)
-    {}
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(trans->Read(&fRefNum, sizeof(int)));
-        return trans->Read(&fIntRefNum, sizeof(int));
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(WritePacketInit());
-        CheckRes(WritePacket(&fRefNum, sizeof(int)));
-        CheckRes(WritePacket(&fIntRefNum, sizeof(int)));
-        return JackRequestImpl::Write(trans);
-    }
-
-};
-
 /*!
 \brief InternalClientLoad result.
 */
-
-struct JackInternalClientUnloadResult : public JackResult
-{
-
-    int fStatus;
-
-    JackInternalClientUnloadResult(): JackResult(), fStatus(0)
-    {}
-    JackInternalClientUnloadResult(int32_t result, int status)
-            : JackResult(result), fStatus(status)
-    {}
-
-    int Read(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(JackResult::Read(trans));
-        CheckRes(trans->Read(&fStatus, sizeof(int)));
-        return 0;
-    }
-
-    int Write(detail::JackChannelTransactionInterface* trans) override
-    {
-        CheckRes(JackResult::Write(trans));
-        CheckRes(trans->Write(&fStatus, sizeof(int)));
-        return 0;
-    }
-
-    int Size() const { return sizeof(int); }
-};
 
 /*!
 \brief ClientNotification request.

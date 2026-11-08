@@ -72,10 +72,6 @@ public:
     std::vector<Parameter> parameters() const;
     Result<void> set_parameter(std::string_view name, Value value);
 
-    // Internal clients, loaded into the server.
-    Result<void> load_internal_client(std::string_view name, std::string_view library,
-                                      std::string_view parameters);
-    Result<void> unload_internal_client(std::string_view name);
 
 private:
     Server() = default;

@@ -43,7 +43,7 @@ struct JackClientControl;
 struct JackEngineControl;
 
 /*!
-\brief The base class for clients: share part of the implementation for JackInternalClient and JackLibClient.
+\brief The base class for clients: share part of the implementation for the client library (JackLibClient).
 */
 
 class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnableInterface
@@ -188,12 +188,6 @@ class SERVER_EXPORT JackClient : public JackClientInterface, public JackRunnable
         virtual int SetPortConnectCallback(JackPortConnectCallback callback, void *arg);
         virtual int SetPortRenameCallback(JackPortRenameCallback callback, void *arg);
         virtual int SetLatencyCallback(JackLatencyCallback callback, void *arg);
-        // Internal clients
-        virtual char* GetInternalClientName(int ref);
-        virtual int InternalClientHandle(const char* client_name, jack_status_t* status);
-        virtual int InternalClientLoad(const char* client_name, jack_options_t options, jack_status_t* status, jack_varargs_t* va);
-        virtual void InternalClientUnload(int ref, jack_status_t* status);
-
         // RT Thread
         jack_nframes_t CycleWait();
         void CycleSignal(int status);

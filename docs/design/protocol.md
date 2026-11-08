@@ -64,8 +64,7 @@ Each request is answered by exactly one reply, which has the same request id.
 The reply carries a status (`0` for success, otherwise an error code that maps
 to `jackmini::Error`) and the reply payload.
 
-Current requests (`JackRequest::RequestType`, 40 types) and what happens to
-each:
+Requests (`JackRequest::RequestType`, 26 types) and what happens to each:
 
 | Current | New | Notes |
 |---|---|---|
@@ -77,15 +76,14 @@ each:
 | kSetBufferSize, kSetFreeWheel, kSetClientCapabilities | keep | |
 | kSetTimeBaseClient, kSetTimebaseCallback, kReleaseTimebase | keep | transport |
 | kComputeTotalLatencies | keep | |
-| kGetInternalClientName, kInternalClientHandle, kInternalClientLoad, kInternalClientUnload | keep | used by internal clients and the control API |
 | kGetClientByUUID, kGetUUIDByClient, kReserveClientName | keep | `jackmini::Uuid` |
 | kNotification | keep | a client's request to register notification interest |
-| kSessionNotify, kSessionReply, kClientHasSessionCallback | **drop** | session API is dropped |
-| kPropertyChangeNotify | **drop** | metadata is dropped |
+| kSessionNotify, kSessionReply, kClientHasSessionCallback | **drop** (done) | session API is dropped |
+| kPropertyChangeNotify | **drop** (done) | metadata is dropped |
 
-The 40 current types became 30 (done). The request numbers are reassigned in order, 1 to 30, and the protocol
-version is 11. The session requests and the property change request are gone, with their server and client code
-(the metadata store stays inside the server: the ALSA drivers set pretty port names through it).
+The 40 types became 26 (done). The request numbers are reassigned in order, 1 to 26, and the protocol version is
+12. The session requests, the property change request, and the internal-client requests are gone, with their server
+and client code (the metadata store stays inside the server: the ALSA drivers set pretty port names through it).
 
 ### 3.2 Notifications
 

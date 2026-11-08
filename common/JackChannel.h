@@ -174,14 +174,6 @@ class JackClientChannelInterface
         virtual void SetTimebaseCallback(int refnum, int conditional, int* result)
         {}
 
-        virtual void GetInternalClientName(int refnum, int int_ref, char* name_res, int* result)
-        {}
-        virtual void InternalClientHandle(int refnum, const char* client_name, int* status, int* int_ref, int* result)
-        {}
-        virtual void InternalClientLoad(int refnum, const char* client_name, const char* so_name, const char* objet_data, int options, int* status, int* int_ref, jack_uuid_t uuid, int* result)
-        {}
-        virtual void InternalClientUnload(int refnum, int int_ref, int* status, int* result)
-        {}
 
         virtual void GetUUIDForClientName(int refnum, const char* client_name, char* uuid_res, int* result)
         {}

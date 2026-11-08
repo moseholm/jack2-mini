@@ -123,11 +123,11 @@ class SERVER_EXPORT JackLockedEngine
             return fEngine.ClientExternalOpen(name, pid, uuid, ref, shared_engine, shared_client, shared_graph_manager);
             CATCH_EXCEPTION_RETURN
         }
-        int ClientInternalOpen(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait)
+        int RegisterDriver(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait)
         {
             TRY_CALL
             JackLock lock(&fEngine);
-            return fEngine.ClientInternalOpen(name, ref, shared_engine, shared_manager, client, wait);
+            return fEngine.RegisterDriver(name, ref, shared_engine, shared_manager, client, wait);
             CATCH_EXCEPTION_RETURN
         }
 
@@ -138,11 +138,11 @@ class SERVER_EXPORT JackLockedEngine
             return (fEngine.CheckClient(refnum)) ? fEngine.ClientExternalClose(refnum) : -1;
             CATCH_CLOSE_EXCEPTION_RETURN
         }
-        int ClientInternalClose(int refnum, bool wait)
+        int UnregisterDriver(int refnum, bool wait)
         {
             TRY_CALL
             JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.ClientInternalClose(refnum, wait) : -1;
+            return (fEngine.CheckClient(refnum)) ? fEngine.UnregisterDriver(refnum, wait) : -1;
             CATCH_CLOSE_EXCEPTION_RETURN
         }
 
@@ -166,30 +166,6 @@ class SERVER_EXPORT JackLockedEngine
             JackLock lock(&fEngine);
             fEngine.ClientKill(refnum);
             CATCH_EXCEPTION
-        }
-
-        // Internal client management
-        int GetInternalClientName(int int_ref, char* name_res)
-        {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.GetInternalClientName(int_ref, name_res);
-            CATCH_EXCEPTION_RETURN
-        }
-        int InternalClientHandle(const char* client_name, int* status, int* int_ref)
-        {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.InternalClientHandle(client_name, status, int_ref);
-            CATCH_EXCEPTION_RETURN
-        }
-        int InternalClientUnload(int refnum, int* status)
-        {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            // Client is tested in fEngine.InternalClientUnload
-            return fEngine.InternalClientUnload(refnum, status);
-            CATCH_EXCEPTION_RETURN
         }
 
         // Port management

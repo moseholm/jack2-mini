@@ -65,7 +65,7 @@ int JackDriver::Open()
 {
     int refnum = -1;
 
-    if (fEngine->ClientInternalOpen(fClientControl.fName, &refnum, &fEngineControl, &fGraphManager, this, false) != 0) {
+    if (fEngine->RegisterDriver(fClientControl.fName, &refnum, &fEngineControl, &fGraphManager, this, false) != 0) {
         jack_error("Cannot allocate internal client for driver");
         return -1;
     }
@@ -103,7 +103,7 @@ int JackDriver::Open(jack_nframes_t buffer_size,
     }
     strcpy(fClientControl.fName, name_res.data());
 
-    if (fEngine->ClientInternalOpen(fClientControl.fName, &refnum, &fEngineControl, &fGraphManager, this, false) != 0) {
+    if (fEngine->RegisterDriver(fClientControl.fName, &refnum, &fEngineControl, &fGraphManager, this, false) != 0) {
         jack_error("Cannot allocate internal client for driver");
         return -1;
     }
@@ -141,7 +141,7 @@ int JackDriver::Close()
         fGraphManager->DirectDisconnect(fClientControl.fRefNum, fClientControl.fRefNum); // Disconnect driver from itself for sync
         fClientControl.fActive = false;
         fEngineControl->fDriverNum--;
-        return fEngine->ClientInternalClose(fClientControl.fRefNum, false);
+        return fEngine->UnregisterDriver(fClientControl.fRefNum, false);
     } else {
         return -1;
     }

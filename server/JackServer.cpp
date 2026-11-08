@@ -20,6 +20,10 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackSystemDeps.h"
 #include "JackServerGlobals.h"
+#include "JackServer.h"
+#include "JackDriverInfo.h"
+#include "driver_interface.h"
+#include "JackDriverLoader.h"
 #include "JackTime.h"
 #include "JackFreewheelDriver.h"
 #include "JackThreadedDriver.h"
@@ -30,10 +34,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackClientControl.h"
 #include "JackEngineControl.h"
 #include "JackGraphManager.h"
-#include "JackInternalClient.h"
 #include "JackError.h"
 #include "JackMessageBuffer.h"
-#include "JackInternalSessionLoader.h"
 
 const char * jack_get_self_connect_mode_description(char mode);
 
@@ -199,52 +201,6 @@ bool JackServer::IsRunning()
     jack_log("JackServer::IsRunning");
     assert(fAudioDriver);
     return fAudioDriver->IsRunning();
-}
-
-//------------------
-// Internal clients 
-//------------------
-
-int JackServer::InternalClientLoad1(const char* client_name, const char* so_name, const char* objet_data, int options, int* int_ref, jack_uuid_t uuid, int* status)
-{
-    JackLoadableInternalClient* client = new JackLoadableInternalClient1(JackServerGlobals::fInstance, GetSynchroTable(), objet_data);
-    assert(client);
-    return InternalClientLoadAux(client, so_name, client_name, options, int_ref, uuid, status);
- }
-
-int JackServer::InternalClientLoad2(const char* client_name, const char* so_name, const JSList * parameters, int options, int* int_ref, jack_uuid_t uuid, int* status)
-{
-    JackLoadableInternalClient* client = new JackLoadableInternalClient2(JackServerGlobals::fInstance, GetSynchroTable(), parameters);
-    assert(client);
-    return InternalClientLoadAux(client, so_name, client_name, options, int_ref, uuid, status);
-}
-
-int JackServer::InternalClientLoadAux(JackLoadableInternalClient* client, const char* so_name, const char* client_name, int options, int* int_ref, jack_uuid_t uuid, int* status)
-{
-    // Clear status
-    *status = 0;
-
-    // Client object is internally kept in JackEngine
-    if ((client->Init(so_name) < 0) || (client->Open(JackTools::DefaultServerName(), client_name,  uuid, (jack_options_t)options, (jack_status_t*)status) < 0)) {
-        delete client;
-        int my_status1 = *status | JackFailure;
-        *status = (jack_status_t)my_status1;
-        *int_ref = 0;
-        return -1;
-    } else {
-        *int_ref = client->GetClientControl()->fRefNum;
-        return 0;
-    }
- }
-
-//-----------------------
-// Internal session file 
-//-----------------------
-
-int JackServer::LoadInternalSessionFile(const char* file)
-{
-    JackInternalSessionLoader loader(this);
-    return loader.Load(file);
 }
 
 //---------------------------
