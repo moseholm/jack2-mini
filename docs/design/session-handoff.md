@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `6f7a2791` (protocol item 7). `origin/develop` is `5c926a55`.
+  `e082dfe7` (client API, lifecycle area). `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -68,6 +68,12 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `e082dfe7` Client API step 3, first area: `jackmini::Client` lifecycle, callbacks and
+  identity on the C library (`common/jackmini/client.cpp`). Not yet: ports, connections,
+  buffers, transport (declared, not implemented: a program that calls them does not
+  link). Also a C library fix: a failed open kept only `JackFailure|JackServerError`,
+  dropping the reason (`JackNameNotUnique`). Checked by `tests/jackmini_client_e2e.cpp`
+  with a server, and the existing checks.
 - `6f7a2791` Protocol item 7: `tests/protocol_conformance_unit.cpp` (fake server on a
   socket pair; requests and replies; malformed, version-mismatch, bad-header and
   mismatched-reply refusals; a synchronous notification). TSAN clean. Layout checks for
@@ -146,19 +152,17 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-The protocol order of work (protocol.md section 10) is done except item 4b.
-
-- **4b, and client-API step 3 (port the client library behind the new headers):** 4b
-  waits for the client-API port, by decision. Step 3 is the next large piece of work and
-  needs a go-ahead: it changes the public C library.
+- **Client API step 3, next areas:** ports and connections on `jackmini::Client`, then
+  the buffers (audio, MIDI) and transport, then the `tests/*.cpp` programs ported and the
+  C client library removed. See `docs/design/client-api.md`.
+- **4b (protocol: drop session and metadata messages):** unblocked by the client-API
+  port, which removes the C exports that use them. Do it when the client side is off the
+  C library.
 - **Measure the notification queue size** (protocol section 9, item 3); 256 now.
 - **Open TSAN findings, outside the counters** (not fixed; verify on the base before
-  attributing):
-  - `JackEngine::ProcessNext`, `fLastSwitchUsecs` (JackEngine.cpp:154).
-  - `JackConnectionManager::ResumeRefNum`, the client timing fields `fStatus`,
-    `fSignaledAt` (JackConnectionManager.cpp:267-268).
-  - Client library: `JackClient::Activate`, `Deactivate`, `CallSyncCallbackAux`,
-    `JackLibClient::Open`.
+  attributing): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing fields
+  in `ResumeRefNum`; the client library's `JackClient::Activate`, `Deactivate`,
+  `CallSyncCallbackAux`, `JackLibClient::Open`.
 
 ## Environment facts
 
@@ -214,7 +218,7 @@ The protocol order of work (protocol.md section 10) is done except item 4b.
 2. Read this file, `docs/design/protocol.md` (section 4.1 and the order of work),
    and `docs/design/client-api.md`.
 3. Rebuild the test dir and run `ctest --test-dir /tmp/opencode/build-jack2-cxx23`.
-4. Protocol items are done except 4b. Next is client-API step 3, which needs a go-ahead (see "Next").
+4. Continue client-API step 3 with ports and connections (see "Next").
 
 ## Working agreements with the user
 
