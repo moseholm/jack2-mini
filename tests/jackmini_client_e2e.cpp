@@ -78,7 +78,7 @@ int main(int argc, char** argv)
 
     std::atomic<unsigned long> cycles{ 0 };
     std::atomic<bool> xrun_called{ false };
-    Check("on_process while opened", client.on_process([&](FrameCount) {
+    Check("on_process while opened", client.on_process([&](const Cycle&) {
         cycles++;
         return true;
     }).has_value());
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
     }
     Client clock = std::move(*clock_opened);
     std::atomic<unsigned long> clock_cycles{ 0 };
-    Check("clock: on_process", clock.on_process([&](FrameCount) {
+    Check("clock: on_process", clock.on_process([&](const Cycle&) {
         clock_cycles++;
         return true;
     }).has_value());
@@ -199,7 +199,7 @@ int main(int argc, char** argv)
             Port mout = *midi_out;
             Port ain = *audio_in;
             Port min = *midi_in;
-            Check("source process: set", src.on_process([&src, aout, mout](FrameCount) {
+            Check("source process: set", src.on_process([&src, aout, mout](const Cycle&) {
                 for (auto& sample : src.audio_buffer(aout)) {
                     sample = 0.25f;
                 }
@@ -209,7 +209,7 @@ int main(int argc, char** argv)
                 midi.write(5, note);
                 return true;
             }).has_value());
-            Check("destination process: set", dst.on_process([&dst, ain, min, &dst_cycles, &last_sample, &midi_seen, &first_byte, &event_size](FrameCount) {
+            Check("destination process: set", dst.on_process([&dst, ain, min, &dst_cycles, &last_sample, &midi_seen, &first_byte, &event_size](const Cycle&) {
                 dst_cycles++;
                 auto samples = dst.audio_buffer(ain);
                 if (!samples.empty()) {

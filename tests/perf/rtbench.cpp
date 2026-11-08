@@ -30,8 +30,9 @@ static long long now_ns()
     return ts.tv_sec * 1000000000LL + ts.tv_nsec;
 }
 
-static bool process(FrameCount nframes)
+static bool process(const Cycle& cycle)
 {
+    const FrameCount nframes = cycle.frames;
     unsigned long i = nsamples.fetch_add(1);
     long long s = now_ns();
     auto o = jack_handle->audio_buffer(out);

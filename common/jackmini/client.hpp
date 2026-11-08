@@ -38,6 +38,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 namespace jackmini
 {
 
+// The cycle a process callback runs in.  The server computes it at the start of the cycle, so every client of a cycle
+// sees the same values.  The times are in the server's clock.  In real time the next cycle is one period after the
+// current one.  In freewheel mode the cycles are not paced by the clock: the times follow the cycles as the server runs
+// them, and the period is measured, not nominal.  A client correcting for clock drift must skip that when freewheel is
+// set.
+struct Cycle {
+    FrameCount frames = 0;            // the buffer size of this cycle
+    FrameCount current_frames = 0;    // the frame at the start of this cycle
+    std::uint64_t current_usecs = 0;  // the time at the start of this cycle
+    std::uint64_t next_usecs = 0;     // the expected start of the next cycle
+    float period_usecs = 0.0f;        // the nominal period
+    bool freewheel = false;           // the server runs its cycles without the sound card
+};
+
 // The lifecycle is three states.  A client is opened, then it may be activated
 // and deactivated any number of times.
 //
@@ -54,7 +68,7 @@ class JACKMINI_API Client {
 public:
     // Process callback: called once per cycle on the realtime thread.  Returns
     // false to report a failure, which the server treats as a shutdown request.
-    using ProcessFn = std::move_only_function<bool(FrameCount frames)>;
+    using ProcessFn = std::move_only_function<bool(const Cycle& cycle)>;
 
     using XrunFn = std::move_only_function<void()>;
     using ShutdownFn = std::move_only_function<void()>;
@@ -79,8 +93,8 @@ public:
     // Callbacks.  Each is stored while the client is inactive.  Setting one
     // while active returns Error::InvalidState.  The stored callable is used
     // from the next activate().
-    template <std::invocable<FrameCount> F>
-        requires std::convertible_to<std::invoke_result_t<F&, FrameCount>, bool>
+    template <std::invocable<const Cycle&> F>
+        requires std::convertible_to<std::invoke_result_t<F&, const Cycle&>, bool>
     Result<void> on_process(F&& fn) {
         return set_process(ProcessFn(std::forward<F>(fn)));
     }

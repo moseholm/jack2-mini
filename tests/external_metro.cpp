@@ -85,7 +85,7 @@ ExternalMetro::ExternalMetro(int freq_arg, double max_amp, int dur_arg, int bpm_
     freq = freq_arg;
     bpm = bpm_arg;
 
-    client.on_process([this](FrameCount nframes) { return process_audio(nframes); });
+    client.on_process([this](const Cycle& cycle) { return process_audio(cycle.frames); });
     client.on_shutdown([] { std::printf("shutdown called..\n"); });
     auto out = client.register_port("bpm", PortType::Audio, PortFlags::Output);
     auto in = client.register_port("metro_in", PortType::Audio, PortFlags::Input);

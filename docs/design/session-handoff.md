@@ -189,6 +189,13 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   graph and end-to-end runs.
 - **Finding (API):** a client passing another client's port handle to `connect` gets `InvalidArgument`, not
   `NotFound`. The documented rule is to use `find_port`. Not changed yet.
+- **Cycle struct (done).** The process callback is `bool(const Cycle&)`: `frames` (buffer size),
+  `current_frames`, `current_usecs`, `next_usecs`, `period_usecs`, `freewheel`. Filled from
+  `jack_get_cycle_times` and the engine control's `fFreewheel` (now `std::atomic<bool>`). Transport position
+  dropped by decision. Checked by the graph test (`cycle:` checks; `jackd -F` run with the argument
+  `freewheel`): frames advance by exactly the buffer size in both modes; in real time the next cycle is one
+  period after the current one (within 2 us). In freewheel the period is measured, not nominal (it varies
+  per cycle), so the period check is skipped there.
 - **Next: remove the C client library.** `common/jackmini/client.cpp` is still built on the C library
   (`jack_client_open`, `jack_connect`, ...). Removing the C exports needs the jackmini client rebuilt on the
   internal client (JackLibClient) or the new protocol first. That is the next large step.

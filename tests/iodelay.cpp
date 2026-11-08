@@ -201,8 +201,9 @@ latency_cb (LatencyMode mode)
 
 }
 
-bool jack_callback (FrameCount nframes)
+bool jack_callback (const Cycle& cycle)
 {
+    const FrameCount nframes = cycle.frames;
     auto ip = jack_handle->audio_buffer (jack_capt);
     auto op = jack_handle->audio_buffer (jack_play);
     mtdm_process (mtdm, nframes, ip.data(), op.data());

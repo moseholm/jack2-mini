@@ -66,8 +66,9 @@ void usage()
  * The process callback runs once for each audio cycle.  The load spins for a share of the buffer period, the share
  * being percent_cpu of the buffer.
  */
-bool process(FrameCount nframes)
+bool process(const Cycle& cycle)
 {
+    const FrameCount nframes = cycle.frames;
     const auto start = std::chrono::steady_clock::now();
     auto out = client->audio_buffer(output_port);
     std::fill(out.begin(), out.end(), 0.0f);

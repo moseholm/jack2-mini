@@ -41,6 +41,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "jack/midiport.h"
 #include "jack/transport.h"
 
+#include "JackEngineControl.h"
+#include "JackGlobals.h"
+
 namespace jackmini
 {
 
@@ -199,7 +202,17 @@ struct ClientBridge {
         if (!impl->process) {
             return 0;
         }
-        return impl->process(frames) ? 0 : -1;
+        Cycle cycle;
+        cycle.frames = frames;
+        jack_time_t current_usecs = 0;
+        jack_time_t next_usecs = 0;
+        if (jack_get_cycle_times(impl->handle, &cycle.current_frames, &current_usecs, &next_usecs, &cycle.period_usecs) == 0) {
+            cycle.current_usecs = current_usecs;
+            cycle.next_usecs = next_usecs;
+        }
+        Jack::JackEngineControl* control = Jack::GetEngineControl();
+        cycle.freewheel = control != nullptr && control->fFreewheel.load();
+        return impl->process(cycle) ? 0 : -1;
     }
 
     static int xrun(void* arg)

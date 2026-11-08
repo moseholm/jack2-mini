@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <atomic>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
@@ -64,8 +65,11 @@ Client OpenOrDie(const char* name)
 
 } // namespace
 
-int main()
+// The mode the server runs in is given by the caller: "freewheel" for jackd -F, otherwise real time.
+int main(int argc, char** argv)
 {
+    const bool expect_freewheel = argc > 1 && std::string(argv[1]) == "freewheel";
+
     // A chain of three clients: a source writes 0.5 each cycle, a doubler doubles it, a sink keeps the last sample.
     // The sink must see exactly 1.0 (0.5 doubled) once the chain is connected.
     {
@@ -83,13 +87,13 @@ int main()
         std::atomic<float> sink_last{ -1.0f };
         if (src_out && dbl_in && dbl_out && snk_in) {
             const Port so = *src_out, di = *dbl_in, dO = *dbl_out, si = *snk_in;
-            source.on_process([&source, so](FrameCount) {
+            source.on_process([&source, so](const Cycle&) {
                 for (auto& s : source.audio_buffer(so)) {
                     s = 0.5f;
                 }
                 return true;
             });
-            doubler.on_process([&doubler, di, dO](FrameCount) {
+            doubler.on_process([&doubler, di, dO](const Cycle&) {
                 auto in = doubler.audio_buffer(di);
                 auto out = doubler.audio_buffer(dO);
                 for (std::size_t i = 0; i < out.size(); i++) {
@@ -97,7 +101,7 @@ int main()
                 }
                 return true;
             });
-            sink.on_process([&sink, si, &sink_cycles, &sink_last](FrameCount) {
+            sink.on_process([&sink, si, &sink_cycles, &sink_last](const Cycle&) {
                 auto in = sink.audio_buffer(si);
                 if (!in.empty()) {
                     sink_last = in.back();
@@ -229,7 +233,7 @@ int main()
         if (all_open) {
             for (int i = 0; i < n; i++) {
                 auto* counter = counts[i].get();
-                clients[i]->on_process([counter](FrameCount) {
+                clients[i]->on_process([counter](const Cycle&) {
                     (*counter)++;
                     return true;
                 });
@@ -262,6 +266,54 @@ int main()
             for (auto& c : clients) {
                 c->close();
             }
+        }
+    }
+
+    // The cycle data: the frames advance by the buffer size each cycle, the times never go back, the freewheel flag is
+    // the mode the server runs in, and in real time the next cycle is one period after the current one.
+    {
+        OpenOptions options;
+        options.start_server = false;
+        auto opened = Client::open("jackmini_cycle", options);
+        Check("cycle: a client opens", opened.has_value());
+        if (opened) {
+            Client cycle_client = std::move(*opened);
+            const FrameCount buffer = cycle_client.buffer_size();
+            std::atomic<unsigned long> cycles{ 0 };
+            std::atomic<FrameCount> last_frames{ 0 };
+            std::atomic<std::uint64_t> last_usecs{ 0 };
+            std::atomic<bool> frames_ok{ true }, times_ok{ true }, flag_ok{ true }, period_ok{ true }, size_ok{ true };
+            cycle_client.on_process([&](const Cycle& cy) {
+                if (cy.frames != buffer) {
+                    size_ok = false;
+                }
+                if (cy.freewheel != expect_freewheel) {
+                    flag_ok = false;
+                }
+                if (cycles.load() > 0) {
+                    if (cy.current_frames - last_frames.load() != cy.frames) {
+                        frames_ok = false;
+                    }
+                    if (cy.current_usecs < last_usecs.load()) {
+                        times_ok = false;
+                    }
+                }
+                if (!cy.freewheel && std::fabs(static_cast<double>(cy.next_usecs - cy.current_usecs) - cy.period_usecs) > 2.0) {
+                    period_ok = false;
+                }
+                last_frames = cy.current_frames;
+                last_usecs = cy.current_usecs;
+                cycles++;
+                return true;
+            });
+            Check("cycle: activate", cycle_client.activate().has_value());
+            Check("cycle: the process callback runs", WaitCycles(cycles, 200));
+            Check("cycle: the buffer size is the cycle's frames", size_ok.load());
+            Check("cycle: the frames advance by the buffer size each cycle", frames_ok.load());
+            Check("cycle: the times never go back", times_ok.load());
+            Check("cycle: the freewheel flag is the server's mode", flag_ok.load());
+            Check("cycle: in real time the next cycle is one period later", period_ok.load());
+            cycle_client.close();
         }
     }
 

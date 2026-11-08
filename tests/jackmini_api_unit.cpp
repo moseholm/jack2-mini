@@ -39,12 +39,12 @@ static_assert(std::equality_comparable<Port>);
 static_assert(!Port{}.valid());
 
 // The process callback must return bool.  A void callable is rejected.
-using ProcessOk = decltype(std::declval<Client&>().on_process(std::declval<bool (*)(FrameCount)>()));
+using ProcessOk = decltype(std::declval<Client&>().on_process(std::declval<bool (*)(const Cycle&)>()));
 static_assert(std::same_as<ProcessOk, Result<void>>);
 template <class F>
 concept AcceptsProcess = requires(Client& c, F f) { c.on_process(f); };
 static_assert(!AcceptsProcess<void (*)(FrameCount)>);
-static_assert(AcceptsProcess<bool (*)(FrameCount)>);
+static_assert(AcceptsProcess<bool (*)(const Cycle&)>);
 
 // Setup calls return a result, and open() returns a Result<Client>.
 static_assert(std::same_as<decltype(Client::open("x")), Result<Client>>);
