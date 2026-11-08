@@ -35,6 +35,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackPort.h"
 #include "JackTransportEngine.h"
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 
@@ -62,5 +63,18 @@ static_assert(sizeof(JackClientTiming) % alignof(JackClientTiming) == 0);
 // The activation counter and the state counters are 32-bit, read and written
 // with std::atomic_ref.  They need 4-byte alignment.
 static_assert(alignof(JackActivationCount) >= alignof(SInt32));
+
+// Each field of the per-client timing sits at an offset that is a multiple of its own alignment: the times are 64-bit.
+static_assert(offsetof(JackClientTiming, fSignaledAt) % alignof(jack_time_t) == 0);
+static_assert(offsetof(JackClientTiming, fAwakeAt) % alignof(jack_time_t) == 0);
+static_assert(offsetof(JackClientTiming, fFinishedAt) % alignof(jack_time_t) == 0);
+
+// The activation count of a client is configuration only: one 32-bit field, at offset 0.  The live counter is outside
+// the copied state, as an atomic array of the graph manager (protocol.md section 4.5), so it must be lock-free there.
+static_assert(sizeof(JackActivationCount) == sizeof(SInt32));
+static_assert(std::atomic<SInt32>::is_always_lock_free);
+
+// The deactivation flag of the connection manager is 32-bit, and aligned in the state that is copied (protocol.md section 6).
+static_assert(alignof(UInt32) == 4);
 
 int main() { return 0; }

@@ -397,6 +397,13 @@ if(JACK_BUILD_TESTS)
     target_link_libraries(jack_deactivate_graph_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
     add_test(NAME deactivate_graph_unit COMMAND jack_deactivate_graph_unit)
 
+    # Conformance of the control socket: requests, replies, malformed and version-mismatched messages, with a fake server.
+    add_executable(jack_protocol_conformance_unit tests/protocol_conformance_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
+    target_include_directories(jack_protocol_conformance_unit PRIVATE ${JACK_INCLUDE_DIRS})
+    target_compile_definitions(jack_protocol_conformance_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
+    target_link_libraries(jack_protocol_conformance_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
+    add_test(NAME protocol_conformance_unit COMMAND jack_protocol_conformance_unit)
+
     # The parts of jackmini that need no server: ring buffer, Uuid, error text.
     add_library(jackmini_base STATIC common/jackmini/uuid.cpp common/jackmini/error.cpp)
     target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common)
