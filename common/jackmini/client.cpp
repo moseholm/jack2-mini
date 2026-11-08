@@ -54,6 +54,7 @@ struct Client::Impl {
     ShutdownFn shutdown;
     BufferSizeFn buffer_size;
     SampleRateFn sample_rate;
+    LatencyFn latency;
 
     // The ports this client has handed out, by id: the id is the slot.  Slot 0 is no port.  A slot is written under the
     // lock by the control thread and read without a lock by the realtime thread, so a slot is never reused: a handle
@@ -227,6 +228,14 @@ struct ClientBridge {
         return impl->buffer_size(frames) ? 0 : -1;
     }
 
+    static void latency(jack_latency_callback_mode_t mode, void* arg)
+    {
+        auto* impl = static_cast<Client::Impl*>(arg);
+        if (impl->latency) {
+            impl->latency(mode == JackCaptureLatency ? LatencyMode::Capture : LatencyMode::Playback);
+        }
+    }
+
     static int sample_rate(jack_nframes_t rate, void* arg)
     {
         auto* impl = static_cast<Client::Impl*>(arg);
@@ -269,6 +278,7 @@ Result<Client> Client::open(std::string_view name, OpenOptions options)
     jack_on_shutdown(handle, ClientBridge::shutdown, client.fImpl.get());
     jack_set_buffer_size_callback(handle, ClientBridge::buffer_size, client.fImpl.get());
     jack_set_sample_rate_callback(handle, ClientBridge::sample_rate, client.fImpl.get());
+    jack_set_latency_callback(handle, ClientBridge::latency, client.fImpl.get());
     return client;
 }
 
@@ -505,6 +515,51 @@ Result<void> Client::on_buffer_size(BufferSizeFn fn)
         return std::unexpected(Error::InvalidState);
     }
     fImpl->buffer_size = std::move(fn);
+    return {};
+}
+
+Result<void> Client::on_latency(LatencyFn fn)
+{
+    if (!fImpl || fImpl->active) {
+        return std::unexpected(Error::InvalidState);
+    }
+    fImpl->latency = std::move(fn);
+    return {};
+}
+
+LatencyRange Client::port_latency(Port port, LatencyMode mode) const
+{
+    jack_port_t* ptr = fImpl ? fImpl->port_of(port) : nullptr;
+    if (ptr == nullptr) {
+        return {};
+    }
+    jack_latency_range_t range{};
+    jack_port_get_latency_range(ptr, mode == LatencyMode::Capture ? JackCaptureLatency : JackPlaybackLatency, &range);
+    return LatencyRange{ range.min, range.max };
+}
+
+Result<void> Client::set_port_latency(Port port, LatencyMode mode, LatencyRange range)
+{
+    if (!fImpl || !fImpl->handle) {
+        return std::unexpected(Error::InvalidState);
+    }
+    jack_port_t* ptr = fImpl->port_of(port);
+    if (ptr == nullptr) {
+        return std::unexpected(Error::NotFound);
+    }
+    jack_latency_range_t c_range{ range.min, range.max };
+    jack_port_set_latency_range(ptr, mode == LatencyMode::Capture ? JackCaptureLatency : JackPlaybackLatency, &c_range);
+    return {};
+}
+
+Result<void> Client::recompute_latencies()
+{
+    if (!fImpl || !fImpl->handle) {
+        return std::unexpected(Error::InvalidState);
+    }
+    if (jack_recompute_total_latencies(fImpl->handle) != 0) {
+        return std::unexpected(Error::ServerFailure);
+    }
     return {};
 }
 

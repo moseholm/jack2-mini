@@ -210,7 +210,13 @@ int main(int argc, char** argv)
             }).has_value());
         }
 
+        std::atomic<unsigned> latency_calls{ 0 };
+        Check("latency callback: set while inactive", dst.on_latency([&](LatencyMode) { latency_calls++; }).has_value());
         Check("audio clients activate", src.activate().has_value() && dst.activate().has_value());
+        if (audio_out) {
+            Check("latency range: set and read back", src.set_port_latency(*audio_out, LatencyMode::Playback, LatencyRange{ 10, 20 }).has_value() &&
+                                                       src.port_latency(*audio_out, LatencyMode::Playback) == (LatencyRange{ 10, 20 }));
+        }
         auto aout_again = src.find_port("jackmini_src:aout");
         auto ain_again = src.find_port("jackmini_dst:ain");
         auto mout_again = src.find_port("jackmini_src:mout");
@@ -221,6 +227,9 @@ int main(int argc, char** argv)
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         Check("the destination reads the source's audio", std::fabs(last_sample.load() - 0.25f) < 1e-6f);
+        Check("recompute the latencies", src.recompute_latencies().has_value());
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        Check("the server asks for the latency (callback runs)", latency_calls.load() > 0);
         Check("the destination reads the source's MIDI event", midi_seen.load() == 1 && first_byte.load() == 0x90 && event_size.load() == 3);
 
         Check("transport start", src.transport_start().has_value());

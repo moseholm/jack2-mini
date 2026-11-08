@@ -97,6 +97,12 @@ SERVER_EXPORT bool
 jackctl_server_start(
     jackctl_server_t * server);
 
+/* Freewheel: the server runs cycles as fast as it can, without waiting for the sound card.  For tests and offline work. */
+SERVER_EXPORT bool
+jackctl_server_set_freewheel(
+    jackctl_server_t * server,
+    bool onoff);
+
 SERVER_EXPORT bool
 jackctl_server_stop(
     jackctl_server_t * server);

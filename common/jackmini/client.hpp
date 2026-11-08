@@ -60,6 +60,7 @@ public:
     using ShutdownFn = std::move_only_function<void()>;
     using BufferSizeFn = std::move_only_function<bool(FrameCount frames)>;
     using SampleRateFn = std::move_only_function<bool(FrameCount rate)>;
+    using LatencyFn = std::move_only_function<void(LatencyMode mode)>;
 
     static Result<Client> open(std::string_view name, OpenOptions options = {});
 
@@ -87,6 +88,12 @@ public:
     Result<void> on_shutdown(ShutdownFn fn);
     Result<void> on_buffer_size(BufferSizeFn fn);
     Result<void> on_sample_rate(SampleRateFn fn);
+    Result<void> on_latency(LatencyFn fn);     // the server asks for the latency of this client's ports
+
+    // Latency.  The server computes the total latency of each path; a client sets the range of its ports.
+    LatencyRange port_latency(Port port, LatencyMode mode) const;
+    Result<void> set_port_latency(Port port, LatencyMode mode, LatencyRange range);
+    Result<void> recompute_latencies();        // asks the server to recompute the total latencies
 
     // Identity and timing, valid at any time.
     std::string_view name() const noexcept;

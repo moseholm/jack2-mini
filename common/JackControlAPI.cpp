@@ -933,6 +933,17 @@ SERVER_EXPORT bool jackctl_server_close(jackctl_server *server_ptr)
     }
 }
 
+/* Freewheel: the server runs cycles as fast as it can, without waiting for the sound card.  Switching is done while the
+ * server runs; clients that are to run during freewheel must be opened before the switch (a client opened during
+ * freewheel does not start its cycle yet). */
+SERVER_EXPORT bool jackctl_server_set_freewheel(jackctl_server *server_ptr, bool onoff)
+{
+    if (!server_ptr || !server_ptr->engine) {
+        return false;
+    }
+    return server_ptr->engine->SetFreewheel(onoff) >= 0;
+}
+
 SERVER_EXPORT const JSList * jackctl_server_get_parameters(jackctl_server *server_ptr)
 {
     return (server_ptr) ? server_ptr->parameters : NULL;

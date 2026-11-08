@@ -37,6 +37,20 @@ enum class PortType : std::uint8_t {
     Midi,
 };
 
+// Latency is measured in two directions: capture ports report how late their input is, playback ports how late their
+// output reaches the hardware.  A client sets the range of its own ports, usually when the server asks (on_latency).
+enum class LatencyMode : std::uint8_t {
+    Capture,
+    Playback,
+};
+
+struct LatencyRange {
+    FrameCount min = 0;
+    FrameCount max = 0;
+
+    friend constexpr bool operator==(LatencyRange, LatencyRange) = default;
+};
+
 // Flags given when a port is registered.  They can be combined.
 enum class PortFlags : std::uint32_t {
     None = 0,
