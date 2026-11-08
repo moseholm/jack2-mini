@@ -295,13 +295,10 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
    8-byte fields. The probe shows every field and the per-client timing array
    at natural offsets. ALSA startup is still intermittent (see the baseline
    notes); it is not caused by this change.
-2. Segment handoff with `SCM_RIGHTS` and no registry. Part 2a is done:
-   `posix/JackFdSegment` sends descriptors over a socket, creates anonymous
-   segments with `memfd_create`, and maps them, with `tests/fd_segment_unit.cpp`
-   covering the cases that usually break. Part 2b is done: the `ClientOpen`
-   reply carries the three descriptors and the client maps them. Step 3, the
-   single-instance lock on the socket path, is done. Step 4, removing the
-   registry code in `shm.c`, is next.
+2. Segment handoff with `SCM_RIGHTS` and no registry. Done: `posix/JackFdSegment`
+   (2a), the descriptors in the `ClientOpen` reply (2b), the single-instance lock on
+   the socket path (step 3), and the registry removed (step 4). Open: the lock
+   scope (per server name now; see the handoff).
 3. Message framing and the handshake.
 4. Requests, then notifications.
 5. Counter redesign (section 4.5), with its TSAN test.

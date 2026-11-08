@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `528aab29` (P2 step 3). `origin/develop` is `5c926a55`.
+  `70ac646b` (P2 step 4). `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -68,6 +68,15 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `70ac646b` P2 step 4: the shared-memory registry (`shm.c`, `shm.h`) is removed.
+  `JackShmMemAble` holds its size, address and descriptor. The
+  `--replace-registry` option is removed (jackd, control API, server globals).
+  Verification: unit suites 7/7; dummy-driver e2e; control API; second server with the
+  same name refused; the server no longer creates `/dev/shm/jack-shm-registry`.
+- Step 5 (ALSA startup on the USB card, `hw:CARD=U192k`, 10 starts, each ended with
+  SIGKILL): **10 of 10** runs passed the end-to-end client (cycles counted), logs
+  clean (no driver timeout, no xrun). Baseline was 2 of 4 failing. Ten runs is a
+  small sample: repeat before calling the stall gone.
 - `528aab29` P2 step 3: single-instance lock. `posix/JackServerLock` takes an
   `flock` on `<socket path>.lock`; both start paths use it (`jackd` and the
   control API). The server table is gone from `shm.c`. Also fixes a crash on
@@ -98,31 +107,13 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 `alsa_secondary_unit`, `message_buffer_unit`, `jackmini_api_unit`,
 `jackmini_unit`, `shm_layout_unit`, `fd_segment_unit`.
 
-## Next: P2 step 4 and step 5
+## Next
 
-Steps 2b and 3 are done (see Done). The plan, in order:
-
-4. **Remove the registry** from `common/shm.c` and `shm.h`: the registry header,
-   `jack_access_registry`, `jack_create_registry`, `jack_shm_lock_registry`, the
-   index-based attach/release, and `jack_cleanup_shm`'s registry part. The index
-   field of `jack_shm_info_t` goes too. `jack_initialize_shm_server()` (server
-   start, after the lock) and the client `jack_initialize_shm()` are no longer
-   needed. Callers: `JackServerGlobals.cpp` and `JackControlAPI.cpp` (start,
-   close, and the failure paths).
-   **Needs a decision first:** the `replace-registry` option
-   (`JackControlAPI.cpp`, `Jackdmp.cpp`, `JackServerGlobals.cpp`) has no meaning
-   without a registry. Remove it, or keep it accepted and ignored.
-   Also decide whether the server should unlink the old `/dev/shm/jack-shm-registry`
-   once at start.
-5. **Verify.** Smoke test (`jackd -d dummy`), in-process server test, the unit
-   suites, then ALSA startup reliability: start the server 10 times on the USB
-   card and count successes. Success means the intermittent stall is gone. That
-   stall is parked until this step, as agreed.
-
-Scripts used for the step 2b and 3 checks were in `/tmp/opencode` (not durable):
-`e2e_2b.c` (two clients, audio through the shared graph) and `ctl_2b.cpp` (control
-API open, second open refused, reopen after close). Run the server with
-`JACK_DRIVER_DIR=<build>/lib/jack` and `LD_LIBRARY_PATH=<build>/lib`.
+- **Decide the lock scope** (open issue below). Answer given: a name-independent
+  lock path means a second server is refused whatever its name. Choose the path,
+  then check it with two names.
+- Then the protocol order of work, item 3: message framing and the handshake
+  (`docs/design/protocol.md` section 2, section 10).
 
 ## Environment facts
 
@@ -156,10 +147,10 @@ API open, second open refused, reopen after close). Run the server with
 
 ## Open issues (recorded, not fixed)
 
-- **ALSA startup stall.** Intermittent: the server prints its banner, the driver
+- **ALSA startup stall.** (Step 5 run, 10 of 10 passing, see Done.) Intermittent: the server prints its banner, the driver
   never runs its first cycle, and the engine's 5-second driver timeout expires.
   Counts: `HEAD` 2 of 4 starts, the packed change 3 of 4. Not caused by the
-  layout change. Parked until step 5 above.
+  layout change.
 - **The lock is per socket path, so per server name.** Two servers with
   different names run together (checked). The protocol doc says one server per
   machine. Decide: lock a name-independent path, or keep the approved design and
@@ -182,7 +173,7 @@ API open, second open refused, reopen after close). Run the server with
 2. Read this file, `docs/design/protocol.md` (section 4.1 and the order of work),
    and `docs/design/client-api.md`.
 3. Rebuild the test dir and run `ctest --test-dir /tmp/opencode/build-jack2-cxx23`.
-4. Start P2 step 4 (see "Next"). Ask about the `replace-registry` option first.
+4. Decide the lock scope, then continue with protocol item 3 (see "Next").
 
 ## Working agreements with the user
 
