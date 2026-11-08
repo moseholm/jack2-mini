@@ -846,6 +846,13 @@ int JackEngine::ClientDeactivate(int refnum, bool wait)
     fGraphManager->Deactivate(refnum);
     fLastSwitchUsecs = 0; // Force switch to occur next cycle, even when called with "dead" clients
 
+    // In freewheel the driver waits for every client of the graph (see JackFreewheelDriver), and a removed client never
+    // signals it.  Wake the driver, so that it reaches Process and switches to the graph without the client.  If the
+    // driver was not waiting, Process finds the graph unfinished and retries, so the wake does no harm.
+    if (fEngineControl->fFreewheel && !fGraphManager->IsFinishedGraph()) {
+        fSynchroTable[FREEWHEEL_DRIVER_REFNUM].Signal();
+    }
+
     // Wait for graph state change to be effective
     if (wait && !fSignal.LockedTimedWait(fEngineControl->fTimeOutUsecs * 10)) {
         jack_error("JackEngine::ClientDeactivate wait error ref = %ld name = %s", refnum, client->GetClientControl()->fName);

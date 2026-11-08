@@ -165,12 +165,17 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   `tests/perf/rtbench.cpp` as `jack_rtbench`). Durations are counted in cycles (`WaitUntil` / `WaitCycles`
   in `tests/jackmini_wait.hpp`), no sleeps. `run-baseline.sh` uses `jack_rtbench` and no fixed delay.
   `alloccount.c` is an LD_PRELOAD tool, unchanged.
-- **OPEN, server bug (freewheel):** closing a client that is in the freewheel graph stalls the next
-  cycles. The freewheel driver waits in `SuspendRefNum` (10 s, `FREEWHEEL_DRIVER_TIMEOUT`) for the
-  removed client's signal, which never comes. The close's own wait (85 ms) fails, and the next client
-  open fails after 5 s. Seen with `jack_cpu`: the first run is fine, later runs take ~5 s. Real time is
-  not affected (short driver timeout). Not yet known whether the C client shows it too. Needs a design
-  decision before the fix (see the message to the user).
+- **Fixed: closing a client in freewheel stalled the graph.** The freewheel driver waited (10 s) for a
+  removed client's signal. `JackEngine::ClientDeactivate` now wakes the driver in freewheel while the graph is
+  unfinished; `Process` then switches to the graph without the client. Repeated `jack_cpu` runs and the e2e test
+  followed by `jack_cpu` show no `SuspendRefNum` or close-wait errors.
+- Freewheel and `jack_cpu`: the load is still wall-clock (a share of the buffer period per cycle), so a run in
+  freewheel takes longer than the cycle count suggests. Not a bug.
+- **Timing windows left (non-RT kernel):** the 85 ms wait in `ClientCloseAux` and the 5 s wait in
+  `ClientExternalOpen` are time limits. They can fail on a loaded non-RT machine while the server is working. They
+  should wait for the graph switch instead. Not done yet.
+- Real time on this non-RT kernel (`PREEMPT_DYNAMIC`, not RT): `jack_cpu -t 1` takes 1 to 3 s. Benchmark numbers are
+  for the RT hardware run.
 - Real-time: `jack_cpu`, `jack_iodelay`, `jack_multiple_metro`, `jack_rtbench`, and the e2e test all pass.
 - **Still open:** `tests/test.cpp` (the functional suite, C API) is not ported yet; the C client library
   removal waits for it; the overflow test is not in the repo.
