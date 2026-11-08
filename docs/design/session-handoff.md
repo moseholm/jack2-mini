@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `c3ab712e` (client API: buffers and transport), docs after it. `origin/develop` is `5c926a55`.
+  `0c3d50b6` (latency; freewheel control). `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -68,6 +68,11 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `0c3d50b6` Latency on `jackmini::Client` (port ranges, recompute, the latency callback),
+  and `jackctl_server_set_freewheel` (freewheel as a server control). Found: a client opened
+  while the server is in freewheel mode does not start its cycle (the base does the same).
+- Reference tag `reference/c-client-api` (pushed) marks the last commit with the C client
+  library, for reference.
 - `c3ab712e` Client API step 3, third area: audio and MIDI buffers and transport on
   `jackmini::Client`; the port table is lock-free for the realtime thread; a header fix
   (the MIDI buffer's friend). Checked by `tests/jackmini_client_e2e.cpp` (with a server).
@@ -156,21 +161,25 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-Continuing client-API step 3 (the removal of the C client library). Findings for the
-removal, not yet acted on:
-- The C exports are thin wrappers (`common/JackAPI.cpp`, 143 functions; `JackLibAPI.cpp`;
-  `JackMidiAPI.cpp`). Each checks its arguments and calls one method of the internal
-  `JackClient`/`JackLibClient`. `jack_port_t*` is the graph port id cast to a pointer.
-  `jackmini::Client` uses about 40 of those exports; it can call the internal methods
-  directly, with the same checks.
-- `tests/test.cpp` (`jack_test`, 2189 lines, 335 C calls) exercises features the new API
-  does not have (freewheel, latency, timebase, session, metadata). Its removal needs a
-  decision: see the question to the user.
-- Waiting for the user: how `tests/test.cpp` is handled (port the parts the new API has and
-  drop the rest, or retire it), and whether freewheel, latency, and timebase stay out of
-  the new API.
-- Blocked until then: the removal of the C exports, and protocol item 4b (drop session and
-  metadata messages), which follows the removal.
+Decided by the user: timebase is dropped; freewheel is a server control; latency is in the
+new API; the C library is kept as the tag `reference/c-client-api`; test programs are
+ported only when needed.
+
+- **Freewheel: fix the late-join bug.** A client opened while the server is in freewheel
+  mode does not start its cycle. The tests need this fixed before they can open clients
+  during freewheel, and before `-F` at start is offered (reverted for now).
+- **Decide how a separate test process switches freewheel.** The control call is in the
+  server process only. Options: a test-only control request on the server socket; a signal;
+  or a test that runs the server in-process (libjack and libjackserver in one process
+  conflict, not tried). Pending the user's choice.
+- **Then:** convert the sleep-based tests (deactivate, overflow, counters) to freewheel
+  runs with exact counts.
+- **Remaining client API:** the test programs ported when needed; the C client library
+  removed (after the above); then protocol item 4b (drop session and metadata).
+- Open TSAN findings, outside the counters (verified to be the same statements as in
+  `origin/develop`): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing
+  fields in `ResumeRefNum`; the client library's `JackClient::Activate`, `Deactivate`,
+  `CallSyncCallbackAux`, `JackLibClient::Open`.
 
 ## Environment facts
 
