@@ -146,7 +146,8 @@ set(JACK_SERVER_SOURCES
     common/JackMetadata.cpp
     posix/JackSocketServerChannel.cpp
     posix/JackSocketNotifyChannel.cpp
-    posix/JackSocketServerNotifyChannel.cpp)
+    posix/JackSocketServerNotifyChannel.cpp
+    posix/JackServerLock.cpp)
 
 add_library(jack SHARED ${JACK_CLIENT_SOURCES})
 target_include_directories(jack PRIVATE ${JACK_INCLUDE_DIRS})

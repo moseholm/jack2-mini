@@ -26,6 +26,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackLockedEngine.h"
 #include "JackTools.h"
 #include "JackCString.h"
+#include "JackServerLock.h"
 #include "shm.h"
 #include <getopt.h>
 #include <errno.h>
@@ -320,20 +321,21 @@ bool JackServerGlobals::Init()
             server_name = (char*)JackTools::DefaultServerName();
         }
 
-        rc = jack_register_server(server_name, false);
-        switch (rc) {
-            case EEXIST:
+        auto lock = AcquireServerLock(jack_server_dir, server_name);
+        if (!lock) {
+            if (lock.error() == std::errc::file_exists) {
                 jack_error("`%s' server already active", server_name);
-                goto error;
-            case ENOSPC:
-                jack_error("too many servers already active");
-                goto error;
-            case ENOMEM:
-                jack_error("no access to shm registry");
-                goto error;
-            default:
-                jack_info("server `%s' registered", server_name);
+            } else {
+                jack_error("cannot lock `%s' server (%s)", server_name, lock.error().message().c_str());
+            }
+            goto error;
         }
+        if (jack_initialize_shm_server(false)) {
+            jack_error("no access to shm registry");
+            ReleaseServerLock();
+            goto error;
+        }
+        jack_info("server `%s' locked", server_name);
         server_registered = true;
 
         /* clean up shared memory and files from any previous instance of this server name */
@@ -350,7 +352,7 @@ bool JackServerGlobals::Init()
             Delete();
             jack_cleanup_shm();
             JackTools::CleanupFiles(server_name);
-            jack_unregister_server(server_name);
+            ReleaseServerLock();
             server_registered = false;
             goto error;
         }
@@ -417,7 +419,7 @@ void JackServerGlobals::Destroy()
         Delete();
         jack_cleanup_shm();
         JackTools::CleanupFiles(server_name);
-        jack_unregister_server(server_name);
+        ReleaseServerLock();
     }
 }
 

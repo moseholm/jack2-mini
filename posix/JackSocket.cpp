@@ -44,6 +44,13 @@ static void BuildName(const char* client_name, char* res, const char* dir, int w
     *end.out = '\0';
 }
 
+std::string JackServerSocketPath(const char* dir, const char* name, int which)
+{
+    std::array<char, sizeof(sockaddr_un::sun_path)> path{};
+    BuildName(name, path.data(), dir, which, path.size(), getenv("JACK_PROMISCUOUS_SERVER") != nullptr);
+    return path.data();
+}
+
 JackClientSocket::JackClientSocket(): JackClientRequestInterface(), fSocket(-1), fTimeOut(0), fNonBlocking(false)
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");

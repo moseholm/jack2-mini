@@ -246,12 +246,13 @@ jack_get_server_prefix (const char* const server_name, char* const prefix, const
 		  "jack-%d:%s:", GetUID(), server_name);
 }
 
-/* gain server addressability to shared memory registration segment
+/* gain server addressability to shared memory registration segment.
+ * Called by the server once it holds its single-instance lock.
  *
  * returns: 0 if successful
  */
-static int
-jack_server_initialize_shm (int new_registry)
+int
+jack_initialize_shm_server (int new_registry)
 {
 	int rc;
 
@@ -280,8 +281,11 @@ jack_server_initialize_shm (int new_registry)
 		/* else it was invalid, so fall through */
 	case EINVAL:			/* bad registry */
 		/* Apparently, this registry was created by an older
-		 * JACK version.  Delete it so we can try again. */
-		jack_release_shm (&registry_info);
+		 * JACK version.  Delete it so we can try again.  It is
+		 * unmapped with its mapped size: the registry index is
+		 * not valid here, so jack_release_shm() cannot be used. */
+		if (registry_info.ptr.attached_at != MAP_FAILED)
+			munmap (registry_info.ptr.attached_at, JACK_SHM_REGISTRY_SIZE);
 		jack_remove_shm (registry_id);
 		if ((rc = jack_create_registry (&registry_info)) != 0) {
 			jack_error ("incompatible shm registry (%s)",
@@ -298,8 +302,7 @@ jack_server_initialize_shm (int new_registry)
 
 /* gain client addressability to shared memory registration segment
  *
- * NOTE: this function is no longer used for server initialization,
- * instead it calls jack_register_server().
+ * NOTE: the server uses jack_initialize_shm_server() instead.
  *
  * returns: 0 if successful
  */
@@ -391,98 +394,6 @@ jack_release_shm_info (jack_shm_registry_index_t index)
 	}
 
     return 0;
-}
-
-/* Claim server_name for this process.
- *
- * returns 0 if successful
- *	   EEXIST if server_name was already active for this user
- *	   ENOSPC if server registration limit reached
- *	   ENOMEM if unable to access shared memory registry
- */
-int
-jack_register_server (const char *server_name, int new_registry)
-{
-	int i, res = 0;
-	char server_prefix[JACK_SERVER_NAME_SIZE+1];
-
-	jack_get_server_prefix (server_name, server_prefix, sizeof(server_prefix));
-
-	if (jack_server_initialize_shm (new_registry))
-		return ENOMEM;
-
-	if (jack_shm_lock_registry () < 0) {
-        jack_error ("jack_shm_lock_registry fails...");
-        return -1;
-    }
-
-	/* See if server_name already registered.  Since server names
-	 * are per-user, we register the unique server prefix string.
-	 */
-	for (i = 0; i < MAX_SERVERS; i++) {
-
-		if (strncmp (jack_shm_header->server[i].name,
-			     server_prefix,
-			     sizeof(server_prefix)) != 0)
-			continue;	/* no match */
-
-		if (jack_shm_header->server[i].pid == GetPID()){
-			res = 0; /* it's me */
-			goto unlock;
-		}
-
-		/* see if server still exists */
-		if (kill (jack_shm_header->server[i].pid, 0) == 0)  {
-			res = EEXIST;	/* other server running */
-			goto unlock;
-		}
-
-		/* it's gone, reclaim this entry */
-		memset (&jack_shm_header->server[i], 0,
-			sizeof (jack_shm_server_t));
-	}
-
-	/* find a free entry */
-	for (i = 0; i < MAX_SERVERS; i++) {
-		if (jack_shm_header->server[i].pid == 0)
-			break;
-	}
-
-	if (i >= MAX_SERVERS){
-		res = ENOSPC;		/* out of space */
-		goto unlock;
-	}
-
-	/* claim it */
-	jack_shm_header->server[i].pid = GetPID();
-	strncpy (jack_shm_header->server[i].name,
-		 server_prefix,
-		 sizeof(server_prefix));
-
- unlock:
-	jack_shm_unlock_registry ();
-	return res;
-}
-
-/* release server_name registration */
-int
-jack_unregister_server (const char *server_name /* unused */)
-{
-	int i;
-	if (jack_shm_lock_registry () < 0) {
-        jack_error ("jack_shm_lock_registry fails...");
-        return -1;
-    }
-
-	for (i = 0; i < MAX_SERVERS; i++) {
-		if (jack_shm_header->server[i].pid == GetPID()) {
-			memset (&jack_shm_header->server[i], 0,
-				sizeof (jack_shm_server_t));
-		}
-	}
-
-	jack_shm_unlock_registry ();
-	return 0;
 }
 
 /* called for server startup and termination */

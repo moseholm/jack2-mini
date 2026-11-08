@@ -43,7 +43,6 @@ extern "C"
 {
 #endif
 
-#define MAX_SERVERS 8               /* maximum concurrent servers */
 #define MAX_SHM_ID 256              /* generally about 16 per server */
 #define JACK_SHM_MAGIC 0x4a41434b	/* shm magic number: "JACK" */
 #define JACK_SHM_NULL_INDEX -1		/* NULL SHM index */
@@ -77,16 +76,9 @@ extern "C"
      * multiple JACK servers.  It contains no pointers and is valid across
      * address spaces.
      *
-     * The registry consists of two parts: a header including an array of
-     * server names, followed by an array of segment registry entries.
+     * The registry consists of two parts: a header, followed by an array of
+     * segment registry entries.
      */
-    typedef struct _jack_shm_server {
-        pid_t pid;	/* process ID */
-
-        char	name[JACK_SERVER_NAME_SIZE+1];
-    }
-    jack_shm_server_t;
-
     typedef struct _jack_shm_header {
         uint32_t	magic;	/* magic number */
         uint16_t	protocol;	/* JACK protocol version */
@@ -94,7 +86,6 @@ extern "C"
         jack_shmsize_t	size;	/* total registry segment size */
         jack_shmsize_t	hdr_len;	/* size of header */
         jack_shmsize_t	entry_len; /* size of registry entry */
-        jack_shm_server_t server[MAX_SERVERS]; /* current server array */
     }
     jack_shm_header_t;
 
@@ -139,11 +130,8 @@ extern "C"
     char* jack_shm_addr (jack_shm_info_t* si);
 
     /* here begin the API */
-    int jack_register_server (const char *server_name, int new_registry);
-    int jack_unregister_server (const char *server_name);
-
     int jack_initialize_shm (const char *server_name);
-    int jack_initialize_shm_server (void);
+    int jack_initialize_shm_server (int new_registry);
     int jack_initialize_shm_client (void);
     int jack_cleanup_shm (void);
 

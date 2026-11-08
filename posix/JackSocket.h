@@ -29,12 +29,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <errno.h>
 #include <unistd.h>
 #include <span>
+#include <string>
 #include <vector>
 
 #include "JackChannel.h"
 
 namespace Jack
 {
+
+// The path of a server's socket.  The server's single-instance lock is a file next to it.
+std::string JackServerSocketPath(const char* dir, const char* name, int which);
 
 /*!
 \brief Client socket.

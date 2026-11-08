@@ -45,6 +45,7 @@
 #include "JackConstants.h"
 #include "JackDriverLoader.h"
 #include "JackServerGlobals.h"
+#include "JackServerLock.h"
 
 using namespace Jack;
 
@@ -941,9 +942,9 @@ SERVER_EXPORT bool jackctl_server_close(jackctl_server *server_ptr)
 
         JackTools::CleanupFiles(server_ptr->name.str);
 
-        jack_log("Unregistering server `%s'", server_ptr->name.str);
+        jack_log("Releasing lock of server `%s'", server_ptr->name.str);
 
-        jack_unregister_server(server_ptr->name.str);
+        ReleaseServerLock();
 
         server_ptr->engine = NULL;
 
@@ -971,21 +972,22 @@ jackctl_server_open(
             return false;
         }
 
-        int rc = jack_register_server(server_ptr->name.str, server_ptr->replace_registry.b);
-        switch (rc)
-        {
-        case EEXIST:
-            jack_error("`%s' server already active", server_ptr->name.str);
+        auto lock = AcquireServerLock(jack_server_dir, server_ptr->name.str);
+        if (!lock) {
+            if (lock.error() == std::errc::file_exists) {
+                jack_error("`%s' server already active", server_ptr->name.str);
+            } else {
+                jack_error("Cannot lock `%s' server (%s)", server_ptr->name.str, lock.error().message().c_str());
+            }
             goto fail;
-        case ENOSPC:
-            jack_error("Too many servers already active");
-            goto fail;
-        case ENOMEM:
+        }
+        if (jack_initialize_shm_server(server_ptr->replace_registry.b)) {
             jack_error("No access to shm registry");
+            ReleaseServerLock();
             goto fail;
         }
 
-        jack_log("Server `%s' registered", server_ptr->name.str);
+        jack_log("Server `%s' locked", server_ptr->name.str);
 
         /* clean up shared memory and files from any previous
          * instance of this server name */
@@ -1021,7 +1023,7 @@ jackctl_server_open(
         }
 
         if (!jackctl_create_param_list(driver_ptr->parameters, &paramlist)) goto fail_delete;
-        rc = server_ptr->engine->Open(driver_ptr->desc_ptr, paramlist);
+        int rc = server_ptr->engine->Open(driver_ptr->desc_ptr, paramlist);
         jackctl_destroy_param_list(paramlist);
         if (rc < 0)
         {
@@ -1049,9 +1051,9 @@ fail_unregister:
 
     JackTools::CleanupFiles(server_ptr->name.str);
 
-    jack_log("Unregistering server `%s'", server_ptr->name.str);
+    jack_log("Releasing lock of server `%s'", server_ptr->name.str);
 
-    jack_unregister_server(server_ptr->name.str);
+    ReleaseServerLock();
 
 fail:
     return false;
