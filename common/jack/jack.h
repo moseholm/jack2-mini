@@ -42,9 +42,7 @@ extern "C"
      * Functions that predate this release are marked with
      * JACK_WEAK_OPTIONAL_EXPORT which can be defined at compile
      * time in a variety of ways. The default definition is empty,
-     * so that these symbols get normal linkage. If you wish to
-     * use all JACK symbols with weak linkage, include
-     * <jack/weakjack.h> before jack.h.
+     * so that these symbols get normal linkage.
      *************************************************************/
 
 /**
@@ -168,38 +166,6 @@ char *jack_get_uuid_for_client_name (jack_client_t *client,
  */
 char *jack_get_client_name_by_uuid (jack_client_t *client,
                                     const char    *client_uuid ) JACK_WEAK_EXPORT;
-
-/**
- * Load an internal client into the Jack server.
- *
- * Internal clients run inside the JACK server process.  They can use
- * most of the same functions as external clients.  Each internal
- * client must declare jack_initialize() and jack_finish() entry
- * points, called at load and unload times.  See inprocess.c for an
- * example of how to write an internal client.
- *
- * @deprecated Please use jack_internal_client_load().
- *
- * @param client_name of at most jack_client_name_size() characters.
- *
- * @param load_name of a shared object file containing the code for
- * the new client.
- *
- * @param load_init an arbitrary string passed to the jack_initialize()
- * routine of the new client (may be NULL).
- *
- * @return 0 if successful.
- */
-int jack_internal_client_new (const char *client_name,
-                              const char *load_name,
-                              const char *load_init) JACK_OPTIONAL_WEAK_DEPRECATED_EXPORT;
-
-/**
- * Remove an internal client from a JACK server.
- *
- * @deprecated Please use jack_internal_client_unload().
- */
-void jack_internal_client_close (const char *client_name) JACK_OPTIONAL_WEAK_DEPRECATED_EXPORT;
 
 /**
  * Tell the Jack server that the program is ready to start processing
@@ -1482,7 +1448,7 @@ void jack_set_info_function (void (*func)(const char *)) JACK_OPTIONAL_WEAK_EXPO
 
 /**
  * The free function to be used on memory returned by jack_port_get_connections,
- * jack_port_get_all_connections, jack_get_ports and jack_get_internal_client_name functions.
+ * jack_port_get_all_connections, jack_get_ports functions.
  * This is MANDATORY on Windows when otherwise all nasty runtime version related crashes can occur.
  * Developers are strongly encouraged to use this function instead of the standard "free" function in new code.
  *

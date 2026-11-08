@@ -27,9 +27,7 @@
  * Functions that predate this release are marked with
  * JACK_WEAK_OPTIONAL_EXPORT which can be defined at compile
  * time in a variety of ways. The default definition is empty,
- * so that these symbols get normal linkage. If you wish to
- * use all JACK symbols with weak linkage, include
- * <jack/weakjack.h> before jack.h.
+ * so that these symbols get normal linkage.
  *************************************************************/
 
 #define WEAK_ATTRIBUTE __weak__

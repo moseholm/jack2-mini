@@ -44,19 +44,6 @@ typedef uint32_t        jack_nframes_t;
 typedef uint64_t jack_time_t;
 
 /**
- *  Maximum size of @a load_init string passed to an internal client
- *  jack_initialize() function via jack_internal_client_load().
- */
-#define JACK_LOAD_INIT_LIMIT 1024
-
-/**
- *  jack_intclient_t is an opaque type representing a loaded internal
- *  client.  You may only access it using the API provided in @ref
- *  intclient.h "<jack/intclient.h>".
- */
-typedef uint64_t jack_intclient_t;
-
-/**
  *  jack_port_t is an opaque type.  You may only access it using the
  *  API provided.
  */
