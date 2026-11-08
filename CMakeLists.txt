@@ -330,18 +330,6 @@ install(FILES
     common/jack/weakmacros.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/jack)
 
-set(PREFIX "${CMAKE_INSTALL_PREFIX}")
-set(LIBDIR "${CMAKE_INSTALL_FULL_LIBDIR}")
-set(INCLUDEDIR "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
-set(CLIENTLIB "jack")
-set(SERVERLIB "jackserver")
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/jack.pc.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/jack.pc"
-    @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/jack.pc"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-
 if(JACK_BUILD_TESTS)
     # Benchmarks and interactive test clients, on the jackmini client API.  They need a running server.
     set(JACK_BENCH_PROGRAMS

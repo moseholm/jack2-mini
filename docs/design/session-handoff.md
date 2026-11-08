@@ -206,20 +206,18 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 - **Install (step 5 done).** Installed: the jackmini headers (`include/jackmini/`), the public headers of
   the MIDI, ring buffer and server control (`include/jack/`: midiport.h, ringbuffer.h, control.h, types.h, ...),
   and the libraries `libjack`, `libjackserver`, `libjackring`, `libjacklog`, `libjackmidi` (all versioned).
-  The other C client headers (jack.h, intclient.h, ...) are no longer installed. `jack.pc` lists the helper
-  libraries in its Libs line. Checked: a program built against the staged install (`cmake --install --prefix`)
+  The other C client headers (jack.h, intclient.h, ...) are no longer installed. There is no pkg-config
+  file: the build is CMake only. Checked: a program built against the staged install (`cmake --install --prefix`)
   opens a client on a running server.
-- **The C client library and its split are done.** Remaining work: decide whether `jack.pc` should also be
-  split into per-library pkg-config files (jackserver, jackmidi, ...); the `jack_midi_*` and `jack_ringbuffer_*`
-  names are kept as they are.
+- **The C client library and its split are done.** `jack.pc` removed (the build is CMake only). The
+  `jack_midi_*` and `jack_ringbuffer_*` names are kept as they are.
 - **jackmini uses the MIDI library directly (step 4 done).** The client calls `jack_midi_*` from `libjackmidi`
   (prototypes in `common/JackMidiPort.h`). The copies in `lib.cpp` are gone. `libjack` no longer defines any
-  `jack_midi_*` symbol. Next: step 5, the install rules and the pkg-config files.
+  `jack_midi_*` symbol.
 - **MIDI buffer in its own library (step 3 done).** `libjackmidi` (`common/JackMidiPort.cpp`, `JackMidiPort.h`, and
   the `jack_midi_*` functions in `common/JackMidiAPI.cpp`). Its buffer symbols are `LIB_EXPORT` now, so the client
   library (which is not built with the server definitions) can link them. Linked by the client library, the server
-  library, the drivers and the unit tests. Next: step 4 (the jackmini client uses `JackMidiBuffer` directly, and
-  `lib.cpp` drops its MIDI copies), then step 5 (install rules and pkg-config).
+  library, the drivers and the unit tests.
 - **Basic logging split (step 2 done).** `libjacklog` (`common/JackLog.cpp`, `common/JackLog.h`): the
   callbacks, `jack_error`, `jack_info`, `jack_log_direct`, and the routing hook `jack_log_router`. It has no
   dependencies. The host (`common/JackError.cpp`) keeps `jack_log` (verbose only) and the per-thread routing, and
@@ -228,11 +226,6 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   `jack`, `jackserver`, the ALSA drivers, and the unit tests that build the server objects; installed with them.
   Next: `libjacklog` (basic logging), then `libjackmidi` (MIDI buffer), then the jackmini client on `JackMidiBuffer`,
   then the install rules and pkg-config.
-- **Open (decisions):** the public headers `common/jack/*.h` are still installed, and `jack.pc` still
-  describes the client library. `Jackdmp.cpp` and `linux/alsa/alsa_midi_impl.h` still include `jack/jack.h`
-  and the ALSA drivers use the `jack_midi_*` functions. Options: stop installing the client headers and
-  `jack.pc`; move the MIDI functions into the drivers (`JackMidiBuffer`), and remove the ring buffer and
-  error variables if nothing uses them.
 - Then: protocol item 4b (drop session and metadata messages).
 - Open TSAN findings, outside the counters (verified to be the same statements as in
   `origin/develop`): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing
