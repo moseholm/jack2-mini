@@ -106,7 +106,9 @@ Rules that follow from this:
 
 1. Done: the headers are in `common/jackmini/`, and `tests/jackmini_api_unit.cpp`
    checks the types and overloads at compile time.
-2. Write the tests for the surface against a fake server, so they run without
-   audio hardware.
+2. Partly done: `RingBuffer`, `Uuid`, and the error text are implemented and
+   tested without a server (`tests/jackmini_unit.cpp`, TSAN clean). The
+   server-facing tests need the P2 protocol specification first, so they are
+   not written yet.
 3. Port the client library behind the new headers, one area at a time, with
    the existing `tests/*.cpp` programs ported as they go.

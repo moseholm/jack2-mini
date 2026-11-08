@@ -364,6 +364,14 @@ if(JACK_BUILD_TESTS)
     target_include_directories(jack_api_unit PRIVATE ${JACK_INCLUDE_DIRS})
     add_test(NAME jackmini_api_unit COMMAND jack_api_unit)
 
+    # The parts of jackmini that need no server: ring buffer, Uuid, error text.
+    add_library(jackmini_base STATIC common/jackmini/uuid.cpp common/jackmini/error.cpp)
+    target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common)
+    target_compile_features(jackmini_base PUBLIC cxx_std_23)
+    add_executable(jack_jackmini_unit tests/jackmini_unit.cpp)
+    target_link_libraries(jack_jackmini_unit PRIVATE jackmini_base Threads::Threads)
+    add_test(NAME jackmini_unit COMMAND jack_jackmini_unit)
+
     # A test-only resampler plugin, loaded by name from JACK_RESAMPLER_PATH.
     add_library(passthrough_test MODULE tests/alsa_test_resampler_plugin.c)
     target_include_directories(passthrough_test PRIVATE
