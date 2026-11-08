@@ -280,7 +280,6 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 		 jack_nframes_t capture_latency,
 		 jack_nframes_t playback_latency,
 		 alsa_midi_t *midi_driver,
-		 int generic_hw,
 		 int sample_format
 		 );
 

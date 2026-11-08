@@ -250,11 +250,7 @@ set(JACK_ALSA_SOURCES
     platform/alsa/alsa_rawmidi.c
     platform/alsa/alsa_seqmidi.c
     platform/alsa/alsa_midi_jackmp.cpp
-    platform/alsa/generic_hw.c
-    platform/alsa/hdsp.c
     platform/alsa/alsa_driver.c
-    platform/alsa/hammerfall.c
-    platform/alsa/ice1712.c
     platform/alsa/JackAlsaRingBuffer.cpp
     platform/alsa/JackAlsaSecondaryConfig.cpp
     platform/alsa/JackAlsaSecondaryCard.cpp

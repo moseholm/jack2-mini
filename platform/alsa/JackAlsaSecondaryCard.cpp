@@ -224,7 +224,6 @@ int JackAlsaSecondaryCard::OpenStream(jack_nframes_t requested_rate,
                                                               0,
                                                               0,
                                                               NULL,
-                                                              1,
                                                               fConfig.sample_format);
         if (!alsa) {
             jack_error("secondary card '%s': cannot open ALSA device %s",

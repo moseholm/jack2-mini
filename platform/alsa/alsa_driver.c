@@ -35,10 +35,6 @@
 #include <string.h>
 
 #include "alsa_driver.h"
-#include "hammerfall.h"
-#include "hdsp.h"
-#include "ice1712.h"
-#include "generic.h"
 #include "memops.h"
 #include "JackError.h"
 
@@ -168,67 +164,36 @@ alsa_driver_check_card_type (alsa_driver_t *driver)
 	return alsa_driver_check_capabilities (driver);
 }
 
+/* Only class-compliant PCM is supported: the hardware has no monitoring, clock, or metering controls. */
 static int
-alsa_driver_hammerfall_hardware (alsa_driver_t *driver)
+alsa_driver_no_set_input_monitor_mask (jack_hardware_t *hw, unsigned long mask)
 {
-	driver->hw = jack_alsa_hammerfall_hw_new (driver);
-	return 0;
+	(void)hw;
+	(void)mask;
+	return -1;
 }
 
 static int
-alsa_driver_hdsp_hardware (alsa_driver_t *driver)
+alsa_driver_no_change_sample_clock (jack_hardware_t *hw, SampleClockMode mode)
 {
-	driver->hw = jack_alsa_hdsp_hw_new (driver);
-	return 0;
+	(void)hw;
+	(void)mode;
+	return -1;
+}
+
+static void
+alsa_driver_no_release (jack_hardware_t *hw)
+{
+	(void)hw;
 }
 
 static int
-alsa_driver_ice1712_hardware (alsa_driver_t *driver)
+alsa_driver_hw_specific (alsa_driver_t *driver, int hw_monitoring, int hw_metering)
 {
-        driver->hw = jack_alsa_ice1712_hw_new (driver);
-        return 0;
-}
-
-static int
-alsa_driver_generic_hardware (alsa_driver_t *driver)
-{
-	driver->hw = jack_alsa_generic_hw_new (driver);
-	return 0;
-}
-
-static int
-alsa_driver_hw_specific (alsa_driver_t *driver, int hw_monitoring,
-			 int hw_metering, int generic_hw)
-{
-	int err;
-
-	/*
-	 * Secondary cards must always use the generic backend: the card
-	 * specific backends manage global clock configuration and are only
-	 * appropriate for the primary card.
-	 */
-	if (generic_hw) {
-		if ((err = alsa_driver_generic_hardware (driver)) != 0) {
-			return err;
-		}
-	} else if (!strcmp(driver->alsa_driver, "RME9652")) {
-		if ((err = alsa_driver_hammerfall_hardware (driver)) != 0) {
-			return err;
-		}
-	} else if (!strcmp(driver->alsa_driver, "H-DSP")) {
-                if ((err = alsa_driver_hdsp_hardware (driver)) !=0) {
-                        return err;
-                }
-	} else if (!strcmp(driver->alsa_driver, "ICE1712")) {
-                if ((err = alsa_driver_ice1712_hardware (driver)) !=0) {
-                        return err;
-                }
-	}
-       else {
-	        if ((err = alsa_driver_generic_hardware (driver)) != 0) {
-			return err;
-		}
-	}
+	driver->hw = (jack_hardware_t *) calloc (1, sizeof (jack_hardware_t));
+	driver->hw->set_input_monitor_mask = alsa_driver_no_set_input_monitor_mask;
+	driver->hw->change_sample_clock = alsa_driver_no_change_sample_clock;
+	driver->hw->release = alsa_driver_no_release;
 
 	if (driver->hw->capabilities & Cap_HardwareMonitoring) {
 		driver->has_hw_monitoring = TRUE;
@@ -2013,7 +1978,6 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 		 jack_nframes_t capture_latency,
 		 jack_nframes_t playback_latency,
 		 alsa_midi_t *midi_driver,
-		 int generic_hw,
 		 int sample_format
 		 )
 {
@@ -2107,7 +2071,7 @@ alsa_driver_new (char *name, char *playback_alsa_device,
 		return NULL;
 	}
 
-	alsa_driver_hw_specific (driver, hw_monitoring, hw_metering, generic_hw);
+	alsa_driver_hw_specific (driver, hw_monitoring, hw_metering);
 
 	if (playing) {
 		if (snd_pcm_open (&driver->playback_handle,

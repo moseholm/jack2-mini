@@ -60,16 +60,5 @@ typedef struct _jack_hardware
 }
 jack_hardware_t;
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
-    jack_hardware_t * jack_hardware_new ();
-
-#ifdef __cplusplus
-}
-#endif
-
 
 #endif /* __jack_hardware_h__ */
