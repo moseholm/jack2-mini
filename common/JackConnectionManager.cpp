@@ -223,11 +223,11 @@ void JackConnectionManager::InitRefNum(int refnum)
 /*!
 \brief Reset all clients activation.
 */
-void JackConnectionManager::ResetGraph(JackClientTiming* timing)
+void JackConnectionManager::ResetGraph(JackClientTiming* timing, std::atomic<SInt32>* live)
 {
     // Reset activation counter : must be done *before* starting to resume clients
     for (int i = 0; i < CLIENT_NUM; i++) {
-        fInputCounter[i].Reset();
+        live[i].store(fInputCounter[i].GetCount());
         timing[i].fStatus = NotTriggered;
     }
 }
@@ -248,7 +248,7 @@ int JackConnectionManager::SuspendRefNum(JackClientControl* control, JackSynchro
 /*!
 \brief Signal clients connected to the given client.
 */
-int JackConnectionManager::ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing)
+int JackConnectionManager::ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live)
 {
     jack_time_t current_date = GetMicroSeconds();
     const jack_int_t* output_ref = fConnectionRef.GetItems(control->fRefNum);
@@ -267,7 +267,7 @@ int JackConnectionManager::ResumeRefNum(JackClientControl* control, JackSynchro*
             timing[i].fStatus = Triggered;
             timing[i].fSignaledAt = current_date;
 
-            if (!fInputCounter[i].Signal(table + i, control)) {
+            if (!JackActivationCount::Signal(live[i], table + i, control)) {
                 jack_log("JackConnectionManager::ResumeRefNum error: ref = %ld output = %ld ", control->fRefNum, i);
                 res = -1;
             }

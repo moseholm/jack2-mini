@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define __JackGraphManager__
 
 #include "JackShmMem.h"
+#include <atomic>
 #include "JackPort.h"
 #include "JackConstants.h"
 #include "JackConnectionManager.h"
@@ -44,6 +45,7 @@ class SERVER_EXPORT JackGraphManager : public JackShmMem, public JackAtomicState
 
         unsigned int fPortMax;
         JackClientTiming fClientTiming[CLIENT_NUM];
+        std::atomic<SInt32> fActivation[CLIENT_NUM];   // live activation counters, outside the copied connection state
         JackPort fPortArray[0];    // The actual size depends of port_max, it will be dynamically computed and allocated using "placement" new
 
         void AssertPort(jack_port_id_t port_index);

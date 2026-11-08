@@ -34,69 +34,51 @@ namespace Jack
 struct JackClientControl;
 
 /*!
-\brief Client activation counter.
+\brief Client activation count.
+
+The class holds the configuration only: the number of connected inputs of a client. The state that is copied on write
+holds it. The live counter, which the realtime thread decrements in a cycle, is not in the copied state: it is an
+atomic array in the graph manager (protocol.md section 4.5), and it is reset from this count at the start of each cycle.
 */
-
-
 class JackActivationCount
 {
-
     private:
-
-        alignas(SInt32) SInt32 fValue;
         SInt32 fCount;
 
     public:
-
-        JackActivationCount(): fValue(0), fCount(0)
+        JackActivationCount(): fCount(0)
         {
-            static_assert(offsetof(JackActivationCount, fValue) % sizeof(fValue) == 0,
-                          "fValue must be aligned within JackActivationCount");
             static_assert(offsetof(JackActivationCount, fCount) % sizeof(fCount) == 0,
                           "fCount must be aligned within JackActivationCount");
-            assert(reinterpret_cast<std::uintptr_t>(ValuePtr()) % alignof(SInt32) == 0);
             assert(reinterpret_cast<std::uintptr_t>(CountPtr()) % alignof(SInt32) == 0);
         }
 
-        bool Signal(JackSynchro* synchro, JackClientControl* control);
-
-        /* The counters are reached through their offsets: the class is packed, and a
-         * reference to a packed member is not allowed.  The constructor checks that
-         * the addresses are aligned. */
-        SInt32* ValuePtr()
-        {
-            return reinterpret_cast<SInt32*>(reinterpret_cast<char*>(this) + offsetof(JackActivationCount, fValue));
-        }
+        /* The counter is reached through its offset: the class is packed, and a reference to a packed member is not
+         * allowed.  The constructor checks that the address is aligned. */
         SInt32* CountPtr()
         {
             return reinterpret_cast<SInt32*>(reinterpret_cast<char*>(this) + offsetof(JackActivationCount, fCount));
         }
 
-        inline void Reset()
-        {
-            std::atomic_ref<SInt32>(*ValuePtr()).store(std::atomic_ref<SInt32>(*CountPtr()).load());
-        }
+        // Decrements the live counter; signals the client when it reaches zero.
+        static bool Signal(std::atomic<SInt32>& live, JackSynchro* synchro, JackClientControl* control);
 
         inline void SetValue(int val)
         {
             std::atomic_ref<SInt32>(*CountPtr()).store(val);
         }
-
         inline void IncValue()
         {
             std::atomic_ref<SInt32>(*CountPtr()).fetch_add(1);
         }
-
         inline void DecValue()
         {
             std::atomic_ref<SInt32>(*CountPtr()).fetch_sub(1);
         }
-
-        inline int GetValue() const
+        inline int GetCount() const
         {
-            return std::atomic_ref<SInt32>(*const_cast<JackActivationCount*>(this)->ValuePtr()).load();
+            return std::atomic_ref<SInt32>(*const_cast<JackActivationCount*>(this)->CountPtr()).load();
         }
-
 };
 
 } // end of namespace

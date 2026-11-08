@@ -68,6 +68,9 @@ JackGraphManager::JackGraphManager(int port_max)
     }
 
     fPortMax = port_max;
+    for (int i = 0; i < CLIENT_NUM; i++) {
+        fActivation[i].store(0);
+    }
 }
 
 JackPort* JackGraphManager::GetPort(jack_port_id_t port_index)
@@ -93,7 +96,7 @@ void JackGraphManager::InitRefNum(int refnum)
 void JackGraphManager::RunCurrentGraph()
 {
     JackConnectionManager* manager = ReadCurrentState();
-    manager->ResetGraph(fClientTiming);
+    manager->ResetGraph(fClientTiming, fActivation);
 }
 
 // RT
@@ -101,22 +104,21 @@ bool JackGraphManager::RunNextGraph()
 {
     bool res;
     JackConnectionManager* manager = TrySwitchState(&res);
-    manager->ResetGraph(fClientTiming);
+    manager->ResetGraph(fClientTiming, fActivation);
     return res;
 }
 
 // RT
 bool JackGraphManager::IsFinishedGraph()
 {
-    JackConnectionManager* manager = ReadCurrentState();
-    return (manager->GetActivation(FREEWHEEL_DRIVER_REFNUM) == 0);
+    return (fActivation[FREEWHEEL_DRIVER_REFNUM].load() == 0);
 }
 
 // RT
 int JackGraphManager::ResumeRefNum(JackClientControl* control, JackSynchro* table)
 {
     JackConnectionManager* manager = ReadCurrentState();
-    return manager->ResumeRefNum(control, table, fClientTiming);
+    return manager->ResumeRefNum(control, table, fClientTiming, fActivation);
 }
 
 // RT
@@ -144,7 +146,7 @@ void JackGraphManager::DirectConnect(int ref1, int ref2)
 {
     JackConnectionManager* manager = WriteNextStateStart();
     manager->DirectConnect(ref1, ref2);
-    jack_log("JackGraphManager::ConnectRefNum cur_index = %ld ref1 = %ld ref2 = %ld", CurIndex(fCounter), ref1, ref2);
+    jack_log("JackGraphManager::ConnectRefNum cur_index = %ld ref1 = %ld ref2 = %ld", CurIndex(LoadCounter(fCounter)), ref1, ref2);
     WriteNextStateStop();
 }
 
@@ -153,7 +155,7 @@ void JackGraphManager::DirectDisconnect(int ref1, int ref2)
 {
     JackConnectionManager* manager = WriteNextStateStart();
     manager->DirectDisconnect(ref1, ref2);
-    jack_log("JackGraphManager::DisconnectRefNum cur_index = %ld ref1 = %ld ref2 = %ld", CurIndex(fCounter), ref1, ref2);
+    jack_log("JackGraphManager::DisconnectRefNum cur_index = %ld ref1 = %ld ref2 = %ld", CurIndex(LoadCounter(fCounter)), ref1, ref2);
     WriteNextStateStop();
 }
 

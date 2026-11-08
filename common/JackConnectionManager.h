@@ -476,14 +476,11 @@ class SERVER_EXPORT JackConnectionManager
         void DirectConnect(int ref1, int ref2);
         void DirectDisconnect(int ref1, int ref2);
 
-        int GetActivation(int refnum) const
-        {
-            return fInputCounter[refnum].GetValue();
-        }
 
         // Graph
-        void ResetGraph(JackClientTiming* timing);
-        int ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing);
+        // The live activation counters are passed in: they are not part of this (copied) state.
+        void ResetGraph(JackClientTiming* timing, std::atomic<SInt32>* live);
+        int ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live);
         int SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, long time_out_usec);
         void TopologicalSort(std::vector<jack_int_t>& sorted);
 
