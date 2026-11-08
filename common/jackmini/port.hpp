@@ -71,20 +71,23 @@ constexpr bool has_flag(PortFlags set, PortFlags flag) noexcept {
 // A handle to a registered port.  It is a value: copies refer to the same
 // port.  It is valid until the port is unregistered or its client closes.
 // A handle belongs to the client that obtained it: another client's port is
-// reached through that client's find_port().
+// reached through that client's find_port().  The client refuses a handle of
+// another client (Error::NotFound).
 class Port {
 public:
     constexpr Port() noexcept = default;
 
     constexpr bool valid() const noexcept { return fId != 0; }
     constexpr std::uint32_t id() const noexcept { return fId; }
+    constexpr std::uint32_t owner() const noexcept { return fOwner; }
 
     friend constexpr bool operator==(Port, Port) = default;
 
 private:
     friend class Client;
-    constexpr explicit Port(std::uint32_t id) noexcept : fId(id) {}
+    constexpr Port(std::uint32_t id, std::uint32_t owner) noexcept : fId(id), fOwner(owner) {}
     std::uint32_t fId = 0;
+    std::uint32_t fOwner = 0;  // the client that issued the handle: the ids of two clients are not the same ports
 };
 
 } // namespace jackmini

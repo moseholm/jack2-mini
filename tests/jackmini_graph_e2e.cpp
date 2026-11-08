@@ -117,6 +117,9 @@ int main(int argc, char** argv)
             // A handle belongs to the client that obtained it: the other client's ports are reached with find_port.
             auto dbl_in_seen = source.find_port("chain_dbl:in");
             auto snk_in_seen = doubler.find_port("chain_snk:in");
+            // A handle of another client is not a port of this one: it is refused, and nothing is connected.
+            Check("chain: another client's handle is refused (NotFound)",
+                  source.connect(*src_out, *dbl_in).error() == Error::NotFound);
             Check("chain: connect source -> doubler -> sink",
                   dbl_in_seen && snk_in_seen && source.connect(*src_out, *dbl_in_seen).has_value() &&
                   doubler.connect(*dbl_out, *snk_in_seen).has_value());

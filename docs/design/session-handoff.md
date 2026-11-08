@@ -196,8 +196,9 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   and thread-init callbacks, `jack_set_buffer_size`, the sync callback (slow-sync transport), `jack_frame_time`,
   cycle times, alternate thread models, the error function. Freewheel is the `-F` start option, checked by the
   graph and end-to-end runs.
-- **Finding (API):** a client passing another client's port handle to `connect` gets `InvalidArgument`, not
-  `NotFound`. The documented rule is to use `find_port`. Not changed yet.
+- **Foreign port handles (fixed).** A `Port` carries the token of the client that issued it. A client refuses a
+  handle with another token (`Error::NotFound`). Before, the id of another client's handle could match one of this
+  client's own ports, so a connect could hit the wrong port. The graph test checks the refusal.
 - **Cycle struct (done).** The process callback is `bool(const Cycle&)`: `frames` (buffer size),
   `current_frames`, `current_usecs`, `next_usecs`, `period_usecs`, `freewheel`. Filled from
   `jack_get_cycle_times` and the engine control's `fFreewheel` (now `std::atomic<bool>`). Transport position
@@ -277,8 +278,9 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   never runs its first cycle, and the engine's 5-second driver timeout expires.
   Counts: `HEAD` 2 of 4 starts, the packed change 3 of 4. Not caused by the
   layout change.
-- **Server ignores SIGINT and SIGTERM.** Must be killed (`SIGKILL`). Leaves
-  registry and segments behind.
+- **Signals (not reproduced, closed).** The server exits on SIGINT and SIGTERM, with and without clients connected, and
+  removes its own segments. A killed client's semaphore is removed by the server while the server runs. The registry is
+  gone (step 4). A `jack_db-1000` directory from older builds stays in `/dev/shm`; the current code does not create it.
 - **Interval does not match the nominal period.** At 64 frames the start-to-start
   interval is about 11% long; at 256 frames about 6% short. Hypotheses: the USB
   period and the non-RT kernel. Not explained.

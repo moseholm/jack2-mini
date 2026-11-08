@@ -66,6 +66,8 @@ struct Client::Impl {
     static constexpr std::uint32_t kMaxPortHandles = 4096;
     std::array<std::atomic<jack_port_t*>, kMaxPortHandles> slots{};
     std::uint32_t used = 1;
+    // The token of this client: its handles carry it, and a handle with another token is not a port of this client.
+    std::uint32_t token = 0;
     std::unordered_map<jack_port_t*, std::uint32_t> ids;
     std::mutex control;
 
@@ -93,6 +95,9 @@ struct Client::Impl {
     jack_port_t* port_of(Port port) const
     {
         const std::uint32_t id = port.id();
+        if (port.owner() != token) {
+            return nullptr;
+        }
         return (id > 0 && id < kMaxPortHandles) ? slots[id].load() : nullptr;
     }
 
@@ -284,6 +289,8 @@ Result<Client> Client::open(std::string_view name, OpenOptions options)
 
     Client client;
     client.fImpl = std::make_unique<Impl>();
+    static std::atomic<std::uint32_t> next_token{ 1 };
+    client.fImpl->token = next_token.fetch_add(1);
     client.fImpl->handle = handle;
 
     // The trampolines are installed once: they call whatever is stored, so the stored callbacks decide what runs.
@@ -369,7 +376,7 @@ Result<Port> Client::register_port(std::string_view name, PortType type, PortFla
         const std::string full = std::string(this->name()) + ":" + short_name;
         return std::unexpected(jackmini::lib::jack_port_by_name(fImpl->handle, full.c_str()) != nullptr ? Error::NameTaken : Error::ServerFailure);
     }
-    return Port(fImpl->id_of(port));
+    return Port(fImpl->id_of(port), fImpl->token);
 }
 
 Result<void> Client::unregister_port(Port port)
@@ -421,7 +428,7 @@ Result<Port> Client::find_port(std::string_view full_name) const
     if (ptr == nullptr) {
         return std::unexpected(Error::NotFound);
     }
-    return Port(fImpl->id_of(ptr));
+    return Port(fImpl->id_of(ptr), fImpl->token);
 }
 
 std::vector<std::string> Client::port_names(PortType type, PortFlags required) const
