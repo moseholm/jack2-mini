@@ -81,6 +81,10 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `8dbe02fa` Plan B S4: the driver module interface. Each driver exports `jackmini_driver_module` (a `Module`:
+  version, describe, initialize). The server refuses a module whose version is not 1 (`server/driver_module.h`).
+  Checked with a fake module that reports version 99: refused, dummy still runs. Also removed `jack_internals_load`,
+  and a duplicate driver name now returns NULL (it returned the rejected descriptor before).
 - `a89cae4c` Plan B S3: `memops.c` becomes `memops.cpp`, kernels unchanged. Byte-identical to the C build
   on random inputs (scratch harness, not committed), with default flags and `-msse4.1`. Runtime dispatch is NOT
   done (compile-time selection kept); the SSE2 and SSE4.1 outputs match, so it can follow.
@@ -95,6 +99,11 @@ Protocol and shared memory (`docs/design/protocol.md`):
   client declarations.
 - `ea685c8e` Internal clients removed. The protocol has 26 requests and is at version 12.
 - `8fd1e5a2` Style guide (`docs/design/style.md`) and the namespace rename `Jack` to `jackmini`.
+
+Still open: S5 (control API and `jackd`, `JackControlAPI.cpp` and `Jackdmp.cpp`), S6 (engine and graph idioms),
+S7 (server and protocol), S8 (the ALSA C files, now unblocked by S4; the fake-backend unit tests are not started), S9
+(remove the rest of the C), S10 (sanitizers and final docs), and Plan A (the jackmini client takes over from the old
+`JackLibClient`; `lib.cpp` is still the copied wrapper). Plan C (renames and dead code) runs with each area.
 
 What is left in C: `platform/alsa/alsa_driver.c`, `alsa_rawmidi.c`, `alsa_seqmidi.c` (the S8 port), and
 `tests/alsa_test_resampler_plugin.c`. The ALSA C files use `server/driver_interface.h` and the old driver structs,
