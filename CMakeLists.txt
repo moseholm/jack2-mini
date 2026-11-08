@@ -371,6 +371,11 @@ if(JACK_BUILD_TESTS)
     target_compile_definitions(jack_shm_layout_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
     add_test(NAME shm_layout_unit COMMAND jack_shm_layout_unit)
 
+    # Descriptor passing over a Unix socket and anonymous shared-memory segments (P2 step 2).
+    add_executable(jack_fd_segment_unit tests/fd_segment_unit.cpp posix/JackFdSegment.cpp)
+    target_include_directories(jack_fd_segment_unit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/posix")
+    add_test(NAME fd_segment_unit COMMAND jack_fd_segment_unit)
+
     # The parts of jackmini that need no server: ring buffer, Uuid, error text.
     add_library(jackmini_base STATIC common/jackmini/uuid.cpp common/jackmini/error.cpp)
     target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common)
