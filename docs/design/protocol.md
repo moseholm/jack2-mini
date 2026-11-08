@@ -128,12 +128,14 @@ already active". The P0 startup failures were this. A segment that was not
 removed also keeps its memory, which is how a 107 MB segment was left behind
 after one killed run.
 
-**One server or several.** The registry's server table exists only because
-several servers can run at once under different names. If jackmini runs one
-server per machine, that table goes. The single-instance rule can then be a
-lock on the server's socket path. Clients still find the server by its socket,
-and they still get their audio segments by descriptor. Open: do we keep server
-names for running more than one?
+**One server, exclusively.** Only one server runs on a machine, so the
+registry's server table goes. The server still has a name, which identifies it
+in its socket path (`/run/user/<uid>/jackmini-<name>.sock`, or the
+equivalent). A lock on that path makes the single-instance rule: a second
+server finds the lock held and refuses to start. A lock released by the kernel
+when its holder dies means a killed server cannot block the next start.
+Clients find the server by its socket, and they get their segments by
+descriptor.
 
 **What replaces it.** Nothing global. The server passes each client the file
 descriptors it needs when the client opens, and the client maps them. A killed
