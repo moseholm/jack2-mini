@@ -203,6 +203,10 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   Exports left in libjack (24 `jack_` symbols): the `jack_midi_*` functions (the ALSA drivers use them as
   their interface), the `jack_ringbuffer_*` functions, and the `jack_error_callback`/`jack_info_callback`
   variables. Checked: unit suite; end-to-end and graph tests in freewheel and real time; cpu; rtbench.
+- **Libraries split (step 1 done).** The ring buffer is `libjackring` (`common/ringbuffer.c`), linked by
+  `jack`, `jackserver`, the ALSA drivers, and the unit tests that build the server objects; installed with them.
+  Next: `libjacklog` (basic logging), then `libjackmidi` (MIDI buffer), then the jackmini client on `JackMidiBuffer`,
+  then the install rules and pkg-config.
 - **Open (decisions):** the public headers `common/jack/*.h` are still installed, and `jack.pc` still
   describes the client library. `Jackdmp.cpp` and `linux/alsa/alsa_midi_impl.h` still include `jack/jack.h`
   and the ALSA drivers use the `jack_midi_*` functions. Options: stop installing the client headers and
