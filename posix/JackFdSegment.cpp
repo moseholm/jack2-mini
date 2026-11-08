@@ -77,34 +77,35 @@ std::expected<void, std::error_code> SendWithFds(int socket,
         return std::unexpected(std::make_error_code(std::errc::invalid_argument));
     }
 
-    iovec iov{};
-    iov.iov_base = const_cast<std::byte*>(data.data());
-    iov.iov_len = data.size();
+    // The descriptors travel with the first part; a stream socket may take the rest in later calls.
+    std::size_t done = 0;
+    while (done < data.size()) {
+        iovec iov{};
+        iov.iov_base = const_cast<std::byte*>(data.data() + done);
+        iov.iov_len = data.size() - done;
 
-    alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(int))> control{};
-    msghdr msg{};
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;
-    if (!fds.empty()) {
-        msg.msg_control = control.data();
-        msg.msg_controllen = CMSG_SPACE(fds.size() * sizeof(int));
-        cmsghdr* header = CMSG_FIRSTHDR(&msg);
-        header->cmsg_level = SOL_SOCKET;
-        header->cmsg_type = SCM_RIGHTS;
-        header->cmsg_len = CMSG_LEN(fds.size() * sizeof(int));
-        std::memcpy(CMSG_DATA(header), fds.data(), fds.size() * sizeof(int));
-    }
+        alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(int))> control{};
+        msghdr msg{};
+        msg.msg_iov = &iov;
+        msg.msg_iovlen = 1;
+        if (done == 0 && !fds.empty()) {
+            msg.msg_control = control.data();
+            msg.msg_controllen = CMSG_SPACE(fds.size() * sizeof(int));
+            cmsghdr* header = CMSG_FIRSTHDR(&msg);
+            header->cmsg_level = SOL_SOCKET;
+            header->cmsg_type = SCM_RIGHTS;
+            header->cmsg_len = CMSG_LEN(fds.size() * sizeof(int));
+            std::memcpy(CMSG_DATA(header), fds.data(), fds.size() * sizeof(int));
+        }
 
-    ssize_t sent;
-    do {
-        sent = sendmsg(socket, &msg, MSG_NOSIGNAL);
-    } while (sent < 0 && errno == EINTR);
-    if (sent < 0) {
-        return std::unexpected(LastError());
-    }
-    if (static_cast<std::size_t>(sent) != data.size()) {
-        // A stream socket may take a message in parts, so a short send is an error here.
-        return std::unexpected(std::make_error_code(std::errc::message_size));
+        ssize_t sent;
+        do {
+            sent = sendmsg(socket, &msg, MSG_NOSIGNAL);
+        } while (sent < 0 && errno == EINTR);
+        if (sent < 0) {
+            return std::unexpected(LastError());
+        }
+        done += static_cast<std::size_t>(sent);
     }
     return {};
 }

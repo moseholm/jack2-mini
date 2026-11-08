@@ -53,8 +53,11 @@ void JackSocketNotifyChannel::ClientNotify(int refnum, const char* name, int not
     JackResult res;
     int err;
 
+    // A synchronous notification gets a request id, which the client's reply echoes
+    const std::uint32_t request = sync ? NextJackRequestId() : 0;
+
     // Send notification
-    err = event.Write(&fNotifySocket);
+    err = event.Write(&fNotifySocket, request);
     if (err < 0) {
         jack_error("Could not write notification");
         *result = err;
@@ -64,7 +67,7 @@ void JackSocketNotifyChannel::ClientNotify(int refnum, const char* name, int not
     // Read the result in "synchronous" mode only
     if (sync) {
         // Get result : use a time out
-        err = res.Read(&fNotifySocket);
+        err = ReadJackReply(&fNotifySocket, notify, request, res);
         if (err < 0) {
             jack_error("Could not read notification result");
             *result = err;

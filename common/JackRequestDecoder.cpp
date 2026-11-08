@@ -42,17 +42,6 @@ JackRequestDecoder::JackRequestDecoder(JackServer* server, JackClientHandlerInte
 JackRequestDecoder::~JackRequestDecoder()
 {}
 
-// The reply to a request: the request's type and id, and the result as the payload.
-static int SendJackReply(detail::JackChannelTransactionInterface* socket, JackResult& res, const JackMsgHeader& request)
-{
-    JackPayloadWriter payload;
-    if (res.Write(&payload) < 0) {
-        return -1;
-    }
-    const auto length = static_cast<std::uint32_t>(payload.fData.size());
-    return SendJackMessage(socket, MakeJackMsgHeader(request.type, length, request.request), payload.fData.data(), length, payload.fFds);
-}
-
 int JackRequestDecoder::Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header)
 {
     jack_error("JACK protocol mismatch: request version %d, server version %d", header.version, kJackMsgVersion);

@@ -20,6 +20,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 // writer and reader.  The transport is a byte buffer, so the test needs no server.
 
 #include "JackMessage.h"
+#include "JackRequest.h"
+#include "JackNotification.h"
 
 #include <cstdio>
 #include <cstring>
@@ -148,6 +150,58 @@ void TestReplyWriter()
     CHECK(writer.fFds.empty());
 }
 
+void TestNotificationRoundTrip()
+{
+    BufferTransport wire;
+    JackClientNotification sent("system", 3, Jack::kXRunCallback, 1, "msg", 5, 6);
+    CHECK(sent.Write(&wire, 91) == 0);
+
+    JackMsgHeader got{};
+    CHECK(ReadJackMsgHeader(&wire, got) == 0);
+    CHECK(got.type == Jack::kXRunCallback);
+    CHECK(got.request == 91);
+    CHECK(got.length == JackClientNotification::PayloadSize);
+
+    JackClientNotification back;
+    JackPayloadReader body(&wire, got.length, {});
+    CHECK(back.Read(&body) == 0);
+    CHECK(body.Done());
+    CHECK(std::strcmp(back.fName, "system") == 0);
+    CHECK(back.fRefNum == 3);
+    CHECK(back.fNotify == Jack::kXRunCallback);
+    CHECK(back.fSync == 1);
+    CHECK(back.fValue1 == 5 && back.fValue2 == 6);
+    CHECK(std::strcmp(back.fMessage, "msg") == 0);
+}
+
+void TestSyncReplyEchoesRequest()
+{
+    BufferTransport wire;
+    JackResult res(42);
+    CHECK(SendJackReply(&wire, res, MakeJackMsgHeader(Jack::kXRunCallback, 0, 91)) == 0);
+
+    class ReplySocket : public detail::JackClientRequestInterface
+    {
+        public:
+            BufferTransport& fWire;
+            explicit ReplySocket(BufferTransport& wire) : fWire(wire) {}
+            int Read(void* data, int len) override { return fWire.Read(data, len); }
+            int Write(void* data, int len) override { return fWire.Write(data, len); }
+            int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) override { return fWire.Read(data, len); }
+    } socket(wire);
+
+    JackResult back;
+    CHECK(ReadJackReply(&socket, Jack::kXRunCallback, 91, back) == 0);
+    CHECK(back.fResult == 42);
+
+    BufferTransport again;
+    JackResult other(1);
+    SendJackReply(&again, other, MakeJackMsgHeader(Jack::kXRunCallback, 0, 91));
+    ReplySocket socket2(again);
+    JackResult wrong;
+    CHECK(ReadJackReply(&socket2, Jack::kXRunCallback, 92, wrong) < 0);
+}
+
 void TestRequestIdsAreDistinct()
 {
     const std::uint32_t first = NextJackRequestId();
@@ -165,6 +219,8 @@ int main()
     TestShortReadIsNotDone();
     TestBadMagicIsRefused();
     TestReplyWriter();
+    TestNotificationRoundTrip();
+    TestSyncReplyEchoesRequest();
     TestRequestIdsAreDistinct();
 
     if (gFailures == 0) {

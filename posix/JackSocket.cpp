@@ -189,6 +189,12 @@ int JackClientSocket::WriteWithFds(void* data, int len, std::span<const int> fds
     const std::span<const std::byte> bytes(static_cast<const std::byte*>(data), len);
     const auto sent = SendWithFds(fSocket, bytes, fds);
     if (!sent) {
+        // A full non-blocking socket drops the message, as Write() does: the notifications sent from the RT thread
+        // are not worth blocking for.
+        if (sent.error() == std::error_code(EAGAIN, std::system_category()) && fNonBlocking) {
+            jack_log("JackClientSocket::WriteWithFds dropped on a full non-blocking socket fd = %d", fSocket);
+            return 0;
+        }
         jack_error("JackClientSocket::WriteWithFds fd = %d err = %s", fSocket, sent.error().message().c_str());
         return -1;
     }

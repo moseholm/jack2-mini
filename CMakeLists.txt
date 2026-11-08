@@ -378,7 +378,7 @@ if(JACK_BUILD_TESTS)
     add_test(NAME fd_segment_unit COMMAND jack_fd_segment_unit)
 
     # Message framing of the control socket: the header, the exact payload length, and the reply writer and reader.
-    add_executable(jack_message_frame_unit tests/message_frame_unit.cpp posix/JackFdSegment.cpp)
+    add_executable(jack_message_frame_unit tests/message_frame_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
     target_include_directories(jack_message_frame_unit PRIVATE ${JACK_INCLUDE_DIRS})
     target_compile_definitions(jack_message_frame_unit PRIVATE HAVE_CONFIG_H)
     add_test(NAME message_frame_unit COMMAND jack_message_frame_unit)

@@ -135,7 +135,8 @@ bool JackSocketClientChannel::Execute()
     JackClientNotification event;
     JackResult res;
 
-    int err = event.Read(fNotificationSocket);
+    JackMsgHeader header{};
+    int err = ReadJackMsgHeader(fNotificationSocket, header);
     if (err < 0) {
         // aborted reading due to shutdown
         if (err != JACK_REQUEST_ERR_ABORTED) {
@@ -143,11 +144,22 @@ bool JackSocketClientChannel::Execute()
         }
         goto error;
     }
+    if (header.version != kJackMsgVersion || header.length != JackClientNotification::PayloadSize) {
+        jack_error("JackSocketClientChannel: notification of protocol version %d, length %d", header.version, header.length);
+        goto error;
+    }
+    {
+        JackPayloadReader payload(fNotificationSocket, header.length, {});
+        if (event.Read(&payload) < 0 || !payload.Done()) {
+            jack_error("JackSocketClientChannel: notification does not match its length");
+            goto error;
+        }
+    }
 
     res.fResult = fClient->ClientNotify(event.fRefNum, event.fName, event.fNotify, event.fSync, event.fMessage, event.fValue1, event.fValue2);
 
     if (event.fSync) {
-        if (res.Write(fNotificationSocket) < 0) {
+        if (SendJackReply(fNotificationSocket, res, header) < 0) {
             jack_error("JackSocketClientChannel write fail");
             goto error;
         }

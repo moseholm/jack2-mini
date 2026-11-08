@@ -132,6 +132,7 @@ template<int DataSize>
 struct JackRequestImpl : JackRequest
 {
     static constexpr int TotalSize = DataSize;
+    static_assert(DataSize <= static_cast<int>(kJackMsgMaxPayload), "request payload larger than a message");
 
     JackRequestImpl(RequestType type)
         : JackRequest(type), fPacketInit(false), fPacketPos(0)
@@ -224,6 +225,46 @@ struct JackResult
     }
 
 };
+
+// The reply to a request: the request's type and id, and the result as the payload.
+inline int SendJackReply(detail::JackChannelTransactionInterface* trans, JackResult& res, const JackMsgHeader& request)
+{
+    JackPayloadWriter payload;
+    if (res.Write(&payload) < 0) {
+        return -1;
+    }
+    const auto length = static_cast<std::uint32_t>(payload.fData.size());
+    return SendJackMessage(trans, MakeJackMsgHeader(request.type, length, request.request), payload.fData.data(), length, payload.fFds);
+}
+
+// Reads the reply to the message with the given type and id.  The header must match it and carry our protocol version,
+// and the payload must be read in full.
+inline int ReadJackReply(detail::JackClientRequestInterface* socket, std::uint16_t type, std::uint32_t request, JackResult& res)
+{
+    JackMsgHeader header{};
+    std::vector<UniqueFd> fds;
+    if (socket->ReadWithFds(&header, sizeof(header), fds) < 0) {
+        return -1;
+    }
+    if (header.magic != kJackMsgMagic) {
+        jack_error("JACK reply without the protocol magic number");
+        return -1;
+    }
+    if (header.version != kJackMsgVersion) {
+        jack_error("JACK protocol mismatch (server %d, client %d)", header.version, kJackMsgVersion);
+        return -1;
+    }
+    if (header.request != request || header.type != type) {
+        jack_error("JACK reply does not match its request, type %d request %d", type, request);
+        return -1;
+    }
+
+    JackPayloadReader payload(socket, header.length, std::move(fds));
+    if (res.Read(&payload) < 0 || !payload.Done()) {
+        return -1;
+    }
+    return 0;
+}
 
 /*!
 \brief CheckClient request.
@@ -1771,7 +1812,8 @@ struct JackPropertyChangeNotifyRequest : public JackRequestImpl<sizeof(jack_uuid
 
 struct JackClientNotification
 {
-    int fSize;
+    static constexpr int PayloadSize = (JACK_CLIENT_NAME_SIZE + 1) + 5 * sizeof(int) + (JACK_MESSAGE_SIZE + 1);
+
     char fName[JACK_CLIENT_NAME_SIZE+1];
     int fRefNum;
     int fNotify;
@@ -1780,7 +1822,7 @@ struct JackClientNotification
     int fSync;
     char fMessage[JACK_MESSAGE_SIZE+1];
 
-    JackClientNotification(): fSize(0), fRefNum(0), fNotify(-1), fValue1(-1), fValue2(-1), fSync(0)
+    JackClientNotification(): fRefNum(0), fNotify(-1), fValue1(-1), fValue2(-1), fSync(0)
     {
         memset(fName, 0, sizeof(fName));
         memset(fMessage, 0, sizeof(fMessage));
@@ -1794,18 +1836,12 @@ struct JackClientNotification
         if (message) {
             strncpy(fMessage, message, sizeof(fMessage)-1);
         }
-        fSize = Size();
     }
 
+    // The payload of a notification message.  The header's type is the notification kind (fNotify), and its request id
+    // is 0, unless the notification is synchronous: then the client's reply echoes the id.
     int Read(detail::JackChannelTransactionInterface* trans)
     {
-        // The notification keeps its size prefix until notifications are framed (protocol.md section 10, item 4).
-        int size = -1;
-        CheckRes(trans->Read(&size, sizeof(int)));
-        if (size != Size()) {
-            jack_error("JackClientNotification::Read size = %d Size() = %d", size, Size());
-            return -1;
-        }
         CheckRes(trans->Read(&fName, sizeof(fName)));
         CheckRes(trans->Read(&fRefNum, sizeof(int)));
         CheckRes(trans->Read(&fNotify, sizeof(int)));
@@ -1816,20 +1852,23 @@ struct JackClientNotification
         return 0;
     }
 
-    int Write(detail::JackChannelTransactionInterface* trans)
+    int Write(detail::JackChannelTransactionInterface* trans, std::uint32_t request)
     {
-        CheckRes(trans->Write(&fSize, sizeof(int)));
-        CheckRes(trans->Write(&fName, sizeof(fName)));
-        CheckRes(trans->Write(&fRefNum, sizeof(int)));
-        CheckRes(trans->Write(&fNotify, sizeof(int)));
-        CheckRes(trans->Write(&fValue1, sizeof(int)));
-        CheckRes(trans->Write(&fValue2, sizeof(int)));
-        CheckRes(trans->Write(&fSync, sizeof(int)));
-        CheckRes(trans->Write(&fMessage, sizeof(fMessage)));
-        return 0;
+        std::array<std::byte, PayloadSize> payload{};
+        std::byte* out = payload.data();
+        auto put = [&out](const void* data, std::size_t size) {
+            memcpy(out, data, size);
+            out += size;
+        };
+        put(fName, sizeof(fName));
+        put(&fRefNum, sizeof(int));
+        put(&fNotify, sizeof(int));
+        put(&fValue1, sizeof(int));
+        put(&fValue2, sizeof(int));
+        put(&fSync, sizeof(int));
+        put(fMessage, sizeof(fMessage));
+        return SendJackMessage(trans, MakeJackMsgHeader(static_cast<std::uint16_t>(fNotify), PayloadSize, request), payload.data(), PayloadSize);
     }
-
-    int Size() const { return sizeof(int) + sizeof(fName) + 5 * sizeof(int) + sizeof(fMessage); }
 
 };
 

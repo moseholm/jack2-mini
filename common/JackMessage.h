@@ -47,6 +47,9 @@ static_assert(sizeof(JackMsgHeader) == 16);
 constexpr std::uint32_t kJackMsgMagic = 0x4a4d4e53;     // "JMNS"
 constexpr std::uint16_t kJackMsgVersion = JACK_PROTOCOL_VERSION;
 constexpr std::int32_t kJackMsgProtocolError = 7;       // jackmini::Error::Protocol (protocol.md section 7)
+// Largest payload of a message.  The frame is built on the stack, so nothing allocates on the way out: notifications
+// are sent from the realtime thread.
+constexpr std::uint32_t kJackMsgMaxPayload = 4096;
 
 // A new request id for each request sent.  Replies echo it, so a reply can be matched to its request.
 inline std::uint32_t NextJackRequestId()
@@ -65,12 +68,15 @@ inline JackMsgHeader MakeJackMsgHeader(std::uint16_t type, std::uint32_t length,
 inline int SendJackMessage(detail::JackChannelTransactionInterface* trans, const JackMsgHeader& header,
                            const void* payload, std::uint32_t length, std::span<const int> fds = {})
 {
-    std::vector<std::byte> frame(sizeof(JackMsgHeader) + length);
+    if (length > kJackMsgMaxPayload) {
+        return -1;
+    }
+    std::array<std::byte, sizeof(JackMsgHeader) + kJackMsgMaxPayload> frame;
     std::memcpy(frame.data(), &header, sizeof(JackMsgHeader));
     if (length != 0) {
         std::memcpy(frame.data() + sizeof(JackMsgHeader), payload, length);
     }
-    return trans->WriteWithFds(frame.data(), static_cast<int>(frame.size()), fds);
+    return trans->WriteWithFds(frame.data(), static_cast<int>(sizeof(JackMsgHeader) + length), fds);
 }
 
 // Reads a header.  A header without the magic number is not one of ours, and the read fails.
