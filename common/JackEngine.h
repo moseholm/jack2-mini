@@ -59,7 +59,8 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         JackProcessSync fSignal;
         // Number of graph switches so far.  Changed by the RT thread (ProcessNext) only.
         std::atomic<unsigned long> fSwitchCount;
-        jack_time_t fLastSwitchUsecs;
+        // Written by the RT thread at each switch, and by the server thread when a client is deactivated.
+        std::atomic<jack_time_t> fLastSwitchUsecs;
         JackMetadata fMetadata;
 
         std::map<int,std::string> fReservationMap;
