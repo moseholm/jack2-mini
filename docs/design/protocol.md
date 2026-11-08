@@ -107,6 +107,29 @@ the server blocking on it.
 
 ### 4.1 Segment handoff: replacing the registry
 
+**What the registry is.** `/dev/shm/jack-shm-registry` is a shared-memory
+segment that the server and its clients use to find the other segments. It
+has three parts (`common/shm.h`):
+
+- a header, with a magic number and an array of `MAX_SERVERS` (8) slots, one
+  per server name that is running;
+- a table of `MAX_SHM_ID` (256) entries. Each entry records one segment: its
+  name, size, the PID of the process that created it, and its index;
+- a lock, taken with a semaphore, around every change to the table.
+
+A process that wants a segment asks the registry for its index, then maps the
+segment by name. The server creates the registry the first time it starts,
+and it removes a server's entries when that server closes cleanly.
+
+**Why it is a problem.** A server that is killed does not run its cleanup, so
+its entries stay in the table, and its slot stays taken. Once eight servers
+have been killed this way, every new server fails with "Too many servers
+already active". The P0 startup failures were this. A segment that was not
+removed also keeps its memory, which is how a 107 MB segment was left behind
+after one killed run.
+
+**What replaces it.** Each process holds the names it needs and nothing more:
+
 Today a client finds a segment by index in `/dev/shm/jack-shm-registry`, and
 an interrupted server leaves its entries behind. Eight stale entries stop new
 servers from starting. That is the cause of the startup failures seen in the
@@ -131,8 +154,7 @@ name.
   This is the first time they can be used in shared memory directly, because
   the layout is ours to change.
 - **Fixed-size arrays with a compile-time bound** wherever the current code
-  uses a variable size. The port count is the one exception, handled by a
-  second segment (section 4.4).
+  uses a variable size. The port count is fixed at `PORT_NUM` (section 4.4).
 
 ### 4.3 The structures
 
@@ -150,10 +172,12 @@ name.
 
 ### 4.4 Graph segment
 
-The graph has a variable number of ports, so the port array is a separate
-segment, sized at buffer-size change time, and referenced by its index from the
-graph. A reallocation publishes a new port segment and then bumps a generation
-counter; the realtime thread checks the generation at the start of each cycle.
+The port array has a fixed maximum, `PORT_NUM` (2048 ports), and is allocated
+in the graph segment when the server starts. It is never reallocated, so
+there is no port generation counter, and the realtime thread reads the port
+table without any check. The maximum sets the size of the connection matrix,
+so the segment size is fixed too. The current code allocates the same way, so
+the cost does not change; only the reallocation path is removed.
 
 ### 4.5 The copy-on-write counters, redesigned
 
@@ -245,12 +269,8 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
 
 ## 9. Open questions
 
-1. **Registry removal (section 4.1).** I recommend it. It removes the stale
-   state that caused the startup failures, at the cost of a change to every
-   place that maps a segment.
-2. **Port segment reallocation (section 4.4).** A generation counter is the
-   simplest correct choice. The alternative is a fixed maximum port count,
-   which avoids reallocation but caps the port count.
+1. **Registry removal (section 4.1).** Decided: remove it.
+2. **Port count (section 4.4).** Decided: fixed maximum, `PORT_NUM`.
 3. **Notification queue size.** The bound is not chosen. It should be large
    enough for a burst of port registrations during startup, and that is to be
    measured.
