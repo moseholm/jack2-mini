@@ -245,7 +245,7 @@ endif()
 message(STATUS "Resampler SIMD kernels                    : ${JACK_RESAMPLER_SIMD_ENABLED}")
 
 set(JACK_ALSA_SOURCES
-    common/memops.c
+    common/memops.cpp
     platform/alsa/JackAlsaDriver.cpp
     platform/alsa/alsa_rawmidi.c
     platform/alsa/alsa_seqmidi.c
@@ -382,6 +382,12 @@ if(JACK_BUILD_TESTS)
     target_include_directories(jack_ringbuffer_unit PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/common")
     target_link_libraries(jack_ringbuffer_unit PRIVATE jackring Threads::Threads)
     add_test(NAME ringbuffer_unit COMMAND jack_ringbuffer_unit)
+
+    # The sample conversions and the interleaved copies, against the bytes of the C implementation they replaced.
+    add_executable(jack_memops_unit tests/memops_unit.cpp common/memops.cpp)
+    target_include_directories(jack_memops_unit PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/common")
+    target_link_libraries(jack_memops_unit PRIVATE m)
+    add_test(NAME memops_unit COMMAND jack_memops_unit)
 
     # Compile-time checks of the jackmini client API headers.  No implementation is linked.
     add_executable(jack_api_unit tests/jackmini_api_unit.cpp)
