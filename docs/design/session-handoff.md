@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `66d3abc4` (protocol item 6). `origin/develop` is `5c926a55`.
+  `6f7a2791` (protocol item 7). `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -68,6 +68,11 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `6f7a2791` Protocol item 7: `tests/protocol_conformance_unit.cpp` (fake server on a
+  socket pair; requests and replies; malformed, version-mismatch, bad-header and
+  mismatched-reply refusals; a synchronous notification). TSAN clean. Layout checks for
+  the new fields in `tests/shm_layout_unit.cpp`. The control-API test under TSAN (the
+  in-process server) reports nothing.
 - `66d3abc4` Protocol item 6: deactivate keeps the connections. The graph counts a
   deactivated client's connections only while it is active (`SetInactive`), its
   inputs are silent, and its outputs are not mixed in. The engine no longer disconnects
@@ -141,13 +146,11 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-- **Item 7: the fake server and the conformance tests** (protocol.md section 8): a test
-  double that speaks the protocol over a socketpair, driven to every reply and
-  notification; conformance tests per message (a well-formed request gets its reply;
-  a malformed one gets Protocol; a version mismatch is refused); static checks per
-  shared structure; TSAN on the fake-server tests.
-- **4b (waits for the client-API port, by decision):** drop the session and metadata
-  messages, then renumber the requests.
+The protocol order of work (protocol.md section 10) is done except item 4b.
+
+- **4b, and client-API step 3 (port the client library behind the new headers):** 4b
+  waits for the client-API port, by decision. Step 3 is the next large piece of work and
+  needs a go-ahead: it changes the public C library.
 - **Measure the notification queue size** (protocol section 9, item 3); 256 now.
 - **Open TSAN findings, outside the counters** (not fixed; verify on the base before
   attributing):
@@ -211,7 +214,7 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 2. Read this file, `docs/design/protocol.md` (section 4.1 and the order of work),
    and `docs/design/client-api.md`.
 3. Rebuild the test dir and run `ctest --test-dir /tmp/opencode/build-jack2-cxx23`.
-4. Continue with item 7 (fake server and conformance tests). 4b waits for the client-API port (see "Next").
+4. Protocol items are done except 4b. Next is client-API step 3, which needs a go-ahead (see "Next").
 
 ## Working agreements with the user
 

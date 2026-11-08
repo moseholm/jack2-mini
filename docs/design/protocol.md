@@ -312,4 +312,6 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
 5. Counter redesign (section 4.5), with its TSAN test.
 6. Deactivate with connections (section 6), with the graph tests. Done: the graph
    and the buffer path skip a deactivated client; the connections are kept.
-7. The fake server and the conformance tests.
+7. The fake server and the conformance tests. Done: `tests/protocol_conformance_unit.cpp`
+   (requests and replies, malformed, version mismatch, bad headers, mismatched replies, a
+   synchronous notification), with the TSAN run; the layout checks cover the new fields.
