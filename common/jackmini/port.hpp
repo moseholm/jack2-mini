@@ -53,6 +53,8 @@ constexpr bool has_flag(PortFlags set, PortFlags flag) noexcept {
 
 // A handle to a registered port.  It is a value: copies refer to the same
 // port.  It is valid until the port is unregistered or its client closes.
+// A handle belongs to the client that obtained it: another client's port is
+// reached through that client's find_port().
 class Port {
 public:
     constexpr Port() noexcept = default;
