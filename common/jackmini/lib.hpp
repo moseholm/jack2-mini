@@ -5,7 +5,6 @@
 
 #include "jack/types.h"
 #include "jack/transport.h"
-#include "JackMidiPort.h"
 #include "jack/uuid.h"
 
 namespace jackmini::lib
@@ -94,22 +93,6 @@ const char* jack_port_short_name(const jack_port_t* port);
 int jack_port_is_mine(const jack_client_t* ext_client, const jack_port_t* port);
 
 int jack_port_connected(const jack_port_t* port);
-
-uint32_t jack_midi_get_event_count(void* port_buffer);
-
-int jack_midi_event_get(jack_midi_event_t *event, void* port_buffer, uint32_t event_index);
-
-void jack_midi_clear_buffer(void* port_buffer);
-
-int jack_midi_event_write(void* port_buffer, jack_nframes_t time, const jack_midi_data_t* data, size_t data_size);
-
-jack_midi_data_t* jack_midi_event_reserve(void* port_buffer, jack_nframes_t time, size_t data_size);
-
-size_t jack_midi_max_event_size(void* port_buffer);
-
-void jack_midi_reset_buffer(void* port_buffer);
-
-uint32_t jack_midi_get_lost_event_count(void* port_buffer);
 
 } // namespace jackmini::lib
 

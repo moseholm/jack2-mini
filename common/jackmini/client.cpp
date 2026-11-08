@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "jackmini/client.hpp"
 
 #include "lib.hpp"
+#include "JackMidiPort.h"
 
 #include "jack/uuid.h"
 
@@ -649,13 +650,13 @@ namespace midi
 
 std::size_t Buffer::count() const noexcept
 {
-    return fHandle ? jackmini::lib::jack_midi_get_event_count(fHandle) : 0;
+    return fHandle ? jack_midi_get_event_count(fHandle) : 0;
 }
 
 Event Buffer::event(std::size_t index) const noexcept
 {
     jack_midi_event_t raw{};
-    if (fHandle == nullptr || jackmini::lib::jack_midi_event_get(&raw, fHandle, index) != 0) {
+    if (fHandle == nullptr || jack_midi_event_get(&raw, fHandle, index) != 0) {
         return {};
     }
     return Event{ raw.time, std::span<const std::byte>(reinterpret_cast<const std::byte*>(raw.buffer), raw.size) };
@@ -666,13 +667,13 @@ bool Buffer::write(FrameCount time, std::span<const std::byte> data) noexcept
     if (fHandle == nullptr) {
         return false;
     }
-    return jackmini::lib::jack_midi_event_write(fHandle, time, reinterpret_cast<const jack_midi_data_t*>(data.data()), data.size()) == 0;
+    return jack_midi_event_write(fHandle, time, reinterpret_cast<const jack_midi_data_t*>(data.data()), data.size()) == 0;
 }
 
 void Buffer::clear() noexcept
 {
     if (fHandle != nullptr) {
-        jackmini::lib::jack_midi_clear_buffer(fHandle);
+        jack_midi_clear_buffer(fHandle);
     }
 }
 

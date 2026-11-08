@@ -203,6 +203,9 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   Exports left in libjack (24 `jack_` symbols): the `jack_midi_*` functions (the ALSA drivers use them as
   their interface), the `jack_ringbuffer_*` functions, and the `jack_error_callback`/`jack_info_callback`
   variables. Checked: unit suite; end-to-end and graph tests in freewheel and real time; cpu; rtbench.
+- **jackmini uses the MIDI library directly (step 4 done).** The client calls `jack_midi_*` from `libjackmidi`
+  (prototypes in `common/JackMidiPort.h`). The copies in `lib.cpp` are gone. `libjack` no longer defines any
+  `jack_midi_*` symbol. Next: step 5, the install rules and the pkg-config files.
 - **MIDI buffer in its own library (step 3 done).** `libjackmidi` (`common/JackMidiPort.cpp`, `JackMidiPort.h`, and
   the `jack_midi_*` functions in `common/JackMidiAPI.cpp`). Its buffer symbols are `LIB_EXPORT` now, so the client
   library (which is not built with the server definitions) can link them. Linked by the client library, the server

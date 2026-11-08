@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "types.h"
 #include "JackConstants.h"
 #include "JackPlatformPlug.h"
+#include "JackCompilerDeps.h"
 #include <stddef.h>
 
 /** Type for raw event data contained in @ref jack_midi_event_t. */
@@ -36,6 +37,24 @@ struct jack_midi_event_t
     size_t            size;   /**< Number of bytes of data in \a buffer */
     jack_midi_data_t *buffer; /**< Raw MIDI data */
 };
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+    LIB_EXPORT uint32_t jack_midi_get_event_count(void* port_buffer);
+    LIB_EXPORT int jack_midi_event_get(jack_midi_event_t* event, void* port_buffer, uint32_t event_index);
+    LIB_EXPORT void jack_midi_clear_buffer(void* port_buffer);
+    LIB_EXPORT void jack_midi_reset_buffer(void* port_buffer);
+    LIB_EXPORT size_t jack_midi_max_event_size(void* port_buffer);
+    LIB_EXPORT jack_midi_data_t* jack_midi_event_reserve(void* port_buffer, jack_nframes_t time, size_t data_size);
+    LIB_EXPORT int jack_midi_event_write(void* port_buffer, jack_nframes_t time, const jack_midi_data_t* data, size_t data_size);
+    LIB_EXPORT uint32_t jack_midi_get_lost_event_count(void* port_buffer);
+
+#ifdef __cplusplus
+}
+#endif
 
 /** A Jack MIDI port type. */
 #define JACK_DEFAULT_MIDI_TYPE "8 bit raw midi"
