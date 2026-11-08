@@ -35,7 +35,7 @@ namespace Jack
 \brief Counter for CAS
 */
 
-PRE_PACKED_STRUCTURE
+
 struct AtomicCounter
 {
     union {
@@ -83,7 +83,7 @@ struct AtomicCounter
         return *this;
     }
 
-} POST_PACKED_STRUCTURE;
+};
 
 #define Counter(e) (e).info.fLongVal
 #define CurIndex(e) (e).info.scounter.fShortVal1
@@ -108,7 +108,7 @@ static inline AtomicCounter LoadCounter(const AtomicCounter& counter)
 
 // CHECK livelock
 
-PRE_PACKED_STRUCTURE
+
 template <class T>
 class JackAtomicState
 {
@@ -281,7 +281,7 @@ class JackAtomicState
         }
         */
 
-} POST_PACKED_STRUCTURE;
+};
 
 } // end of namespace
 

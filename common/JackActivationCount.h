@@ -37,7 +37,7 @@ struct JackClientControl;
 \brief Client activation counter.
 */
 
-PRE_PACKED_STRUCTURE
+
 class JackActivationCount
 {
 
@@ -97,7 +97,7 @@ class JackActivationCount
             return std::atomic_ref<SInt32>(*const_cast<JackActivationCount*>(this)->ValuePtr()).load();
         }
 
-}  POST_PACKED_STRUCTURE;
+};
 
 } // end of namespace
 

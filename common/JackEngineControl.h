@@ -42,7 +42,7 @@ class JackGraphManager;
 \brief Engine control in shared memory.
 */
 
-PRE_PACKED_STRUCTURE
+
 struct SERVER_EXPORT JackEngineControl : public JackShmMem
 {
     // Shared state
@@ -180,7 +180,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
     void CalcCPULoad(std::atomic<JackClientInterface*>* table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end);
     void ResetRollingUsecs();
 
-} POST_PACKED_STRUCTURE;
+};
 
 } // end of namespace
 

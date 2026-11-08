@@ -36,7 +36,7 @@ namespace Jack
 \brief Base class for port.
 */
 
-PRE_PACKED_STRUCTURE
+
 class SERVER_EXPORT JackPort
 {
 
@@ -114,7 +114,7 @@ class SERVER_EXPORT JackPort
 
         int GetRefNum() const;
 
-} POST_PACKED_STRUCTURE;
+};
 
 } // end of namespace
 
