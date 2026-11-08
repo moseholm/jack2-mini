@@ -105,9 +105,9 @@ hot-plug behaviour and the current limits are described in
 Building
 ========
 
-The build requires CMake, a C/C++ compiler, the ALSA development headers
-and libraries, and libudev for sound-device hot-plug. On Debian-based systems
-the dependencies are::
+The build requires CMake, a C/C++ compiler, the ALSA development headers and
+libraries, and libudev for sound-device hot-plug. On Debian-based systems the
+dependencies are::
 
     sudo apt-get install build-essential cmake libasound2-dev libudev-dev
 
