@@ -6,8 +6,8 @@ without the conversation. Read this first, then `protocol.md` and
 
 ## Branch and state
 
-- Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `0c3d50b6` (latency; freewheel control). `origin/develop` is `5c926a55`.
+- Branch `hjj/cxx23`, pushed to origin. Head: see `git log -1`. The plan steps done since
+  `0c3d50b6` are listed first under "Done". `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -80,6 +80,25 @@ Protocol and shared memory (`docs/design/protocol.md`):
   is the base of the server's internal clients), it stays in `common/`.
 
 ## Done (commits in order, newest first)
+
+- `a89cae4c` Plan B S3: `memops.c` becomes `memops.cpp`, kernels unchanged. Byte-identical to the C build
+  on random inputs (scratch harness, not committed), with default flags and `-msse4.1`. Runtime dispatch is NOT
+  done (compile-time selection kept); the SSE2 and SSE4.1 outputs match, so it can follow.
+- `46d826f9` Plan B S2: the ring buffer is C++ with `std::atomic` (`common/ringbuffer.cpp`); the `jack_ringbuffer_*`
+  names stay; `jack_ringbuffer_t` is opaque now. `tests/ringbuffer_unit.cpp`, clean under TSAN.
+- `d727b06a` Plan B S8 (first part): hdsp, hammerfall, ice1712, and the generic_hw stub are removed. `alsa_driver.c`
+  keeps one no-op hardware struct; the `generic_hw` argument is gone. Ran `jackd -d alsa -d hw:U192k` for 12 s, no errors.
+- `e00c74b2` Plan B S1: usx2y deleted; `promiscuous.c` becomes `platform/promiscuous.cpp`; `JackLinuxTime.c` becomes
+  `platform/JackLinuxTime.cpp` (the clock functions move to `jackmini` and get snake_case names); `alloccount.c` becomes
+  `tests/perf/alloccount.cpp`.
+- `9b29f41c` Dead public headers removed: `intclient.h`, `statistics.h`, `weakjack.h`; `jack.h` loses the internal
+  client declarations.
+- `ea685c8e` Internal clients removed. The protocol has 26 requests and is at version 12.
+- `8fd1e5a2` Style guide (`docs/design/style.md`) and the namespace rename `Jack` to `jackmini`.
+
+What is left in C: `platform/alsa/alsa_driver.c`, `alsa_rawmidi.c`, `alsa_seqmidi.c` (the S8 port), and
+`tests/alsa_test_resampler_plugin.c`. The ALSA C files use `server/driver_interface.h` and the old driver structs,
+so the driver module interface (S4) comes before the ALSA port (S8).
 
 - `0c3d50b6` Latency on `jackmini::Client` (port ranges, recompute, the latency callback),
   and `jackctl_server_set_freewheel` (freewheel as a server control). Found: a client opened
