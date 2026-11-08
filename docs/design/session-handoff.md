@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `98fe0131` (protocol item 5). `origin/develop` is `5c926a55`.
+  `66d3abc4` (protocol item 6). `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -68,6 +68,12 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `66d3abc4` Protocol item 6: deactivate keeps the connections. The graph counts a
+  deactivated client's connections only while it is active (`SetInactive`), its
+  inputs are silent, and its outputs are not mixed in. The engine no longer disconnects
+  or sends port-off notices on deactivate. Tests: `deactivate_graph_unit` (graph), and
+  the client API with a running server (connection kept, the other client keeps
+  cycling, silence, audio back on reactivation). Closing a deactivated client is fine.
 - `98fe0131` Protocol item 5: the live activation counters are outside the copied
   connection state (`JackGraphManager::fActivation`). `JackActivationCount` keeps only
   the configuration count. `tests/counter_tsan_unit.cpp`: TSAN reports four races on
@@ -135,23 +141,21 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-- **Item 6: deactivate keeps connections** (protocol.md section 6, client-api.md). The
-  engine skips an inactive client's ports (silence in, nothing mixed out), keeps the
-  connections, and sends `kActivateClient` on the next activate. Tests: connections
-  survive a deactivate; no audio through an inactive client; the cycle goes on without
-  it; reactivate restores the path on the next cycle. Extend the graph tests.
+- **Item 7: the fake server and the conformance tests** (protocol.md section 8): a test
+  double that speaks the protocol over a socketpair, driven to every reply and
+  notification; conformance tests per message (a well-formed request gets its reply;
+  a malformed one gets Protocol; a version mismatch is refused); static checks per
+  shared structure; TSAN on the fake-server tests.
 - **4b (waits for the client-API port, by decision):** drop the session and metadata
   messages, then renumber the requests.
 - **Measure the notification queue size** (protocol section 9, item 3); 256 now.
-- **Open TSAN findings, outside the counters** (from a TSAN run of `jackd` with the
-  end-to-end client; not yet fixed):
-  - `JackEngine::ProcessNext`, `fLastSwitchUsecs` written by the RT thread and another
-    thread (JackEngine.cpp:154).
+- **Open TSAN findings, outside the counters** (not fixed; verify on the base before
+  attributing):
+  - `JackEngine::ProcessNext`, `fLastSwitchUsecs` (JackEngine.cpp:154).
   - `JackConnectionManager::ResumeRefNum`, the client timing fields `fStatus`,
     `fSignaledAt` (JackConnectionManager.cpp:267-268).
   - Client library: `JackClient::Activate`, `Deactivate`, `CallSyncCallbackAux`,
-    `JackLibClient::Open` (client-API port).
-  Verify on the base commit before attributing them to a change.
+    `JackLibClient::Open`.
 
 ## Environment facts
 
@@ -207,7 +211,7 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 2. Read this file, `docs/design/protocol.md` (section 4.1 and the order of work),
    and `docs/design/client-api.md`.
 3. Rebuild the test dir and run `ctest --test-dir /tmp/opencode/build-jack2-cxx23`.
-4. Continue with item 6 (deactivate keeps connections). 4b waits for the client-API port (see "Next").
+4. Continue with item 7 (fake server and conformance tests). 4b waits for the client-API port (see "Next").
 
 ## Working agreements with the user
 

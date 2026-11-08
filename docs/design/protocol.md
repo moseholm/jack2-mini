@@ -310,5 +310,6 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
    Notifications keep their own format until item 4.
 4. Requests, then notifications.
 5. Counter redesign (section 4.5), with its TSAN test.
-6. Deactivate with connections (section 6), with the graph tests.
+6. Deactivate with connections (section 6), with the graph tests. Done: the graph
+   and the buffer path skip a deactivated client; the connections are kept.
 7. The fake server and the conformance tests.
