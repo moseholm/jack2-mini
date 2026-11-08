@@ -22,7 +22,7 @@ can change.
 |---|---|---|
 | Control socket | client → server, with a reply | requests (section 3), each answered by one reply |
 | Notification socket | server → client | notifications (section 3.2) |
-| Shared memory | both | graph, engine control, transport, client control, activation counts (section 4) |
+| Shared memory | both | audio buffers and the port array, engine control, transport, client control, activation counts (section 4) |
 | Futex words | both | cycle wake-up and client completion (section 5) |
 
 The two sockets are separate. Requests and replies are never mixed with
@@ -128,6 +128,13 @@ already active". The P0 startup failures were this. A segment that was not
 removed also keeps its memory, which is how a 107 MB segment was left behind
 after one killed run.
 
+**One server or several.** The registry's server table exists only because
+several servers can run at once under different names. If jackmini runs one
+server per machine, that table goes. The single-instance rule can then be a
+lock on the server's socket path. Clients still find the server by its socket,
+and they still get their audio segments by descriptor. Open: do we keep server
+names for running more than one?
+
 **What replaces it.** Nothing global. The server passes each client the file
 descriptors it needs when the client opens, and the client maps them. A killed
 server leaves no table entries, because there is no table: its segments go when
@@ -169,6 +176,12 @@ name.
 | `JackAtomicState`, `JackAtomicArrayState` | two- and three-buffer switching protocols | keep the protocol, see 4.5 |
 
 ### 4.4 Graph segment
+
+Audio buffers are part of the port array: each `JackPort` holds its own buffer
+of `BUFFER_SIZE_MAX` (8192) samples. So audio already travels through shared
+memory, and the realtime thread reads and writes the buffers in place. The new
+layout keeps this. At `PORT_NUM` (2048) ports that is about 67 MB of buffer
+storage, most of the 107 MB segment seen in the baseline.
 
 The port array has a fixed maximum, `PORT_NUM` (2048 ports), and is allocated
 in the graph segment when the server starts. It is never reallocated, so
