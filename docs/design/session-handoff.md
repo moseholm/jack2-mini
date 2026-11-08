@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `575b58e9` (protocol item 3). `origin/develop` is `5c926a55`.
+  `a20f118d` (protocol item 4a). `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -68,6 +68,12 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `a20f118d` Protocol item 4a: notifications framed with the header (type = notification
+  kind, request 0, or an id for a synchronous notification that the client's reply
+  echoes). Messages are built on the stack (the RT thread sends notifications; no
+  allocation). `SendWithFds` finishes partial writes; a full non-blocking socket drops
+  the message as before. Checks: `message_frame_unit` (notification round trip, sync
+  reply); end-to-end client; control API; old-version refusal; ALSA starts.
 - `575b58e9` Protocol order of work, item 3: the 16-byte header on every request
   and reply (`common/JackMessage.h`), the request id echoed, the exact payload
   length, and the version check on every message (`JACK_PROTOCOL_VERSION` is 10).
@@ -120,10 +126,17 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-- Protocol order of work, item 4: requests, then notifications. The request
-  payloads are already in the header format; notifications still need the header
-  (`JackClientNotification`, `JackClientNotificationRequest`, and the sync result).
-  Check the notification path with the end-to-end client after each change.
+Protocol item 4 is split. 4a (notifications framed) is done.
+
+- **4b: drop the session and metadata messages** (protocol.md sections 3.1 and 3.2:
+  kSessionNotify, kSessionReply, kClientHasSessionCallback, kPropertyChangeNotify,
+  kSessionCallback, kPropertyChangeCallback), then renumber the requests. The decisions
+  are confirmed (client-api.md), but session code is in about 30 files, and the C
+  library exports `jack_session_*` and the metadata functions. Removing them is a
+  visible break in the library. Confirm the scope before starting.
+- **4c: bounded per-client notification queue** with `kDropped` (protocol.md section 3.2).
+  Needs a design: the RT thread sends notifications through the server's request
+  socket today, and the queue size is open (section 9, item 3, to be measured).
 - Item 5: counter redesign (section 4.5), with its TSAN test.
 
 ## Environment facts
@@ -180,7 +193,7 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 2. Read this file, `docs/design/protocol.md` (section 4.1 and the order of work),
    and `docs/design/client-api.md`.
 3. Rebuild the test dir and run `ctest --test-dir /tmp/opencode/build-jack2-cxx23`.
-4. Continue with protocol item 4 (see "Next").
+4. Continue with protocol item 4b or 4c (see "Next").
 
 ## Working agreements with the user
 
