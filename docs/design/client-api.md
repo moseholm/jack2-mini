@@ -1,6 +1,6 @@
 # C++ client API (P1 design)
 
-Status: decided. The headers are written in `common/jackmini/` and compile
+Status: decided. The headers are written in `client/jackmini/` and compile
 standalone; the implementation is not started.
 
 ## Scope
@@ -104,7 +104,7 @@ Rules that follow from this:
 
 ## Next steps
 
-1. Done: the headers are in `common/jackmini/`, and `tests/jackmini_api_unit.cpp`
+1. Done: the headers are in `client/jackmini/`, and `tests/jackmini_api_unit.cpp`
    checks the types and overloads at compile time.
 2. Partly done: `RingBuffer`, `Uuid`, and the error text are implemented and
    tested without a server (`tests/jackmini_unit.cpp`, TSAN clean). The
@@ -113,7 +113,7 @@ Rules that follow from this:
 3. Port the client library behind the new headers, one area at a time, with
    the existing `tests/*.cpp` programs ported as they go. Areas, in order:
    - Done: the lifecycle (open, activate, deactivate, close), the callbacks, and the
-     identity (name, uuid, sample rate, buffer size, cpu load). `common/jackmini/client.cpp`,
+     identity (name, uuid, sample rate, buffer size, cpu load). `client/jackmini/client.cpp`,
      checked by `tests/jackmini_client_e2e.cpp` (run with a server).
    - Done: ports (register, unregister, names, find, flags, type) and connections. The
      port table is safe for the realtime thread.

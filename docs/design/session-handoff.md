@@ -39,7 +39,7 @@ Architecture and scope:
 
 Client API (`docs/design/client-api.md`):
 
-- Namespace `jackmini`. Headers in `common/jackmini/`, declarations only for the
+- Namespace `jackmini`. Headers in `client/jackmini/`, declarations only for the
   client; `RingBuffer`, `Uuid` and error text are implemented and tested.
 - Keep the control API as `jackmini::control` (an application can run the server
   without `jackd`). Drop the session API. Drop metadata (stubs, no database).
@@ -66,6 +66,19 @@ Protocol and shared memory (`docs/design/protocol.md`):
 - Counters: split configuration (copied on write) from live activation counters
   (never copied). Fixes the TSAN race in the connection-state copy.
 
+## Layout (current)
+
+- `common/`: shared by client and server (shared memory structures, requests and notifications, graph, ports,
+  logging, the MIDI buffer, the client base class `JackClient`, the platform selector, the public headers in `common/jack/`).
+- `client/`: the client library (`JackLibClient`, `JackGenericClientChannel`, `JackLibGlobals.h`, `varargs.h`,
+  `JackServerLaunch.h`) and the `jackmini` API (`client/jackmini/`).
+- `server/`: the engine, the server and its control API, `jackd` (`Jackdmp.cpp`), the drivers (dummy, freewheel,
+  audio, MIDI), the internal clients and the session file loader, the request decoder, the MIDI queues.
+- `platform/`: the POSIX and Linux code (threads, mutexes, sockets, futex, clock, the ALSA drivers in
+  `platform/alsa` and `platform/alsarawmidi`).
+- The rule for a file used by both sides: `common/`. Where the placement was unclear (for example `JackClient`, which
+  is the base of the server's internal clients), it stays in `common/`.
+
 ## Done (commits in order, newest first)
 
 - `0c3d50b6` Latency on `jackmini::Client` (port ranges, recompute, the latency callback),
@@ -78,7 +91,7 @@ Protocol and shared memory (`docs/design/protocol.md`):
   (the MIDI buffer's friend). Checked by `tests/jackmini_client_e2e.cpp` (with a server).
 - `f92385ed` Client API step 3, second area: ports and connections.
 - `e082dfe7` Client API step 3, first area: `jackmini::Client` lifecycle, callbacks and
-  identity on the C library (`common/jackmini/client.cpp`). Not yet: ports, connections,
+  identity on the C library (`client/jackmini/client.cpp`). Not yet: ports, connections,
   buffers, transport (declared, not implemented: a program that calls them does not
   link). Also a C library fix: a failed open kept only `JackFailure|JackServerError`,
   dropping the reason (`JackNameNotUnique`). Checked by `tests/jackmini_client_e2e.cpp`
@@ -208,7 +221,7 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   per cycle), so the period check is skipped there.
 - **C client library removed (step 2 done).** The client API exports are gone: `common/JackAPI.cpp`,
   `common/JackLibAPI.cpp` and their wrapper bodies. The jackmini client calls `jackmini::lib`
-  (`common/jackmini/lib.hpp`, `lib.cpp`), which holds the former bodies, not exported. The UUID functions
+  (`client/jackmini/lib.hpp`, `lib.cpp`), which holds the former bodies, not exported. The UUID functions
   the server uses moved to `common/JackUuid.cpp`. `jackd` assigns `jack_error_callback` directly.
   Exports left in libjack (24 `jack_` symbols): the `jack_midi_*` functions (the ALSA drivers use them as
   their interface), the `jack_ringbuffer_*` functions, and the `jack_error_callback`/`jack_info_callback`

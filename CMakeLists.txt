@@ -67,6 +67,8 @@ configure_file(
 
 set(JACK_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/common"
+    "${CMAKE_CURRENT_SOURCE_DIR}/client"
+    "${CMAKE_CURRENT_SOURCE_DIR}/server"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/jack"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform"
     "${CMAKE_CURRENT_BINARY_DIR}")
@@ -84,13 +86,13 @@ set(JACK_COMMON_SOURCES
     common/JackAudioPort.cpp
     common/JackEngineControl.cpp
     common/JackShmMem.cpp
-    common/JackGenericClientChannel.cpp
+    client/JackGenericClientChannel.cpp
     common/JackGlobals.cpp
     common/JackTransportEngine.cpp
     common/JackTools.cpp
     common/JackUuid.cpp
     common/JackMessageBuffer.cpp
-    common/promiscuous.c
+    platform/promiscuous.c
     platform/JackPosixThread.cpp
     platform/JackPosixProcessSync.cpp
     platform/JackPosixMutex.cpp
@@ -101,42 +103,42 @@ set(JACK_COMMON_SOURCES
 
 set(JACK_CLIENT_SOURCES
     ${JACK_COMMON_SOURCES}
-    common/JackLibClient.cpp
-    common/jackmini/client.cpp
-    common/jackmini/lib.cpp
-    common/JackMetadata.cpp
+    client/JackLibClient.cpp
+    client/jackmini/client.cpp
+    client/jackmini/lib.cpp
+    server/JackMetadata.cpp
     platform/JackSocketClientChannel.cpp
     platform/JackPosixServerLaunch.cpp)
 
 set(JACK_SERVER_SOURCES
     ${JACK_COMMON_SOURCES}
-    common/JackAudioDriver.cpp
-    common/JackTimedDriver.cpp
-    common/JackMidiDriver.cpp
-    common/JackDriver.cpp
-    common/JackEngine.cpp
-    common/JackExternalClient.cpp
-    common/JackFreewheelDriver.cpp
-    common/JackInternalClient.cpp
-    common/JackInternalSessionLoader.cpp
-    common/JackServer.cpp
-    common/JackThreadedDriver.cpp
-    common/JackDriverLoader.cpp
-    common/JackServerGlobals.cpp
-    common/JackControlAPI.cpp
-    common/JackRequestDecoder.cpp
-    common/JackMidiAsyncQueue.cpp
-    common/JackMidiAsyncWaitQueue.cpp
-    common/JackMidiBufferReadQueue.cpp
-    common/JackMidiBufferWriteQueue.cpp
-    common/JackMidiRawInputWriteQueue.cpp
-    common/JackMidiRawOutputWriteQueue.cpp
-    common/JackMidiReadQueue.cpp
-    common/JackMidiReceiveQueue.cpp
-    common/JackMidiSendQueue.cpp
-    common/JackMidiUtil.cpp
-    common/JackMidiWriteQueue.cpp
-    common/JackMetadata.cpp
+    server/JackAudioDriver.cpp
+    server/JackTimedDriver.cpp
+    server/JackMidiDriver.cpp
+    server/JackDriver.cpp
+    server/JackEngine.cpp
+    server/JackExternalClient.cpp
+    server/JackFreewheelDriver.cpp
+    server/JackInternalClient.cpp
+    server/JackInternalSessionLoader.cpp
+    server/JackServer.cpp
+    server/JackThreadedDriver.cpp
+    server/JackDriverLoader.cpp
+    server/JackServerGlobals.cpp
+    server/JackControlAPI.cpp
+    server/JackRequestDecoder.cpp
+    server/JackMidiAsyncQueue.cpp
+    server/JackMidiAsyncWaitQueue.cpp
+    server/JackMidiBufferReadQueue.cpp
+    server/JackMidiBufferWriteQueue.cpp
+    server/JackMidiRawInputWriteQueue.cpp
+    server/JackMidiRawOutputWriteQueue.cpp
+    server/JackMidiReadQueue.cpp
+    server/JackMidiReceiveQueue.cpp
+    server/JackMidiSendQueue.cpp
+    server/JackMidiUtil.cpp
+    server/JackMidiWriteQueue.cpp
+    server/JackMetadata.cpp
     platform/JackSocketServerChannel.cpp
     platform/JackSocketNotifyChannel.cpp
     platform/JackSocketServerNotifyChannel.cpp
@@ -190,7 +192,7 @@ set_target_properties(jackserver PROPERTIES
     C_VISIBILITY_PRESET hidden
     CXX_VISIBILITY_PRESET hidden)
 
-add_executable(jackd common/Jackdmp.cpp)
+add_executable(jackd server/Jackdmp.cpp)
 target_include_directories(jackd PRIVATE ${JACK_INCLUDE_DIRS})
 target_compile_definitions(jackd PRIVATE HAVE_CONFIG_H SERVER_SIDE)
 target_link_libraries(jackd PRIVATE jackserver jacklog Threads::Threads ${CMAKE_DL_LIBS} rt m)
@@ -207,7 +209,7 @@ function(jack_add_driver name)
     install(TARGETS jack_${name} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/jack)
 endfunction()
 
-jack_add_driver(dummy common/JackDummyDriver.cpp)
+jack_add_driver(dummy server/JackDummyDriver.cpp)
 
 # The vendored PipeWire resampler is portable C by default.  On x86 we also
 # build its SSE and AVX2 kernels, and on AArch64 its NEON kernel; the bridge
@@ -300,16 +302,16 @@ install(TARGETS jackd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # The client API: the jackmini headers (jackmini/...).
 install(FILES
-    common/jackmini/client.hpp
-    common/jackmini/control.hpp
-    common/jackmini/error.hpp
-    common/jackmini/jackmini.hpp
-    common/jackmini/midi.hpp
-    common/jackmini/options.hpp
-    common/jackmini/port.hpp
-    common/jackmini/ringbuffer.hpp
-    common/jackmini/transport.hpp
-    common/jackmini/uuid.hpp
+    client/jackmini/client.hpp
+    client/jackmini/control.hpp
+    client/jackmini/error.hpp
+    client/jackmini/jackmini.hpp
+    client/jackmini/midi.hpp
+    client/jackmini/options.hpp
+    client/jackmini/port.hpp
+    client/jackmini/ringbuffer.hpp
+    client/jackmini/transport.hpp
+    client/jackmini/uuid.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/jackmini)
 
 # The public headers of the libraries that have an interface of their own: the server control, the MIDI buffer and the
@@ -439,8 +441,8 @@ if(JACK_BUILD_TESTS)
     add_test(NAME notify_overflow_unit COMMAND jack_notify_overflow_unit)
 
     # The parts of jackmini that need no server: ring buffer, Uuid, error text.
-    add_library(jackmini_base STATIC common/jackmini/uuid.cpp common/jackmini/error.cpp)
-    target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common)
+    add_library(jackmini_base STATIC client/jackmini/uuid.cpp client/jackmini/error.cpp)
+    target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/client)
     target_compile_features(jackmini_base PUBLIC cxx_std_23)
     add_executable(jack_jackmini_unit tests/jackmini_unit.cpp)
     target_link_libraries(jack_jackmini_unit PRIVATE jackmini_base Threads::Threads)
