@@ -411,6 +411,7 @@ void JackEngine::NotifyFailure(int code, const char* reason)
 
 void JackEngine::NotifyFreewheel(bool onoff)
 {
+    fEngineControl->fFreewheel = onoff;
     if (onoff) {
         // Save RT state
         fEngineControl->fSavedRealTime = fEngineControl->fRealTime;

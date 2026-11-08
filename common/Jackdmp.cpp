@@ -155,6 +155,7 @@ static void usage(FILE* file, jackctl_server_t *server, bool full = true)
             "               [ --silent OR -s ]\n"
             "               [ --sync OR -S ]\n"
             "               [ --temporary OR -T ]\n"
+            "               [ --freewheel OR -F ]\n"
             "               [ --version OR -V ]\n"
             "         -d master-backend-name [ ... master-backend args ... ]\n"
             "       jackdmp -d master-backend-name --help\n"
@@ -211,6 +212,7 @@ int main(int argc, char** argv)
                                        { "realtime-priority", 1, 0, 'P' },
                                        { "timeout", 1, 0, 't' },
                                        { "temporary", 0, 0, 'T' },
+                                       { "freewheel", 0, 0, 'F' },
                                        { "silent", 0, 0, 's' },
                                        { "sync", 0, 0, 'S' },
                                        { "autoconnect", 1, 0, 'a' },
@@ -381,6 +383,14 @@ int main(int argc, char** argv)
 
             case 'T':
                 param = jackctl_get_parameter(server_parameters, "temporary");
+                if (param != NULL) {
+                    value.b = true;
+                    jackctl_parameter_set_value(param, &value);
+                }
+                break;
+
+            case 'F':
+                param = jackctl_get_parameter(server_parameters, "freewheel");
                 if (param != NULL) {
                     value.b = true;
                     jackctl_parameter_set_value(param, &value);

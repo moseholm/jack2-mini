@@ -154,10 +154,19 @@ int JackServer::Close()
     return 0;
 }
 
-int JackServer::Start()
+int JackServer::Start(bool freewheel)
 {
-    jack_log("JackServer::Start");
-    if (fAudioDriver->Start() < 0) {
+    jack_log("JackServer::Start freewheel = %d", freewheel);
+    if (freewheel) {
+        // Begin in freewheel mode with the sound card never started (SetFreewheel would stop it)
+        fFreewheel = true;
+        fEngine->NotifyFreewheel(true);
+        fAudioDriver->SetMaster(false);
+        fFreewheelDriver->SetMaster(true);
+        if (fThreadedFreewheelDriver->Start() < 0) {
+            return -1;
+        }
+    } else if (fAudioDriver->Start() < 0) {
         return -1;
     }
     return fRequestChannel.Start();

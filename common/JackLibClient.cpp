@@ -146,7 +146,7 @@ int JackLibClient::Open(const char* server_name, const char* name, jack_uuid_t u
         goto error;
     }
 
-    SetupDriverSync(false);
+    SetupDriverSync(GetEngineControl()->fFreewheel);
 
     // Connect shared synchro : the synchro must be usable in I/O mode when several clients live in the same process
     assert(JackGlobals::fSynchroMutex);

@@ -73,7 +73,7 @@ class SERVER_EXPORT JackServer
         int Open(jack_driver_desc_t* driver_desc, JSList* driver_params);
         int Close();
 
-        int Start();
+        int Start(bool freewheel = false);
         int Stop();
 
         bool IsRunning();

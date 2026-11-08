@@ -37,6 +37,21 @@ namespace
 
 int gFailures = 0;
 
+// Waits until a counter has moved by n cycles (a time limit guards against a stalled server).  Counting cycles, not
+// time, makes the checks exact with the server in freewheel mode (jackd -F), and still correct in real time.
+bool WaitCycles(const std::atomic<unsigned long>& counter, unsigned long n)
+{
+    const unsigned long target = counter.load() + n;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+    while (counter.load() < target) {
+        if (std::chrono::steady_clock::now() > deadline) {
+            return false;
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(200));
+    }
+    return true;
+}
+
 void Check(const char* what, bool ok)
 {
     std::printf("%-56s %s\n", what, ok ? "ok" : "FAIL");
@@ -88,22 +103,35 @@ int main(int argc, char** argv)
     Check("active: a second activate is refused", client.activate().error() == Error::InvalidState);
     Check("active: callbacks cannot be set", client.on_shutdown([] {}).error() == Error::InvalidState);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    Check("active: the process callback runs each cycle", cycles.load() > 10);
+    // A clock client counts the cycles of the server; the checks below wait for cycles of the clock, not for time.
+    auto clock_opened = Client::open("jackmini_clock", options);
+    Check("clock client opens", clock_opened.has_value());
+    if (!clock_opened) {
+        return 1;
+    }
+    Client clock = std::move(*clock_opened);
+    std::atomic<unsigned long> clock_cycles{ 0 };
+    Check("clock: on_process", clock.on_process([&](FrameCount) {
+        clock_cycles++;
+        return true;
+    }).has_value());
+    Check("clock activates", clock.activate().has_value());
+
+    Check("active: the process callback runs", WaitCycles(cycles, 10));
 
     Check("deactivate", client.deactivate().has_value());
     Check("inactive: is_active is false", !client.is_active());
     Check("inactive: a second deactivate is refused", client.deactivate().error() == Error::InvalidState);
 
     const unsigned long after = cycles.load();
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    Check("inactive: the clock runs on", WaitCycles(clock_cycles, 200));
     Check("inactive: the process callback no longer runs", cycles.load() == after);
 
     Check("inactive: callbacks can be set again", client.on_buffer_size([](FrameCount) { return true; }).has_value());
     Check("reactivate", client.activate().has_value());
-    const unsigned long resumed = cycles.load();
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    Check("reactivated: the process callback runs again", cycles.load() > resumed);
+    Check("reactivated: the process callback runs again", WaitCycles(cycles, 10));
+    Check("clock deactivates", clock.deactivate().has_value());
+    clock.close();
 
     // Ports and connections.  A second client supplies a port of its own, so that find_port and the connections see
     // another client's port too.

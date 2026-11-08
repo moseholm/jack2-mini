@@ -57,6 +57,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
     bool fTimeOut;
     bool fRealTime;
     bool fSavedRealTime;  // RT state saved and restored during Freewheel mode
+    bool fFreewheel;      // Freewheel mode is on: clients opened now must use the normal (not flushed) driver synchro
     int fServerPriority;
     int fClientPriority;
     int fMaxClientPriority;
@@ -101,6 +102,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
         fTimeOutUsecs = timeout * 1000;
         fRealTime = rt;
         fSavedRealTime = false;
+        fFreewheel = false;
         fServerPriority = priority;
 
         fClientPriority = (rt) ? priority - 5 : 0;

@@ -161,21 +161,18 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-Decided by the user: timebase is dropped; freewheel is a server control; latency is in the
-new API; the C library is kept as the tag `reference/c-client-api`; test programs are
-ported only when needed.
-
-- **Freewheel: fix the late-join bug.** A client opened while the server is in freewheel
-  mode does not start its cycle. The tests need this fixed before they can open clients
-  during freewheel, and before `-F` at start is offered (reverted for now).
-- **Decide how a separate test process switches freewheel.** The control call is in the
-  server process only. Options: a test-only control request on the server socket; a signal;
-  or a test that runs the server in-process (libjack and libjackserver in one process
-  conflict, not tried). Pending the user's choice.
-- **Then:** convert the sleep-based tests (deactivate, overflow, counters) to freewheel
-  runs with exact counts.
-- **Remaining client API:** the test programs ported when needed; the C client library
-  removed (after the above); then protocol item 4b (drop session and metadata).
+- **Freewheel** is a construction-only setting: `jackd -F` (parameter `freewheel`). The runtime
+  switch `jackctl_server_set_freewheel` is removed. The late-join bug is fixed: a client opened
+  during freewheel used the flushed driver synchro (its signals to the freewheel driver were
+  dropped, so the driver waited 10 s each cycle). The shared `JackEngineControl::fFreewheel`
+  flag now sets that mode at open.
+- **Sleep-based tests:** the deactivate and reactivate checks in `tests/jackmini_client_e2e.cpp`
+  count cycles of a clock client, not time. The e2e runs in freewheel (`jackd -F -d dummy`, 1 s)
+  and in real time (6 s), both pass. The transport and latency checks still use sleeps.
+- **Still open:** the overflow test (notification queue) is not in the repo; add it with the
+  freewheel start if wanted.
+- **Then:** port the test programs only when needed; remove the C client library (reference tag
+  `reference/c-client-api`); protocol item 4b (drop session and metadata messages).
 - Open TSAN findings, outside the counters (verified to be the same statements as in
   `origin/develop`): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing
   fields in `ResumeRefNum`; the client library's `JackClient::Activate`, `Deactivate`,

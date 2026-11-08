@@ -83,6 +83,10 @@ struct jackctl_server
     union jackctl_parameter_value temporary;
     union jackctl_parameter_value default_temporary;
 
+    /* bool, whether to start in freewheel mode: cycles run as fast as possible, without the sound card */
+    union jackctl_parameter_value freewheel;
+    union jackctl_parameter_value default_freewheel;
+
     /* bool, whether to be verbose */
     union jackctl_parameter_value verbose;
     union jackctl_parameter_value default_verbose;
@@ -778,6 +782,20 @@ SERVER_EXPORT jackctl_server_t * jackctl_server_create2(
     value.b = false;
     if (jackctl_add_parameter(
             &server_ptr->parameters,
+            "freewheel",
+            "Start in freewheel mode: cycles run as fast as possible, without the sound card.",
+            "",
+            JackParamBool,
+            &server_ptr->freewheel,
+            &server_ptr->default_freewheel,
+            value) == NULL)
+    {
+        goto fail_free_parameters;
+    }
+
+    value.b = false;
+    if (jackctl_add_parameter(
+            &server_ptr->parameters,
             "verbose",
             "Verbose mode.",
             "",
@@ -933,17 +951,6 @@ SERVER_EXPORT bool jackctl_server_close(jackctl_server *server_ptr)
     }
 }
 
-/* Freewheel: the server runs cycles as fast as it can, without waiting for the sound card.  Switching is done while the
- * server runs; clients that are to run during freewheel must be opened before the switch (a client opened during
- * freewheel does not start its cycle yet). */
-SERVER_EXPORT bool jackctl_server_set_freewheel(jackctl_server *server_ptr, bool onoff)
-{
-    if (!server_ptr || !server_ptr->engine) {
-        return false;
-    }
-    return server_ptr->engine->SetFreewheel(onoff) >= 0;
-}
-
 SERVER_EXPORT const JSList * jackctl_server_get_parameters(jackctl_server *server_ptr)
 {
     return (server_ptr) ? server_ptr->parameters : NULL;
@@ -1044,7 +1051,7 @@ jackctl_server_start(
     if (!server_ptr) {
         return false;
     } else {
-        int rc = server_ptr->engine->Start();
+        int rc = server_ptr->engine->Start(server_ptr->freewheel.b);
         bool result = rc >= 0;
         if (! result)
         {

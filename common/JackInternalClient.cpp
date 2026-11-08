@@ -107,7 +107,7 @@ int JackInternalClient::Open(const char* server_name, const char* name, jack_uui
         goto error;
     }
 
-    SetupDriverSync(false);
+    SetupDriverSync(GetEngineControl()->fFreewheel);
     JackGlobals::fClientTable[fClientControl.fRefNum] = this;
     JackGlobals::fServerRunning = true;
     jack_log("JackInternalClient::Open name = %s refnum = %ld", name_res.data(), fClientControl.fRefNum);
