@@ -1,6 +1,7 @@
 # C++ client API (P1 design)
 
-Status: decided, not implemented. Headers and tests come next.
+Status: decided. The headers are written in `common/jackmini/` and compile
+standalone; the implementation is not started.
 
 ## Scope
 
@@ -103,7 +104,8 @@ Rules that follow from this:
 
 ## Next steps
 
-1. Write `common/jack/*.hpp` for the surface above. No implementation yet.
+1. Done: the headers are in `common/jackmini/`, and `tests/jackmini_api_unit.cpp`
+   checks the types and overloads at compile time.
 2. Write the tests for the surface against a fake server, so they run without
    audio hardware.
 3. Port the client library behind the new headers, one area at a time, with

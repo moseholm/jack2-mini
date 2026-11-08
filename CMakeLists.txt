@@ -359,6 +359,11 @@ if(JACK_BUILD_TESTS)
     target_include_directories(jack_cstring_unit PRIVATE ${JACK_INCLUDE_DIRS})
     add_test(NAME cstring_unit COMMAND jack_cstring_unit)
 
+    # Compile-time checks of the jackmini client API headers.  No implementation is linked.
+    add_executable(jack_api_unit tests/jackmini_api_unit.cpp)
+    target_include_directories(jack_api_unit PRIVATE ${JACK_INCLUDE_DIRS})
+    add_test(NAME jackmini_api_unit COMMAND jack_api_unit)
+
     # A test-only resampler plugin, loaded by name from JACK_RESAMPLER_PATH.
     add_library(passthrough_test MODULE tests/alsa_test_resampler_plugin.c)
     target_include_directories(passthrough_test PRIVATE
