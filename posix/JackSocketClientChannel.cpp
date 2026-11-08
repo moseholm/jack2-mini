@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackSocketClientChannel.h"
 #include "JackRequest.h"
+#include "JackNotification.h"
 #include "JackClient.h"
 #include "JackGlobals.h"
 #include "JackError.h"
@@ -156,6 +157,9 @@ bool JackSocketClientChannel::Execute()
         }
     }
 
+    if (event.fNotify == kDropped) {
+        jack_error("JACK server dropped %d notifications for this client (it did not read them in time)", event.fValue1);
+    }
     res.fResult = fClient->ClientNotify(event.fRefNum, event.fName, event.fNotify, event.fSync, event.fMessage, event.fValue1, event.fValue2);
 
     if (event.fSync) {
