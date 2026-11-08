@@ -68,7 +68,7 @@ typedef int	(*JackDriverBufSizeFunction)(struct _jack_driver *,
 
      1) engine loads driver via runtime dynamic linking
 	 - calls jack_driver_load
-	 - we call dlsym for "driver_initialize" and execute it
+	 - we call dlsym for "jackmini_driver_module", check its version, and call its initialize function
      2) engine attaches to driver
      3) engine starts driver
      4) driver runs its own thread, calling
@@ -246,8 +246,8 @@ void jack_driver_unload (jack_driver_t *);
 
      1) engine loads driver via runtime dynamic linking
 	 - calls jack_driver_load
-	 - we call dlsym for "driver_initialize" and execute it
-         - driver_initialize calls jack_driver_nt_init
+	 - we call dlsym for "jackmini_driver_module", check its version, and call its initialize function
+         - the module initialize function calls jack_driver_nt_init
      2) nt layer attaches to driver
      3) nt layer starts driver
      4) nt layer runs a thread, calling

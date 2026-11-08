@@ -422,28 +422,37 @@ struct DriverModuleCloser {
     }
 };
 
-static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sofile, const char* symbol, const char* driver_dir)
+/* Loads the module of a driver file, checks its interface version, and returns its descriptor. A driver whose name is
+   already in the list is refused, so the first one is used. */
+static jack_driver_desc_t* load_descriptor (JSList* drivers, const char* sofile, const char* driver_dir)
 {
     jack_driver_desc_t* descriptor = NULL;
     jack_driver_desc_t* other_descriptor;
-    JackDriverDescFunction so_get_descriptor = NULL;
     std::array<char, 1024> filename{};
     JSList* node;
     void* raw_handle = NULL;
 
     jackmini::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
-    
-    so_get_descriptor = (JackDriverDescFunction)check_symbol(sofile, symbol, driver_dir, &raw_handle);
-    std::unique_ptr<void, DriverModuleCloser> dlhandle(raw_handle);
 
-    if (so_get_descriptor == NULL) {
-        jack_error("jack_get_descriptor : dll %s is not a driver", sofile);
-        goto error;
+    const auto get_module = reinterpret_cast<jackmini::driver::ModuleFunction>(
+        check_symbol(sofile, jackmini::driver::kModuleSymbol, driver_dir, &raw_handle));
+    std::unique_ptr<void, DriverModuleCloser> dlhandle(raw_handle);
+    const jackmini::driver::Module* module = get_module ? get_module() : NULL;
+
+    if (module == NULL) {
+        jack_error("load_descriptor : dll %s is not a driver", sofile);
+        return NULL;
     }
 
-    if ((descriptor = so_get_descriptor ()) == NULL) {
+    if (module->version != jackmini::driver::kModuleVersion) {
+        jack_error("Driver from '%s' has interface version %u, this server needs version %u",
+                   filename.data(), module->version, jackmini::driver::kModuleVersion);
+        return NULL;
+    }
+
+    if ((descriptor = module->describe ()) == NULL) {
         jack_error("Driver from '%s' returned NULL descriptor", filename.data());
-        goto error;
+        return NULL;
     }
 
     /* check it doesn't exist already */
@@ -453,13 +462,11 @@ static jack_driver_desc_t* jack_get_descriptor (JSList* drivers, const char* sof
             jack_error("The drivers in '%s' and '%s' both have the name '%s'; using the first",
                        other_descriptor->file, filename.data(), other_descriptor->name);
             /* FIXME: delete the descriptor */
-            goto error;
+            return NULL;
         }
     }
 
     strncpy(descriptor->file, filename.data(), JACK_PATH_MAX);
-
-error:
     return descriptor;
 }
 
@@ -494,16 +501,11 @@ JSList* jack_drivers_load (JSList * drivers)
             continue;
         }
 
-        /* check if dll is an internal client */
-        if (check_symbol(name.c_str(), "jack_internal_initialize", driver_dir) != NULL) {
-            continue;
-        }
-
-        desc = jack_get_descriptor (drivers, name.c_str(), "driver_get_descriptor", driver_dir);
+        desc = load_descriptor (drivers, name.c_str(), driver_dir);
         if (desc) {
             driver_list = jack_slist_append (driver_list, desc);
         } else {
-            jack_error ("jack_get_descriptor returns null for \'%s\'", name.c_str());
+            jack_error ("Driver file \"%s\" does not give a usable driver descriptor", name.c_str());
         }
     }
 
@@ -515,54 +517,6 @@ JSList* jack_drivers_load (JSList * drivers)
     return driver_list;
 }
 
-
-
-JSList* jack_internals_load(JSList * internals)
-{
-    JSList* driver_list = NULL;
-    jack_driver_desc_t* desc;
-
-    const char* driver_dir;
-    if ((driver_dir = getenv("JACK_DRIVER_DIR")) == 0) {
-        driver_dir = ADDON_DIR;
-    }
-
-    /* search through the driver_dir and add get descriptors
-    from the .so files in it */
-    std::error_code ec;
-    const auto entries = ListDirectory(driver_dir, ec);
-    if (ec) {
-        jack_error ("Could not open driver directory %s: %s\n",
-                    driver_dir, ec.message().c_str());
-        return NULL;
-    }
-
-    for (const std::string& name : entries) {
-
-        if (!HasSharedObjectExtension(name)) {
-            continue;
-        }
-
-        /* check if dll is an internal client */
-        if (check_symbol(name.c_str(), "jack_internal_initialize", driver_dir) == NULL) {
-            continue;
-        }
-
-        desc = jack_get_descriptor (internals, name.c_str(), "jack_get_descriptor", driver_dir);
-        if (desc) {
-            driver_list = jack_slist_append (driver_list, desc);
-        } else {
-            jack_error ("jack_get_descriptor returns null for \'%s\'", name.c_str());
-        }
-    }
-
-    if (!driver_list) {
-        jack_error ("Could not find any internals in %s!", driver_dir);
-        return NULL;
-    }
-
-    return driver_list;
-}
 
 
 jackmini::JackDriverClientInterface* JackDriverInfo::Open(jack_driver_desc_t* driver_desc,
@@ -585,18 +539,20 @@ jackmini::JackDriverClientInterface* JackDriverInfo::Open(jack_driver_desc_t* dr
     }
 
 
-    //jack_error (" ---------------------------------  Successfully opened driver \"%s\"\n", driver_desc->file);
-
-        
-    fInitialize = (driverInitialize)GetDriverProc(fHandle, "driver_initialize");
-
-    if ((fInitialize == NULL) && (errstr = dlerror ()) != 0) {
-
-        jack_error("No initialize function in shared object %s\n", driver_desc->file);
+    const auto get_module = reinterpret_cast<jackmini::driver::ModuleFunction>(GetDriverProc(fHandle, jackmini::driver::kModuleSymbol));
+    fModule = get_module ? get_module() : NULL;
+    if (fModule == NULL) {
+        jack_error("No driver module entry point in shared object %s", driver_desc->file);
         return NULL;
     }
 
-    fBackend = fInitialize(engine, synchro, params);
+    if (fModule->version != jackmini::driver::kModuleVersion) {
+        jack_error("Driver %s has interface version %u, this server needs version %u",
+                   driver_desc->file, fModule->version, jackmini::driver::kModuleVersion);
+        return NULL;
+    }
+
+    fBackend = fModule->initialize(engine, synchro, params);
     return fBackend;
 }
 

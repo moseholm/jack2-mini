@@ -24,21 +24,20 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "driver_interface.h"
 #include "JackDriver.h"
 #include "JackSystemDeps.h"
-
-typedef jackmini::JackDriverClientInterface* (*driverInitialize) (jackmini::JackLockedEngine*, jackmini::JackSynchro*, const JSList*);
+#include "driver_module.h"
 
 class SERVER_EXPORT JackDriverInfo
 {
 
     private:
 
-        driverInitialize fInitialize;
+        const jackmini::driver::Module* fModule;
         DRIVER_HANDLE fHandle;
         jackmini::JackDriverClientInterface* fBackend;
 
     public:
 
-        JackDriverInfo():fInitialize(NULL),fHandle(NULL),fBackend(NULL)
+        JackDriverInfo():fModule(NULL),fHandle(NULL),fBackend(NULL)
         {}
         ~JackDriverInfo();
 

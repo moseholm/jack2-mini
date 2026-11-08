@@ -189,8 +189,6 @@ JACK_CONSTRAINT_COMPOSE_ENUM(sint32);
 JACK_CONSTRAINT_COMPOSE_ENUM(char);
 JACK_CONSTRAINT_COMPOSE_ENUM(str);
 
-typedef jack_driver_desc_t * (*JackDriverDescFunction) ();
-
 #ifdef __cplusplus
 }
 #endif

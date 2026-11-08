@@ -27,7 +27,6 @@
 
 jack_driver_desc_t* jack_find_driver_descriptor(JSList* drivers, const char* name);
 JSList* jack_drivers_load(JSList* drivers);
-JSList* jack_internals_load(JSList* internals);
 void jack_free_driver_params(JSList * param_ptr);
 void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file);
 

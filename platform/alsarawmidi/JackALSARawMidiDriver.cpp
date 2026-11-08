@@ -31,6 +31,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackError.h"
 #include "JackMidiUtil.h"
 #include "driver_interface.h"
+#include "driver_module.h"
 
 using jackmini::JackALSARawMidiDriver;
 
@@ -628,42 +629,42 @@ JackALSARawMidiDriver::Write()
     return 0;
 }
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-    
+
+// singleton kind of driver
+static jackmini::JackALSARawMidiDriver* driver = NULL;
+
+static jack_driver_desc_t *
+describe_driver()
+{
+    // X: There could be parameters here regarding setting I/O buffer
+    // sizes.  I don't think MIDI drivers can accept parameters right
+    // now without being set as the main driver.
+
+    return jack_driver_descriptor_construct("alsarawmidi", JackDriverSlave, "Alternative ALSA raw MIDI backend.", NULL);
+}
+
+static jackmini::JackDriverClientInterface *
+initialize_driver(jackmini::JackLockedEngine *engine, jackmini::JackSynchro *table,
+                  const JSList *params)
+{
     // singleton kind of driver
-    static jackmini::JackALSARawMidiDriver* driver = NULL;
-
-    SERVER_EXPORT jack_driver_desc_t *
-    driver_get_descriptor()
-    {
-        // X: There could be parameters here regarding setting I/O buffer
-        // sizes.  I don't think MIDI drivers can accept parameters right
-        // now without being set as the main driver.
-
-        return jack_driver_descriptor_construct("alsarawmidi", JackDriverSlave, "Alternative ALSA raw MIDI backend.", NULL);
-    }
-
-    SERVER_EXPORT jackmini::JackDriverClientInterface *
-    driver_initialize(jackmini::JackLockedEngine *engine, jackmini::JackSynchro *table,
-                      const JSList *params)
-    {
-        // singleton kind of driver
-        if (!driver) {
-            driver = new jackmini::JackALSARawMidiDriver("system_midi", "alsarawmidi", engine, table);
-            if (driver->Open(1, 1, 0, 0, false, "midi in", "midi out", 0, 0) == 0) {
-                return driver;
-            } else {
-                delete driver;
-                return NULL;
-            }
+    if (!driver) {
+        driver = new jackmini::JackALSARawMidiDriver("system_midi", "alsarawmidi", engine, table);
+        if (driver->Open(1, 1, 0, 0, false, "midi in", "midi out", 0, 0) == 0) {
+            return driver;
         } else {
-            jack_info("JackALSARawMidiDriver already allocated, cannot be loaded twice");
+            delete driver;
             return NULL;
         }
+    } else {
+        jack_info("JackALSARawMidiDriver already allocated, cannot be loaded twice");
+        return NULL;
     }
-
-#ifdef __cplusplus
 }
-#endif
+
+
+extern "C" SERVER_EXPORT const jackmini::driver::Module* jackmini_driver_module()
+{
+    static const jackmini::driver::Module kDriverModule{jackmini::driver::kModuleVersion, describe_driver, initialize_driver};
+    return &kDriverModule;
+}

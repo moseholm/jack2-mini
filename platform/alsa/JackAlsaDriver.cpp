@@ -52,6 +52,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackPosixThread.h"
 #include "JackCompilerDeps.h"
 #include "JackServerGlobals.h"
+#include "driver_module.h"
 
 static struct jack_constraint_enum_str_descriptor midi_constraint_descr_array[] =
 {
@@ -1493,7 +1494,7 @@ dither_opt (char c, DitherAlgorithm* dither)
     return 0;
 }
 
-SERVER_EXPORT const jack_driver_desc_t* driver_get_descriptor ()
+static jack_driver_desc_t* describe_driver()
 {
     jack_driver_desc_t * desc;
     jack_driver_desc_filler_t filler;
@@ -1586,7 +1587,7 @@ SERVER_EXPORT const jack_driver_desc_t* driver_get_descriptor ()
     return desc;
 }
 
-SERVER_EXPORT jackmini::JackDriverClientInterface* driver_initialize(jackmini::JackLockedEngine* engine, jackmini::JackSynchro* table, const JSList* params)
+static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLockedEngine* engine, jackmini::JackSynchro* table, const JSList* params)
 {
     jack_nframes_t srate = 48000;
     jack_nframes_t frames_per_interrupt = 1024;
@@ -1785,4 +1786,8 @@ SERVER_EXPORT jackmini::JackDriverClientInterface* driver_initialize(jackmini::J
 }
 #endif
 
-
+extern "C" SERVER_EXPORT const jackmini::driver::Module* jackmini_driver_module()
+{
+    static const jackmini::driver::Module kDriverModule{jackmini::driver::kModuleVersion, describe_driver, initialize_driver};
+    return &kDriverModule;
+}
