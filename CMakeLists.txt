@@ -95,6 +95,7 @@ set(JACK_COMMON_SOURCES
     common/JackTools.cpp
     common/JackMessageBuffer.cpp
     common/promiscuous.c
+    common/jackmini/client.cpp
     posix/JackPosixThread.cpp
     posix/JackPosixProcessSync.cpp
     posix/JackPosixMutex.cpp
@@ -411,6 +412,12 @@ if(JACK_BUILD_TESTS)
     add_executable(jack_jackmini_unit tests/jackmini_unit.cpp)
     target_link_libraries(jack_jackmini_unit PRIVATE jackmini_base Threads::Threads)
     add_test(NAME jackmini_unit COMMAND jack_jackmini_unit)
+
+    # The client lifecycle of the jackmini API with a running server.  Not a test: ctest has no server.  Run it after
+    # starting one, for example `jackd -d dummy`.
+    add_executable(jack_jackmini_client_e2e tests/jackmini_client_e2e.cpp)
+    target_include_directories(jack_jackmini_client_e2e PRIVATE ${JACK_INCLUDE_DIRS})
+    target_link_libraries(jack_jackmini_client_e2e PRIVATE jack jackmini_base Threads::Threads)
 
     # A test-only resampler plugin, loaded by name from JACK_RESAMPLER_PATH.
     add_library(passthrough_test MODULE tests/alsa_test_resampler_plugin.c)

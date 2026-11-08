@@ -38,6 +38,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 namespace jackmini
 {
 
+// The client library is built with hidden visibility by default; the API is exported explicitly.
+#define JACKMINI_API __attribute__((visibility("default")))
+
 // The lifecycle is three states.  A client is opened, then it may be activated
 // and deactivated any number of times.
 //
@@ -50,7 +53,7 @@ namespace jackmini
 // The destructor deactivates an active client and then closes it.  close()
 // reports errors.  Port handles stay valid across deactivate.  Connections
 // are kept across deactivate.
-class Client {
+class JACKMINI_API Client {
 public:
     // Process callback: called once per cycle on the realtime thread.  Returns
     // false to report a failure, which the server treats as a shutdown request.
@@ -122,6 +125,8 @@ public:
     Result<void> transport_locate(FrameCount frame);
 
 private:
+    friend struct ClientBridge;
+
     Client() = default;
     Result<void> set_process(ProcessFn fn);
 

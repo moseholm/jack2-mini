@@ -98,7 +98,8 @@ jack_client_t* jack_client_new_aux(const char* client_name, jack_options_t optio
     if (res < 0) {
         delete client;
         JackLibGlobals::Destroy(); // jack library destruction
-        int my_status1 = (JackFailure | JackServerError);
+        // Keep the reason Open reported (for example JackNameNotUnique); add the failure bits to it.
+        int my_status1 = (*status | JackFailure | JackServerError);
         *status = (jack_status_t)my_status1;
         return NULL;
     } else {
@@ -147,7 +148,8 @@ static jack_client_t* jack_client_open_aux(const char* client_name, jack_options
     if (res < 0) {
         delete client;
         JackLibGlobals::Destroy(); // jack library destruction
-        int my_status1 = (JackFailure | JackServerError);
+        // Keep the reason Open reported (for example JackNameNotUnique); add the failure bits to it.
+        int my_status1 = (*status | JackFailure | JackServerError);
         *status = (jack_status_t)my_status1;
         return NULL;
     } else {
