@@ -156,21 +156,21 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-Decided (user): keep the C client library for now, as the reference for the original
-implementation. Do not port the test programs until they are needed.
-
-Blocked until then: client-API step 3's removal of the C client library, and protocol
-item 4b (drop session and metadata), which needs that removal. Nothing else in the plan is
-open except the hardware measurements at the end.
-
-Done this round: the notification queue size is measured and kept at 256 (protocol
-section 9, item 3). The TSAN findings below are the same statements as in `origin/develop`,
-so they predate this branch (verified by the source, not by running TSAN on the old tree).
-
-- **Open TSAN findings, outside the counters** (not fixed; verify on the base before
-  attributing): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing fields
-  in `ResumeRefNum`; the client library's `JackClient::Activate`, `Deactivate`,
-  `CallSyncCallbackAux`, `JackLibClient::Open`.
+Continuing client-API step 3 (the removal of the C client library). Findings for the
+removal, not yet acted on:
+- The C exports are thin wrappers (`common/JackAPI.cpp`, 143 functions; `JackLibAPI.cpp`;
+  `JackMidiAPI.cpp`). Each checks its arguments and calls one method of the internal
+  `JackClient`/`JackLibClient`. `jack_port_t*` is the graph port id cast to a pointer.
+  `jackmini::Client` uses about 40 of those exports; it can call the internal methods
+  directly, with the same checks.
+- `tests/test.cpp` (`jack_test`, 2189 lines, 335 C calls) exercises features the new API
+  does not have (freewheel, latency, timebase, session, metadata). Its removal needs a
+  decision: see the question to the user.
+- Waiting for the user: how `tests/test.cpp` is handled (port the parts the new API has and
+  drop the rest, or retire it), and whether freewheel, latency, and timebase stay out of
+  the new API.
+- Blocked until then: the removal of the C exports, and protocol item 4b (drop session and
+  metadata messages), which follows the removal.
 
 ## Environment facts
 
