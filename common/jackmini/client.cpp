@@ -25,7 +25,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "jackmini/client.hpp"
 
-#include "jack/jack.h"
+#include "lib.hpp"
+
 #include "jack/uuid.h"
 
 #include <array>
@@ -38,7 +39,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <unordered_map>
 #include <vector>
 
-#include "jack/midiport.h"
 #include "jack/transport.h"
 
 #include "JackEngineControl.h"
@@ -167,7 +167,7 @@ std::vector<std::string> take_names(const char** list)
     for (const char** entry = list; *entry != nullptr; entry++) {
         names.emplace_back(*entry);
     }
-    jack_free(list);
+    jackmini::lib::jack_free(list);
     return names;
 }
 
@@ -206,7 +206,7 @@ struct ClientBridge {
         cycle.frames = frames;
         jack_time_t current_usecs = 0;
         jack_time_t next_usecs = 0;
-        if (jack_get_cycle_times(impl->handle, &cycle.current_frames, &current_usecs, &next_usecs, &cycle.period_usecs) == 0) {
+        if (jackmini::lib::jack_get_cycle_times(impl->handle, &cycle.current_frames, &current_usecs, &next_usecs, &cycle.period_usecs) == 0) {
             cycle.current_usecs = current_usecs;
             cycle.next_usecs = next_usecs;
         }
@@ -275,8 +275,8 @@ Result<Client> Client::open(std::string_view name, OpenOptions options)
     const std::string client_name(name);
     jack_status_t status = static_cast<jack_status_t>(0);
     jack_client_t* handle = options.server_name.empty()
-        ? jack_client_open(client_name.c_str(), static_cast<jack_options_t>(bits), &status)
-        : jack_client_open(client_name.c_str(), static_cast<jack_options_t>(bits), &status, options.server_name.c_str());
+        ? jackmini::lib::jack_client_open(client_name.c_str(), static_cast<jack_options_t>(bits), &status)
+        : jackmini::lib::jack_client_open(client_name.c_str(), static_cast<jack_options_t>(bits), &status, options.server_name.c_str());
     if (handle == nullptr) {
         return std::unexpected(to_error(status));
     }
@@ -286,12 +286,12 @@ Result<Client> Client::open(std::string_view name, OpenOptions options)
     client.fImpl->handle = handle;
 
     // The trampolines are installed once: they call whatever is stored, so the stored callbacks decide what runs.
-    jack_set_process_callback(handle, ClientBridge::process, client.fImpl.get());
-    jack_set_xrun_callback(handle, ClientBridge::xrun, client.fImpl.get());
-    jack_on_shutdown(handle, ClientBridge::shutdown, client.fImpl.get());
-    jack_set_buffer_size_callback(handle, ClientBridge::buffer_size, client.fImpl.get());
-    jack_set_sample_rate_callback(handle, ClientBridge::sample_rate, client.fImpl.get());
-    jack_set_latency_callback(handle, ClientBridge::latency, client.fImpl.get());
+    jackmini::lib::jack_set_process_callback(handle, ClientBridge::process, client.fImpl.get());
+    jackmini::lib::jack_set_xrun_callback(handle, ClientBridge::xrun, client.fImpl.get());
+    jackmini::lib::jack_on_shutdown(handle, ClientBridge::shutdown, client.fImpl.get());
+    jackmini::lib::jack_set_buffer_size_callback(handle, ClientBridge::buffer_size, client.fImpl.get());
+    jackmini::lib::jack_set_sample_rate_callback(handle, ClientBridge::sample_rate, client.fImpl.get());
+    jackmini::lib::jack_set_latency_callback(handle, ClientBridge::latency, client.fImpl.get());
     return client;
 }
 
@@ -320,7 +320,7 @@ Result<void> Client::activate()
     if (!fImpl || !fImpl->handle || fImpl->active) {
         return std::unexpected(Error::InvalidState);
     }
-    if (jack_activate(fImpl->handle) != 0) {
+    if (jackmini::lib::jack_activate(fImpl->handle) != 0) {
         return std::unexpected(Error::ServerFailure);
     }
     fImpl->active = true;
@@ -332,7 +332,7 @@ Result<void> Client::deactivate()
     if (!fImpl || !fImpl->handle || !fImpl->active) {
         return std::unexpected(Error::InvalidState);
     }
-    const int rc = jack_deactivate(fImpl->handle);
+    const int rc = jackmini::lib::jack_deactivate(fImpl->handle);
     fImpl->active = false;
     if (rc != 0) {
         return std::unexpected(Error::ServerFailure);
@@ -348,7 +348,7 @@ Result<void> Client::close()
     if (fImpl->active) {
         (void)deactivate();
     }
-    const int rc = jack_client_close(fImpl->handle);
+    const int rc = jackmini::lib::jack_client_close(fImpl->handle);
     fImpl->handle = nullptr;
     return (rc == 0) ? Result<void>{} : std::unexpected(Error::ServerFailure);
 }
@@ -363,10 +363,10 @@ Result<Port> Client::register_port(std::string_view name, PortType type, PortFla
         return std::unexpected(Error::InvalidArgument);
     }
     const std::string short_name(name);
-    jack_port_t* port = jack_port_register(fImpl->handle, short_name.c_str(), to_c_type(type), to_c_flags(flags), 0);
+    jack_port_t* port = jackmini::lib::jack_port_register(fImpl->handle, short_name.c_str(), to_c_type(type), to_c_flags(flags), 0);
     if (port == nullptr) {
         const std::string full = std::string(this->name()) + ":" + short_name;
-        return std::unexpected(jack_port_by_name(fImpl->handle, full.c_str()) != nullptr ? Error::NameTaken : Error::ServerFailure);
+        return std::unexpected(jackmini::lib::jack_port_by_name(fImpl->handle, full.c_str()) != nullptr ? Error::NameTaken : Error::ServerFailure);
     }
     return Port(fImpl->id_of(port));
 }
@@ -380,7 +380,7 @@ Result<void> Client::unregister_port(Port port)
     if (ptr == nullptr) {
         return std::unexpected(Error::NotFound);
     }
-    if (jack_port_unregister(fImpl->handle, ptr) != 0) {
+    if (jackmini::lib::jack_port_unregister(fImpl->handle, ptr) != 0) {
         return std::unexpected(Error::ServerFailure);
     }
     fImpl->forget(ptr);
@@ -392,7 +392,7 @@ Result<void> Client::unregister_port(Port port)
 std::string_view Client::port_name(Port port) const
 {
     jack_port_t* ptr = fImpl ? fImpl->port_of(port) : nullptr;
-    return ptr ? jack_port_name(ptr) : std::string_view();
+    return ptr ? jackmini::lib::jack_port_name(ptr) : std::string_view();
 }
 
 PortType Client::port_type(Port port) const
@@ -401,13 +401,13 @@ PortType Client::port_type(Port port) const
     if (ptr == nullptr) {
         return PortType::Audio;
     }
-    return std::strcmp(jack_port_type(ptr), JACK_DEFAULT_MIDI_TYPE) == 0 ? PortType::Midi : PortType::Audio;
+    return std::strcmp(jackmini::lib::jack_port_type(ptr), JACK_DEFAULT_MIDI_TYPE) == 0 ? PortType::Midi : PortType::Audio;
 }
 
 PortFlags Client::port_flags(Port port) const
 {
     jack_port_t* ptr = fImpl ? fImpl->port_of(port) : nullptr;
-    return ptr ? from_c_flags(jack_port_flags(ptr)) : PortFlags::None;
+    return ptr ? from_c_flags(jackmini::lib::jack_port_flags(ptr)) : PortFlags::None;
 }
 
 Result<Port> Client::find_port(std::string_view full_name) const
@@ -416,7 +416,7 @@ Result<Port> Client::find_port(std::string_view full_name) const
         return std::unexpected(Error::InvalidState);
     }
     const std::string text(full_name);
-    jack_port_t* ptr = jack_port_by_name(fImpl->handle, text.c_str());
+    jack_port_t* ptr = jackmini::lib::jack_port_by_name(fImpl->handle, text.c_str());
     if (ptr == nullptr) {
         return std::unexpected(Error::NotFound);
     }
@@ -428,7 +428,7 @@ std::vector<std::string> Client::port_names(PortType type, PortFlags required) c
     if (!fImpl || !fImpl->handle) {
         return {};
     }
-    return take_names(jack_get_ports(fImpl->handle, nullptr, to_c_type(type), to_c_flags(required)));
+    return take_names(jackmini::lib::jack_get_ports(fImpl->handle, nullptr, to_c_type(type), to_c_flags(required)));
 }
 
 Result<void> Client::connect(Port source, Port destination)
@@ -449,7 +449,7 @@ Result<void> Client::connect(Port source, Port destination)
     if (is_connected(source, destination)) {
         return std::unexpected(Error::InvalidState);
     }
-    if (jack_connect(fImpl->handle, jack_port_name(src), jack_port_name(dst)) != 0) {
+    if (jackmini::lib::jack_connect(fImpl->handle, jackmini::lib::jack_port_name(src), jackmini::lib::jack_port_name(dst)) != 0) {
         return std::unexpected(Error::ServerFailure);
     }
     return {};
@@ -465,7 +465,7 @@ Result<void> Client::disconnect(Port source, Port destination)
     if (src == nullptr || dst == nullptr || !is_connected(source, destination)) {
         return std::unexpected(Error::NotFound);
     }
-    if (jack_disconnect(fImpl->handle, jack_port_name(src), jack_port_name(dst)) != 0) {
+    if (jackmini::lib::jack_disconnect(fImpl->handle, jackmini::lib::jack_port_name(src), jackmini::lib::jack_port_name(dst)) != 0) {
         return std::unexpected(Error::ServerFailure);
     }
     return {};
@@ -478,7 +478,7 @@ bool Client::is_connected(Port source, Port destination) const
     if (src == nullptr || dst == nullptr) {
         return false;
     }
-    return jack_port_connected_to(src, jack_port_name(dst)) != 0;
+    return jackmini::lib::jack_port_connected_to(src, jackmini::lib::jack_port_name(dst)) != 0;
 }
 
 std::vector<std::string> Client::connections(Port port) const
@@ -487,7 +487,7 @@ std::vector<std::string> Client::connections(Port port) const
     if (ptr == nullptr) {
         return {};
     }
-    return take_names(jack_port_get_all_connections(fImpl->handle, ptr));
+    return take_names(jackmini::lib::jack_port_get_all_connections(fImpl->handle, ptr));
 }
 
 bool Client::is_active() const noexcept
@@ -547,7 +547,7 @@ LatencyRange Client::port_latency(Port port, LatencyMode mode) const
         return {};
     }
     jack_latency_range_t range{};
-    jack_port_get_latency_range(ptr, mode == LatencyMode::Capture ? JackCaptureLatency : JackPlaybackLatency, &range);
+    jackmini::lib::jack_port_get_latency_range(ptr, mode == LatencyMode::Capture ? JackCaptureLatency : JackPlaybackLatency, &range);
     return LatencyRange{ range.min, range.max };
 }
 
@@ -561,7 +561,7 @@ Result<void> Client::set_port_latency(Port port, LatencyMode mode, LatencyRange 
         return std::unexpected(Error::NotFound);
     }
     jack_latency_range_t c_range{ range.min, range.max };
-    jack_port_set_latency_range(ptr, mode == LatencyMode::Capture ? JackCaptureLatency : JackPlaybackLatency, &c_range);
+    jackmini::lib::jack_port_set_latency_range(ptr, mode == LatencyMode::Capture ? JackCaptureLatency : JackPlaybackLatency, &c_range);
     return {};
 }
 
@@ -570,7 +570,7 @@ Result<void> Client::recompute_latencies()
     if (!fImpl || !fImpl->handle) {
         return std::unexpected(Error::InvalidState);
     }
-    if (jack_recompute_total_latencies(fImpl->handle) != 0) {
+    if (jackmini::lib::jack_recompute_total_latencies(fImpl->handle) != 0) {
         return std::unexpected(Error::ServerFailure);
     }
     return {};
@@ -590,7 +590,7 @@ std::string_view Client::name() const noexcept
     if (!fImpl || !fImpl->handle) {
         return {};
     }
-    return jack_get_client_name(fImpl->handle);
+    return jackmini::lib::jack_get_client_name(fImpl->handle);
 }
 
 Uuid Client::uuid() const noexcept
@@ -599,49 +599,49 @@ Uuid Client::uuid() const noexcept
         return {};
     }
     // The C library returns a string it allocates, which is freed here.
-    char* text = jack_get_uuid_for_client_name(fImpl->handle, jack_get_client_name(fImpl->handle));
+    char* text = jackmini::lib::jack_get_uuid_for_client_name(fImpl->handle, jackmini::lib::jack_get_client_name(fImpl->handle));
     if (text == nullptr) {
         return {};
     }
     jack_uuid_t value = 0;
-    const bool parsed = jack_uuid_parse(text, &value) == 0;
-    jack_free(text);
+    const bool parsed = jackmini::lib::jack_uuid_parse(text, &value) == 0;
+    jackmini::lib::jack_free(text);
     return parsed ? Uuid(static_cast<std::uint64_t>(value)) : Uuid();
 }
 
 FrameCount Client::sample_rate() const noexcept
 {
-    return fImpl && fImpl->handle ? static_cast<FrameCount>(jack_get_sample_rate(fImpl->handle)) : 0;
+    return fImpl && fImpl->handle ? static_cast<FrameCount>(jackmini::lib::jack_get_sample_rate(fImpl->handle)) : 0;
 }
 
 FrameCount Client::buffer_size() const noexcept
 {
-    return fImpl && fImpl->handle ? static_cast<FrameCount>(jack_get_buffer_size(fImpl->handle)) : 0;
+    return fImpl && fImpl->handle ? static_cast<FrameCount>(jackmini::lib::jack_get_buffer_size(fImpl->handle)) : 0;
 }
 
 float Client::cpu_load() const noexcept
 {
-    return fImpl && fImpl->handle ? jack_cpu_load(fImpl->handle) : 0.0f;
+    return fImpl && fImpl->handle ? jackmini::lib::jack_cpu_load(fImpl->handle) : 0.0f;
 }
 
 // Realtime access.  These do not allocate, lock, or return errors; a port that is not known gives an empty buffer.
 std::span<float> Client::audio_buffer(Port port) noexcept
 {
     jack_port_t* ptr = fImpl ? fImpl->port_of(port) : nullptr;
-    if (ptr == nullptr || std::strcmp(jack_port_type(ptr), JACK_DEFAULT_AUDIO_TYPE) != 0) {
+    if (ptr == nullptr || std::strcmp(jackmini::lib::jack_port_type(ptr), JACK_DEFAULT_AUDIO_TYPE) != 0) {
         return {};
     }
-    const auto frames = jack_get_buffer_size(fImpl->handle);
-    return std::span<float>(static_cast<float*>(jack_port_get_buffer(ptr, frames)), frames);
+    const auto frames = jackmini::lib::jack_get_buffer_size(fImpl->handle);
+    return std::span<float>(static_cast<float*>(jackmini::lib::jack_port_get_buffer(ptr, frames)), frames);
 }
 
 midi::Buffer Client::midi_buffer(Port port) noexcept
 {
     jack_port_t* ptr = fImpl ? fImpl->port_of(port) : nullptr;
-    if (ptr == nullptr || std::strcmp(jack_port_type(ptr), JACK_DEFAULT_MIDI_TYPE) != 0) {
+    if (ptr == nullptr || std::strcmp(jackmini::lib::jack_port_type(ptr), JACK_DEFAULT_MIDI_TYPE) != 0) {
         return midi::Buffer(nullptr);
     }
-    return midi::Buffer(jack_port_get_buffer(ptr, jack_get_buffer_size(fImpl->handle)));
+    return midi::Buffer(jackmini::lib::jack_port_get_buffer(ptr, jackmini::lib::jack_get_buffer_size(fImpl->handle)));
 }
 
 namespace midi
@@ -649,13 +649,13 @@ namespace midi
 
 std::size_t Buffer::count() const noexcept
 {
-    return fHandle ? jack_midi_get_event_count(fHandle) : 0;
+    return fHandle ? jackmini::lib::jack_midi_get_event_count(fHandle) : 0;
 }
 
 Event Buffer::event(std::size_t index) const noexcept
 {
     jack_midi_event_t raw{};
-    if (fHandle == nullptr || jack_midi_event_get(&raw, fHandle, index) != 0) {
+    if (fHandle == nullptr || jackmini::lib::jack_midi_event_get(&raw, fHandle, index) != 0) {
         return {};
     }
     return Event{ raw.time, std::span<const std::byte>(reinterpret_cast<const std::byte*>(raw.buffer), raw.size) };
@@ -666,13 +666,13 @@ bool Buffer::write(FrameCount time, std::span<const std::byte> data) noexcept
     if (fHandle == nullptr) {
         return false;
     }
-    return jack_midi_event_write(fHandle, time, reinterpret_cast<const jack_midi_data_t*>(data.data()), data.size()) == 0;
+    return jackmini::lib::jack_midi_event_write(fHandle, time, reinterpret_cast<const jack_midi_data_t*>(data.data()), data.size()) == 0;
 }
 
 void Buffer::clear() noexcept
 {
     if (fHandle != nullptr) {
-        jack_midi_clear_buffer(fHandle);
+        jackmini::lib::jack_midi_clear_buffer(fHandle);
     }
 }
 
@@ -685,7 +685,7 @@ TransportState Client::transport_state() const noexcept
         return TransportState::Stopped;
     }
     jack_position_t position{};
-    switch (jack_transport_query(fImpl->handle, &position)) {
+    switch (jackmini::lib::jack_transport_query(fImpl->handle, &position)) {
     case JackTransportRolling:  return TransportState::Rolling;
     case JackTransportStarting: return TransportState::Starting;
     case JackTransportLooping:  return TransportState::Looping;
@@ -698,7 +698,7 @@ Result<void> Client::transport_start()
     if (!fImpl || !fImpl->handle) {
         return std::unexpected(Error::InvalidState);
     }
-    jack_transport_start(fImpl->handle);
+    jackmini::lib::jack_transport_start(fImpl->handle);
     return {};
 }
 
@@ -707,7 +707,7 @@ Result<void> Client::transport_stop()
     if (!fImpl || !fImpl->handle) {
         return std::unexpected(Error::InvalidState);
     }
-    jack_transport_stop(fImpl->handle);
+    jackmini::lib::jack_transport_stop(fImpl->handle);
     return {};
 }
 
@@ -716,7 +716,7 @@ Result<void> Client::transport_locate(FrameCount frame)
     if (!fImpl || !fImpl->handle) {
         return std::unexpected(Error::InvalidState);
     }
-    if (jack_transport_locate(fImpl->handle, frame) != 0) {
+    if (jackmini::lib::jack_transport_locate(fImpl->handle, frame) != 0) {
         return std::unexpected(Error::ServerFailure);
     }
     return {};

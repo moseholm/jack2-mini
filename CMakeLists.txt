@@ -95,7 +95,6 @@ set(JACK_COMMON_SOURCES
     common/JackTools.cpp
     common/JackMessageBuffer.cpp
     common/promiscuous.c
-    common/jackmini/client.cpp
     posix/JackPosixThread.cpp
     posix/JackPosixProcessSync.cpp
     posix/JackPosixMutex.cpp
@@ -108,6 +107,8 @@ set(JACK_CLIENT_SOURCES
     ${JACK_COMMON_SOURCES}
     common/JackLibClient.cpp
     common/JackLibAPI.cpp
+    common/jackmini/client.cpp
+    common/jackmini/lib.cpp
     common/JackMetadata.cpp
     posix/JackSocketClientChannel.cpp
     posix/JackPosixServerLaunch.cpp)
