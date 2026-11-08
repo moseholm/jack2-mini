@@ -171,9 +171,11 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   followed by `jack_cpu` show no `SuspendRefNum` or close-wait errors.
 - Freewheel and `jack_cpu`: the load is still wall-clock (a share of the buffer period per cycle), so a run in
   freewheel takes longer than the cycle count suggests. Not a bug.
-- **Timing windows left (non-RT kernel):** the 85 ms wait in `ClientCloseAux` and the 5 s wait in
-  `ClientExternalOpen` are time limits. They can fail on a loaded non-RT machine while the server is working. They
-  should wait for the graph switch instead. Not done yet.
+- **Waits on a graph switch, not on time.** `JackEngine::WaitForSwitches(count)` waits until the engine's
+  switch counter (`fSwitchCount`, incremented in `ProcessNext`) reaches `count`. Client open waits for one
+  switch (the RT thread runs); activate, deactivate and close wait for two switches after their graph write (the
+  first switch may have begun before the write). The only time limit is `GRAPH_SWITCH_GUARD` (15 s), a failure
+  guard for a dead driver, which is longer than a freewheel cycle wait.
 - Real time on this non-RT kernel (`PREEMPT_DYNAMIC`, not RT): `jack_cpu -t 1` takes 1 to 3 s. Benchmark numbers are
   for the RT hardware run.
 - Real-time: `jack_cpu`, `jack_iodelay`, `jack_multiple_metro`, `jack_rtbench`, and the e2e test all pass.

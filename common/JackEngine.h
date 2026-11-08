@@ -57,6 +57,8 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         JackSynchro* fSynchroTable;
         JackServerNotifyChannel fChannel;              /*! To communicate between the RT thread and server */
         JackProcessSync fSignal;
+        // Number of graph switches so far.  Changed by the RT thread (ProcessNext) only.
+        std::atomic<unsigned long> fSwitchCount;
         jack_time_t fLastSwitchUsecs;
         JackMetadata fMetadata;
 
@@ -73,6 +75,10 @@ class SERVER_EXPORT JackEngine : public JackLockAble
 
         void ProcessNext(jack_time_t callback_usecs);
         void ProcessCurrent(jack_time_t callback_usecs);
+
+        // Waits until fSwitchCount reaches count.  A change written to the next state is in effect after the second
+        // switch that begins after the write (the first may have begun before it), so a waiter asks for two more switches.
+        bool WaitForSwitches(unsigned long count);
 
         bool ClientCheckName(const char* name);
         bool GenerateUniqueName(char* name);

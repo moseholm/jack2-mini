@@ -74,6 +74,7 @@
 
 #define SOCKET_TIME_OUT 2               // in sec
 #define DRIVER_OPEN_TIMEOUT 5           // in sec
+#define GRAPH_SWITCH_GUARD 15           // in sec: failure guard for waits on a graph switch, not the time a switch takes
 #define FREEWHEEL_DRIVER_TIMEOUT 10     // in sec
 #define DRIVER_TIMEOUT_FACTOR    10
 
