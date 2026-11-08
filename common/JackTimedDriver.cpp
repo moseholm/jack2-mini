@@ -68,36 +68,4 @@ void JackTimedDriver::ProcessWait()
     JackSleep(wait_time_usec);
 }
 
-int JackWaiterDriver::ProcessNull()
-{
-    JackDriver::CycleTakeBeginTime();
-
-    // Graph processing without Read/Write
-    if (fEngineControl->fSyncMode) {
-        ProcessGraphSync();
-    } else {
-        ProcessGraphAsync();
-    }
-
-    // Keep end cycle time
-    JackDriver::CycleTakeEndTime();
-
-    ProcessWait();
-    return 0;
-}
-
-void JackRestarterDriver::SetRestartDriver(JackDriver* driver)
-{
-    fRestartDriver = driver;
-}
-
-int JackRestarterDriver::RestartWait()
-{
-    if (!fRestartDriver) {
-        jack_error("JackRestartedDriver::RestartWait driver not set");
-        return -1;
-    }
-    return fRestartDriver->Start();
-}
-
 } // end of namespace

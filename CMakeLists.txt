@@ -121,9 +121,6 @@ set(JACK_SERVER_SOURCES
     common/JackInternalSessionLoader.cpp
     common/JackServer.cpp
     common/JackThreadedDriver.cpp
-    common/JackWaitThreadedDriver.cpp
-    common/JackWaitCallbackDriver.cpp
-    common/JackServerAPI.cpp
     common/JackDriverLoader.cpp
     common/JackServerGlobals.cpp
     common/JackControlAPI.cpp
@@ -211,8 +208,6 @@ function(jack_add_driver name)
 endfunction()
 
 jack_add_driver(dummy common/JackDummyDriver.cpp)
-jack_add_driver(loopback common/JackLoopbackDriver.cpp)
-jack_add_driver(proxy common/JackProxyDriver.cpp)
 
 # The vendored PipeWire resampler is portable C by default.  On x86 we also
 # build its SSE and AVX2 kernels, and on AArch64 its NEON kernel; the bridge
