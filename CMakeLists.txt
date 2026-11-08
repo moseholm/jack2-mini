@@ -149,6 +149,7 @@ set(JACK_SERVER_SOURCES
 # The ring buffer is a library of its own: the client and server libraries and the ALSA drivers use it.
 add_library(jackring SHARED common/ringbuffer.c)
 target_include_directories(jackring PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
+set_target_properties(jackring PROPERTIES VERSION "${JACK_API_VERSION}" SOVERSION 0)
 
 # The MIDI buffer (the format of the MIDI data in the port buffers, and the jack_midi_* functions that the drivers use).
 # Built with the server definitions: its buffer methods are used by the server and by the client library.
@@ -156,10 +157,12 @@ add_library(jackmidi SHARED common/JackMidiPort.cpp common/JackMidiAPI.cpp)
 target_include_directories(jackmidi PRIVATE ${JACK_INCLUDE_DIRS})
 target_compile_definitions(jackmidi PRIVATE HAVE_CONFIG_H SERVER_SIDE)
 target_link_libraries(jackmidi PRIVATE jacklog)
+set_target_properties(jackmidi PROPERTIES VERSION "${JACK_API_VERSION}" SOVERSION 0)
 
 # The basic logging (errors and messages, and where they go): a library of its own, with no dependencies.
 add_library(jacklog SHARED common/JackLog.cpp)
 target_include_directories(jacklog PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
+set_target_properties(jacklog PROPERTIES VERSION "${JACK_API_VERSION}" SOVERSION 0)
 
 add_library(jack SHARED ${JACK_CLIENT_SOURCES})
 target_include_directories(jack PRIVATE ${JACK_INCLUDE_DIRS})
@@ -301,9 +304,31 @@ install(TARGETS jack jackserver jackring jacklog jackmidi
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(TARGETS jackd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-install(DIRECTORY common/jack/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/jack
-    FILES_MATCHING PATTERN "*.h")
+# The client API: the jackmini headers (jackmini/...).
+install(FILES
+    common/jackmini/client.hpp
+    common/jackmini/control.hpp
+    common/jackmini/error.hpp
+    common/jackmini/jackmini.hpp
+    common/jackmini/midi.hpp
+    common/jackmini/options.hpp
+    common/jackmini/port.hpp
+    common/jackmini/ringbuffer.hpp
+    common/jackmini/transport.hpp
+    common/jackmini/uuid.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/jackmini)
+
+# The public headers of the libraries that have an interface of their own: the server control, the MIDI buffer and the
+# ring buffer.  The other headers of common/jack are internal.
+install(FILES
+    common/jack/control.h
+    common/jack/jslist.h
+    common/jack/midiport.h
+    common/jack/ringbuffer.h
+    common/jack/systemdeps.h
+    common/jack/types.h
+    common/jack/weakmacros.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/jack)
 
 set(PREFIX "${CMAKE_INSTALL_PREFIX}")
 set(LIBDIR "${CMAKE_INSTALL_FULL_LIBDIR}")
