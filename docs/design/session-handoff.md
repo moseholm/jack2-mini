@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `a20f118d` (protocol item 4a). `origin/develop` is `5c926a55`.
+  `04934528` (protocol item 4c). `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -68,6 +68,10 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `04934528` Protocol item 4c: bounded per-client notification queue (256, to be measured),
+  one writer thread per client, the oldest dropped and counted, `kDropped` sent to the
+  client. The engine no longer waits for a slow client: 2000 registrations with a
+  sleeping client take 0.35 s. Checks as before.
 - `a20f118d` Protocol item 4a: notifications framed with the header (type = notification
   kind, request 0, or an id for a synchronous notification that the client's reply
   echoes). Messages are built on the stack (the RT thread sends notifications; no
@@ -126,18 +130,11 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-Protocol item 4 is split. 4a (notifications framed) is done.
-
-- **4b: drop the session and metadata messages** (protocol.md sections 3.1 and 3.2:
-  kSessionNotify, kSessionReply, kClientHasSessionCallback, kPropertyChangeNotify,
-  kSessionCallback, kPropertyChangeCallback), then renumber the requests. The decisions
-  are confirmed (client-api.md), but session code is in about 30 files, and the C
-  library exports `jack_session_*` and the metadata functions. Removing them is a
-  visible break in the library. Confirm the scope before starting.
-- **4c: bounded per-client notification queue** with `kDropped` (protocol.md section 3.2).
-  Needs a design: the RT thread sends notifications through the server's request
-  socket today, and the queue size is open (section 9, item 3, to be measured).
-- Item 5: counter redesign (section 4.5), with its TSAN test.
+- **4b (waits for the client-API port, by decision):** drop the session and metadata
+  messages from the protocol (sections 3.1 and 3.2), and renumber the requests.
+- **Measure the notification queue size** (protocol section 9, item 3) and adjust
+  `JackSocketNotifyChannel::kQueueSize` (256 now).
+- **Item 5:** counter redesign (section 4.5), with its TSAN test.
 
 ## Environment facts
 
@@ -193,7 +190,7 @@ Protocol item 4 is split. 4a (notifications framed) is done.
 2. Read this file, `docs/design/protocol.md` (section 4.1 and the order of work),
    and `docs/design/client-api.md`.
 3. Rebuild the test dir and run `ctest --test-dir /tmp/opencode/build-jack2-cxx23`.
-4. Continue with protocol item 4b or 4c (see "Next").
+4. Continue with item 5 (counter redesign). 4b waits for the client-API port (see "Next").
 
 ## Working agreements with the user
 

@@ -105,7 +105,8 @@ Server → client, on the notification socket. Current kinds (`NotificationType`
 Notifications are sent with a bounded per-client queue. If a client does not
 read them, the server drops the oldest one and counts the drop. A client
 learns of drops from a `kDropped` notification (new) with the count, instead of
-the server blocking on it.
+the server blocking on it. Implemented with 256 entries per client (a first
+guess, to be measured): one writer thread per client writes to the socket.
 
 ## 4. Shared-memory structures
 
