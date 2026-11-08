@@ -377,6 +377,12 @@ if(JACK_BUILD_TESTS)
     target_include_directories(jack_fd_segment_unit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/posix")
     add_test(NAME fd_segment_unit COMMAND jack_fd_segment_unit)
 
+    # Message framing of the control socket: the header, the exact payload length, and the reply writer and reader.
+    add_executable(jack_message_frame_unit tests/message_frame_unit.cpp posix/JackFdSegment.cpp)
+    target_include_directories(jack_message_frame_unit PRIVATE ${JACK_INCLUDE_DIRS})
+    target_compile_definitions(jack_message_frame_unit PRIVATE HAVE_CONFIG_H)
+    add_test(NAME message_frame_unit COMMAND jack_message_frame_unit)
+
     # The parts of jackmini that need no server: ring buffer, Uuid, error text.
     add_library(jackmini_base STATIC common/jackmini/uuid.cpp common/jackmini/error.cpp)
     target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common)

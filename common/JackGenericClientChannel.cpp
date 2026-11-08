@@ -21,6 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackClient.h"
 #include "JackGlobals.h"
 #include "JackError.h"
+#include "JackMessage.h"
+
+#include <vector>
 
 namespace Jack
 {
@@ -44,6 +47,35 @@ int JackGenericClientChannel::ServerCheck(const char* server_name)
     }
 }
 
+// Reads the reply to req: its header, which must match the request and carry our protocol version, then its payload,
+// which must be read in full.
+static int ReadReply(detail::JackClientRequestInterface* socket, JackRequest* req, JackResult* res)
+{
+    JackMsgHeader header{};
+    std::vector<UniqueFd> fds;
+    if (socket->ReadWithFds(&header, sizeof(header), fds) < 0) {
+        return -1;
+    }
+    if (header.magic != kJackMsgMagic) {
+        jack_error("JACK reply without the protocol magic number");
+        return -1;
+    }
+    if (header.version != kJackMsgVersion) {
+        jack_error("JACK protocol mismatch (server %d, client %d)", header.version, kJackMsgVersion);
+        return -1;
+    }
+    if (header.request != req->fRequestId || header.type != req->fType) {
+        jack_error("JACK reply does not match its request, type %d request %d", req->fType, req->fRequestId);
+        return -1;
+    }
+
+    JackPayloadReader payload(socket, header.length, std::move(fds));
+    if (res->Read(&payload) < 0 || !payload.Done()) {
+        return -1;
+    }
+    return 0;
+}
+
 void JackGenericClientChannel::ServerSyncCall(JackRequest* req, JackResult* res, int* result)
 {
     // Check call context
@@ -65,7 +97,7 @@ void JackGenericClientChannel::ServerSyncCall(JackRequest* req, JackResult* res,
         return;
     }
 
-    if (res->Read(fRequest) < 0) {
+    if (ReadReply(fRequest, req, res) < 0) {
         jack_error("Could not read result type = %ld", req->fType);
         *result = -1;
         return;

@@ -229,14 +229,18 @@ bool JackSocketServerChannel::Execute()
                 } else if (fPollTable[i].revents & POLLIN) {
                     JackClientSocket* socket = fSocketTable[fd].second;
                     // Decode header
-                    JackRequestHeader header;
-                    if (header.Read(socket) < 0) {
+                    JackMsgHeader header;
+                    if (ReadJackMsgHeader(socket, header) < 0) {
                         jack_log("JackSocketServerChannel::Execute : cannot decode header");
+                        ClientKill(fd);
+                    // A client of another protocol version is refused, and disconnected
+                    } else if (header.version != kJackMsgVersion) {
+                        fDecoder->Refuse(socket, header);
                         ClientKill(fd);
                     // Decode request
                     } else {
                         // Result is not needed here
-                        fDecoder->HandleRequest(socket, header.fType);
+                        fDecoder->HandleRequest(socket, header);
                     }
                 }
             }

@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define __JackRequestDecoder__
 
 #include "JackChannel.h"
+#include "JackMessage.h"
 
 namespace Jack
 {
@@ -55,7 +56,9 @@ class JackRequestDecoder
         JackRequestDecoder(JackServer* server, JackClientHandlerInterface* handler);
         virtual ~JackRequestDecoder();
 
-        int HandleRequest(detail::JackChannelTransactionInterface* socket, int type);
+        int HandleRequest(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
+        // Refuses a message of another protocol version: the reply carries the protocol error.
+        int Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
 };
 
 } // end of namespace

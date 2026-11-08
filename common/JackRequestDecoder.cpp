@@ -30,10 +30,10 @@ using namespace std;
 namespace Jack
 {
 
-#define CheckRead(req, socket)          { if (req.Read(socket) <  0) { jack_error("CheckRead error"); return -1; } }
-#define CheckWriteName(error, socket)   { if (res.Write(socket) < 0) { jack_error("%s write error name = %s", error, req.fName); } }
-#define CheckWriteRefNum(error, socket) { if (res.Write(socket) < 0) { jack_error("%s write error ref = %d", error, req.fRefNum); } }
-#define CheckWrite(error, socket)       { if (res.Write(socket) < 0) { jack_error("%s write error", error); } }
+#define CheckRead(req, socket)          { if (header.length != static_cast<std::uint32_t>(req.Size()) || req.Read(socket) < 0) { jack_error("CheckRead error"); return -1; } }
+#define CheckWriteName(error, socket)   { if (SendJackReply(socket, res, header) < 0) { jack_error("%s write error name = %s", error, req.fName); } }
+#define CheckWriteRefNum(error, socket) { if (SendJackReply(socket, res, header) < 0) { jack_error("%s write error ref = %d", error, req.fRefNum); } }
+#define CheckWrite(error, socket)       { if (SendJackReply(socket, res, header) < 0) { jack_error("%s write error", error); } }
 
 JackRequestDecoder::JackRequestDecoder(JackServer* server, JackClientHandlerInterface* handler)
     :fServer(server), fHandler(handler)
@@ -42,9 +42,32 @@ JackRequestDecoder::JackRequestDecoder(JackServer* server, JackClientHandlerInte
 JackRequestDecoder::~JackRequestDecoder()
 {}
 
-int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* socket, int type_aux)
+// The reply to a request: the request's type and id, and the result as the payload.
+static int SendJackReply(detail::JackChannelTransactionInterface* socket, JackResult& res, const JackMsgHeader& request)
 {
-    JackRequest::RequestType type = (JackRequest::RequestType)type_aux;
+    JackPayloadWriter payload;
+    if (res.Write(&payload) < 0) {
+        return -1;
+    }
+    const auto length = static_cast<std::uint32_t>(payload.fData.size());
+    return SendJackMessage(socket, MakeJackMsgHeader(request.type, length, request.request), payload.fData.data(), length, payload.fFds);
+}
+
+int JackRequestDecoder::Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header)
+{
+    jack_error("JACK protocol mismatch: request version %d, server version %d", header.version, kJackMsgVersion);
+    JackResult res(kJackMsgProtocolError);
+    return SendJackReply(socket, res, header);
+}
+
+int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header)
+{
+    if (header.version != kJackMsgVersion) {
+        Refuse(socket, header);
+        return -1;
+    }
+
+    JackRequest::RequestType type = (JackRequest::RequestType)header.type;
 
     // Read data
     switch (type) {
@@ -58,9 +81,11 @@ int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* s
             CheckWriteName("JackRequest::ClientCheck", socket);
             // Atomic ClientCheck followed by ClientOpen on same socket
             if (req.fOpen) {
-                JackRequestHeader header;
-                header.Read(socket);
-                return HandleRequest(socket, header.fType);
+                JackMsgHeader next;
+                if (ReadJackMsgHeader(socket, next) < 0) {
+                    return -1;
+                }
+                return HandleRequest(socket, next);
             }
             break;
         }
@@ -347,7 +372,7 @@ int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* s
         }
 
         default:
-            jack_error("Unknown request %d", type_aux);
+            jack_error("Unknown request %d", header.type);
             return -1;
     }
 
