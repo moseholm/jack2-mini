@@ -51,6 +51,10 @@ static_assert(sizeof(MsgHeader) == 16);
 - The client sends its version in the first request. The server answers with
   its own version. If they differ, the server refuses the connection with
   `Error::Protocol`. There is no negotiation.
+  Implemented: every message carries the version and is checked, not only the
+  first request. The reply to a refused request carries the status 7 and the
+  server disconnects the client. Notifications are not framed yet (order of work,
+  item 4).
 
 ## 3. Messages
 
@@ -299,7 +303,10 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
 2. Segment handoff with `SCM_RIGHTS` and no registry. Done: `posix/JackFdSegment`
    (2a), the descriptors in the `ClientOpen` reply (2b), the single-instance lock on
    the per-user lock (step 3), and the registry removed (step 4).
-3. Message framing and the handshake.
+3. Message framing and the handshake. Done on the control socket: the 16-byte
+   header on every request and reply, the request id echoed, the exact payload length,
+   and the version check (`common/JackMessage.h`, `tests/message_frame_unit.cpp`).
+   Notifications keep their own format until item 4.
 4. Requests, then notifications.
 5. Counter redesign (section 4.5), with its TSAN test.
 6. Deactivate with connections (section 6), with the graph tests.

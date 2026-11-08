@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `70ac646b` (P2 step 4). `origin/develop` is `5c926a55`.
+  `575b58e9` (protocol item 3). `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -68,6 +68,17 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `575b58e9` Protocol order of work, item 3: the 16-byte header on every request
+  and reply (`common/JackMessage.h`), the request id echoed, the exact payload
+  length, and the version check on every message (`JACK_PROTOCOL_VERSION` is 10).
+  A client of another version gets status 7 (Protocol) and is disconnected.
+  Notifications keep their old format (`JackClientNotification` keeps its size
+  prefix) until item 4. Checks: `tests/message_frame_unit.cpp` (8/8 suites); the
+  end-to-end client; the control API; an old-version raw client refused; five ALSA
+  starts. Found on the way: removing every `CheckSize()` also removed the size
+  check of `JackClientNotification` (not a request), which broke the add-client
+  notification. Restored.
+- `07a72929` Per-user lock (`/dev/shm/jack_<uid>_server.lock`), name-independent.
 - `70ac646b` P2 step 4: the shared-memory registry (`shm.c`, `shm.h`) is removed.
   `JackShmMemAble` holds its size, address and descriptor. The
   `--replace-registry` option is removed (jackd, control API, server globals).
@@ -109,8 +120,11 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-- The protocol order of work, item 3: message framing and the handshake
-  (`docs/design/protocol.md` section 2, section 10).
+- Protocol order of work, item 4: requests, then notifications. The request
+  payloads are already in the header format; notifications still need the header
+  (`JackClientNotification`, `JackClientNotificationRequest`, and the sync result).
+  Check the notification path with the end-to-end client after each change.
+- Item 5: counter redesign (section 4.5), with its TSAN test.
 
 ## Environment facts
 
@@ -166,7 +180,7 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 2. Read this file, `docs/design/protocol.md` (section 4.1 and the order of work),
    and `docs/design/client-api.md`.
 3. Rebuild the test dir and run `ctest --test-dir /tmp/opencode/build-jack2-cxx23`.
-4. Continue with protocol item 3 (see "Next").
+4. Continue with protocol item 4 (see "Next").
 
 ## Working agreements with the user
 
