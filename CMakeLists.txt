@@ -364,6 +364,13 @@ if(JACK_BUILD_TESTS)
     target_include_directories(jack_api_unit PRIVATE ${JACK_INCLUDE_DIRS})
     add_test(NAME jackmini_api_unit COMMAND jack_api_unit)
 
+    # Static layout checks of the shared-memory structures.  Compile-only checks; nothing is linked from the server.
+    add_executable(jack_shm_layout_unit tests/shm_layout_unit.cpp)
+    target_include_directories(jack_shm_layout_unit PRIVATE ${JACK_INCLUDE_DIRS}
+        "${CMAKE_CURRENT_SOURCE_DIR}/linux" "${CMAKE_CURRENT_SOURCE_DIR}/posix")
+    target_compile_definitions(jack_shm_layout_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
+    add_test(NAME shm_layout_unit COMMAND jack_shm_layout_unit)
+
     # The parts of jackmini that need no server: ring buffer, Uuid, error text.
     add_library(jackmini_base STATIC common/jackmini/uuid.cpp common/jackmini/error.cpp)
     target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common)

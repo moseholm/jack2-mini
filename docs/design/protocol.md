@@ -290,8 +290,11 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
 
 ## 10. Order of work
 
-1. Static layout checks for the new structures, with the packed attributes
-   removed.
+1. Done: the packed attributes are removed from the shared-memory classes, and
+   `tests/shm_layout_unit.cpp` checks their size, alignment, and the offsets of the
+   8-byte fields. The probe shows every field and the per-client timing array
+   at natural offsets. ALSA startup is still intermittent (see the baseline
+   notes); it is not caused by this change.
 2. Segment handoff with `SCM_RIGHTS` and no registry.
 3. Message framing and the handshake.
 4. Requests, then notifications.
