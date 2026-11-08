@@ -179,8 +179,19 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 - Real time on this non-RT kernel (`PREEMPT_DYNAMIC`, not RT): `jack_cpu -t 1` takes 1 to 3 s. Benchmark numbers are
   for the RT hardware run.
 - Real-time: `jack_cpu`, `jack_iodelay`, `jack_multiple_metro`, `jack_rtbench`, and the e2e test all pass.
-- **Still open:** `tests/test.cpp` (the functional suite, C API) is not ported yet; the C client library
-  removal waits for it; the overflow test is not in the repo.
+- **`tests/test.cpp` replaced** by `tests/jackmini_graph_e2e.cpp` (ctest: no; run with a server, in
+  freewheel or real time). Kept and checked: chain data flow (exact sample), 64 ports registered, listed and
+  removed, connection rules, unique names and UUIDs, eight clients running with a transport seen by all.
+  Dropped, because jackmini has no such feature: internal clients, `jack_client_new`, port tie/untie, port
+  rename and its callback, registration, connect, rename, graph-order, sample-rate, buffer-size, xrun, freewheel
+  and thread-init callbacks, `jack_set_buffer_size`, the sync callback (slow-sync transport), `jack_frame_time`,
+  cycle times, alternate thread models, the error function. Freewheel is the `-F` start option, checked by the
+  graph and end-to-end runs.
+- **Finding (API):** a client passing another client's port handle to `connect` gets `InvalidArgument`, not
+  `NotFound`. The documented rule is to use `find_port`. Not changed yet.
+- **Next: remove the C client library.** `common/jackmini/client.cpp` is still built on the C library
+  (`jack_client_open`, `jack_connect`, ...). Removing the C exports needs the jackmini client rebuilt on the
+  internal client (JackLibClient) or the new protocol first. That is the next large step.
 - Then: protocol item 4b (drop session and metadata messages).
 - Open TSAN findings, outside the counters (verified to be the same statements as in
   `origin/develop`): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing

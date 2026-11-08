@@ -306,19 +306,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/jack.pc"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 if(JACK_BUILD_TESTS)
-    set(JACK_TEST_PROGRAMS
-        jack_test:tests/test.cpp)
-
-    foreach(entry IN LISTS JACK_TEST_PROGRAMS)
-        string(REPLACE ":" ";" parts "${entry}")
-        list(GET parts 0 program)
-        list(GET parts 1 source)
-        add_executable(${program} ${source})
-        target_include_directories(${program} PRIVATE ${JACK_INCLUDE_DIRS})
-        target_link_libraries(${program} PRIVATE jack rt)
-        install(TARGETS ${program} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    endforeach()
-
     # Benchmarks and interactive test clients, on the jackmini client API.  They need a running server.
     set(JACK_BENCH_PROGRAMS
         jack_cpu:tests/cpu.cpp
@@ -431,6 +418,10 @@ if(JACK_BUILD_TESTS)
     add_executable(jack_jackmini_client_e2e tests/jackmini_client_e2e.cpp)
     target_include_directories(jack_jackmini_client_e2e PRIVATE ${JACK_INCLUDE_DIRS})
     target_link_libraries(jack_jackmini_client_e2e PRIVATE jack jackmini_base Threads::Threads)
+
+    # The graph of the jackmini API (chains, ports at scale, connection rules, naming, several clients), with a server.
+    add_executable(jack_jackmini_graph_e2e tests/jackmini_graph_e2e.cpp)
+    target_link_libraries(jack_jackmini_graph_e2e PRIVATE jack jackmini_base Threads::Threads)
 
     # A test-only resampler plugin, loaded by name from JACK_RESAMPLER_PATH.
     add_library(passthrough_test MODULE tests/alsa_test_resampler_plugin.c)
