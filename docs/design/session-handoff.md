@@ -7,7 +7,7 @@ without the conversation. Read this first, then `protocol.md` and
 ## Branch and state
 
 - Branch `hjj/cxx23`, pushed to origin. Head at the time of writing:
-  `6bf4566b` (P2 step 2a). `origin/develop` is `5c926a55`.
+  `528aab29` (P2 step 3). `origin/develop` is `5c926a55`.
 - `hjj/cxx23` contains all of `develop` (checked: `merge-base --is-ancestor`).
   The `hjj/cleanup` and `hjj/secondary-alsa` work is on `develop` through rebase
   merges, so the hashes differ. `git cherry` shows every commit of those two
@@ -68,6 +68,15 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- `528aab29` P2 step 3: single-instance lock. `posix/JackServerLock` takes an
+  `flock` on `<socket path>.lock`; both start paths use it (`jackd` and the
+  control API). The server table is gone from `shm.c`. Also fixes a crash on
+  a registry with the old layout (the bad-registry path used an index before the
+  mapping).
+- `7fa627fe` P2 step 2b: segments are memfd, and the `ClientOpen` reply carries
+  the three descriptors (`SCM_RIGHTS`, one message, order engine, graph, client
+  control) and the sizes. The client maps them and closes them. The index-based
+  templates are gone (`JackShmReadPtr`, `JackShmReadWritePtr1`).
 - `6bf4566b` P2 step 2a: `posix/JackFdSegment` (descriptor passing, memfd
   segments, `UniqueFd`), `tests/fd_segment_unit.cpp` (18 checks).
 - `a03b05ed` P2 step 1: static layout checks, `tests/shm_layout_unit.cpp`.
@@ -89,34 +98,31 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 `alsa_secondary_unit`, `message_buffer_unit`, `jackmini_api_unit`,
 `jackmini_unit`, `shm_layout_unit`, `fd_segment_unit`.
 
-## Next: P2 step 2b and steps 3–5
+## Next: P2 step 4 and step 5
 
-Plan, in order. Each step must build and pass the test suites before the next.
+Steps 2b and 3 are done (see Done). The plan, in order:
 
-1. **Server allocates memfd-backed segments** (`JackShmMem::operator new`, via
-   `CreateSegment`/`MapSegment`), and keeps each descriptor. The index stays for
-   now.
-2. **The `ClientOpen` reply carries the three descriptors** (engine, graph, client
-   control) with `SendWithFds`. The client receives them with `RecvWithFds` and
-   maps them. Files: `JackRequestDecoder.cpp` (kClientOpen),
-   `JackSocketServerChannel.cpp` (ClientAdd, reply write),
-   `JackGenericClientChannel.cpp` (ClientOpen), `JackChannel.h`,
-   `JackLibClient.cpp`, `JackInternalClient.cpp`, `JackExternalClient.cpp`,
-   `JackShmMem.h/.cpp` (attach by descriptor instead of index).
-3. **Single-instance by a lock on the server's socket path** (approved). Replaces
-   `jack_register_server` / `jack_unregister_server` and the server table in
-   `shm.c`. Use `flock` on a lock file next to the socket.
 4. **Remove the registry** from `common/shm.c` and `shm.h`: the registry header,
    `jack_access_registry`, `jack_create_registry`, `jack_shm_lock_registry`, the
-   index-based attach/release, and `jack_cleanup_shm`'s registry part. Other users
-   of indexes: `linux/alsa/JackAlsaControl.cpp`, `JackEngine.cpp`.
+   index-based attach/release, and `jack_cleanup_shm`'s registry part. The index
+   field of `jack_shm_info_t` goes too. `jack_initialize_shm_server()` (server
+   start, after the lock) and the client `jack_initialize_shm()` are no longer
+   needed. Callers: `JackServerGlobals.cpp` and `JackControlAPI.cpp` (start,
+   close, and the failure paths).
+   **Needs a decision first:** the `replace-registry` option
+   (`JackControlAPI.cpp`, `Jackdmp.cpp`, `JackServerGlobals.cpp`) has no meaning
+   without a registry. Remove it, or keep it accepted and ignored.
+   Also decide whether the server should unlink the old `/dev/shm/jack-shm-registry`
+   once at start.
 5. **Verify.** Smoke test (`jackd -d dummy`), in-process server test, the unit
    suites, then ALSA startup reliability: start the server 10 times on the USB
    card and count successes. Success means the intermittent stall is gone. That
    stall is parked until this step, as agreed.
 
-Before step 2b, the open reply and the mapping must agree with each other. Do
-not land step 1 without step 2 in the same series.
+Scripts used for the step 2b and 3 checks were in `/tmp/opencode` (not durable):
+`e2e_2b.c` (two clients, audio through the shared graph) and `ctl_2b.cpp` (control
+API open, second open refused, reopen after close). Run the server with
+`JACK_DRIVER_DIR=<build>/lib/jack` and `LD_LIBRARY_PATH=<build>/lib`.
 
 ## Environment facts
 
@@ -154,6 +160,10 @@ not land step 1 without step 2 in the same series.
   never runs its first cycle, and the engine's 5-second driver timeout expires.
   Counts: `HEAD` 2 of 4 starts, the packed change 3 of 4. Not caused by the
   layout change. Parked until step 5 above.
+- **The lock is per socket path, so per server name.** Two servers with
+  different names run together (checked). The protocol doc says one server per
+  machine. Decide: lock a name-independent path, or keep the approved design and
+  change the doc.
 - **Server ignores SIGINT and SIGTERM.** Must be killed (`SIGKILL`). Leaves
   registry and segments behind.
 - **Interval does not match the nominal period.** At 64 frames the start-to-start
@@ -172,7 +182,7 @@ not land step 1 without step 2 in the same series.
 2. Read this file, `docs/design/protocol.md` (section 4.1 and the order of work),
    and `docs/design/client-api.md`.
 3. Rebuild the test dir and run `ctest --test-dir /tmp/opencode/build-jack2-cxx23`.
-4. Start P2 step 2b, step 1 of the list above.
+4. Start P2 step 4 (see "Next"). Ask about the `replace-registry` option first.
 
 ## Working agreements with the user
 
