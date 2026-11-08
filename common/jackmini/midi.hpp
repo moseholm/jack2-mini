@@ -24,6 +24,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <cstddef>
 #include <span>
 
+namespace jackmini
+{
+class Client;
+}
+
 namespace jackmini::midi
 {
 
@@ -35,7 +40,7 @@ struct Event {
 
 // The events of a MIDI port for one cycle.  Valid only inside the process
 // callback.  Reading does not allocate.
-class Buffer {
+class JACKMINI_API Buffer {
 public:
     std::size_t count() const noexcept;
     Event event(std::size_t index) const noexcept;
@@ -45,7 +50,7 @@ public:
     void clear() noexcept;
 
 private:
-    friend class Client;
+    friend class jackmini::Client;
     explicit Buffer(void* handle) noexcept : fHandle(handle) {}
     void* fHandle = nullptr;
 };

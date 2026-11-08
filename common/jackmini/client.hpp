@@ -38,9 +38,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 namespace jackmini
 {
 
-// The client library is built with hidden visibility by default; the API is exported explicitly.
-#define JACKMINI_API __attribute__((visibility("default")))
-
 // The lifecycle is three states.  A client is opened, then it may be activated
 // and deactivated any number of times.
 //

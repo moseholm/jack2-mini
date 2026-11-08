@@ -24,7 +24,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
+#include <cstddef>
 #include <string>
 #include <thread>
 
@@ -158,6 +160,80 @@ int main(int argc, char** argv)
         Check("unregistering twice: NotFound", client.unregister_port(*out).error() == Error::NotFound);
     }
     peer.close();
+
+    // Audio and MIDI through the realtime buffers, between two clients.  The source writes a constant and a MIDI event
+    // in each cycle; the destination reads them in its process callback.
+    auto src_opened = Client::open("jackmini_src", options);
+    auto dst_opened = Client::open("jackmini_dst", options);
+    Check("audio clients open", src_opened.has_value() && dst_opened.has_value());
+    if (src_opened && dst_opened) {
+        Client src = std::move(*src_opened);
+        Client dst = std::move(*dst_opened);
+        auto audio_out = src.register_port("aout", PortType::Audio, PortFlags::Output);
+        auto midi_out = src.register_port("mout", PortType::Midi, PortFlags::Output);
+        auto audio_in = dst.register_port("ain", PortType::Audio, PortFlags::Input);
+        auto midi_in = dst.register_port("min", PortType::Midi, PortFlags::Input);
+        Check("audio and MIDI ports register", audio_out && midi_out && audio_in && midi_in);
+
+        std::atomic<float> last_sample{ -1.0f };
+        std::atomic<std::size_t> midi_seen{ 0 };
+        std::atomic<unsigned> first_byte{ 0 };
+        std::atomic<unsigned> event_size{ 0 };
+        if (audio_out && midi_out && audio_in && midi_in) {
+            Port aout = *audio_out;
+            Port mout = *midi_out;
+            Port ain = *audio_in;
+            Port min = *midi_in;
+            Check("source process: set", src.on_process([&src, aout, mout](FrameCount) {
+                for (auto& sample : src.audio_buffer(aout)) {
+                    sample = 0.25f;
+                }
+                auto midi = src.midi_buffer(mout);
+                midi.clear();
+                const std::byte note[3] = { std::byte{ 0x90 }, std::byte{ 0x40 }, std::byte{ 0x7f } };
+                midi.write(5, note);
+                return true;
+            }).has_value());
+            Check("destination process: set", dst.on_process([&dst, ain, min, &last_sample, &midi_seen, &first_byte, &event_size](FrameCount) {
+                auto samples = dst.audio_buffer(ain);
+                if (!samples.empty()) {
+                    last_sample = samples.back();
+                }
+                auto midi = dst.midi_buffer(min);
+                midi_seen = midi.count();
+                if (midi.count() > 0) {
+                    const auto event = midi.event(0);
+                    first_byte = static_cast<unsigned>(event.data.empty() ? 0 : std::to_integer<unsigned>(event.data[0]));
+                    event_size = static_cast<unsigned>(event.data.size());
+                }
+                return true;
+            }).has_value());
+        }
+
+        Check("audio clients activate", src.activate().has_value() && dst.activate().has_value());
+        auto aout_again = src.find_port("jackmini_src:aout");
+        auto ain_again = src.find_port("jackmini_dst:ain");
+        auto mout_again = src.find_port("jackmini_src:mout");
+        auto min_again = src.find_port("jackmini_dst:min");
+        if (aout_again && ain_again && mout_again && min_again) {
+            Check("connect audio and MIDI", src.connect(*aout_again, *ain_again).has_value() &&
+                                             src.connect(*mout_again, *min_again).has_value());
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        Check("the destination reads the source's audio", std::fabs(last_sample.load() - 0.25f) < 1e-6f);
+        Check("the destination reads the source's MIDI event", midi_seen.load() == 1 && first_byte.load() == 0x90 && event_size.load() == 3);
+
+        Check("transport start", src.transport_start().has_value());
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        Check("transport is rolling", src.transport_state() != TransportState::Stopped);
+        Check("transport stop", src.transport_stop().has_value());
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        Check("transport is stopped", src.transport_state() == TransportState::Stopped);
+        Check("transport locate", src.transport_locate(1000).has_value());
+
+        src.close();
+        dst.close();
+    }
 
     Check("close", client.close().has_value());
     Check("closed: name is empty", client.name().empty());

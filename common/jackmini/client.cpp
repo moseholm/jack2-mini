@@ -28,11 +28,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "jack/jack.h"
 #include "jack/uuid.h"
 
+#include <array>
+#include <atomic>
+#include <span>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "jack/midiport.h"
+#include "jack/transport.h"
 
 namespace jackmini
 {
@@ -48,38 +55,50 @@ struct Client::Impl {
     BufferSizeFn buffer_size;
     SampleRateFn sample_rate;
 
-    // The ports this client has handed out, by id.  The id is the index; index 0 is no port.  Ports of other clients get
-    // an id too, when find_port returns them.  A port that is unregistered keeps its id, with no port behind it.
-    std::vector<jack_port_t*> ports{ nullptr };
+    // The ports this client has handed out, by id: the id is the slot.  Slot 0 is no port.  A slot is written under the
+    // lock by the control thread and read without a lock by the realtime thread, so a slot is never reused: a handle
+    // to an unregistered port stays invalid.  The table holds kMaxPortHandles; a client that uses more fails.
+    static constexpr std::uint32_t kMaxPortHandles = 4096;
+    std::array<std::atomic<jack_port_t*>, kMaxPortHandles> slots{};
+    std::uint32_t used = 1;
     std::unordered_map<jack_port_t*, std::uint32_t> ids;
+    std::mutex control;
 
+    // Control thread.  Returns 0 when the table is full.
     std::uint32_t id_of(jack_port_t* port)
     {
         if (port == nullptr) {
             return 0;
         }
+        std::lock_guard lock(control);
         const auto found = ids.find(port);
         if (found != ids.end()) {
             return found->second;
         }
-        const auto id = static_cast<std::uint32_t>(ports.size());
-        ports.push_back(port);
+        if (used >= kMaxPortHandles) {
+            return 0;
+        }
+        const std::uint32_t id = used++;
+        slots[id].store(port);
         ids.emplace(port, id);
         return id;
     }
 
+    // Realtime thread: no lock.
     jack_port_t* port_of(Port port) const
     {
-        return (port.id() > 0 && port.id() < ports.size()) ? ports[port.id()] : nullptr;
+        const std::uint32_t id = port.id();
+        return (id > 0 && id < kMaxPortHandles) ? slots[id].load() : nullptr;
     }
 
+    // Control thread.
     void forget(jack_port_t* port)
     {
-        ids.erase(port);
-        for (auto& entry : ports) {
-            if (entry == port) {
-                entry = nullptr;
-            }
+        std::lock_guard lock(control);
+        const auto found = ids.find(port);
+        if (found != ids.end()) {
+            slots[found->second].store(nullptr);
+            ids.erase(found);
         }
     }
 };
@@ -535,6 +554,104 @@ FrameCount Client::buffer_size() const noexcept
 float Client::cpu_load() const noexcept
 {
     return fImpl && fImpl->handle ? jack_cpu_load(fImpl->handle) : 0.0f;
+}
+
+// Realtime access.  These do not allocate, lock, or return errors; a port that is not known gives an empty buffer.
+std::span<float> Client::audio_buffer(Port port) noexcept
+{
+    jack_port_t* ptr = fImpl ? fImpl->port_of(port) : nullptr;
+    if (ptr == nullptr || std::strcmp(jack_port_type(ptr), JACK_DEFAULT_AUDIO_TYPE) != 0) {
+        return {};
+    }
+    const auto frames = jack_get_buffer_size(fImpl->handle);
+    return std::span<float>(static_cast<float*>(jack_port_get_buffer(ptr, frames)), frames);
+}
+
+midi::Buffer Client::midi_buffer(Port port) noexcept
+{
+    jack_port_t* ptr = fImpl ? fImpl->port_of(port) : nullptr;
+    if (ptr == nullptr || std::strcmp(jack_port_type(ptr), JACK_DEFAULT_MIDI_TYPE) != 0) {
+        return midi::Buffer(nullptr);
+    }
+    return midi::Buffer(jack_port_get_buffer(ptr, jack_get_buffer_size(fImpl->handle)));
+}
+
+namespace midi
+{
+
+std::size_t Buffer::count() const noexcept
+{
+    return fHandle ? jack_midi_get_event_count(fHandle) : 0;
+}
+
+Event Buffer::event(std::size_t index) const noexcept
+{
+    jack_midi_event_t raw{};
+    if (fHandle == nullptr || jack_midi_event_get(&raw, fHandle, index) != 0) {
+        return {};
+    }
+    return Event{ raw.time, std::span<const std::byte>(reinterpret_cast<const std::byte*>(raw.buffer), raw.size) };
+}
+
+bool Buffer::write(FrameCount time, std::span<const std::byte> data) noexcept
+{
+    if (fHandle == nullptr) {
+        return false;
+    }
+    return jack_midi_event_write(fHandle, time, reinterpret_cast<const jack_midi_data_t*>(data.data()), data.size()) == 0;
+}
+
+void Buffer::clear() noexcept
+{
+    if (fHandle != nullptr) {
+        jack_midi_clear_buffer(fHandle);
+    }
+}
+
+} // namespace midi
+
+// Transport.
+TransportState Client::transport_state() const noexcept
+{
+    if (!fImpl || !fImpl->handle) {
+        return TransportState::Stopped;
+    }
+    jack_position_t position{};
+    switch (jack_transport_query(fImpl->handle, &position)) {
+    case JackTransportRolling:  return TransportState::Rolling;
+    case JackTransportStarting: return TransportState::Starting;
+    case JackTransportLooping:  return TransportState::Looping;
+    default:                    return TransportState::Stopped;
+    }
+}
+
+Result<void> Client::transport_start()
+{
+    if (!fImpl || !fImpl->handle) {
+        return std::unexpected(Error::InvalidState);
+    }
+    jack_transport_start(fImpl->handle);
+    return {};
+}
+
+Result<void> Client::transport_stop()
+{
+    if (!fImpl || !fImpl->handle) {
+        return std::unexpected(Error::InvalidState);
+    }
+    jack_transport_stop(fImpl->handle);
+    return {};
+}
+
+Result<void> Client::transport_locate(FrameCount frame)
+{
+    if (!fImpl || !fImpl->handle) {
+        return std::unexpected(Error::InvalidState);
+    }
+    if (jack_transport_locate(fImpl->handle, frame) != 0) {
+        return std::unexpected(Error::ServerFailure);
+    }
+    return {};
 }
 
 } // namespace jackmini

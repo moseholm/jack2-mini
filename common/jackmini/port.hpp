@@ -29,6 +29,9 @@ namespace jackmini
 
 using FrameCount = std::uint32_t;
 
+// The client library is built with hidden visibility by default; the API is exported explicitly.
+#define JACKMINI_API __attribute__((visibility("default")))
+
 enum class PortType : std::uint8_t {
     Audio,
     Midi,
