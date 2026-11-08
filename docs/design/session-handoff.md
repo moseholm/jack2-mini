@@ -168,7 +168,9 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   flag now sets that mode at open.
 - **Sleep-based tests:** the deactivate and reactivate checks in `tests/jackmini_client_e2e.cpp`
   count cycles of a clock client, not time. The e2e runs in freewheel (`jackd -F -d dummy`, 1 s)
-  and in real time (6 s), both pass. The transport and latency checks still use sleeps.
+  and in real time (5 s), both pass. All other waits in that program are event waits
+  (`WaitUntil`: a cycle, the latency callback, a transport state), with a 60 s limit. No test
+  in the repo relies on a fixed sleep now; `tests/perf` and the legacy programs are benchmarks.
 - **Still open:** the overflow test (notification queue) is not in the repo; add it with the
   freewheel start if wanted.
 - **Then:** port the test programs only when needed; remove the C client library (reference tag

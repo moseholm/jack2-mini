@@ -37,19 +37,27 @@ namespace
 
 int gFailures = 0;
 
-// Waits until a counter has moved by n cycles (a time limit guards against a stalled server).  Counting cycles, not
-// time, makes the checks exact with the server in freewheel mode (jackd -F), and still correct in real time.
-bool WaitCycles(const std::atomic<unsigned long>& counter, unsigned long n)
+// Waits until a condition holds.  The condition is an event (a cycle, a callback, a state), never a time, so the checks
+// are exact with the server in freewheel mode (jackd -F) and still correct in real time.  The time limit only guards
+// against a stalled server.
+template <typename Pred>
+bool WaitUntil(Pred pred)
 {
-    const unsigned long target = counter.load() + n;
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
-    while (counter.load() < target) {
+    while (!pred()) {
         if (std::chrono::steady_clock::now() > deadline) {
             return false;
         }
         std::this_thread::sleep_for(std::chrono::microseconds(200));
     }
     return true;
+}
+
+// Waits until a counter has moved by n cycles.
+bool WaitCycles(const std::atomic<unsigned long>& counter, unsigned long n)
+{
+    const unsigned long target = counter.load() + n;
+    return WaitUntil([&] { return counter.load() >= target; });
 }
 
 void Check(const char* what, bool ok)
@@ -203,6 +211,7 @@ int main(int argc, char** argv)
         auto midi_in = dst.register_port("min", PortType::Midi, PortFlags::Input);
         Check("audio and MIDI ports register", audio_out && midi_out && audio_in && midi_in);
 
+        std::atomic<unsigned long> dst_cycles{ 0 };
         std::atomic<float> last_sample{ -1.0f };
         std::atomic<std::size_t> midi_seen{ 0 };
         std::atomic<unsigned> first_byte{ 0 };
@@ -222,7 +231,8 @@ int main(int argc, char** argv)
                 midi.write(5, note);
                 return true;
             }).has_value());
-            Check("destination process: set", dst.on_process([&dst, ain, min, &last_sample, &midi_seen, &first_byte, &event_size](FrameCount) {
+            Check("destination process: set", dst.on_process([&dst, ain, min, &dst_cycles, &last_sample, &midi_seen, &first_byte, &event_size](FrameCount) {
+                dst_cycles++;
                 auto samples = dst.audio_buffer(ain);
                 if (!samples.empty()) {
                     last_sample = samples.back();
@@ -253,19 +263,16 @@ int main(int argc, char** argv)
             Check("connect audio and MIDI", src.connect(*aout_again, *ain_again).has_value() &&
                                              src.connect(*mout_again, *min_again).has_value());
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
-        Check("the destination reads the source's audio", std::fabs(last_sample.load() - 0.25f) < 1e-6f);
+        // Two cycles after the connections: the destination has run with them in place.
+        Check("the destination reads the source's audio", WaitCycles(dst_cycles, 2) && std::fabs(last_sample.load() - 0.25f) < 1e-6f);
         Check("recompute the latencies", src.recompute_latencies().has_value());
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        Check("the server asks for the latency (callback runs)", latency_calls.load() > 0);
+        Check("the server asks for the latency (callback runs)", WaitUntil([&] { return latency_calls.load() > 0; }));
         Check("the destination reads the source's MIDI event", midi_seen.load() == 1 && first_byte.load() == 0x90 && event_size.load() == 3);
 
         Check("transport start", src.transport_start().has_value());
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        Check("transport is rolling", src.transport_state() != TransportState::Stopped);
+        Check("transport is rolling", WaitUntil([&] { return src.transport_state() != TransportState::Stopped; }));
         Check("transport stop", src.transport_stop().has_value());
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        Check("transport is stopped", src.transport_state() == TransportState::Stopped);
+        Check("transport is stopped", WaitUntil([&] { return src.transport_state() == TransportState::Stopped; }));
         Check("transport locate", src.transport_locate(1000).has_value());
 
         src.close();
