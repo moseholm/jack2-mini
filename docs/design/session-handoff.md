@@ -237,6 +237,15 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   Next: `libjacklog` (basic logging), then `libjackmidi` (MIDI buffer), then the jackmini client on `JackMidiBuffer`,
   then the install rules and pkg-config.
 - Then: protocol item 4b (drop session and metadata messages).
+- **TSAN triage (current build, dummy driver, end-to-end, graph and cpu tests).** Reports, by location:
+  - Real, in one process (candidates to fix): `JackEngine::ProcessNext` (`fLastSwitchUsecs`, JackEngine.cpp:152);
+    `JackConnectionManager::ResumeRefNum` timing fields (268/269); `JackClient::IsActive`, `Activate`, `Deactivate`
+    (127, 438, 460); `JackClient::CallSyncCallbackAux` (913); `JackLibClient::Open` (143); `jack_log` reading
+    `JackGlobals::fVerbose` (JackError.cpp:54); `SetClockSource` (linux/JackLinuxTime.c:170, the clock function pointer).
+  - Probably not races under the protocol (ordering by futex syscalls across processes, which TSAN does not model):
+    audio buffer reads and writes in the chain test (jackmini_graph_e2e.cpp:92, :100) and the shared-memory accessor
+    `JackShmReadWritePtr::operator T*` (JackShmMem.h:185). Needs a decision on how to annotate them.
+  - Not yet checked against `origin/develop`; the earlier list (above) said the client-side statements were the same there.
 - Open TSAN findings, outside the counters (verified to be the same statements as in
   `origin/develop`): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing
   fields in `ResumeRefNum`; the client library's `JackClient::Activate`, `Deactivate`,
