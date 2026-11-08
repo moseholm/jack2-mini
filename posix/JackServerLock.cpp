@@ -19,9 +19,10 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackServerLock.h"
 
 #include "JackFdSegment.h"
-#include "JackSocket.h"
+#include "JackTools.h"
 
 #include <cerrno>
+#include <format>
 #include <fcntl.h>
 #include <string>
 #include <sys/file.h>
@@ -42,9 +43,9 @@ std::error_code LastError()
 
 } // namespace
 
-std::expected<void, std::error_code> AcquireServerLock(const char* dir, const char* server_name)
+std::expected<void, std::error_code> AcquireServerLock(const char* dir)
 {
-    const std::string lock_path = JackServerSocketPath(dir, server_name, 0) + ".lock";
+    const std::string lock_path = std::format("{}/jack_{}_server.lock", dir, JackTools::GetUID());
 
     // O_CLOEXEC keeps the descriptor out of any program the server starts, so the lock ends with the server.
     UniqueFd fd(open(lock_path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0666));

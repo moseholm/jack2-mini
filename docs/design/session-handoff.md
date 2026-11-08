@@ -53,9 +53,9 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 - Exactly one server per machine, exclusive. It still has a name, which
   identifies its socket path.
-- Single-instance rule: a lock on the server's socket path (step 3). A lock
-  released by the kernel when its holder dies, so a killed server cannot block a
-  new start.
+- Single-instance rule: one server per user. A lock on `/dev/shm/jack_<uid>_server.lock`,
+  whatever the server's name (step 3, changed to this path). A lock released by
+  the kernel when its holder dies, so a killed server cannot block a new start.
 - Registry removed (step 2b/4). It is a shared segment that lists the other
   segments and the server table. Replaced by passing file descriptors with
   `SCM_RIGHTS` in the `ClientOpen` reply.
@@ -78,7 +78,7 @@ Protocol and shared memory (`docs/design/protocol.md`):
   clean (no driver timeout, no xrun). Baseline was 2 of 4 failing. Ten runs is a
   small sample: repeat before calling the stall gone.
 - `528aab29` P2 step 3: single-instance lock. `posix/JackServerLock` takes an
-  `flock` on `<socket path>.lock`; both start paths use it (`jackd` and the
+  `flock` (on the per-user file, see Decisions); both start paths use it (`jackd` and the
   control API). The server table is gone from `shm.c`. Also fixes a crash on
   a registry with the old layout (the bad-registry path used an index before the
   mapping).
@@ -109,10 +109,7 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-- **Decide the lock scope** (open issue below). Answer given: a name-independent
-  lock path means a second server is refused whatever its name. Choose the path,
-  then check it with two names.
-- Then the protocol order of work, item 3: message framing and the handshake
+- The protocol order of work, item 3: message framing and the handshake
   (`docs/design/protocol.md` section 2, section 10).
 
 ## Environment facts
@@ -151,10 +148,6 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   never runs its first cycle, and the engine's 5-second driver timeout expires.
   Counts: `HEAD` 2 of 4 starts, the packed change 3 of 4. Not caused by the
   layout change.
-- **The lock is per socket path, so per server name.** Two servers with
-  different names run together (checked). The protocol doc says one server per
-  machine. Decide: lock a name-independent path, or keep the approved design and
-  change the doc.
 - **Server ignores SIGINT and SIGTERM.** Must be killed (`SIGKILL`). Leaves
   registry and segments behind.
 - **Interval does not match the nominal period.** At 64 frames the start-to-start
@@ -173,7 +166,7 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 2. Read this file, `docs/design/protocol.md` (section 4.1 and the order of work),
    and `docs/design/client-api.md`.
 3. Rebuild the test dir and run `ctest --test-dir /tmp/opencode/build-jack2-cxx23`.
-4. Decide the lock scope, then continue with protocol item 3 (see "Next").
+4. Continue with protocol item 3 (see "Next").
 
 ## Working agreements with the user
 

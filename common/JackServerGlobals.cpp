@@ -317,7 +317,7 @@ bool JackServerGlobals::Init()
             server_name = (char*)JackTools::DefaultServerName();
         }
 
-        auto lock = AcquireServerLock(jack_server_dir, server_name);
+        auto lock = AcquireServerLock(jack_server_dir);
         if (!lock) {
             if (lock.error() == std::errc::file_exists) {
                 jack_error("`%s' server already active", server_name);

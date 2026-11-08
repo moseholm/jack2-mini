@@ -131,8 +131,9 @@ after one killed run.
 **One server, exclusively.** Only one server runs on a machine, so the
 registry's server table goes. The server still has a name, which identifies it
 in its socket path (`/run/user/<uid>/jackmini-<name>.sock`, or the
-equivalent). A lock on that path makes the single-instance rule: a second
-server finds the lock held and refuses to start. A lock released by the kernel
+equivalent). The single-instance rule is a lock on a file per user,
+`/dev/shm/jack_<uid>_server.lock`, whatever the server's name: a second server
+finds the lock held and refuses to start, even under another name. A lock released by the kernel
 when its holder dies means a killed server cannot block the next start.
 Clients find the server by its socket, and they get their segments by
 descriptor.
@@ -297,8 +298,7 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
    notes); it is not caused by this change.
 2. Segment handoff with `SCM_RIGHTS` and no registry. Done: `posix/JackFdSegment`
    (2a), the descriptors in the `ClientOpen` reply (2b), the single-instance lock on
-   the socket path (step 3), and the registry removed (step 4). Open: the lock
-   scope (per server name now; see the handoff).
+   the per-user lock (step 3), and the registry removed (step 4).
 3. Message framing and the handshake.
 4. Requests, then notifications.
 5. Counter redesign (section 4.5), with its TSAN test.

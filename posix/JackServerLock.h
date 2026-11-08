@@ -25,12 +25,13 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 namespace Jack
 {
 
-// The single-instance rule of a server: an flock() on a file next to the server's socket.  The kernel releases the
-// lock when its holder exits, so a server that was killed does not block the next start.  The file is not removed on
-// release: removing it would let a second server lock a new file while the first one still holds the old one.
+// The single-instance rule of a server: one server per user.  It is an flock() on a file in dir, named after the user,
+// whatever the server's name.  The kernel releases the lock when its holder exits, so a server that was killed does not
+// block the next start.  The file is not removed on release: removing it would let a second server lock a new file
+// while the first one still holds the old one.
 //
 // The lock belongs to the process.  Acquiring it while it is held fails with std::errc::file_exists.
-std::expected<void, std::error_code> AcquireServerLock(const char* dir, const char* server_name);
+std::expected<void, std::error_code> AcquireServerLock(const char* dir);
 void ReleaseServerLock() noexcept;
 
 } // namespace Jack

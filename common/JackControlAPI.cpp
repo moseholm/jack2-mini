@@ -951,7 +951,7 @@ jackctl_server_open(
             return false;
         }
 
-        auto lock = AcquireServerLock(jack_server_dir, server_ptr->name.str);
+        auto lock = AcquireServerLock(jack_server_dir);
         if (!lock) {
             if (lock.error() == std::errc::file_exists) {
                 jack_error("`%s' server already active", server_ptr->name.str);
