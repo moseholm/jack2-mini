@@ -23,7 +23,10 @@
 #include "shm.h"
 #include "JackError.h"
 #include "JackCompilerDeps.h"
+#include "JackFdSegment.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <new>  // GCC 4.0
 #include <errno.h>
 #include <stdlib.h>
@@ -45,9 +48,19 @@ void LockAllMemory();
 void UnlockAllMemory();
 
 /*!
-\brief
+\brief A shared segment as it is passed between the server and a client: its descriptor and its size.
 
-A class which objects possibly want to be allocated in shared memory derives from this class.
+The server keeps the descriptor of each segment it owns. A client receives its own descriptors with the open reply, maps them, and closes them.
+*/
+
+struct JackShmSegment
+{
+    int fFd = -1;
+    std::uint32_t fSize = 0;
+};
+
+/*!
+\brief A class which objects possibly want to be allocated in shared memory derives from this class.
 */
 
 class JackShmMemAble
@@ -55,14 +68,20 @@ class JackShmMemAble
     protected:
 
         jack_shm_info_t fInfo;
+        int fFd;
 
     public:
 
         void Init();
 
-        int GetShmIndex()
+        int GetShmFd() const
         {
-            return fInfo.index;
+            return fFd;
+        }
+
+        std::uint32_t GetShmSize() const
+        {
+            return fInfo.size;
         }
 
         char* GetShmAddress()
@@ -107,7 +126,9 @@ class SERVER_EXPORT JackShmMem : public JackShmMemAble
 };
 
 /*!
-\brief Pointer on shared memory segment in the client side.
+\brief Pointer on a shared memory segment, in the client side.
+
+The segment is mapped from the descriptor the server sent. The mapping is removed when the pointer is destroyed.
 */
 
 template <class T>
@@ -116,268 +137,63 @@ class JackShmReadWritePtr
 
     private:
 
-        jack_shm_info_t fInfo;
-        bool fInitDone;
+        void* fAddress;
+        std::size_t fSize;
 
-        void Init(int index, const char* server_name = JACK_DEFAULT_SERVER_NAME)
+        void Init(const JackShmSegment& segment)
         {
-            if (fInfo.index < 0 && index >= 0) {
-                jack_log("JackShmReadWritePtr::Init %ld %d", index, fInfo.index);
-                if (jack_initialize_shm(server_name) < 0) {
+            if (fAddress == nullptr) {
+                jack_log("JackShmReadWritePtr::Init fd = %d size = %u", segment.fFd, segment.fSize);
+                auto mapped = MapSegment(segment.fFd, segment.fSize);
+                if (!mapped) {
                     throw std::bad_alloc();
                 }
-                fInfo.index = index;
-                if (jack_attach_lib_shm(&fInfo)) {
-                    throw std::bad_alloc();
-                }
+                fAddress = *mapped;
+                fSize = segment.fSize;
                 GetShmAddress()->LockMemory();
-                fInitDone = true;
             }
         }
 
     public:
 
         JackShmReadWritePtr()
-        {
-            fInfo.index = -1;
-            fInitDone = false;
-            fInfo.ptr.attached_at = (char*)NULL;
-        }
+            : fAddress(nullptr), fSize(0)
+        {}
 
-        JackShmReadWritePtr(int index, const char* server_name)
-        {
-            Init(index, server_name);
-        }
+        JackShmReadWritePtr(const JackShmReadWritePtr&) = delete;
+        JackShmReadWritePtr& operator=(const JackShmReadWritePtr&) = delete;
 
         ~JackShmReadWritePtr()
         {
-            if (!fInitDone) {
-               jack_error("JackShmReadWritePtr::~JackShmReadWritePtr - Init not done for %d, skipping unlock", fInfo.index);
+            if (fAddress == nullptr) {
+               jack_error("JackShmReadWritePtr::~JackShmReadWritePtr - not mapped, skipping unlock");
                return;
             }
-            if (fInfo.index >= 0) {
-                jack_log("JackShmReadWritePtr::~JackShmReadWritePtr %d", fInfo.index);
-                GetShmAddress()->UnlockMemory();
-                jack_release_lib_shm(&fInfo);
-                fInfo.index = -1;
-             }
+            jack_log("JackShmReadWritePtr::~JackShmReadWritePtr");
+            GetShmAddress()->UnlockMemory();
+            UnmapSegment(fAddress, fSize);
+            fAddress = nullptr;
         }
 
         T* operator->() const
         {
-            return (T*)fInfo.ptr.attached_at;
+            return (T*)fAddress;
         }
 
         operator T*() const
         {
-            return (T*)fInfo.ptr.attached_at;
+            return (T*)fAddress;
         }
 
-        JackShmReadWritePtr& operator=(int index)
+        void Map(const JackShmSegment& segment)
         {
-            Init(index);
-            return *this;
-        }
-
-        void SetShmIndex(int index, const char* server_name)
-        {
-            Init(index, server_name);
-        }
-
-        int GetShmIndex()
-        {
-            return fInfo.index;
+            Init(segment);
         }
 
         T* GetShmAddress()
         {
-            return (T*)fInfo.ptr.attached_at;
+            return (T*)fAddress;
         }
-};
-
-/*!
-\brief Pointer on shared memory segment in the client side: destroy the segment (used client control)
-*/
-
-template <class T>
-class JackShmReadWritePtr1
-{
-
-    private:
-
-        jack_shm_info_t fInfo;
-        bool fInitDone;
-
-        void Init(int index, const char* server_name = JACK_DEFAULT_SERVER_NAME)
-        {
-            if (fInfo.index < 0 && index >= 0) {
-                jack_log("JackShmReadWritePtr1::Init %ld %d", index, fInfo.index);
-                if (jack_initialize_shm(server_name) < 0) {
-                    throw std::bad_alloc();
-                }
-                fInfo.index = index;
-                if (jack_attach_lib_shm(&fInfo)) {
-                    throw std::bad_alloc();
-                }
-                GetShmAddress()->LockMemory();
-                fInitDone = true;
-                /*
-                nobody else needs to access this shared memory any more, so
-                destroy it. because we have our own attachment to it, it won't
-                vanish till we exit (and release it).
-                */
-                jack_destroy_shm(&fInfo);
-            }
-        }
-
-    public:
-
-        JackShmReadWritePtr1()
-        {
-            fInfo.index = -1;
-            fInitDone = false;
-            fInfo.ptr.attached_at = NULL;
-        }
-
-        JackShmReadWritePtr1(int index, const char* server_name)
-        {
-            Init(index, server_name);
-        }
-
-        ~JackShmReadWritePtr1()
-        {
-            if (!fInitDone) {
-               jack_error("JackShmReadWritePtr1::~JackShmReadWritePtr1 - Init not done for %d, skipping unlock", fInfo.index);
-               return;
-            }
-            if (fInfo.index >= 0) {
-                jack_log("JackShmReadWritePtr1::~JackShmReadWritePtr1 %d", fInfo.index);
-                GetShmAddress()->UnlockMemory();
-                jack_release_lib_shm(&fInfo);
-                fInfo.index = -1;
-            }
-        }
-
-        T* operator->() const
-        {
-            return (T*)fInfo.ptr.attached_at;
-        }
-
-        operator T*() const
-        {
-            return (T*)fInfo.ptr.attached_at;
-        }
-
-        JackShmReadWritePtr1& operator=(int index)
-        {
-            Init(index);
-            return *this;
-        }
-
-        void SetShmIndex(int index, const char* server_name)
-        {
-            Init(index, server_name);
-        }
-
-        int GetShmIndex()
-        {
-            return fInfo.index;
-        }
-
-        T* GetShmAddress()
-        {
-            return (T*)fInfo.ptr.attached_at;
-        }
-};
-
-/*!
-\brief Pointer on shared memory segment in the client side.
-*/
-
-template <class T>
-class JackShmReadPtr
-{
-
-    private:
-
-        jack_shm_info_t fInfo;
-        bool fInitDone;
-
-        void Init(int index, const char* server_name = JACK_DEFAULT_SERVER_NAME)
-        {
-            if (fInfo.index < 0 && index >= 0) {
-                jack_log("JackShmPtrRead::Init %ld %d", index, fInfo.index);
-                if (jack_initialize_shm(server_name) < 0) {
-                    throw std::bad_alloc();
-                }
-                fInfo.index = index;
-                if (jack_attach_lib_shm_read(&fInfo)) {
-                    throw std::bad_alloc();
-                }
-                GetShmAddress()->LockMemory();
-                fInitDone = true;
-            }
-        }
-
-    public:
-
-        JackShmReadPtr()
-        {
-            fInfo.index = -1;
-            fInitDone = false;
-            fInfo.ptr.attached_at = NULL;
-        }
-
-        JackShmReadPtr(int index, const char* server_name)
-        {
-            Init(index, server_name);
-        }
-
-        ~JackShmReadPtr()
-        {
-            if (!fInitDone) {
-               jack_error("JackShmReadPtr::~JackShmReadPtr - Init not done for %ld, skipping unlock", fInfo.index);
-               return;
-            }
-            if (fInfo.index >= 0) {
-                jack_log("JackShmPtrRead::~JackShmPtrRead %ld", fInfo.index);
-                GetShmAddress()->UnlockMemory();
-                jack_release_lib_shm(&fInfo);
-                fInfo.index = -1;
-            }
-        }
-
-        T* operator->() const
-        {
-            return (T*)fInfo.ptr.attached_at;
-        }
-
-        operator T*() const
-        {
-            return (T*)fInfo.ptr.attached_at;
-        }
-
-        JackShmReadPtr& operator=(int index)
-        {
-            Init(index);
-            return *this;
-        }
-
-        void SetShmIndex(int index, const char* server_name)
-        {
-            Init(index, server_name);
-        }
-
-        int GetShmIndex()
-        {
-            return fInfo.index;
-        }
-
-        T* GetShmAddress()
-        {
-            return (T*)fInfo.ptr.attached_at;
-        }
-
 };
 
 } // end of namespace

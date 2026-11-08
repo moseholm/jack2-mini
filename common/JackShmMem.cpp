@@ -28,6 +28,7 @@ namespace Jack
 
 static unsigned int fSegmentNum = 0;
 static jack_shm_info_t gInfo;
+static int gFd = -1;
 
 JackShmMem::JackShmMem()
 {
@@ -45,6 +46,7 @@ void JackShmMemAble::Init()
     fInfo.index = gInfo.index;
     fInfo.ptr.attached_at = gInfo.ptr.attached_at;
     fInfo.size = gInfo.size;
+    fFd = gFd;
 }
 
 void* JackShmMem::operator new(size_t size, void* memory)
@@ -55,49 +57,42 @@ void* JackShmMem::operator new(size_t size, void* memory)
 
 void* JackShmMem::operator new(size_t size)
 {
-    jack_shm_info_t info;
-    JackShmMem* obj;
     std::array<char, 64> name{};
 
-    Jack::FormatCString(name, "/jack_shared{}", fSegmentNum++);
+    Jack::FormatCString(name, "jack-shared{}", fSegmentNum++);
 
-    if (jack_shmalloc(name.data(), size, &info)) {
-        jack_error("Cannot create shared memory segment of size = %d", size, strerror(errno));
-        goto error;
+    auto segment = CreateSegment(size, name.data());
+    if (!segment) {
+        jack_error("Cannot create shared memory segment name = %s size = %zu err = %s", name.data(), size, segment.error().message().c_str());
+        throw std::bad_alloc();
     }
 
-    if (jack_attach_shm(&info)) {
-        jack_error("Cannot attach shared memory segment name = %s err = %s", name.data(), strerror(errno));
-        jack_destroy_shm(&info);
-        goto error;
+    auto address = MapSegment(segment->get(), size);
+    if (!address) {
+        jack_error("Cannot map shared memory segment name = %s err = %s", name.data(), address.error().message().c_str());
+        throw std::bad_alloc();
     }
 
-    obj = (JackShmMem*)jack_shm_addr(&info);
     // It is unsafe to set object fields directly (may be overwritten during object initialization),
     // so use an intermediate global data
-    gInfo.index = info.index;
+    gInfo.index = JACK_SHM_NULL_INDEX;
     gInfo.size = size;
-    gInfo.ptr.attached_at = info.ptr.attached_at;
+    gInfo.ptr.attached_at = *address;
+    gFd = segment->release();
 
-    jack_log("JackShmMem::new index = %ld attached = %x size = %ld ", info.index, info.ptr.attached_at, size);
-    return obj;
-
-error:
-    jack_error("JackShmMem::new bad alloc", size);
-    throw std::bad_alloc();
+    jack_log("JackShmMem::new fd = %d attached = %p size = %zu", gFd, *address, size);
+    return *address;
 }
 
 void JackShmMem::operator delete(void* p, size_t size)
 {
-    jack_shm_info_t info;
     JackShmMem* obj = (JackShmMem*)p;
-    info.index = obj->fInfo.index;
-    info.ptr.attached_at = obj->fInfo.ptr.attached_at;
+    // The descriptor is closed and the mapping removed; the segment goes when the last one is gone.
+    UniqueFd fd(obj->fFd);
 
-    jack_log("JackShmMem::delete size = %ld index = %ld", size, info.index);
+    jack_log("JackShmMem::delete size = %ld fd = %d", size, fd.get());
 
-    jack_release_shm(&info);
-    jack_destroy_shm(&info);
+    UnmapSegment(p, obj->fInfo.size);
 }
 
 void JackShmMem::operator delete(void* obj)

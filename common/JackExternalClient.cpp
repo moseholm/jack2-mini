@@ -41,7 +41,7 @@ int JackExternalClient::ClientNotify(int refnum, const char* name, int notify, i
     return result;
 }
 
-int JackExternalClient::Open(const char* name, int pid, int refnum, jack_uuid_t uuid, int* shared_client)
+int JackExternalClient::Open(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client)
 {
     try {
 
@@ -53,6 +53,7 @@ int JackExternalClient::Open(const char* name, int pid, int refnum, jack_uuid_t 
         // Use "placement new" to allocate object in shared memory
         JackShmMemAble* shared_mem = static_cast<JackShmMemAble*>(JackShmMem::operator new(sizeof(JackClientControl)));
         shared_mem->Init();
+        const JackShmSegment segment{ shared_mem->GetShmFd(), shared_mem->GetShmSize() };
         fClientControl = new(shared_mem) JackClientControl(name, pid, refnum, uuid);
 
         if (!fClientControl) {
@@ -60,8 +61,8 @@ int JackExternalClient::Open(const char* name, int pid, int refnum, jack_uuid_t 
             return -1;
         }
 
-        *shared_client = shared_mem->GetShmIndex();
-        jack_log("JackExternalClient::Open name = %s index = %ld base = %x", name, shared_mem->GetShmIndex(), shared_mem->GetShmAddress());
+        *shared_client = segment;
+        jack_log("JackExternalClient::Open name = %s fd = %d size = %u base = %p", name, segment.fFd, segment.fSize, shared_mem->GetShmAddress());
         return 0;
 
     } catch (std::exception&) {

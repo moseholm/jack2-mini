@@ -23,6 +23,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "types.h"
 #include "JackSession.h"
 #include "JackMetadata.h"
+#include "JackFdSegment.h"
+
+#include <span>
+#include <vector>
 
 namespace Jack
 {
@@ -32,6 +36,7 @@ class JackClient;
 class JackServer;
 struct JackEngineControl;
 class JackGraphManager;
+struct JackShmSegment;
 
 namespace detail
 {
@@ -48,6 +53,11 @@ class JackChannelTransactionInterface
 
         virtual int Read(void* data, int len) = 0;
         virtual int Write(void* data, int len) = 0;
+
+        // Writes data with descriptors, in one message. The receiver gets its own copies.
+        virtual int WriteWithFds(void* data, int len, std::span<const int> fds) { return -1; }
+        // Reads data and the descriptors sent with it. The caller owns the descriptors it gets.
+        virtual int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) { return -1; }
 
 };
 
@@ -125,7 +135,7 @@ class JackClientChannelInterface
 
         virtual void ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, int protocol, int options, int* status, int* result, int open)
         {}
-        virtual void ClientOpen(const char* name, int pid, jack_uuid_t uuid, int* shared_engine, int* shared_client, int* shared_graph, int* result)
+        virtual void ClientOpen(const char* name, int pid, jack_uuid_t uuid, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph, int* result)
         {}
         virtual void ClientOpen(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, int* result)
         {}

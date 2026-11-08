@@ -184,6 +184,33 @@ int JackClientSocket::Write(void* data, int len)
     return 0;
 }
 
+int JackClientSocket::WriteWithFds(void* data, int len, std::span<const int> fds)
+{
+    const std::span<const std::byte> bytes(static_cast<const std::byte*>(data), len);
+    const auto sent = SendWithFds(fSocket, bytes, fds);
+    if (!sent) {
+        jack_error("JackClientSocket::WriteWithFds fd = %d err = %s", fSocket, sent.error().message().c_str());
+        return -1;
+    }
+    return 0;
+}
+
+int JackClientSocket::ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds)
+{
+    const std::span<std::byte> bytes(static_cast<std::byte*>(data), len);
+    const auto got = RecvWithFds(fSocket, bytes, fds);
+    if (!got) {
+        jack_error("JackClientSocket::ReadWithFds fd = %d err = %s", fSocket, got.error().message().c_str());
+        return -1;
+    }
+    if (*got == 0) {
+        // The peer closed the connection.
+        return JACK_REQUEST_ERR_ABORTED;
+    }
+    // The descriptors arrived with the first bytes; the rest is plain data.
+    return Read(static_cast<uint8_t*>(data) + *got, len - static_cast<int>(*got));
+}
+
 JackServerSocket::JackServerSocket(): fSocket( -1)
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");

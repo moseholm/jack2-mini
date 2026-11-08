@@ -619,7 +619,7 @@ int JackEngine::GetClientRefNum(const char* name)
 }
 
 // Used for external clients
-int JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, int* shared_engine, int* shared_client, int* shared_graph_manager)
+int JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager)
 {
     std::array<char, JACK_CLIENT_NAME_SIZE + 1> real_name{};
 
@@ -672,8 +672,8 @@ int JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, 
 
     fGraphManager->InitRefNum(refnum);
     fRollingResetPending = true;
-    *shared_engine = fEngineControl->GetShmIndex();
-    *shared_graph_manager = fGraphManager->GetShmIndex();
+    *shared_engine = JackShmSegment{ fEngineControl->GetShmFd(), fEngineControl->GetShmSize() };
+    *shared_graph_manager = JackShmSegment{ fGraphManager->GetShmFd(), fGraphManager->GetShmSize() };
     *ref = refnum;
     return 0;
 

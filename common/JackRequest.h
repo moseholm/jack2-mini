@@ -27,12 +27,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackError.h"
 #include "JackPlatformPlug.h"
 #include "JackChannel.h"
+#include "JackShmMem.h"
 #include "JackTime.h"
 #include "types.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <array>
 #include <list>
+#include <vector>
 
 namespace Jack
 {
@@ -390,38 +393,57 @@ struct JackClientOpenRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_
 
 /*!
 \brief NewClient result.
+
+The payload is the status and the sizes of the three segments. The descriptors go with it as SCM_RIGHTS, in one message, in the order engine, graph, client control.
 */
+
+struct JackClientOpenResultPayload
+{
+    int32_t fResult;
+    uint32_t fEngineSize;
+    uint32_t fGraphSize;
+    uint32_t fClientSize;
+};
+static_assert(sizeof(JackClientOpenResultPayload) == 16);
 
 struct JackClientOpenResult : public JackResult
 {
 
-    int fSharedEngine;
-    int fSharedClient;
-    int fSharedGraph;
+    JackShmSegment fSharedEngine;
+    JackShmSegment fSharedClient;
+    JackShmSegment fSharedGraph;
 
     JackClientOpenResult()
-            : JackResult(), fSharedEngine(-1), fSharedClient(-1), fSharedGraph(-1)
-    {}
-    JackClientOpenResult(int32_t result, int index1, int index2, int index3)
-            : JackResult(result), fSharedEngine(index1), fSharedClient(index2), fSharedGraph(index3)
+            : JackResult()
     {}
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
-        CheckRes(JackResult::Read(trans));
-        CheckRes(trans->Read(&fSharedEngine, sizeof(int)));
-        CheckRes(trans->Read(&fSharedClient, sizeof(int)));
-        CheckRes(trans->Read(&fSharedGraph, sizeof(int)));
+        JackClientOpenResultPayload payload{};
+        std::vector<UniqueFd> fds;
+        CheckRes(trans->ReadWithFds(&payload, sizeof(payload), fds));
+        fResult = payload.fResult;
+        if (fResult != 0) {
+            return 0;
+        }
+        if (fds.size() != 3) {
+            jack_error("JackClientOpenResult::Read expected 3 descriptors, got %zu", fds.size());
+            return -1;
+        }
+        fSharedEngine = JackShmSegment{ fds[0].release(), payload.fEngineSize };
+        fSharedGraph = JackShmSegment{ fds[1].release(), payload.fGraphSize };
+        fSharedClient = JackShmSegment{ fds[2].release(), payload.fClientSize };
         return 0;
     }
 
     int Write(detail::JackChannelTransactionInterface* trans) override
     {
-        CheckRes(JackResult::Write(trans));
-        CheckRes(trans->Write(&fSharedEngine, sizeof(int)));
-        CheckRes(trans->Write(&fSharedClient, sizeof(int)));
-        CheckRes(trans->Write(&fSharedGraph, sizeof(int)));
-        return 0;
+        JackClientOpenResultPayload payload{ fResult, fSharedEngine.fSize, fSharedGraph.fSize, fSharedClient.fSize };
+        if (fResult != 0) {
+            return trans->WriteWithFds(&payload, sizeof(payload), {});
+        }
+        const std::array<int, 3> fds{ fSharedEngine.fFd, fSharedGraph.fFd, fSharedClient.fFd };
+        return trans->WriteWithFds(&payload, sizeof(payload), fds);
     }
 
 };

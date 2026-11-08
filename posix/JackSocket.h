@@ -28,6 +28,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <arpa/inet.h>
 #include <errno.h>
 #include <unistd.h>
+#include <span>
+#include <vector>
 
 #include "JackChannel.h"
 
@@ -58,6 +60,8 @@ class JackClientSocket : public detail::JackClientRequestInterface
         int Close();
         int Read(void* data, int len);
         int Write(void* data, int len);
+        int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) override;
+        int WriteWithFds(void* data, int len, std::span<const int> fds) override;
         int GetFd()
         {
             return fSocket;

@@ -106,11 +106,12 @@ void JackGenericClientChannel::ClientCheck(const char* name, jack_uuid_t uuid, c
     strcpy(name_res, res.fName);
 }
 
-void JackGenericClientChannel::ClientOpen(const char* name, int pid, jack_uuid_t uuid, int* shared_engine, int* shared_client, int* shared_graph, int* result)
+void JackGenericClientChannel::ClientOpen(const char* name, int pid, jack_uuid_t uuid, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph, int* result)
 {
     JackClientOpenRequest req(name, pid, uuid);
     JackClientOpenResult res;
     ServerSyncCall(&req, &res, result);
+    // The descriptors now belong to the caller, who closes them.
     *shared_engine = res.fSharedEngine;
     *shared_client = res.fSharedClient;
     *shared_graph = res.fSharedGraph;

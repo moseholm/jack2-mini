@@ -116,7 +116,7 @@ class SERVER_EXPORT JackLockedEngine
             return fEngine.ClientCheck(name, uuid, name_res, protocol, options, status);
             CATCH_EXCEPTION_RETURN
         }
-        int ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, int* shared_engine, int* shared_client, int* shared_graph_manager)
+        int ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager)
         {
             TRY_CALL
             JackLock lock(&fEngine);

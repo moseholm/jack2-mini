@@ -24,6 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackPlatformPlug.h"
 #include "JackTools.h"
 
+#include <array>
+
 namespace Jack
 {
 
@@ -92,7 +94,10 @@ JackLibClient::~JackLibClient()
 
 int JackLibClient::Open(const char* server_name, const char* name, jack_uuid_t uuid, jack_options_t options, jack_status_t* status)
 {
-    int shared_engine, shared_client, shared_graph, result;
+    JackShmSegment shared_engine, shared_client, shared_graph;
+    // Closed when the open ends. The mappings keep the segments alive.
+    std::array<UniqueFd, 3> descriptors;
+    int result;
     bool res;
     jack_log("JackLibClient::Open name = %s", name);
     
@@ -122,6 +127,9 @@ int JackLibClient::Open(const char* server_name, const char* name, jack_uuid_t u
 
     // Require new client
     fChannel->ClientOpen(name_res, JackTools::GetPID(), uuid, &shared_engine, &shared_client, &shared_graph, &result);
+    descriptors[0].reset(shared_engine.fFd);
+    descriptors[1].reset(shared_graph.fFd);
+    descriptors[2].reset(shared_client.fFd);
     if (result < 0) {
         jack_error("Cannot open %s client", name_res);
         goto error;
@@ -129,9 +137,9 @@ int JackLibClient::Open(const char* server_name, const char* name, jack_uuid_t u
 
     try {
         // Map shared memory segments
-        JackLibGlobals::fGlobals->fEngineControl.SetShmIndex(shared_engine, fServerName.data());
-        JackLibGlobals::fGlobals->fGraphManager.SetShmIndex(shared_graph, fServerName.data());
-        fClientControl.SetShmIndex(shared_client, fServerName.data());
+        JackLibGlobals::fGlobals->fEngineControl.Map(shared_engine);
+        JackLibGlobals::fGlobals->fGraphManager.Map(shared_graph);
+        fClientControl.Map(shared_client);
         JackGlobals::fVerbose = GetEngineControl()->fVerbose;
     } catch (...) {
         jack_error("Map shared memory segments exception");

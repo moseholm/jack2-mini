@@ -58,8 +58,6 @@ struct JackLibGlobals
         if (!JackMessageBuffer::Create()) {
             jack_error("Cannot create message buffer");
         }
-        fGraphManager = -1;
-        fEngineControl = -1;
 
         fMetadata = new JackMetadata();
 

@@ -100,6 +100,7 @@ set(JACK_COMMON_SOURCES
     posix/JackPosixProcessSync.cpp
     posix/JackPosixMutex.cpp
     posix/JackSocket.cpp
+    posix/JackFdSegment.cpp
     linux/JackLinuxFutex.cpp
     linux/JackLinuxTime.c)
 
