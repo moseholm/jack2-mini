@@ -90,7 +90,6 @@ set(JACK_COMMON_SOURCES
     common/JackEngineControl.cpp
     common/JackShmMem.cpp
     common/JackGenericClientChannel.cpp
-    common/shm.c
     common/JackGlobals.cpp
     common/JackTransportEngine.cpp
     common/JackTools.cpp

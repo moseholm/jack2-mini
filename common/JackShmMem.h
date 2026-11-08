@@ -20,7 +20,6 @@
 #ifndef __JackShmMem__
 #define __JackShmMem__
 
-#include "shm.h"
 #include "JackError.h"
 #include "JackCompilerDeps.h"
 #include "JackFdSegment.h"
@@ -67,7 +66,8 @@ class JackShmMemAble
 {
     protected:
 
-        jack_shm_info_t fInfo;
+        std::uint32_t fSize;
+        void* fAddress;
         int fFd;
 
     public:
@@ -81,22 +81,22 @@ class JackShmMemAble
 
         std::uint32_t GetShmSize() const
         {
-            return fInfo.size;
+            return fSize;
         }
 
         char* GetShmAddress()
         {
-            return (char*)fInfo.ptr.attached_at;
+            return (char*)fAddress;
         }
 
         void LockMemory()
         {
-            LockMemoryImp(this, fInfo.size);
+            LockMemoryImp(this, fSize);
         }
 
         void UnlockMemory()
         {
-            UnlockMemoryImp(this, fInfo.size);
+            UnlockMemoryImp(this, fSize);
         }
 
 };

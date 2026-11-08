@@ -27,7 +27,8 @@ namespace Jack
 {
 
 static unsigned int fSegmentNum = 0;
-static jack_shm_info_t gInfo;
+static std::uint32_t gSize = 0;
+static void* gAddress = nullptr;
 static int gFd = -1;
 
 JackShmMem::JackShmMem()
@@ -43,9 +44,8 @@ JackShmMem::~JackShmMem()
 
 void JackShmMemAble::Init()
 {
-    fInfo.index = gInfo.index;
-    fInfo.ptr.attached_at = gInfo.ptr.attached_at;
-    fInfo.size = gInfo.size;
+    fSize = gSize;
+    fAddress = gAddress;
     fFd = gFd;
 }
 
@@ -75,9 +75,8 @@ void* JackShmMem::operator new(size_t size)
 
     // It is unsafe to set object fields directly (may be overwritten during object initialization),
     // so use an intermediate global data
-    gInfo.index = JACK_SHM_NULL_INDEX;
-    gInfo.size = size;
-    gInfo.ptr.attached_at = *address;
+    gSize = size;
+    gAddress = *address;
     gFd = segment->release();
 
     jack_log("JackShmMem::new fd = %d attached = %p size = %zu", gFd, *address, size);
@@ -92,7 +91,7 @@ void JackShmMem::operator delete(void* p, size_t size)
 
     jack_log("JackShmMem::delete size = %ld fd = %d", size, fd.get());
 
-    UnmapSegment(p, obj->fInfo.size);
+    UnmapSegment(p, obj->fSize);
 }
 
 void JackShmMem::operator delete(void* obj)

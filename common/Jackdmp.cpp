@@ -152,7 +152,6 @@ static void usage(FILE* file, jackctl_server_t *server, bool full = true)
     }
 
     fprintf(file,
-            "               [ --replace-registry ]\n"
             "               [ --silent OR -s ]\n"
             "               [ --sync OR -S ]\n"
             "               [ --temporary OR -T ]\n"
@@ -183,7 +182,6 @@ int main(int argc, char** argv)
     const JSList * server_parameters;
     jackctl_driver_t * master_driver_ctl;
     jackctl_driver_t * loopback_driver_ctl = NULL;
-    int replace_registry = 0;
 
     for(int a = 1; a < argc; ++a) {
         if( !strcmp(argv[a], "--version") || !strcmp(argv[a], "-V") ) {
@@ -209,7 +207,6 @@ int main(int argc, char** argv)
                                        { "unlock", 0, 0, 'u' },
                                        { "realtime", 0, 0, 'R' },
                                        { "no-realtime", 0, 0, 'r' },
-                                       { "replace-registry", 0, &replace_registry, 0 },
                                        { "loopback", 0, 0, 'L' },
                                        { "realtime-priority", 1, 0, 'P' },
                                        { "timeout", 1, 0, 't' },
@@ -408,13 +405,6 @@ int main(int argc, char** argv)
                 usage(stdout, server_ctl);
                 goto destroy_server;
         }
-    }
-
-    // Long option with no letter so treated separately
-    param = jackctl_get_parameter(server_parameters, "replace-registry");
-    if (param != NULL) {
-        value.b = replace_registry;
-        jackctl_parameter_set_value(param, &value);
     }
 
     if (!master_driver_name) {

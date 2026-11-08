@@ -38,7 +38,6 @@
 #include "driver_interface.h"
 #include "JackError.h"
 #include "JackServer.h"
-#include "shm.h"
 #include "JackTools.h"
 #include "JackControlAPI.h"
 #include "JackLockedEngine.h"
@@ -101,8 +100,6 @@ struct jackctl_server
     union jackctl_parameter_value default_port_max;
 
     /* bool */
-    union jackctl_parameter_value replace_registry;
-    union jackctl_parameter_value default_replace_registry;
 
     /* bool, synchronous or asynchronous engine mode */
     union jackctl_parameter_value sync;
@@ -837,20 +834,6 @@ SERVER_EXPORT jackctl_server_t * jackctl_server_create2(
     value.b = false;
     if (jackctl_add_parameter(
             &server_ptr->parameters,
-            "replace-registry",
-            "Replace shared memory registry.",
-            "",
-            JackParamBool,
-            &server_ptr->replace_registry,
-            &server_ptr->default_replace_registry,
-            value) == NULL)
-    {
-        goto fail_free_parameters;
-    }
-
-    value.b = false;
-    if (jackctl_add_parameter(
-            &server_ptr->parameters,
             "sync",
             "Use server synchronous mode.",
             "",
@@ -933,11 +916,7 @@ SERVER_EXPORT bool jackctl_server_close(jackctl_server *server_ptr)
         server_ptr->engine->Close();
         delete server_ptr->engine;
 
-        /* clean up shared memory and files from this server instance */
-        jack_log("Cleaning up shared memory");
-
-        jack_cleanup_shm();
-
+        /* clean up files from this server instance */
         jack_log("Cleaning up files");
 
         JackTools::CleanupFiles(server_ptr->name.str);
@@ -981,17 +960,9 @@ jackctl_server_open(
             }
             goto fail;
         }
-        if (jack_initialize_shm_server(server_ptr->replace_registry.b)) {
-            jack_error("No access to shm registry");
-            ReleaseServerLock();
-            goto fail;
-        }
-
         jack_log("Server `%s' locked", server_ptr->name.str);
 
-        /* clean up shared memory and files from any previous
-         * instance of this server name */
-        jack_cleanup_shm();
+        /* clean up files from any previous instance of this server name */
         JackTools::CleanupFiles(server_ptr->name.str);
 
         if (!server_ptr->realtime.b && server_ptr->client_timeout.i == 0) {
@@ -1043,10 +1014,6 @@ fail_delete:
     server_ptr->engine = NULL;
 
 fail_unregister:
-    jack_log("Cleaning up shared memory");
-
-    jack_cleanup_shm();
-
     jack_log("Cleaning up files");
 
     JackTools::CleanupFiles(server_ptr->name.str);

@@ -27,7 +27,6 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackTools.h"
 #include "JackCString.h"
 #include "JackServerLock.h"
-#include "shm.h"
 #include <getopt.h>
 #include <errno.h>
 #include <span>
@@ -123,11 +122,9 @@ bool JackServerGlobals::Init()
     JSList* drivers = NULL;
     int loopback = 0;
     int sync = 0;
-    int rc, i;
-    int res;
-    int replace_registry = 0;
+    int i;
 
-    // True once this process has registered the server name, so that errors know what to undo.
+    // True once this process holds the server's lock, so that errors know what to undo.
     bool server_registered = false;
     // The arguments from the first .jackdrc found, the first being the program name.
     std::vector<std::string> rc_tokens;
@@ -154,7 +151,6 @@ bool JackServerGlobals::Init()
                                        { "unlock", 0, 0, 'u' },
                                        { "realtime", 0, 0, 'R' },
                                        { "no-realtime", 0, 0, 'r' },
-                                       { "replace-registry", 0, &replace_registry, 0 },
                                        { "loopback", 0, 0, 'L' },
                                        { "realtime-priority", 1, 0, 'P' },
                                        { "timeout", 1, 0, 't' },
@@ -330,16 +326,10 @@ bool JackServerGlobals::Init()
             }
             goto error;
         }
-        if (jack_initialize_shm_server(false)) {
-            jack_error("no access to shm registry");
-            ReleaseServerLock();
-            goto error;
-        }
         jack_info("server `%s' locked", server_name);
         server_registered = true;
 
-        /* clean up shared memory and files from any previous instance of this server name */
-        jack_cleanup_shm();
+        /* clean up files from any previous instance of this server name */
         JackTools::CleanupFiles(server_name);
 
         if (!realtime && client_timeout == 0) {
@@ -350,7 +340,6 @@ bool JackServerGlobals::Init()
         if (res < 0) {
             jack_error("Cannot start server... exit");
             Delete();
-            jack_cleanup_shm();
             JackTools::CleanupFiles(server_name);
             ReleaseServerLock();
             server_registered = false;
@@ -417,7 +406,6 @@ void JackServerGlobals::Destroy()
             Stop();
         }
         Delete();
-        jack_cleanup_shm();
         JackTools::CleanupFiles(server_name);
         ReleaseServerLock();
     }
