@@ -104,7 +104,9 @@ Server → client, on the notification socket. Current kinds (`NotificationType`
 | kSecondarySampleRateCallback | keep | |
 | kSessionCallback, kPropertyChangeCallback | **drop** (done) | |
 
-Notifications are sent with a bounded per-client queue. If a client does not
+Notifications are sent with a bounded per-client queue (checked by `tests/notify_overflow_unit.cpp`: over the queue,
+every notification is delivered or counted as dropped, the newest is delivered, the order is kept; under it, nothing is
+dropped). If a client does not
 read them, the server drops the oldest one and counts the drop. A client
 learns of drops from a `kDropped` notification (new) with the count, instead of
 the server blocking on it. Implemented with 256 entries per client (a first

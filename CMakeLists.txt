@@ -435,6 +435,15 @@ if(JACK_BUILD_TESTS)
     target_link_libraries(jack_protocol_conformance_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
     add_test(NAME protocol_conformance_unit COMMAND jack_protocol_conformance_unit)
 
+    # The client's notification queue on the server when the client does not read: every notification is delivered or
+    # counted as dropped.  Uses the server objects with a socket pair.
+    add_executable(jack_notify_overflow_unit tests/notify_overflow_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
+    target_link_libraries(jack_notify_overflow_unit PRIVATE jackring jacklog jackmidi)
+    target_include_directories(jack_notify_overflow_unit PRIVATE ${JACK_INCLUDE_DIRS})
+    target_compile_definitions(jack_notify_overflow_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
+    target_link_libraries(jack_notify_overflow_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
+    add_test(NAME notify_overflow_unit COMMAND jack_notify_overflow_unit)
+
     # The parts of jackmini that need no server: ring buffer, Uuid, error text.
     add_library(jackmini_base STATIC common/jackmini/uuid.cpp common/jackmini/error.cpp)
     target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common)

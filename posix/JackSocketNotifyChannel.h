@@ -64,6 +64,7 @@ class JackSocketNotifyChannel
 
         void Writer();
         int Send(Pending& pending, std::uint32_t dropped);
+        int Start();
 
     public:
 
@@ -75,6 +76,8 @@ class JackSocketNotifyChannel
         {}
 
         int Open(const char* name);		// Open the Server/Client connection
+        // Uses a connected socket instead of connecting one: the tests attach one end of a socket pair.
+        int Attach(int fd);
         void Close();					// Close the Server/Client connection
 
         void ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2, int* result);

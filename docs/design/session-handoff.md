@@ -161,6 +161,10 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
+- **Notification overflow test (done).** `tests/notify_overflow_unit.cpp` (ctest `notify_overflow_unit`) attaches a
+  socket pair to the notification channel (`JackSocketNotifyChannel::Attach`, the seam beside `Open`) and sends 1000
+  notifications while the reader does not read: delivered + dropped = 1000, the newest is delivered, the order is kept.
+  With 100 nothing is dropped. The counts do not depend on the kernel's socket buffers, only the invariants.
 - **Protocol item 4b done.** The session requests and the property change request are removed, with their
   notifications (`kSessionCallback`, `kPropertyChangeCallback`) and the server and client code. The requests are
   renumbered 1 to 30. `JACK_PROTOCOL_VERSION` is 11. The metadata store stays inside the server (the ALSA drivers set
