@@ -181,11 +181,22 @@ void* JackGraphManager::GetBuffer(jack_port_id_t port_index, jack_nframes_t buff
         return GetBuffer(0); // port_index 0 is not used
     }
 
-    jack_int_t len = manager->Connections(port_index);
-
     // Output port
     if (port->fFlags & JackPortIsOutput) {
         return (port->fTied != NO_PORT) ? GetBuffer(port->fTied, buffer_size) : GetBuffer(port_index);
+    }
+
+    // The input of a deactivated client is silent; the outputs of deactivated clients are not mixed in.
+    jack_port_id_t active[CONNECTION_NUM_FOR_PORT];
+    jack_int_t len = 0;
+    if (!manager->IsInactive(port->GetRefNum())) {
+        const jack_int_t connections = manager->Connections(port_index);
+        for (jack_int_t i = 0; i < connections; i++) {
+            const jack_port_id_t src_index = manager->GetPort(port_index, i);
+            if (!manager->IsInactive(GetPort(src_index)->GetRefNum())) {
+                active[len++] = src_index;
+            }
+        }
     }
 
     // No connections : return a zero-filled buffer
@@ -195,7 +206,7 @@ void* JackGraphManager::GetBuffer(jack_port_id_t port_index, jack_nframes_t buff
 
     // One connection
     } else if (len == 1) {
-        jack_port_id_t src_index = manager->GetPort(port_index, 0);
+        jack_port_id_t src_index = active[0];
 
         // Ports in same client : copy the buffer
         if (GetPort(src_index)->GetRefNum() == port->GetRefNum()) {
@@ -210,18 +221,11 @@ void* JackGraphManager::GetBuffer(jack_port_id_t port_index, jack_nframes_t buff
 
     // Multiple connections : mix all buffers
     } else {
-
-        const jack_int_t* connections = manager->GetConnections(port_index);
         void* buffers[CONNECTION_NUM_FOR_PORT];
-        jack_port_id_t src_index;
-        int i;
-
-        for (i = 0; (i < CONNECTION_NUM_FOR_PORT) && ((src_index = connections[i]) != EMPTY); i++) {
-            AssertPort(src_index);
-            buffers[i] = GetBuffer(src_index, buffer_size);
+        for (jack_int_t i = 0; i < len; i++) {
+            buffers[i] = GetBuffer(active[i], buffer_size);
         }
-
-        port->MixBuffers(buffers, i, buffer_size);
+        port->MixBuffers(buffers, len, buffer_size);
         return port->GetBuffer();
     }
 }
@@ -557,8 +561,11 @@ void JackGraphManager::GetConnections(jack_port_id_t port_index, jack_int_t* res
 // Server
 void JackGraphManager::Activate(int refnum)
 {
-    DirectConnect(FREEWHEEL_DRIVER_REFNUM, refnum);
-    DirectConnect(refnum, FREEWHEEL_DRIVER_REFNUM);
+    JackConnectionManager* manager = WriteNextStateStart();
+    manager->SetInactive(refnum, false);
+    manager->DirectConnect(FREEWHEEL_DRIVER_REFNUM, refnum);
+    manager->DirectConnect(refnum, FREEWHEEL_DRIVER_REFNUM);
+    WriteNextStateStop();
 }
 
 /*
@@ -569,19 +576,21 @@ void JackGraphManager::Activate(int refnum)
 // Server
 void JackGraphManager::Deactivate(int refnum)
 {
-    // Disconnect only when needed
-    if (IsDirectConnection(refnum, FREEWHEEL_DRIVER_REFNUM)) {
-        DirectDisconnect(refnum, FREEWHEEL_DRIVER_REFNUM);
+    // The activation edges go while the client still counts; then it is inactive. Disconnection from the FW must be done
+    // last, as in Activate, so that no intermediate state is seen where the client is unactivated and still checked.
+    JackConnectionManager* manager = WriteNextStateStart();
+    if (manager->IsDirectConnection(refnum, FREEWHEEL_DRIVER_REFNUM)) {
+        manager->DirectDisconnect(refnum, FREEWHEEL_DRIVER_REFNUM);
     } else {
         jack_log("JackServer::Deactivate client = %ld was not activated", refnum);
     }
-
-    // Disconnect only when needed
-    if (IsDirectConnection(FREEWHEEL_DRIVER_REFNUM, refnum)) {
-        DirectDisconnect(FREEWHEEL_DRIVER_REFNUM, refnum);
+    if (manager->IsDirectConnection(FREEWHEEL_DRIVER_REFNUM, refnum)) {
+        manager->DirectDisconnect(FREEWHEEL_DRIVER_REFNUM, refnum);
     } else {
         jack_log("JackServer::Deactivate client = %ld was not activated", refnum);
     }
+    manager->SetInactive(refnum, true);
+    WriteNextStateStop();
 }
 
 // Server

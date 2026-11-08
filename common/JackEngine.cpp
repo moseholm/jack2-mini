@@ -841,27 +841,7 @@ int JackEngine::ClientDeactivate(int refnum, bool wait)
     JackClientInterface* client = fClientTable[refnum];
     jack_log("JackEngine::ClientDeactivate ref = %ld name = %s", refnum, client->GetClientControl()->fName);
 
-    jack_int_t input_ports[PORT_NUM_FOR_CLIENT];
-    jack_int_t output_ports[PORT_NUM_FOR_CLIENT];
-    fGraphManager->GetInputPorts(refnum, input_ports);
-    fGraphManager->GetOutputPorts(refnum, output_ports);
-
-    // First disconnect all ports
-    for (int i = 0; (i < PORT_NUM_FOR_CLIENT) && (input_ports[i] != EMPTY); i++) {
-        PortDisconnect(-1, input_ports[i], ALL_PORTS);
-    }
-    for (int i = 0; (i < PORT_NUM_FOR_CLIENT) && (output_ports[i] != EMPTY); i++) {
-        PortDisconnect(-1, output_ports[i], ALL_PORTS);
-    }
-
-    // Then issue port registration notification
-    for (int i = 0; (i < PORT_NUM_FOR_CLIENT) && (input_ports[i] != EMPTY); i++) {
-        NotifyPortRegistation(input_ports[i], false);
-    }
-    for (int i = 0; (i < PORT_NUM_FOR_CLIENT) && (output_ports[i] != EMPTY); i++) {
-        NotifyPortRegistation(output_ports[i], false);
-    }
-
+    // The ports and their connections are kept: the graph skips this client until it is activated again.
     fGraphManager->Deactivate(refnum);
     fLastSwitchUsecs = 0; // Force switch to occur next cycle, even when called with "dead" clients
 

@@ -218,6 +218,7 @@ void JackConnectionManager::InitRefNum(int refnum)
     fOutputPort[refnum].Init();
     fConnectionRef.Init(refnum);
     fInputCounter[refnum].SetValue(0);
+    fInactive[refnum] = 0;
 }
 
 /*!
@@ -355,7 +356,9 @@ void JackConnectionManager::DirectConnect(int ref1, int ref2)
 
     if (fConnectionRef.IncItem(ref1, ref2) == 1) { // First connection between client ref1 and client ref2
         jack_log("JackConnectionManager::DirectConnect first: ref1 = %ld ref2 = %ld", ref1, ref2);
-        fInputCounter[ref2].IncValue();
+        if (!IsInactive(ref1)) {
+            fInputCounter[ref2].IncValue();
+        }
     }
 }
 
@@ -368,8 +371,33 @@ void JackConnectionManager::DirectDisconnect(int ref1, int ref2)
 
     if (fConnectionRef.DecItem(ref1, ref2) == 0) { // Last connection between client ref1 and client ref2
         jack_log("JackConnectionManager::DirectDisconnect last: ref1 = %ld ref2 = %ld", ref1, ref2);
-        fInputCounter[ref2].DecValue();
+        if (!IsInactive(ref1)) {
+            fInputCounter[ref2].DecValue();
+        }
     }
+}
+
+/*!
+\brief Deactivates or activates a client. Its connections are kept; the activation count of each client it feeds
+follows: they stop counting while the client is inactive.
+*/
+void JackConnectionManager::SetInactive(int refnum, bool inactive)
+{
+    assert(refnum >= 0 && refnum < CLIENT_NUM);
+    if (IsInactive(refnum) == inactive) {
+        return;
+    }
+    const jack_int_t* outputs = fConnectionRef.GetItems(refnum);
+    for (int ref = 0; ref < CLIENT_NUM; ref++) {
+        if (outputs[ref] > 0) {
+            if (inactive) {
+                fInputCounter[ref].DecValue();
+            } else {
+                fInputCounter[ref].IncValue();
+            }
+        }
+    }
+    fInactive[refnum] = inactive ? 1 : 0;
 }
 
 /*!

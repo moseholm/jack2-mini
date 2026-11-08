@@ -390,6 +390,13 @@ if(JACK_BUILD_TESTS)
     target_link_libraries(jack_counter_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
     add_test(NAME counter_unit COMMAND jack_counter_unit)
 
+    # Deactivation keeps the connections: silence for an inactive client, and the connection is still there (protocol.md section 6).
+    add_executable(jack_deactivate_graph_unit tests/deactivate_graph_unit.cpp $<TARGET_OBJECTS:jackserver_objects>)
+    target_include_directories(jack_deactivate_graph_unit PRIVATE ${JACK_INCLUDE_DIRS})
+    target_compile_definitions(jack_deactivate_graph_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
+    target_link_libraries(jack_deactivate_graph_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
+    add_test(NAME deactivate_graph_unit COMMAND jack_deactivate_graph_unit)
+
     # The parts of jackmini that need no server: ring buffer, Uuid, error text.
     add_library(jackmini_base STATIC common/jackmini/uuid.cpp common/jackmini/error.cpp)
     target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common)

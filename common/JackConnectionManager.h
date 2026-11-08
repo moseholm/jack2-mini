@@ -418,6 +418,7 @@ class SERVER_EXPORT JackConnectionManager
         JackFixedArray<PORT_NUM_FOR_CLIENT> fOutputPort[CLIENT_NUM];	/*! Table of output port per refnum : to find a refnum for a given port */
         JackFixedMatrix<CLIENT_NUM> fConnectionRef;						/*! Table of port connections by (refnum , refnum) */
         alignas(UInt32) alignas(JackActivationCount) JackActivationCount fInputCounter[CLIENT_NUM];	/*! Activation counter per refnum */
+        UInt32 fInactive[CLIENT_NUM];	/*! 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed */
         JackLoopFeedback<CONNECTION_NUM_FOR_PORT> fLoopFeedback;		/*! Loop feedback connections */
 
         bool IsLoopPathAux(int ref1, int ref2) const;
@@ -475,6 +476,14 @@ class SERVER_EXPORT JackConnectionManager
         bool IsDirectConnection(int ref1, int ref2) const;
         void DirectConnect(int ref1, int ref2);
         void DirectDisconnect(int ref1, int ref2);
+
+        // A deactivated client keeps its connections, but they stop counting toward the clients they feed, and its
+        // ports are silent (protocol.md section 6).
+        void SetInactive(int refnum, bool inactive);
+        bool IsInactive(int refnum) const
+        {
+            return fInactive[refnum] != 0;
+        }
 
 
         // Graph
