@@ -92,14 +92,14 @@ set(JACK_COMMON_SOURCES
     common/JackTools.cpp
     common/JackUuid.cpp
     common/JackMessageBuffer.cpp
-    platform/promiscuous.c
+    platform/promiscuous.cpp
     platform/JackPosixThread.cpp
     platform/JackPosixProcessSync.cpp
     platform/JackPosixMutex.cpp
     platform/JackSocket.cpp
     platform/JackFdSegment.cpp
     platform/JackLinuxFutex.cpp
-    platform/JackLinuxTime.c)
+    platform/JackLinuxTime.cpp)
 
 set(JACK_CLIENT_SOURCES
     ${JACK_COMMON_SOURCES}

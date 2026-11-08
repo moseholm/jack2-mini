@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackConstants.h"
 #include "JackTools.h"
 #include "JackError.h"
-#include "promiscuous.h"
+#include "promiscuous.hpp"
 #include "JackCString.h"
 #include <array>
 #include <format>
@@ -48,7 +48,7 @@ JackClientSocket::JackClientSocket(): JackClientRequestInterface(), fSocket(-1),
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
     fPromiscuous = (promiscuous != NULL);
-    fPromiscuousGid = jack_group2gid(promiscuous);
+    fPromiscuousGid = jackmini::group_to_gid(promiscuous);
 }
 
 JackClientSocket::JackClientSocket(int socket): JackClientRequestInterface(), fSocket(socket),fTimeOut(0), fPromiscuous(false), fPromiscuousGid(-1)
@@ -221,7 +221,7 @@ JackServerSocket::JackServerSocket(): fSocket( -1)
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
     fPromiscuous = (promiscuous != NULL);
-    fPromiscuousGid = jack_group2gid(promiscuous);
+    fPromiscuousGid = jackmini::group_to_gid(promiscuous);
 }
 
 int JackServerSocket::Bind(const char* dir, const char* name, int which) // A revoir : utilisation de "which"
@@ -251,7 +251,7 @@ int JackServerSocket::Bind(const char* dir, const char* name, int which) // A re
         goto error;
     }
 
-    if (fPromiscuous && (jack_promiscuous_perms(-1, fName, fPromiscuousGid) < 0))
+    if (fPromiscuous && (jackmini::set_promiscuous_perms(-1, fName, fPromiscuousGid) < 0))
         goto error;
 
     return 0;

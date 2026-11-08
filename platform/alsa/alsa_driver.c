@@ -38,7 +38,6 @@
 #include "hammerfall.h"
 #include "hdsp.h"
 #include "ice1712.h"
-#include "usx2y.h"
 #include "generic.h"
 #include "memops.h"
 #include "JackError.h"
@@ -190,16 +189,6 @@ alsa_driver_ice1712_hardware (alsa_driver_t *driver)
         return 0;
 }
 
-// JACK2
-/*
-static int
-alsa_driver_usx2y_hardware (alsa_driver_t *driver)
-{
-    driver->hw = jack_alsa_usx2y_hw_new (driver);
-    return 0;
-}
-*/
-
 static int
 alsa_driver_generic_hardware (alsa_driver_t *driver)
 {
@@ -235,14 +224,6 @@ alsa_driver_hw_specific (alsa_driver_t *driver, int hw_monitoring,
                         return err;
                 }
 	}
-    // JACK2
-    /*
-        else if (!strcmp(driver->alsa_driver, "USB US-X2Y")) {
-		if ((err = alsa_driver_usx2y_hardware (driver)) !=0) {
-				return err;
-		}
-	}
-    */
        else {
 	        if ((err = alsa_driver_generic_hardware (driver)) != 0) {
 			return err;

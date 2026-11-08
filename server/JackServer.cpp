@@ -121,8 +121,8 @@ int JackServer::Open(jack_driver_desc_t* driver_desc, JSList* driver_params)
     fFreewheelDriver->SetMaster(false);
     fAudioDriver->SetMaster(true);
     fAudioDriver->AddSlave(fFreewheelDriver);
-    InitTime();
-    SetClockSource(fEngineControl->fClockSource);
+    init_time();
+    set_clock_source(fEngineControl->fClockSource);
     return 0;
 
 fail_close5:
@@ -152,7 +152,7 @@ int JackServer::Close()
     fEngine->Close();
     // TODO: move that in reworked JackServerGlobals::Destroy()
     JackMessageBuffer::Destroy();
-    EndTime();
+    end_time();
     return 0;
 }
 

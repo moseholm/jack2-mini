@@ -17,21 +17,20 @@
 
 */
 
-#ifndef __jack_gid_h__
-#define __jack_gid_h__
+#ifndef JACKMINI_PROMISCUOUS_HPP
+#define JACKMINI_PROMISCUOUS_HPP
 
-#ifdef __cplusplus
-extern "C"
+#include <sys/types.h>
+
+namespace jackmini
 {
+
+// Looks up the gid of a UNIX group, given by name or by number. Returns -1 if it is unknown.
+int group_to_gid(const char* group);
+
+// Sets promiscuous permissions on the object referenced by fd, or by path when fd is negative.
+int set_promiscuous_perms(int fd, const char* path, gid_t gid);
+
+} // end of namespace
+
 #endif
-
-int jack_group2gid (const char *group); /*!< Lookup gid for a UNIX group in a thread-safe way */
-int jack_promiscuous_perms (int fd, const char *path, gid_t gid); /*!< Set promiscuous permissions on object referenced by fd and/or path */
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* __jack_gid_h__ */
-
-

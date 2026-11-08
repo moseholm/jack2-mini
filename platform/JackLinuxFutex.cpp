@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackTools.h"
 #include "JackConstants.h"
 #include "JackError.h"
-#include "promiscuous.h"
+#include "promiscuous.hpp"
 #include <climits>
 #include <fcntl.h>
 #include <stdio.h>
@@ -43,7 +43,7 @@ JackLinuxFutex::JackLinuxFutex() : JackSynchro(), fSharedMem(-1), fFutex(NULL), 
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
     fPromiscuous = (promiscuous != NULL);
-    fPromiscuousGid = jack_group2gid(promiscuous);
+    fPromiscuousGid = jackmini::group_to_gid(promiscuous);
 }
 
 void JackLinuxFutex::BuildName(const char* client_name, const char* server_name, char* res, int size)
@@ -158,7 +158,7 @@ bool JackLinuxFutex::Allocate(const char* name, const char* server_name, int val
         return false;
     }
 
-    if (fPromiscuous && (jack_promiscuous_perms(fSharedMem, fName, fPromiscuousGid) < 0)) {
+    if (fPromiscuous && (jackmini::set_promiscuous_perms(fSharedMem, fName, fPromiscuousGid) < 0)) {
         close(fSharedMem);
         fSharedMem = -1;
         shm_unlink(fName);

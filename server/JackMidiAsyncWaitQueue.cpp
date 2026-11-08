@@ -60,7 +60,7 @@ JackMidiAsyncWaitQueue::DequeueEvent(jack_nframes_t frame)
     // little longer if necessary.
 
     jack_time_t frame_time = GetTimeFromFrames(frame);
-    jack_time_t current_time = GetMicroSeconds();
+    jack_time_t current_time = get_microseconds();
     return DequeueEvent((frame_time < current_time) ? 0 :
                         (long) (frame_time - current_time));
 }

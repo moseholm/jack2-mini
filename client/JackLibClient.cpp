@@ -159,7 +159,7 @@ int JackLibClient::Open(const char* server_name, const char* name, jack_uuid_t u
     }
 
     JackGlobals::fClientTable[GetClientControl()->fRefNum] = this;
-    SetClockSource(GetEngineControl()->fClockSource);
+    set_clock_source(GetEngineControl()->fClockSource);
     jack_log("JackLibClient::Open name = %s refnum = %ld", name_res, GetClientControl()->fRefNum);
     return 0;
 

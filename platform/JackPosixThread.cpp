@@ -91,7 +91,7 @@ int JackPosixThread::StartSync()
     } else {
         int count = 0;
         while (fStatus == kStarting && ++count < 1000) {
-            JackSleep(1000);
+            sleep_microseconds(1000);
         }
         return (count == 1000) ? -1 : 0;
     }

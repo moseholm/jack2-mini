@@ -106,7 +106,7 @@ struct JackLibGlobals
 
         if (fClientCount++ == 0 && !fGlobals) {
             jack_log("JackLibGlobals Init %x", fGlobals);
-            InitTime();
+            init_time();
             fGlobals = new JackLibGlobals();
         }
     }
@@ -115,7 +115,7 @@ struct JackLibGlobals
     {
         if (--fClientCount == 0 && fGlobals) {
             jack_log("JackLibGlobals Destroy %x", fGlobals);
-            EndTime();
+            end_time();
             delete fGlobals;
             fGlobals = NULL;
         }

@@ -60,7 +60,7 @@ static inline void WaitGraphChange()
         assert(control);
         if (manager->IsPendingChange()) {
             jack_log("WaitGraphChange...");
-            JackSleep(int(control->fPeriodUsecs * 1.1f));
+            sleep_microseconds(int(control->fPeriodUsecs * 1.1f));
         }
     }
 }

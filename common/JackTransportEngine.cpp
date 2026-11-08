@@ -281,7 +281,7 @@ jack_nframes_t JackTransportEngine::GetCurrentFrame()
     ReadCurrentPos(&pos);
 
     if (fTransportState == JackTransportRolling) {
-        float usecs = GetMicroSeconds() - pos.usecs;
+        float usecs = get_microseconds() - pos.usecs;
         jack_nframes_t elapsed = (jack_nframes_t)floor((((float) pos.frame_rate) / 1000000.0f) * usecs);
         return pos.frame + elapsed;
     } else {
@@ -301,7 +301,7 @@ void JackTransportEngine::CopyPosition(jack_position_t* from, jack_position_t* t
          * design.
          */
         if (tries > 10) {
-            JackSleep(20);
+            sleep_microseconds(20);
             tries = 0;
 
             /* debug code to avoid system hangs... */

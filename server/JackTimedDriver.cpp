@@ -48,7 +48,7 @@ int JackTimedDriver::Start()
 
 void JackTimedDriver::ProcessWait()
 {
-    jack_time_t cur_time_usec = GetMicroSeconds();
+    jack_time_t cur_time_usec = get_microseconds();
     int wait_time_usec;
 
     if (fCycleCount++ == 0) {
@@ -65,7 +65,7 @@ void JackTimedDriver::ProcessWait()
     }
 
     //jack_log("JackTimedDriver::Process wait_time = %d", wait_time_usec);
-    JackSleep(wait_time_usec);
+    sleep_microseconds(wait_time_usec);
 }
 
 } // end of namespace

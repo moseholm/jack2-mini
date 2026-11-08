@@ -43,7 +43,7 @@ constexpr int kRounds = 20000;
 int main()
 {
     // The cycle reads the time, through a clock the server selects at startup.
-    SetClockSource(JACK_TIMER_SYSTEM_CLOCK);
+    set_clock_source(JACK_TIMER_SYSTEM_CLOCK);
 
     JackGraphManager* graph = JackGraphManager::Allocate(16);
     JackSynchro* table = new JackSynchro[CLIENT_NUM];

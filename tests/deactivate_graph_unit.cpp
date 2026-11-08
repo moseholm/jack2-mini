@@ -80,7 +80,7 @@ bool AllEqual(const float* buffer, float value)
 
 int main()
 {
-    SetClockSource(JACK_TIMER_SYSTEM_CLOCK);
+    set_clock_source(JACK_TIMER_SYSTEM_CLOCK);
 
     JackGraphManager* graph = JackGraphManager::Allocate(16);
     graph->InitRefNum(kSourceRef);

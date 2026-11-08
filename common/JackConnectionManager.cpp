@@ -241,7 +241,7 @@ int JackConnectionManager::SuspendRefNum(JackClientControl* control, JackSynchro
     bool res;
     if ((res = table[control->fRefNum].TimedWait(time_out_usec))) {
         timing[control->fRefNum].fStatus = Running;
-        timing[control->fRefNum].fAwakeAt = GetMicroSeconds();
+        timing[control->fRefNum].fAwakeAt = get_microseconds();
     }
     return (res) ? 0 : -1;
 }
@@ -251,7 +251,7 @@ int JackConnectionManager::SuspendRefNum(JackClientControl* control, JackSynchro
 */
 int JackConnectionManager::ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live)
 {
-    jack_time_t current_date = GetMicroSeconds();
+    jack_time_t current_date = get_microseconds();
     const jack_int_t* output_ref = fConnectionRef.GetItems(control->fRefNum);
     int res = 0;
 

@@ -155,9 +155,9 @@ JackALSARawMidiDriver::Execute()
         } else {
 
             // The timeout value is relative to the time that
-            // 'GetMicroSeconds()' is called, not the time that 'poll()' is
+            // 'get_microseconds()' is called, not the time that 'poll()' is
             // called.  This means that the amount of time that passes between
-            // 'GetMicroSeconds()' and 'ppoll()' is time that will be lost
+            // 'get_microseconds()' and 'ppoll()' is time that will be lost
             // while waiting for 'poll() to timeout.
             //
             // I tried to replace the timeout with a 'timerfd' with absolute
@@ -175,7 +175,7 @@ JackALSARawMidiDriver::Execute()
 
             timeout_ptr = &timeout;
             jack_time_t next_time = GetTimeFromFrames(timeout_frame);
-            jack_time_t now = GetMicroSeconds();
+            jack_time_t now = get_microseconds();
             if (next_time <= now) {
                 timeout.tv_sec = 0;
                 timeout.tv_nsec = 0;

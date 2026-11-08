@@ -195,13 +195,13 @@ void JackDriver::CycleIncTime()
 
 void JackDriver::CycleTakeBeginTime()
 {
-    fBeginDateUst = GetMicroSeconds();  // Take callback date here
+    fBeginDateUst = get_microseconds();  // Take callback date here
     fEngineControl->CycleIncTime(fBeginDateUst);
 }
 
 void JackDriver::CycleTakeEndTime()
 {
-    fEndDateUst = GetMicroSeconds();    // Take end date here
+    fEndDateUst = get_microseconds();    // Take end date here
 }
 
 JackClientControl* JackDriver::GetClientControl() const
@@ -570,7 +570,7 @@ void JackDriver::LoadConnections(int alias, bool full_name)
         
         // Wait for connection change
         if (fGraphManager->IsPendingChange()) {
-            JackSleep(int(fEngineControl->fPeriodUsecs * 1.1f));
+            sleep_microseconds(int(fEngineControl->fPeriodUsecs * 1.1f));
         }
         
         if (inputs) {

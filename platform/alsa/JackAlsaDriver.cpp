@@ -1358,7 +1358,7 @@ jack_nframes_t JackAlsaDriver::frame_time() const
 {
     JackTimer timer;
     fEngineControl->ReadFrameTime(&timer);
-    return timer.Time2Frames(GetMicroSeconds(), fEngineControl->fBufferSize);
+    return timer.Time2Frames(get_microseconds(), fEngineControl->fBufferSize);
 }
 
 jack_nframes_t JackAlsaDriver::last_frame_time() const

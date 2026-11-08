@@ -186,7 +186,7 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 - **Benchmarks ported to jackmini** (`tests/cpu.cpp`, `tests/iodelay.cpp`, `tests/external_metro.cpp`,
   `tests/perf/rtbench.cpp` as `jack_rtbench`). Durations are counted in cycles (`WaitUntil` / `WaitCycles`
   in `tests/jackmini_wait.hpp`), no sleeps. `run-baseline.sh` uses `jack_rtbench` and no fixed delay.
-  `alloccount.c` is an LD_PRELOAD tool, unchanged.
+  `alloccount.cpp` is an LD_PRELOAD tool, ported to C++ (build by hand: `g++ -std=c++23 -shared -fPIC -o alloccount.so tests/perf/alloccount.cpp`; send SIGURG for the counts).
 - **Fixed: closing a client in freewheel stalled the graph.** The freewheel driver waited (10 s) for a
   removed client's signal. `JackEngine::ClientDeactivate` now wakes the driver in freewheel while the graph is
   unfinished; `Process` then switches to the graph without the client. Repeated `jack_cpu` runs and the e2e test
@@ -254,7 +254,7 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   - Real, in one process: `JackEngine::ProcessNext` (`fLastSwitchUsecs`, JackEngine.cpp:152), fixed (atomic);
     `JackConnectionManager::ResumeRefNum` timing fields (268/269); `JackClient::IsActive`, `Activate`, `Deactivate`
     (127, 438, 460); `JackClient::CallSyncCallbackAux` (913); `JackLibClient::Open` (143); `jack_log` reading
-    `JackGlobals::fVerbose` (JackError.cpp:54); `SetClockSource` (platform/JackLinuxTime.c:170, the clock function pointer).
+    `JackGlobals::fVerbose` (JackError.cpp:54); `SetClockSource` (platform/JackLinuxTime.cpp, the clock function pointer).
   - Probably not races under the protocol (ordering by futex syscalls across processes, which TSAN does not model):
     audio buffer reads and writes in the chain test (jackmini_graph_e2e.cpp:92, :100) and the shared-memory accessor
     `JackShmReadWritePtr::operator T*` (JackShmMem.h:185). Needs a decision on how to annotate them.

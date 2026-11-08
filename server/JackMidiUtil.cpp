@@ -55,7 +55,7 @@ jackmini::ApplyRunningStatus(jack_midi_event_t *event,
 jack_nframes_t
 jackmini::GetCurrentFrame()
 {
-    jack_time_t time = GetMicroSeconds();
+    jack_time_t time = get_microseconds();
     JackEngineControl *control = GetEngineControl();
     JackTimer timer;
     control->ReadFrameTime(&timer);
