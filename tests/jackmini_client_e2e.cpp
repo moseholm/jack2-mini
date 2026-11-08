@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 // (for example `jackd -d dummy`); it is not part of ctest, which has no server.
 
 #include "jackmini/jackmini.hpp"
+#include "jackmini_wait.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -36,29 +37,6 @@ namespace
 {
 
 int gFailures = 0;
-
-// Waits until a condition holds.  The condition is an event (a cycle, a callback, a state), never a time, so the checks
-// are exact with the server in freewheel mode (jackd -F) and still correct in real time.  The time limit only guards
-// against a stalled server.
-template <typename Pred>
-bool WaitUntil(Pred pred)
-{
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
-    while (!pred()) {
-        if (std::chrono::steady_clock::now() > deadline) {
-            return false;
-        }
-        std::this_thread::sleep_for(std::chrono::microseconds(200));
-    }
-    return true;
-}
-
-// Waits until a counter has moved by n cycles.
-bool WaitCycles(const std::atomic<unsigned long>& counter, unsigned long n)
-{
-    const unsigned long target = counter.load() + n;
-    return WaitUntil([&] { return counter.load() >= target; });
-}
 
 void Check(const char* what, bool ok)
 {

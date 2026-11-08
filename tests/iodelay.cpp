@@ -18,13 +18,18 @@
 
 // --------------------------------------------------------------------------------
 
-#include <stdlib.h>
-#include <stdio.h>
-#define __STDC_LIMIT_MACROS
-#include <stdint.h>
-#include <math.h>
-#include <unistd.h>
-#include <jack/jack.h>
+#include "jackmini/jackmini.hpp"
+#include "jackmini_wait.hpp"
+
+#include <algorithm>
+#include <atomic>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
+
+using namespace jackmini;
 
 struct Freq
 {
@@ -165,30 +170,29 @@ void mtdm_invert (struct MTDM *self)
 // --------------------------------------------------------------------------------
 
 static struct MTDM    *mtdm;
-static jack_client_t  *jack_handle;
-static jack_port_t    *jack_capt;
-static jack_port_t    *jack_play;
+static Client         *jack_handle;
+static Port            jack_capt;
+static Port            jack_play;
+static std::atomic<unsigned long> cycles{ 0 };
 
-jack_latency_range_t   capture_latency = {UINT32_MAX, UINT32_MAX};
-jack_latency_range_t   playback_latency = {UINT32_MAX, UINT32_MAX};
+LatencyRange   capture_latency = {UINT32_MAX, UINT32_MAX};
+LatencyRange   playback_latency = {UINT32_MAX, UINT32_MAX};
 
 void
-latency_cb (jack_latency_callback_mode_t mode, void *arg)
+latency_cb (LatencyMode mode)
 {
-	jack_latency_range_t range;
+	LatencyRange range{ 0, 0 };
 
-	range.min = range.max = 0;
-
-	if (mode == JackCaptureLatency) {
-		jack_port_set_latency_range (jack_play, mode, &range);
-		jack_port_get_latency_range (jack_capt, mode, &range);
+	if (mode == LatencyMode::Capture) {
+		jack_handle->set_port_latency (jack_play, mode, range);
+		range = jack_handle->port_latency (jack_capt, mode);
 		if ((range.min != capture_latency.min) || (range.max != capture_latency.max)) {
 			capture_latency = range;
 			printf ("new capture latency: [%d, %d]\n", range.min, range.max);
 		}
 	} else {
-		jack_port_set_latency_range (jack_capt, mode, &range);
-		jack_port_get_latency_range (jack_play, mode, &range);
+		jack_handle->set_port_latency (jack_capt, mode, range);
+		range = jack_handle->port_latency (jack_play, mode);
 		if ((range.min != playback_latency.min) || (range.max != playback_latency.max)) {
 			playback_latency = range;
 			printf ("new playback latency: [%d, %d]\n", range.min, range.max);
@@ -197,61 +201,73 @@ latency_cb (jack_latency_callback_mode_t mode, void *arg)
 
 }
 
-int jack_callback (jack_nframes_t nframes, void *arg)
+bool jack_callback (FrameCount nframes)
 {
-    float *ip, *op;
-
-    ip = (float *)(jack_port_get_buffer (jack_capt, nframes));
-    op = (float *)(jack_port_get_buffer (jack_play, nframes));
-    mtdm_process (mtdm, nframes, ip, op);
-    return 0;
+    auto ip = jack_handle->audio_buffer (jack_capt);
+    auto op = jack_handle->audio_buffer (jack_play);
+    mtdm_process (mtdm, nframes, ip.data(), op.data());
+    cycles++;
+    return true;
 }
 
 int main (int ac, char *av [])
 {
     float          t;
-    jack_status_t  s;
+    OpenOptions    options;
+    options.start_server = false;
 
-    jack_handle = jack_client_open ("jack_delay", JackNoStartServer, &s);
-    if (jack_handle == 0)
+    auto opened = Client::open ("jack_delay", options);
+    if (!opened)
     {
         fprintf (stderr, "Can't connect to Jack, is the server running ?\n");
         exit (1);
     }
+    Client client = std::move (*opened);
+    jack_handle = &client;
 
-    mtdm = mtdm_new(jack_get_sample_rate(jack_handle));
+    mtdm = mtdm_new(client.sample_rate());
 
-    jack_set_process_callback (jack_handle, jack_callback, 0);
+    client.on_process (jack_callback);
+    client.on_latency (latency_cb);
 
-    if (jack_set_latency_callback)
-	    jack_set_latency_callback (jack_handle, latency_cb, 0);
+    auto capt = client.register_port ("in",  PortType::Audio, PortFlags::Input);
+    auto play = client.register_port ("out", PortType::Audio, PortFlags::Output);
+    if (!capt || !play)
+    {
+        fprintf (stderr, "Can't register the ports\n");
+        return 1;
+    }
+    jack_capt = *capt;
+    jack_play = *play;
 
-    jack_capt = jack_port_register (jack_handle, "in",  JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
-    jack_play = jack_port_register (jack_handle, "out", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+    t = 1000.0f / client.sample_rate ();
 
-    t = 1000.0f / jack_get_sample_rate (jack_handle);
-
-    if (jack_activate (jack_handle))
+    if (!client.activate ().has_value())
     {
         fprintf(stderr, "Can't activate Jack");
         return 1;
     }
 
+    // A report every quarter second of audio: counted in cycles, so it holds in freewheel mode as well.
+    const unsigned long cycles_per_report = std::max<unsigned long> (1, client.sample_rate () / 4 / client.buffer_size ());
     while (1)
     {
- 
-        usleep (250000);
+        if (!WaitCycles (cycles, cycles_per_report))
+        {
+            fprintf (stderr, "The server stopped running cycles\n");
+            return 1;
+        }
         if (mtdm_resolve (mtdm) < 0) printf ("Signal below threshold...\n");
         else 
         {
-            jack_nframes_t systemic_latency;
+            FrameCount systemic_latency;
 
             if (mtdm->_err > 0.3) 
             {
                 mtdm_invert ( mtdm );
                 mtdm_resolve ( mtdm );
             }
-            systemic_latency = (jack_nframes_t) floor (mtdm->_del - (capture_latency.max + playback_latency.max));
+            systemic_latency = (FrameCount) floor (mtdm->_del - (capture_latency.max + playback_latency.max));
 
             printf ("%10.3lf frames %10.3lf ms total roundtrip latency\n\textra loopback latency: %u frames\n\tuse %u for the backend arguments -I and -O", mtdm->_del, mtdm->_del * t, 
                     systemic_latency, systemic_latency/2);

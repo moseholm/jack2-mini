@@ -307,10 +307,7 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/jack.pc"
 
 if(JACK_BUILD_TESTS)
     set(JACK_TEST_PROGRAMS
-        jack_test:tests/test.cpp
-        jack_cpu:tests/cpu.c
-        jack_iodelay:tests/iodelay.cpp
-        jack_multiple_metro:tests/external_metro.cpp)
+        jack_test:tests/test.cpp)
 
     foreach(entry IN LISTS JACK_TEST_PROGRAMS)
         string(REPLACE ":" ";" parts "${entry}")
@@ -319,6 +316,22 @@ if(JACK_BUILD_TESTS)
         add_executable(${program} ${source})
         target_include_directories(${program} PRIVATE ${JACK_INCLUDE_DIRS})
         target_link_libraries(${program} PRIVATE jack rt)
+        install(TARGETS ${program} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endforeach()
+
+    # Benchmarks and interactive test clients, on the jackmini client API.  They need a running server.
+    set(JACK_BENCH_PROGRAMS
+        jack_cpu:tests/cpu.cpp
+        jack_iodelay:tests/iodelay.cpp
+        jack_multiple_metro:tests/external_metro.cpp
+        jack_rtbench:tests/perf/rtbench.cpp)
+
+    foreach(entry IN LISTS JACK_BENCH_PROGRAMS)
+        string(REPLACE ":" ";" parts "${entry}")
+        list(GET parts 0 program)
+        list(GET parts 1 source)
+        add_executable(${program} ${source})
+        target_link_libraries(${program} PRIVATE jack jackmini_base Threads::Threads)
         install(TARGETS ${program} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     endforeach()
 

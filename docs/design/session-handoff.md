@@ -161,20 +161,20 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
 
 ## Next
 
-- **Freewheel** is a construction-only setting: `jackd -F` (parameter `freewheel`). The runtime
-  switch `jackctl_server_set_freewheel` is removed. The late-join bug is fixed: a client opened
-  during freewheel used the flushed driver synchro (its signals to the freewheel driver were
-  dropped, so the driver waited 10 s each cycle). The shared `JackEngineControl::fFreewheel`
-  flag now sets that mode at open.
-- **Sleep-based tests:** the deactivate and reactivate checks in `tests/jackmini_client_e2e.cpp`
-  count cycles of a clock client, not time. The e2e runs in freewheel (`jackd -F -d dummy`, 1 s)
-  and in real time (5 s), both pass. All other waits in that program are event waits
-  (`WaitUntil`: a cycle, the latency callback, a transport state), with a 60 s limit. No test
-  in the repo relies on a fixed sleep now; `tests/perf` and the legacy programs are benchmarks.
-- **Still open:** the overflow test (notification queue) is not in the repo; add it with the
-  freewheel start if wanted.
-- **Then:** port the test programs only when needed; remove the C client library (reference tag
-  `reference/c-client-api`); protocol item 4b (drop session and metadata messages).
+- **Benchmarks ported to jackmini** (`tests/cpu.cpp`, `tests/iodelay.cpp`, `tests/external_metro.cpp`,
+  `tests/perf/rtbench.cpp` as `jack_rtbench`). Durations are counted in cycles (`WaitUntil` / `WaitCycles`
+  in `tests/jackmini_wait.hpp`), no sleeps. `run-baseline.sh` uses `jack_rtbench` and no fixed delay.
+  `alloccount.c` is an LD_PRELOAD tool, unchanged.
+- **OPEN, server bug (freewheel):** closing a client that is in the freewheel graph stalls the next
+  cycles. The freewheel driver waits in `SuspendRefNum` (10 s, `FREEWHEEL_DRIVER_TIMEOUT`) for the
+  removed client's signal, which never comes. The close's own wait (85 ms) fails, and the next client
+  open fails after 5 s. Seen with `jack_cpu`: the first run is fine, later runs take ~5 s. Real time is
+  not affected (short driver timeout). Not yet known whether the C client shows it too. Needs a design
+  decision before the fix (see the message to the user).
+- Real-time: `jack_cpu`, `jack_iodelay`, `jack_multiple_metro`, `jack_rtbench`, and the e2e test all pass.
+- **Still open:** `tests/test.cpp` (the functional suite, C API) is not ported yet; the C client library
+  removal waits for it; the overflow test is not in the repo.
+- Then: protocol item 4b (drop session and metadata messages).
 - Open TSAN findings, outside the counters (verified to be the same statements as in
   `origin/develop`): `JackEngine::ProcessNext` (`fLastSwitchUsecs`); the client timing
   fields in `ResumeRefNum`; the client library's `JackClient::Activate`, `Deactivate`,
