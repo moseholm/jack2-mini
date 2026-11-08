@@ -301,7 +301,7 @@ has the wrong ABI version or struct size, or does not report the name it was
 loaded by, is refused with a message, and the server does not start.
 
 The ABI is internal to this source tree and is versioned. The header is
-`linux/alsa/resample/JackResamplerPlugin.h`; it is not installed. A plugin exports
+`platform/alsa/resample/JackResamplerPlugin.h`; it is not installed. A plugin exports
 `jack_resampler_plugin_v1()`, which returns a `jack_resampler_plugin_t` with the
 create, destroy, reset, set_rate, in_len, out_len, process and delay functions.
 The unit tests include a pass-through plugin (`tests/alsa_test_resampler_plugin.c`)

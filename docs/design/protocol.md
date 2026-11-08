@@ -307,7 +307,7 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
    8-byte fields. The probe shows every field and the per-client timing array
    at natural offsets. ALSA startup is still intermittent (see the baseline
    notes); it is not caused by this change.
-2. Segment handoff with `SCM_RIGHTS` and no registry. Done: `posix/JackFdSegment`
+2. Segment handoff with `SCM_RIGHTS` and no registry. Done: `platform/JackFdSegment`
    (2a), the descriptors in the `ClientOpen` reply (2b), the single-instance lock on
    the per-user lock (step 3), and the registry removed (step 4).
 3. Message framing and the handshake. Done on the control socket: the 16-byte

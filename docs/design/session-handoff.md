@@ -129,7 +129,7 @@ Protocol and shared memory (`docs/design/protocol.md`):
   SIGKILL): **10 of 10** runs passed the end-to-end client (cycles counted), logs
   clean (no driver timeout, no xrun). Baseline was 2 of 4 failing. Ten runs is a
   small sample: repeat before calling the stall gone.
-- `528aab29` P2 step 3: single-instance lock. `posix/JackServerLock` takes an
+- `528aab29` P2 step 3: single-instance lock. `platform/JackServerLock` takes an
   `flock` (on the per-user file, see Decisions); both start paths use it (`jackd` and the
   control API). The server table is gone from `shm.c`. Also fixes a crash on
   a registry with the old layout (the bad-registry path used an index before the
@@ -138,7 +138,7 @@ Protocol and shared memory (`docs/design/protocol.md`):
   the three descriptors (`SCM_RIGHTS`, one message, order engine, graph, client
   control) and the sizes. The client maps them and closes them. The index-based
   templates are gone (`JackShmReadPtr`, `JackShmReadWritePtr1`).
-- `6bf4566b` P2 step 2a: `posix/JackFdSegment` (descriptor passing, memfd
+- `6bf4566b` P2 step 2a: `platform/JackFdSegment` (descriptor passing, memfd
   segments, `UniqueFd`), `tests/fd_segment_unit.cpp` (18 checks).
 - `a03b05ed` P2 step 1: static layout checks, `tests/shm_layout_unit.cpp`.
 - `cd3f88bd` P2 step 1: packed attributes removed from the shared-memory
@@ -241,7 +241,7 @@ Test suites (all in CTest, all passing at `6bf4566b`): `cstring_unit`,
   - Real, in one process: `JackEngine::ProcessNext` (`fLastSwitchUsecs`, JackEngine.cpp:152), fixed (atomic);
     `JackConnectionManager::ResumeRefNum` timing fields (268/269); `JackClient::IsActive`, `Activate`, `Deactivate`
     (127, 438, 460); `JackClient::CallSyncCallbackAux` (913); `JackLibClient::Open` (143); `jack_log` reading
-    `JackGlobals::fVerbose` (JackError.cpp:54); `SetClockSource` (linux/JackLinuxTime.c:170, the clock function pointer).
+    `JackGlobals::fVerbose` (JackError.cpp:54); `SetClockSource` (platform/JackLinuxTime.c:170, the clock function pointer).
   - Probably not races under the protocol (ordering by futex syscalls across processes, which TSAN does not model):
     audio buffer reads and writes in the chain test (jackmini_graph_e2e.cpp:92, :100) and the shared-memory accessor
     `JackShmReadWritePtr::operator T*` (JackShmMem.h:185). Needs a decision on how to annotate them.
