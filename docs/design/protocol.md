@@ -128,12 +128,10 @@ already active". The P0 startup failures were this. A segment that was not
 removed also keeps its memory, which is how a 107 MB segment was left behind
 after one killed run.
 
-**What replaces it.** Each process holds the names it needs and nothing more:
-
-Today a client finds a segment by index in `/dev/shm/jack-shm-registry`, and
-an interrupted server leaves its entries behind. Eight stale entries stop new
-servers from starting. That is the cause of the startup failures seen in the
-P0 baseline.
+**What replaces it.** Nothing global. The server passes each client the file
+descriptors it needs when the client opens, and the client maps them. A killed
+server leaves no table entries, because there is no table: its segments go when
+the last process holding them exits.
 
 New rule: the server creates each segment with a name, passes its file
 descriptor to the client over the control socket with `SCM_RIGHTS` in the
