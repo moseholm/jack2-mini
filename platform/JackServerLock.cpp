@@ -21,17 +21,15 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackFdSegment.h"
 #include "JackTools.h"
 
+#include <fcntl.h>
+#include <sys/file.h>
 #include <cerrno>
 #include <format>
-#include <fcntl.h>
 #include <string>
-#include <sys/file.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
-namespace
-{
+namespace {
 
 // The descriptor that holds the lock.  Closing it releases the lock.
 UniqueFd gLockFd;
@@ -61,7 +59,7 @@ std::expected<void, std::error_code> AcquireServerLock(const char* dir)
     }
 
     gLockFd = std::move(fd);
-    return {};
+    return { };
 }
 
 void ReleaseServerLock() noexcept

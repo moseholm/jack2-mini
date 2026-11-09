@@ -24,18 +24,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <cstddef>
 #include <span>
 
-namespace jackmini
-{
+namespace jackmini {
 class Client;
 }
 
-namespace jackmini::midi
-{
+namespace jackmini::midi {
 
 // One MIDI event within a cycle.
 struct Event {
-    FrameCount time;                       // frame within the cycle
-    std::span<const std::byte> data;       // the raw MIDI bytes
+    FrameCount time; // frame within the cycle
+    std::span<const std::byte> data; // the raw MIDI bytes
 };
 
 // The events of a MIDI port for one cycle.  Valid only inside the process
@@ -51,7 +49,10 @@ public:
 
 private:
     friend class jackmini::Client;
-    explicit Buffer(void* handle) noexcept : fHandle(handle) {}
+    explicit Buffer(void* handle) noexcept
+        : fHandle(handle)
+    {
+    }
     void* fHandle = nullptr;
 };
 

@@ -41,7 +41,7 @@
    require linker arguments in the client as well.
 */
 
-    #define JACK_WEAK_EXPORT __attribute__((WEAK_ATTRIBUTE))
+#define JACK_WEAK_EXPORT __attribute__((WEAK_ATTRIBUTE))
 
 #else
 /* Add other things here for non-gcc platforms */
@@ -70,4 +70,3 @@
 #endif
 
 #endif /* __weakmacros_h__ */
-

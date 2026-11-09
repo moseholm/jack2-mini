@@ -23,8 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <string>
 #include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Which running cards to retire and which desired cards to add.
@@ -39,7 +38,7 @@ struct JackAlsaCardChanges {
 };
 
 inline JackAlsaCardChanges JackAlsaDiffCards(const std::vector<std::string>& current,
-                                             const std::vector<std::string>& desired)
+    const std::vector<std::string>& desired)
 {
     JackAlsaCardChanges changes;
     for (size_t i = 0; i < current.size(); i++) {
@@ -55,6 +54,6 @@ inline JackAlsaCardChanges JackAlsaDiffCards(const std::vector<std::string>& cur
     return changes;
 }
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

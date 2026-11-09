@@ -21,131 +21,126 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackGraphManager__
 #define __JackGraphManager__
 
-#include "JackShmMem.h"
-#include <atomic>
-#include "JackPort.h"
-#include "JackConstants.h"
-#include "JackConnectionManager.h"
 #include "JackAtomicState.h"
+#include "JackConnectionManager.h"
+#include "JackConstants.h"
 #include "JackPlatformPlug.h"
+#include "JackPort.h"
+#include "JackShmMem.h"
 #include "JackSystemDeps.h"
 #include "jackmini/error.hpp"
+#include <atomic>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Graph manager: contains the connection manager and the port array.
 */
 
 
-class SERVER_EXPORT JackGraphManager : public JackShmMem, public JackAtomicState<JackConnectionManager>
-{
+class SERVER_EXPORT JackGraphManager : public JackShmMem, public JackAtomicState<JackConnectionManager> {
 
-    private:
+private:
+    unsigned int fPortMax;
+    JackClientTiming fClientTiming[CLIENT_NUM];
+    std::atomic<SInt32> fActivation[CLIENT_NUM]; // live activation counters, outside the copied connection state
+    JackPort fPortArray[0]; // The actual size depends of port_max, it will be dynamically computed and allocated using "placement" new
 
-        unsigned int fPortMax;
-        JackClientTiming fClientTiming[CLIENT_NUM];
-        std::atomic<SInt32> fActivation[CLIENT_NUM];   // live activation counters, outside the copied connection state
-        JackPort fPortArray[0];    // The actual size depends of port_max, it will be dynamically computed and allocated using "placement" new
+    void AssertPort(jack_port_id_t port_index);
+    jack_port_id_t AllocatePortAux(int refnum, const char* port_name, const char* port_type, JackPortFlags flags);
+    void GetConnectionsAux(JackConnectionManager* manager, const char** res, jack_port_id_t port_index);
+    void GetPortsAux(const char** matching_ports, const char* port_name_pattern, const char* type_name_pattern, unsigned long flags);
+    jack_default_audio_sample_t* GetBuffer(jack_port_id_t port_index);
+    void* GetBufferAux(JackConnectionManager* manager, jack_port_id_t port_index, jack_nframes_t frames);
+    jack_nframes_t ComputeTotalLatencyAux(jack_port_id_t port_index, jack_port_id_t src_port_index, JackConnectionManager* manager, int hop_count);
+    void RecalculateLatencyAux(jack_port_id_t port_index, jack_latency_callback_mode_t mode);
 
-        void AssertPort(jack_port_id_t port_index);
-        jack_port_id_t AllocatePortAux(int refnum, const char* port_name, const char* port_type, JackPortFlags flags);
-        void GetConnectionsAux(JackConnectionManager* manager, const char** res, jack_port_id_t port_index);
-        void GetPortsAux(const char** matching_ports, const char* port_name_pattern, const char* type_name_pattern, unsigned long flags);
-        jack_default_audio_sample_t* GetBuffer(jack_port_id_t port_index);
-        void* GetBufferAux(JackConnectionManager* manager, jack_port_id_t port_index, jack_nframes_t frames);
-        jack_nframes_t ComputeTotalLatencyAux(jack_port_id_t port_index, jack_port_id_t src_port_index, JackConnectionManager* manager, int hop_count);
-        void RecalculateLatencyAux(jack_port_id_t port_index, jack_latency_callback_mode_t mode);
+public:
+    JackGraphManager(int port_max);
+    ~JackGraphManager()
+    {
+    }
 
-    public:
+    void SetBufferSize(jack_nframes_t buffer_size);
 
-        JackGraphManager(int port_max);
-        ~JackGraphManager()
-        {}
+    // Ports management
+    jack_port_id_t AllocatePort(int refnum, const char* port_name, const char* port_type, JackPortFlags flags, jack_nframes_t buffer_size);
+    Result<void> ReleasePort(int refnum, jack_port_id_t port_index);
+    void GetInputPorts(int refnum, jack_int_t* res);
+    void GetOutputPorts(int refnum, jack_int_t* res);
+    void RemoveAllPorts(int refnum);
+    void DisconnectAllPorts(int refnum);
 
-        void SetBufferSize(jack_nframes_t buffer_size);
+    JackPort* GetPort(jack_port_id_t index);
+    // Read-only: the ports in use that belong to refnum, found in the port table.
+    void GetOwnedPorts(int refnum, std::vector<jack_port_id_t>& ports);
+    jack_port_id_t GetPort(const char* name);
 
-        // Ports management
-        jack_port_id_t AllocatePort(int refnum, const char* port_name, const char* port_type, JackPortFlags flags, jack_nframes_t buffer_size);
-        Result<void> ReleasePort(int refnum, jack_port_id_t port_index);
-        void GetInputPorts(int refnum, jack_int_t* res);
-        void GetOutputPorts(int refnum, jack_int_t* res);
-        void RemoveAllPorts(int refnum);
-        void DisconnectAllPorts(int refnum);
+    void ComputeTotalLatency(jack_port_id_t port_index);
+    void ComputeTotalLatencies();
+    void RecalculateLatency(jack_port_id_t port_index, jack_latency_callback_mode_t mode);
 
-        JackPort* GetPort(jack_port_id_t index);
-        // Read-only: the ports in use that belong to refnum, found in the port table.
-        void GetOwnedPorts(int refnum, std::vector<jack_port_id_t>& ports);
-        jack_port_id_t GetPort(const char* name);
+    void RequestMonitor(jack_port_id_t port_index, bool onoff);
 
-        void ComputeTotalLatency(jack_port_id_t port_index);
-        void ComputeTotalLatencies();
-        void RecalculateLatency(jack_port_id_t port_index, jack_latency_callback_mode_t mode);
+    // Connections management
+    Result<void> Connect(jack_port_id_t src_index, jack_port_id_t dst_index);
+    Result<void> Disconnect(jack_port_id_t src_index, jack_port_id_t dst_index);
+    bool IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst);
 
-        void RequestMonitor(jack_port_id_t port_index, bool onoff);
+    // RT, client
+    int GetConnectionsNum(jack_port_id_t port_index)
+    {
+        JackConnectionManager* manager = ReadCurrentState();
+        return manager->Connections(port_index);
+    }
 
-        // Connections management
-        Result<void> Connect(jack_port_id_t src_index, jack_port_id_t dst_index);
-        Result<void> Disconnect(jack_port_id_t src_index, jack_port_id_t dst_index);
-        bool IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst);
+    const char** GetConnections(jack_port_id_t port_index);
+    void GetConnections(jack_port_id_t port_index, jack_int_t* connections); // TODO
+    const char** GetPorts(const char* port_name_pattern, const char* type_name_pattern, unsigned long flags);
 
-        // RT, client
-        int GetConnectionsNum(jack_port_id_t port_index)
-        {
-            JackConnectionManager* manager = ReadCurrentState();
-            return manager->Connections(port_index);
-        }
+    Result<void> GetTwoPorts(const char* src, const char* dst, jack_port_id_t* src_index, jack_port_id_t* dst_index);
+    Result<void> CheckPorts(jack_port_id_t port_src, jack_port_id_t port_dst);
 
-        const char** GetConnections(jack_port_id_t port_index);
-        void GetConnections(jack_port_id_t port_index, jack_int_t* connections);  // TODO
-        const char** GetPorts(const char* port_name_pattern, const char* type_name_pattern, unsigned long flags);
+    void DisconnectAllInput(jack_port_id_t port_index);
+    void DisconnectAllOutput(jack_port_id_t port_index);
+    void DisconnectAll(jack_port_id_t port_index);
 
-        Result<void> GetTwoPorts(const char* src, const char* dst, jack_port_id_t* src_index, jack_port_id_t* dst_index);
-        Result<void> CheckPorts(jack_port_id_t port_src, jack_port_id_t port_dst);
+    bool IsDirectConnection(int ref1, int ref2);
+    void DirectConnect(int ref1, int ref2);
+    void DirectDisconnect(int ref1, int ref2);
 
-        void DisconnectAllInput(jack_port_id_t port_index);
-        void DisconnectAllOutput(jack_port_id_t port_index);
-        void DisconnectAll(jack_port_id_t port_index);
+    void Activate(int refnum);
+    void Deactivate(int refnum);
 
-        bool IsDirectConnection(int ref1, int ref2);
-        void DirectConnect(int ref1, int ref2);
-        void DirectDisconnect(int ref1, int ref2);
+    int GetInputRefNum(jack_port_id_t port_index);
+    int GetOutputRefNum(jack_port_id_t port_index);
 
-        void Activate(int refnum);
-        void Deactivate(int refnum);
+    // Buffer management
+    void* GetBuffer(jack_port_id_t port_index, jack_nframes_t frames);
 
-        int GetInputRefNum(jack_port_id_t port_index);
-        int GetOutputRefNum(jack_port_id_t port_index);
+    // Activation management
+    void RunCurrentGraph();
+    bool RunNextGraph();
+    bool IsFinishedGraph();
 
-        // Buffer management
-        void* GetBuffer(jack_port_id_t port_index, jack_nframes_t frames);
+    void InitRefNum(int refnum);
+    Result<void> ResumeRefNum(JackClientControl* control, JackSynchro* table);
+    Result<void> SuspendRefNum(JackClientControl* control, JackSynchro* table, long usecs);
+    void TopologicalSort(std::vector<jack_int_t>& sorted);
 
-        // Activation management
-        void RunCurrentGraph();
-        bool RunNextGraph();
-        bool IsFinishedGraph();
+    JackClientTiming* GetClientTiming(int refnum)
+    {
+        return &fClientTiming[refnum];
+    }
 
-        void InitRefNum(int refnum);
-        Result<void> ResumeRefNum(JackClientControl* control, JackSynchro* table);
-        Result<void> SuspendRefNum(JackClientControl* control, JackSynchro* table, long usecs);
-        void TopologicalSort(std::vector<jack_int_t>& sorted);
+    void Save(JackConnectionManager* dst);
+    void Restore(JackConnectionManager* src);
 
-        JackClientTiming* GetClientTiming(int refnum)
-        {
-            return &fClientTiming[refnum];
-        }
-
-        void Save(JackConnectionManager* dst);
-        void Restore(JackConnectionManager* src);
-
-        static JackGraphManager* Allocate(int port_max);
-        static void Destroy(JackGraphManager* manager);
-
+    static JackGraphManager* Allocate(int port_max);
+    static void Destroy(JackGraphManager* manager);
 };
 
 
-} // end of namespace
+} // namespace jackmini
 
 #endif
-

@@ -29,17 +29,16 @@
 #include "jackmini/jackmini.hpp"
 #include "jackmini_wait.hpp"
 
+#include <getopt.h>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
-#include <getopt.h>
 
 using namespace jackmini;
 
-namespace
-{
+namespace {
 
 Port input_port;
 Port output_port;
@@ -49,8 +48,8 @@ int time_to_run = 0;
 int time_before_run = 0;
 
 // The load is applied while set; the main thread sets it once the delay has passed.
-std::atomic<bool> load_on{ false };
-std::atomic<unsigned long> cycles{ 0 };
+std::atomic<bool> load_on { false };
+std::atomic<unsigned long> cycles { 0 };
 
 void usage()
 {
@@ -76,8 +75,7 @@ bool process(const Cycle& cycle)
     cycles++;
     if (load_on.load(std::memory_order_relaxed)) {
         const auto sample_rate = client->sample_rate();
-        const auto idle = std::chrono::nanoseconds(static_cast<long long>(nframes) * percent_cpu * 1000000000LL /
-                                                   (100LL * sample_rate));
+        const auto idle = std::chrono::nanoseconds(static_cast<long long>(nframes) * percent_cpu * 1000000000LL / (100LL * sample_rate));
         while (std::chrono::steady_clock::now() - start < idle) {
         }
     }
@@ -102,22 +100,22 @@ int main(int argc, char* argv[])
 
     while ((opt = getopt_long(argc, argv, options, long_options, nullptr)) != -1) {
         switch (opt) {
-            case 'n':
-                client_name = optarg;
-                break;
-            case 't':
-                time_to_run = std::atoi(optarg);
-                break;
-            case 'd':
-                time_before_run = std::atoi(optarg);
-                break;
-            case 'c':
-                percent_cpu = std::atoi(optarg);
-                got_time = true;
-                break;
-            default:
-                std::fprintf(stderr, "unknown option %c\n", opt);
-                usage();
+        case 'n':
+            client_name = optarg;
+            break;
+        case 't':
+            time_to_run = std::atoi(optarg);
+            break;
+        case 'd':
+            time_before_run = std::atoi(optarg);
+            break;
+        case 'c':
+            percent_cpu = std::atoi(optarg);
+            got_time = true;
+            break;
+        default:
+            std::fprintf(stderr, "unknown option %c\n", opt);
+            usage();
         }
     }
 
@@ -148,9 +146,10 @@ int main(int argc, char* argv[])
     std::printf("CPU load applies as %u sample delay.\n", static_cast<FrameCount>(buffer_size * percent_cpu / 100));
 
     if (!jack.on_process(process) || !jack.on_shutdown([] {
-            std::fprintf(stderr, "JACK shut down, exiting ...\n");
-            std::exit(1);
-        }).has_value()) {
+                                              std::fprintf(stderr, "JACK shut down, exiting ...\n");
+                                              std::exit(1);
+                                          })
+            .has_value()) {
         std::fprintf(stderr, "cannot set the callbacks\n");
         return 1;
     }
@@ -212,7 +211,7 @@ int main(int argc, char* argv[])
     }
 
     // Without a time the load runs until the program is stopped.
-    std::atomic<bool> forever{ false };
+    std::atomic<bool> forever { false };
     forever.wait(false);
     return 0;
 }

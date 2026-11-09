@@ -21,27 +21,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackClientControl__
 #define __JackClientControl__
 
-#include <atomic>
-#include "JackShmMem.h"
-#include "JackPort.h"
-#include "JackSynchro.h"
 #include "JackNotification.h"
+#include "JackPort.h"
+#include "JackShmMem.h"
+#include "JackSynchro.h"
+#include <atomic>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Client control possibly in shared memory.
 */
 
 
-struct JackClientControl : public JackShmMemAble
-{
+struct JackClientControl : public JackShmMemAble {
     char fName[JACK_CLIENT_NAME_SIZE + 1];
     bool fCallback[kMaxNotification];
     volatile jack_transport_state_t fTransportState;
-    std::atomic<bool> fTransportSync;      /* Will be true when slow-sync cb has to be called */
-    std::atomic<bool> fTransportTimebase;  /* Will be true when timebase cb is called with new_pos on */
+    std::atomic<bool> fTransportSync; /* Will be true when slow-sync cb has to be called */
+    std::atomic<bool> fTransportTimebase; /* Will be true when timebase cb is called with new_pos on */
     int fRefNum;
     int fPID;
     bool fActive;
@@ -86,10 +84,9 @@ struct JackClientControl : public JackShmMemAble
 
         fSessionID = uuid;
     }
-
 };
 
-} // end of namespace
+} // namespace jackmini
 
 
 #endif

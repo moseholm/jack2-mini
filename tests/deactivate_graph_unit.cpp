@@ -22,17 +22,16 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 // the test makes its (loop-free) connection with the same steps Connect takes after that check.  The client API test,
 // with a running server, is in the end-to-end checks.
 
-#include "JackGraphManager.h"
 #include "JackClientControl.h"
-#include "JackSynchro.h"
 #include "JackConnectionManager.h"
+#include "JackGraphManager.h"
+#include "JackSynchro.h"
 
 #include <cstdio>
 
 using namespace jackmini;
 
-namespace
-{
+namespace {
 
 constexpr int kSourceRef = 2;
 constexpr int kSinkRef = 3;

@@ -23,8 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include <stddef.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Streams planar float audio through a JackResampler.
@@ -35,53 +34,50 @@ requested output count, and Convert() returns the frames it could produce.
 Not thread safe; intended to be used from the primary RT thread only.
 */
 
-class JackAlsaRateConverter
-{
+class JackAlsaRateConverter {
 
-    private:
+private:
+    JackResampler* fResampler;
+    int fChannels;
+    unsigned int fCapacity;
+    float** fIn;
+    float** fOut;
+    float** fOutPtr;
+    unsigned int fInCount;
+    unsigned int fOutCount;
 
-        JackResampler* fResampler;
-        int fChannels;
-        unsigned int fCapacity;
-        float** fIn;
-        float** fOut;
-        float** fOutPtr;
-        unsigned int fInCount;
-        unsigned int fOutCount;
+    JackAlsaRateConverter(const JackAlsaRateConverter&);
+    JackAlsaRateConverter& operator=(const JackAlsaRateConverter&);
 
-        JackAlsaRateConverter(const JackAlsaRateConverter&);
-        JackAlsaRateConverter& operator=(const JackAlsaRateConverter&);
+public:
+    // Takes ownership of resampler.
+    JackAlsaRateConverter(JackResampler* resampler, int channels, unsigned int capacity);
+    ~JackAlsaRateConverter();
 
-    public:
+    bool IsValid() const { return fIn != NULL && fOut != NULL; }
 
-        // Takes ownership of resampler.
-        JackAlsaRateConverter(JackResampler* resampler, int channels, unsigned int capacity);
-        ~JackAlsaRateConverter();
+    void Reset();
 
-        bool IsValid() const { return fIn != NULL && fOut != NULL; }
+    // Ratio correction forwarded to the resampler, 1.0 is nominal.
+    void SetRate(double rate);
 
-        void Reset();
+    // Input frames held in staging, not yet consumed by the resampler.
+    unsigned int Backlog() const { return fInCount; }
 
-        // Ratio correction forwarded to the resampler, 1.0 is nominal.
-        void SetRate(double rate);
+    // Filter delay of the resampler, in frames.
+    unsigned int Delay();
 
-        // Input frames held in staging, not yet consumed by the resampler.
-        unsigned int Backlog() const { return fInCount; }
+    // Output frames the staged input would produce, not yet converted.
+    unsigned int OutputBacklog();
 
-        // Filter delay of the resampler, in frames.
-        unsigned int Delay();
+    // Input frames to supply before Convert(out_frames) to produce out_frames.
+    unsigned int NeedInput(unsigned int out_frames);
 
-        // Output frames the staged input would produce, not yet converted.
-        unsigned int OutputBacklog();
-
-        // Input frames to supply before Convert(out_frames) to produce out_frames.
-        unsigned int NeedInput(unsigned int out_frames);
-
-        // Pushes in_frames and produces up to out_frames.  Returns the count produced.
-        unsigned int Convert(const float* const* in, unsigned int in_frames,
-                             float* const* out, unsigned int out_frames);
+    // Pushes in_frames and produces up to out_frames.  Returns the count produced.
+    unsigned int Convert(const float* const* in, unsigned int in_frames,
+        float* const* out, unsigned int out_frames);
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

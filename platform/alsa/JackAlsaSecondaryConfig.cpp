@@ -27,29 +27,29 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <ranges>
 #include <string_view>
 
-namespace jackmini
-{
+namespace jackmini {
 
 JackAlsaSecondaryConfig::JackAlsaSecondaryConfig()
-    : mode(SecondaryModeDuplex),
-      capture_channels(2),
-      playback_channels(2),
-      rate(0),
-      nperiods(0),
-      optional(false),
-      follow_hw_rate(false),
-      clock(SecondaryClockAsync),
-      sample_format(SampleFormatAuto),
-      resampler("pipewire"),
-      automatic(false)
-{}
+    : mode(SecondaryModeDuplex)
+    , capture_channels(2)
+    , playback_channels(2)
+    , rate(0)
+    , nperiods(0)
+    , optional(false)
+    , follow_hw_rate(false)
+    , clock(SecondaryClockAsync)
+    , sample_format(SampleFormatAuto)
+    , resampler("pipewire")
+    , automatic(false)
+{
+}
 
 static std::string_view Trim(std::string_view text)
 {
     constexpr std::string_view whitespace = " \t\r\n";
     const auto begin = text.find_first_not_of(whitespace);
     if (begin == std::string_view::npos) {
-        return {};
+        return { };
     }
     return text.substr(begin, text.find_last_not_of(whitespace) - begin + 1);
 }
@@ -77,8 +77,8 @@ static std::string Lowercase(std::string_view text)
 
 static bool ParseBool(std::string_view value, bool* result)
 {
-    constexpr std::array truthy = {"1", "true", "yes", "on"};
-    constexpr std::array falsy = {"0", "false", "no", "off"};
+    constexpr std::array truthy = { "1", "true", "yes", "on" };
+    constexpr std::array falsy = { "0", "false", "no", "off" };
     const std::string lower = Lowercase(value);
     if (std::ranges::contains(truthy, lower)) {
         *result = true;
@@ -224,9 +224,9 @@ static bool ParseMode(std::string_view value, JackAlsaSecondaryMode* mode)
 }
 
 static bool ApplyField(JackAlsaSecondaryConfig* config,
-                       std::string_view key,
-                       std::string_view value,
-                       std::string* error)
+    std::string_view key,
+    std::string_view value,
+    std::string* error)
 {
     if (key == "name") {
         config->name = value;
@@ -346,8 +346,8 @@ static bool Validate(JackAlsaSecondaryConfig* config, std::string* error)
 
     if (config->name.empty()) {
         const std::string& device = config->capture_device.empty()
-                                  ? config->playback_device
-                                  : config->capture_device;
+            ? config->playback_device
+            : config->capture_device;
         config->name = DefaultNameForDevice(device);
     }
     config->name = JackAlsaSecondarySanitizeName(config->name);
@@ -360,8 +360,8 @@ static bool Validate(JackAlsaSecondaryConfig* config, std::string* error)
 }
 
 bool JackAlsaSecondaryConfigParse(std::string_view spec,
-                                  JackAlsaSecondaryConfig* config,
-                                  std::string* error)
+    JackAlsaSecondaryConfig* config,
+    std::string* error)
 {
     JackAlsaSecondaryConfig parsed;
     const std::string_view text = Trim(spec);
@@ -378,7 +378,7 @@ bool JackAlsaSecondaryConfigParse(std::string_view spec,
     } else {
         for (const auto segment : text | std::views::split(';')) {
             const std::string_view field = Trim(std::string_view(std::ranges::data(segment),
-                                                                 std::ranges::size(segment)));
+                std::ranges::size(segment)));
             if (field.empty()) {
                 continue;
             }
@@ -408,8 +408,8 @@ bool JackAlsaSecondaryConfigParse(std::string_view spec,
 }
 
 bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
-                                     std::vector<JackAlsaSecondaryConfig>* configs,
-                                     std::string* error)
+    std::vector<JackAlsaSecondaryConfig>* configs,
+    std::string* error)
 {
     std::ifstream file(path);
     if (!file.is_open()) {
@@ -439,4 +439,4 @@ bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
     return true;
 }
 
-} // end of namespace
+} // namespace jackmini

@@ -18,13 +18,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 #include "JackSocketServerNotifyChannel.h"
-#include "JackError.h"
-#include "JackRequest.h"
 #include "JackConstants.h"
+#include "JackError.h"
 #include "JackNotification.h"
+#include "JackRequest.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 Result<void> JackSocketServerNotifyChannel::Open(const char* server_name)
 {
@@ -33,7 +32,7 @@ Result<void> JackSocketServerNotifyChannel::Open(const char* server_name)
         return std::unexpected(Error::ServerFailure);
     } else {
         fRequestSocket.SetNonBlocking(true);
-        return {};
+        return { };
     }
 }
 
@@ -61,6 +60,4 @@ void JackSocketServerNotifyChannel::NotifyQuit()
     Notify(-1, kQUIT, 0);
 }
 
-} // end of namespace
-
-
+} // namespace jackmini

@@ -21,17 +21,15 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackError.h"
 #include "JackTime.h"
 
+#include <poll.h>
+#include <sys/time.h>
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
-#include <poll.h>
-#include <sys/time.h>
 
-namespace jackmini::alsa
-{
+namespace jackmini::alsa {
 
-namespace
-{
+namespace {
 
 struct FormatEntry {
     snd_pcm_format_t format;
@@ -42,15 +40,15 @@ constexpr bool kHostLittleEndian = __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__;
 
 // Ordered the way the old driver tried them: the 32-bit formats first (ascending), the 16-bit ones last.
 constexpr FormatEntry kFormats[] = {
-    {SND_PCM_FORMAT_FLOAT_LE, true},
-    {SND_PCM_FORMAT_S32_LE, true},
-    {SND_PCM_FORMAT_S32_BE, false},
-    {SND_PCM_FORMAT_S24_3LE, true},
-    {SND_PCM_FORMAT_S24_3BE, false},
-    {SND_PCM_FORMAT_S24_LE, true},
-    {SND_PCM_FORMAT_S24_BE, false},
-    {SND_PCM_FORMAT_S16_LE, true},
-    {SND_PCM_FORMAT_S16_BE, false},
+    { SND_PCM_FORMAT_FLOAT_LE, true },
+    { SND_PCM_FORMAT_S32_LE, true },
+    { SND_PCM_FORMAT_S32_BE, false },
+    { SND_PCM_FORMAT_S24_3LE, true },
+    { SND_PCM_FORMAT_S24_3BE, false },
+    { SND_PCM_FORMAT_S24_LE, true },
+    { SND_PCM_FORMAT_S24_BE, false },
+    { SND_PCM_FORMAT_S16_LE, true },
+    { SND_PCM_FORMAT_S16_BE, false },
 };
 constexpr std::size_t kFormatCount = sizeof(kFormats) / sizeof(kFormats[0]);
 
@@ -58,9 +56,12 @@ constexpr std::size_t kFormatCount = sizeof(kFormats) / sizeof(kFormats[0]);
 std::size_t requested_format_index(SampleFormat format)
 {
     switch (format) {
-    case SampleFormat::Float: return 0;
-    case SampleFormat::S32: return 1;
-    default: return 7;
+    case SampleFormat::Float:
+        return 0;
+    case SampleFormat::S32:
+        return 1;
+    default:
+        return 7;
     }
 }
 
@@ -68,7 +69,7 @@ std::size_t requested_format_index(SampleFormat format)
 constexpr unsigned kMaxDefaultChannels = 1024;
 
 int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direction, const Request& request,
-                     std::uint32_t wanted_channels, StreamInfo& info, std::uint32_t user_periods, bool playback)
+    std::uint32_t wanted_channels, StreamInfo& info, std::uint32_t user_periods, bool playback)
 {
     snd_pcm_hw_params_t* hw = nullptr;
     snd_pcm_sw_params_t* sw = nullptr;
@@ -93,7 +94,7 @@ int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direc
             access = SND_PCM_ACCESS_MMAP_COMPLEX;
             if (snd_pcm_hw_params_set_access(handle, hw, access) < 0) {
                 jack_error("ALSA: mmap-based access is not possible for the %s stream of this audio interface",
-                           stream_name);
+                    stream_name);
                 return -1;
             }
         }
@@ -113,7 +114,8 @@ int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direc
         while (snd_pcm_hw_params_set_format(handle, hw, kFormats[index].format) < 0) {
             if (ascending ? index + 1 >= kFormatCount : index == 0) {
                 jack_error("Sorry. The audio interface \"%s\" doesn't support any of the hardware sample formats"
-                           " that JACK's alsa-driver can use.", name);
+                           " that JACK's alsa-driver can use.",
+                    name);
                 return -1;
             }
             ascending ? ++index : --index;
@@ -220,26 +222,26 @@ int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direc
     }
 
     jack_info("ALSA: final selected sample format for %s: %s, %u periods", stream_name,
-              snd_pcm_format_name(info.format), periods);
+        snd_pcm_format_name(info.format), periods);
     return 0;
 }
 
 enum class OpenResult {
     Opened,
-    Unavailable,  // the device could not be opened; the other direction may still work
+    Unavailable, // the device could not be opened; the other direction may still work
     Failed,
 };
 
 OpenResult open_stream(const char* name, snd_pcm_stream_t direction, const Request& request,
-                       std::uint32_t wanted_channels, std::uint32_t user_periods, snd_pcm_t*& handle,
-                       StreamInfo& info)
+    std::uint32_t wanted_channels, std::uint32_t user_periods, snd_pcm_t*& handle,
+    StreamInfo& info)
 {
     const int err = snd_pcm_open(&handle, name, direction, SND_PCM_NONBLOCK);
     if (err < 0) {
         handle = nullptr;
         if (err == -EBUSY) {
             jack_error("ALSA: the device \"%s\" is already in use; stop the application using it and start again",
-                       name);
+                name);
             return OpenResult::Failed;
         }
         if (err == -EPERM) {
@@ -276,12 +278,12 @@ int Device::open(const char* capture_name, const char* playback_name, Request& r
     OpenResult capture = OpenResult::Unavailable;
     if (capture_name != nullptr) {
         capture = open_stream(capture_name, SND_PCM_STREAM_CAPTURE, request, request.capture_channels, user_periods,
-                              capture_.handle, capture_.info);
+            capture_.handle, capture_.info);
     }
     OpenResult playback = OpenResult::Unavailable;
     if (playback_name != nullptr) {
         playback = open_stream(playback_name, SND_PCM_STREAM_PLAYBACK, request, request.playback_channels,
-                               user_periods, playback_.handle, playback_.info);
+            user_periods, playback_.handle, playback_.info);
     }
     if (capture == OpenResult::Failed || playback == OpenResult::Failed) {
         close();
@@ -305,7 +307,7 @@ int Device::open(const char* capture_name, const char* playback_name, Request& r
 
     if (capture_.handle && playback_.handle && capture_.info.rate != playback_.info.rate) {
         jack_error("playback and capture sample rates do not match (%u vs. %u)", playback_.info.rate,
-                   capture_.info.rate);
+            capture_.info.rate);
     }
 
     // Keep the requested rate when either stream has it; otherwise take the capture rate.  Some hardware runs
@@ -322,7 +324,7 @@ int Device::open(const char* capture_name, const char* playback_name, Request& r
     }
     request.rate = rate;
 
-    for (StreamState* stream : {&capture_, &playback_}) {
+    for (StreamState* stream : { &capture_, &playback_ }) {
         if (stream->handle == nullptr) {
             continue;
         }
@@ -334,7 +336,7 @@ int Device::open(const char* capture_name, const char* playback_name, Request& r
         snd_pcm_hw_params_get_period_size(hw, &period, &dir);
         if (period != request.frames_per_cycle) {
             jack_error("alsa_pcm: requested an interrupt every %u frames but got %lu frames", request.frames_per_cycle,
-                       static_cast<unsigned long>(period));
+                static_cast<unsigned long>(period));
             close();
             return -1;
         }
@@ -348,7 +350,7 @@ int Device::open(const char* capture_name, const char* playback_name, Request& r
 void Device::close()
 {
     not_synced_ = false;
-    for (StreamState* stream : {&capture_, &playback_}) {
+    for (StreamState* stream : { &capture_, &playback_ }) {
         if (stream->handle != nullptr) {
             snd_pcm_close(stream->handle);
             stream->handle = nullptr;
@@ -453,7 +455,7 @@ int Device::drop(Stream stream)
 
 int Device::status(XrunStatus& out)
 {
-    out = XrunStatus{};
+    out = XrunStatus { };
     const StreamState& s = capture_.handle ? capture_ : playback_;
 
     snd_pcm_status_t* status = nullptr;
@@ -467,9 +469,9 @@ int Device::status(XrunStatus& out)
     out.suspended = state == SND_PCM_STATE_SUSPENDED;
     out.xrun = state == SND_PCM_STATE_XRUN;
     if (out.xrun) {
-        struct timeval now{};
-        struct timeval trigger{};
-        struct timeval diff{};
+        struct timeval now { };
+        struct timeval trigger { };
+        struct timeval diff { };
         snd_pcm_status_get_tstamp(status, &now);
         snd_pcm_status_get_trigger_tstamp(status, &trigger);
         timersub(&now, &trigger, &diff);

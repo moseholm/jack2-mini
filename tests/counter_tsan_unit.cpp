@@ -20,8 +20,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 // graph, reset the counters, signal the connected clients) while another thread changes connections, which copies the
 // configuration to the next state.  Run under TSAN, the test fails on any race between the copy and the live counters.
 
-#include "JackGraphManager.h"
 #include "JackClientControl.h"
+#include "JackGraphManager.h"
 #include "JackSynchro.h"
 
 #include <array>
@@ -31,8 +31,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 using namespace jackmini;
 
-namespace
-{
+namespace {
 
 constexpr int kInputRef = 2;
 constexpr int kOutputRef = 3;
@@ -48,7 +47,7 @@ int main()
     JackGraphManager* graph = JackGraphManager::Allocate(16);
     JackSynchro* table = new JackSynchro[CLIENT_NUM];
 
-    std::array<char, 64> name{};
+    std::array<char, 64> name { };
     for (int ref : { kInputRef, kOutputRef }) {
         std::snprintf(name.data(), name.size(), "counter_test_%d", ref);
         if (!table[ref].Allocate(name.data(), "counter_test", 0)) {
@@ -63,7 +62,7 @@ int main()
     graph->RunNextGraph();
 
     JackClientControl output(name.data(), 0, kOutputRef, 0);
-    std::atomic<int> failures{ 0 };
+    std::atomic<int> failures { 0 };
 
     // The realtime thread: one cycle per round.
     std::thread rt([&] {

@@ -22,23 +22,21 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackCompilerDeps.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 class JackServer;
 
 /*!
 \brief The server instance and the device reservation hooks.  The hooks are set by the control API.
 */
-struct SERVER_EXPORT JackServerGlobals
-{
+struct SERVER_EXPORT JackServerGlobals {
     static JackServer* fInstance;
 
-    static bool (* on_device_acquire)(const char* device_name);
-    static void (* on_device_release)(const char* device_name);
-    static void (* on_device_reservation_loop)(void);
+    static bool (*on_device_acquire)(const char* device_name);
+    static void (*on_device_release)(const char* device_name);
+    static void (*on_device_reservation_loop)(void);
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

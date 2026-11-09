@@ -25,47 +25,45 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackSocket.h"
 #include "JackSocketNotifyChannel.h"
 
-#include <cstdio>
 #include <sys/socket.h>
-#include <thread>
 #include <unistd.h>
+#include <cstdio>
+#include <thread>
 #include <vector>
 
 using namespace jackmini;
 
-namespace
-{
+namespace {
 
 int gFailures = 0;
 
-#define CHECK(cond)                                                    \
-    do {                                                               \
-        if (!(cond)) {                                                 \
+#define CHECK(cond)                                                     \
+    do {                                                                \
+        if (!(cond)) {                                                  \
             std::printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-            gFailures++;                                               \
-        }                                                              \
+            gFailures++;                                                \
+        }                                                               \
     } while (0)
 
 // Sent in order: value1 is the index.  The kind is a registration notification, nothing special for the client.
 constexpr int kNotify = kPortRegistrationOnCallback;
 
 // The reader: parses the notifications from the client's end of the socket pair, as the client does.
-struct Received
-{
-    std::vector<int> delivered;   // value1 of the notifications that came through, in order
-    unsigned long dropped = 0;    // the sum of the kDropped counts
+struct Received {
+    std::vector<int> delivered; // value1 of the notifications that came through, in order
+    unsigned long dropped = 0; // the sum of the kDropped counts
 };
 
 Received ReadAll(JackClientSocket& socket, int last)
 {
     Received got;
     while (true) {
-        JackMsgHeader header{};
+        JackMsgHeader header { };
         if (ReadJackMsgHeader(&socket, header) < 0) {
             break;
         }
         JackClientNotification event;
-        JackPayloadReader payload(&socket, header.length, {});
+        JackPayloadReader payload(&socket, header.length, { });
         if (event.Read(&payload) < 0 || !payload.Done()) {
             break;
         }
@@ -88,7 +86,7 @@ Received Run(int sent)
     int fd[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd) != 0) {
         std::printf("socketpair failed\n");
-        return {};
+        return { };
     }
 
     // A small send buffer, so that the writer stops early: the rest waits in the queue.  The count of what fits is

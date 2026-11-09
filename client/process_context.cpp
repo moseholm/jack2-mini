@@ -23,12 +23,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackMessageBuffer.h"
 #include "JackTime.h"
 
-namespace jackmini::client
-{
+namespace jackmini::client {
 
 std::mutex ProcessContext::registry_mutex_;
 std::unique_ptr<ProcessContext> ProcessContext::instance_;
-std::atomic<ProcessContext*> ProcessContext::current_{nullptr};
+std::atomic<ProcessContext*> ProcessContext::current_ { nullptr };
 int ProcessContext::count_ = 0;
 
 ProcessContext::ProcessContext()
@@ -81,8 +80,7 @@ void ProcessContext::release() noexcept
 
 } // end of namespace jackmini::client
 
-namespace jackmini
-{
+namespace jackmini {
 
 // The accessors of the shared state for the code that is common to the server and the client library. The server
 // defines them over its own state; here they are the state of the process's clients, and NULL when there is none.

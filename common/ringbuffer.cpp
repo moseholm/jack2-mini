@@ -32,187 +32,181 @@
 #include <memory>
 #include <new>
 
-namespace jackmini
-{
+namespace jackmini {
 
-class RingBuffer
-{
-    public:
-
-        // Allocates the data area for at least sz bytes. The size is rounded up to a power of two, and is at least 2.
-        // Returns false when the allocation fails.
-        bool init(std::size_t sz) noexcept
-        {
-            std::size_t power_of_two = 2;
-            while (power_of_two < sz) {
-                power_of_two <<= 1;
-            }
-            fBuf.reset(new (std::nothrow) char[power_of_two]);
-            if (!fBuf) {
-                return false;
-            }
-            fSize = power_of_two;
-            fSizeMask = power_of_two - 1;
-            return true;
+class RingBuffer {
+public:
+    // Allocates the data area for at least sz bytes. The size is rounded up to a power of two, and is at least 2.
+    // Returns false when the allocation fails.
+    bool init(std::size_t sz) noexcept
+    {
+        std::size_t power_of_two = 2;
+        while (power_of_two < sz) {
+            power_of_two <<= 1;
         }
-
-        bool mlock() noexcept
-        {
-            // USE_MLOCK has never been defined in this build, so the lock is only recorded.
-            fMlocked = true;
-            return true;
+        fBuf.reset(new (std::nothrow) char[power_of_two]);
+        if (!fBuf) {
+            return false;
         }
+        fSize = power_of_two;
+        fSizeMask = power_of_two - 1;
+        return true;
+    }
 
-        void reset() noexcept
-        {
-            fWritePtr.store(0, std::memory_order_relaxed);
-            fReadPtr.store(0, std::memory_order_relaxed);
-            std::memset(fBuf.get(), 0, fSize);
+    bool mlock() noexcept
+    {
+        // USE_MLOCK has never been defined in this build, so the lock is only recorded.
+        fMlocked = true;
+        return true;
+    }
+
+    void reset() noexcept
+    {
+        fWritePtr.store(0, std::memory_order_relaxed);
+        fReadPtr.store(0, std::memory_order_relaxed);
+        std::memset(fBuf.get(), 0, fSize);
+    }
+
+    void reset_size(std::size_t sz) noexcept
+    {
+        fSize = sz;
+        fSizeMask = sz - 1;
+        fWritePtr.store(0, std::memory_order_relaxed);
+        fReadPtr.store(0, std::memory_order_relaxed);
+    }
+
+    std::size_t read_space() const noexcept
+    {
+        const std::size_t w = fWritePtr.load(std::memory_order_acquire);
+        const std::size_t r = fReadPtr.load(std::memory_order_relaxed);
+        return (w - r) & fSizeMask;
+    }
+
+    std::size_t write_space() const noexcept
+    {
+        const std::size_t w = fWritePtr.load(std::memory_order_relaxed);
+        const std::size_t r = fReadPtr.load(std::memory_order_acquire);
+        return (r - w - 1) & fSizeMask;
+    }
+
+    std::size_t read(char* dest, std::size_t cnt) noexcept
+    {
+        const std::size_t free_cnt = read_space();
+        if (free_cnt == 0) {
+            return 0;
         }
+        const std::size_t to_read = std::min(cnt, free_cnt);
+        std::size_t r = fReadPtr.load(std::memory_order_relaxed);
+        const std::size_t n1 = (r + to_read > fSize) ? fSize - r : to_read;
+        const std::size_t n2 = to_read - n1;
 
-        void reset_size(std::size_t sz) noexcept
-        {
-            fSize = sz;
-            fSizeMask = sz - 1;
-            fWritePtr.store(0, std::memory_order_relaxed);
-            fReadPtr.store(0, std::memory_order_relaxed);
-        }
-
-        std::size_t read_space() const noexcept
-        {
-            const std::size_t w = fWritePtr.load(std::memory_order_acquire);
-            const std::size_t r = fReadPtr.load(std::memory_order_relaxed);
-            return (w - r) & fSizeMask;
-        }
-
-        std::size_t write_space() const noexcept
-        {
-            const std::size_t w = fWritePtr.load(std::memory_order_relaxed);
-            const std::size_t r = fReadPtr.load(std::memory_order_acquire);
-            return (r - w - 1) & fSizeMask;
-        }
-
-        std::size_t read(char* dest, std::size_t cnt) noexcept
-        {
-            const std::size_t free_cnt = read_space();
-            if (free_cnt == 0) {
-                return 0;
-            }
-            const std::size_t to_read = std::min(cnt, free_cnt);
-            std::size_t r = fReadPtr.load(std::memory_order_relaxed);
-            const std::size_t n1 = (r + to_read > fSize) ? fSize - r : to_read;
-            const std::size_t n2 = to_read - n1;
-
-            std::memcpy(dest, fBuf.get() + r, n1);
-            r = (r + n1) & fSizeMask;
+        std::memcpy(dest, fBuf.get() + r, n1);
+        r = (r + n1) & fSizeMask;
+        fReadPtr.store(r, std::memory_order_release);
+        if (n2) {
+            std::memcpy(dest + n1, fBuf.get() + r, n2);
+            r = (r + n2) & fSizeMask;
             fReadPtr.store(r, std::memory_order_release);
-            if (n2) {
-                std::memcpy(dest + n1, fBuf.get() + r, n2);
-                r = (r + n2) & fSizeMask;
-                fReadPtr.store(r, std::memory_order_release);
-            }
-            return to_read;
         }
+        return to_read;
+    }
 
-        std::size_t peek(char* dest, std::size_t cnt) const noexcept
-        {
-            const std::size_t free_cnt = read_space();
-            if (free_cnt == 0) {
-                return 0;
-            }
-            const std::size_t to_read = std::min(cnt, free_cnt);
-            const std::size_t r = fReadPtr.load(std::memory_order_relaxed);
-            const std::size_t n1 = (r + to_read > fSize) ? fSize - r : to_read;
-            const std::size_t n2 = to_read - n1;
-
-            std::memcpy(dest, fBuf.get() + r, n1);
-            if (n2) {
-                std::memcpy(dest + n1, fBuf.get(), n2);
-            }
-            return to_read;
+    std::size_t peek(char* dest, std::size_t cnt) const noexcept
+    {
+        const std::size_t free_cnt = read_space();
+        if (free_cnt == 0) {
+            return 0;
         }
+        const std::size_t to_read = std::min(cnt, free_cnt);
+        const std::size_t r = fReadPtr.load(std::memory_order_relaxed);
+        const std::size_t n1 = (r + to_read > fSize) ? fSize - r : to_read;
+        const std::size_t n2 = to_read - n1;
 
-        std::size_t write(const char* src, std::size_t cnt) noexcept
-        {
-            const std::size_t free_cnt = write_space();
-            if (free_cnt == 0) {
-                return 0;
-            }
-            const std::size_t to_write = std::min(cnt, free_cnt);
-            std::size_t w = fWritePtr.load(std::memory_order_relaxed);
-            const std::size_t n1 = (w + to_write > fSize) ? fSize - w : to_write;
-            const std::size_t n2 = to_write - n1;
+        std::memcpy(dest, fBuf.get() + r, n1);
+        if (n2) {
+            std::memcpy(dest + n1, fBuf.get(), n2);
+        }
+        return to_read;
+    }
 
-            std::memcpy(fBuf.get() + w, src, n1);
-            w = (w + n1) & fSizeMask;
+    std::size_t write(const char* src, std::size_t cnt) noexcept
+    {
+        const std::size_t free_cnt = write_space();
+        if (free_cnt == 0) {
+            return 0;
+        }
+        const std::size_t to_write = std::min(cnt, free_cnt);
+        std::size_t w = fWritePtr.load(std::memory_order_relaxed);
+        const std::size_t n1 = (w + to_write > fSize) ? fSize - w : to_write;
+        const std::size_t n2 = to_write - n1;
+
+        std::memcpy(fBuf.get() + w, src, n1);
+        w = (w + n1) & fSizeMask;
+        fWritePtr.store(w, std::memory_order_release);
+        if (n2) {
+            std::memcpy(fBuf.get() + w, src + n1, n2);
+            w = (w + n2) & fSizeMask;
             fWritePtr.store(w, std::memory_order_release);
-            if (n2) {
-                std::memcpy(fBuf.get() + w, src + n1, n2);
-                w = (w + n2) & fSizeMask;
-                fWritePtr.store(w, std::memory_order_release);
-            }
-            return to_write;
         }
+        return to_write;
+    }
 
-        void read_advance(std::size_t cnt) noexcept
-        {
-            const std::size_t r = fReadPtr.load(std::memory_order_relaxed);
-            fReadPtr.store((r + cnt) & fSizeMask, std::memory_order_release);
+    void read_advance(std::size_t cnt) noexcept
+    {
+        const std::size_t r = fReadPtr.load(std::memory_order_relaxed);
+        fReadPtr.store((r + cnt) & fSizeMask, std::memory_order_release);
+    }
+
+    void write_advance(std::size_t cnt) noexcept
+    {
+        const std::size_t w = fWritePtr.load(std::memory_order_relaxed);
+        fWritePtr.store((w + cnt) & fSizeMask, std::memory_order_release);
+    }
+
+    void read_vector(jack_ringbuffer_data_t* vec) const noexcept
+    {
+        const std::size_t r = fReadPtr.load(std::memory_order_relaxed);
+        const std::size_t free_cnt = read_space();
+        describe(r, free_cnt, vec);
+    }
+
+    void write_vector(jack_ringbuffer_data_t* vec) const noexcept
+    {
+        const std::size_t w = fWritePtr.load(std::memory_order_relaxed);
+        const std::size_t free_cnt = write_space();
+        describe(w, free_cnt, vec);
+    }
+
+private:
+    // Two segments when the data wraps past the end of the buffer.
+    void describe(std::size_t pos, std::size_t cnt, jack_ringbuffer_data_t* vec) const noexcept
+    {
+        const std::size_t end = pos + cnt;
+        vec[0].buf = fBuf.get() + pos;
+        if (end > fSize) {
+            vec[0].len = fSize - pos;
+            vec[1].buf = fBuf.get();
+            vec[1].len = end & fSizeMask;
+        } else {
+            vec[0].len = cnt;
+            vec[1].len = 0;
         }
+    }
 
-        void write_advance(std::size_t cnt) noexcept
-        {
-            const std::size_t w = fWritePtr.load(std::memory_order_relaxed);
-            fWritePtr.store((w + cnt) & fSizeMask, std::memory_order_release);
-        }
-
-        void read_vector(jack_ringbuffer_data_t* vec) const noexcept
-        {
-            const std::size_t r = fReadPtr.load(std::memory_order_relaxed);
-            const std::size_t free_cnt = read_space();
-            describe(r, free_cnt, vec);
-        }
-
-        void write_vector(jack_ringbuffer_data_t* vec) const noexcept
-        {
-            const std::size_t w = fWritePtr.load(std::memory_order_relaxed);
-            const std::size_t free_cnt = write_space();
-            describe(w, free_cnt, vec);
-        }
-
-    private:
-
-        // Two segments when the data wraps past the end of the buffer.
-        void describe(std::size_t pos, std::size_t cnt, jack_ringbuffer_data_t* vec) const noexcept
-        {
-            const std::size_t end = pos + cnt;
-            vec[0].buf = fBuf.get() + pos;
-            if (end > fSize) {
-                vec[0].len = fSize - pos;
-                vec[1].buf = fBuf.get();
-                vec[1].len = end & fSizeMask;
-            } else {
-                vec[0].len = cnt;
-                vec[1].len = 0;
-            }
-        }
-
-        std::unique_ptr<char[]> fBuf;
-        std::atomic<std::size_t> fWritePtr{0};
-        std::atomic<std::size_t> fReadPtr{0};
-        std::size_t fSize = 0;
-        std::size_t fSizeMask = 0;
-        bool fMlocked = false;
+    std::unique_ptr<char[]> fBuf;
+    std::atomic<std::size_t> fWritePtr { 0 };
+    std::atomic<std::size_t> fReadPtr { 0 };
+    std::size_t fSize = 0;
+    std::size_t fSizeMask = 0;
+    bool fMlocked = false;
 };
 
 } // end of namespace jackmini
 
 // The public C type. Its contents are private to this file.
-struct jack_ringbuffer_t : jackmini::RingBuffer
-{};
+struct jack_ringbuffer_t : jackmini::RingBuffer { };
 
-extern "C"
-{
+extern "C" {
 
 LIB_EXPORT jack_ringbuffer_t* jack_ringbuffer_create(size_t sz)
 {

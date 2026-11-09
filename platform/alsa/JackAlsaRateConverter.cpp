@@ -22,8 +22,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <string.h>
 #include <algorithm>
 
-namespace jackmini
-{
+namespace jackmini {
 
 static float** AllocChannels(int channels, unsigned int frames)
 {
@@ -47,8 +46,14 @@ static void FreeChannels(float** buffers, int channels)
 }
 
 JackAlsaRateConverter::JackAlsaRateConverter(JackResampler* resampler, int channels, unsigned int capacity)
-    : fResampler(resampler), fChannels(channels), fCapacity(capacity),
-      fIn(NULL), fOut(NULL), fOutPtr(NULL), fInCount(0), fOutCount(0)
+    : fResampler(resampler)
+    , fChannels(channels)
+    , fCapacity(capacity)
+    , fIn(NULL)
+    , fOut(NULL)
+    , fOutPtr(NULL)
+    , fInCount(0)
+    , fOutCount(0)
 {
     if (fResampler == NULL) {
         return;
@@ -107,7 +112,7 @@ unsigned int JackAlsaRateConverter::NeedInput(unsigned int out_frames)
 }
 
 unsigned int JackAlsaRateConverter::Convert(const float* const* in, unsigned int in_frames,
-                                            float* const* out, unsigned int out_frames)
+    float* const* out, unsigned int out_frames)
 {
     if (out_frames > fCapacity) {
         out_frames = fCapacity;
@@ -156,4 +161,4 @@ unsigned int JackAlsaRateConverter::Convert(const float* const* in, unsigned int
     return produced;
 }
 
-} // end of namespace
+} // namespace jackmini

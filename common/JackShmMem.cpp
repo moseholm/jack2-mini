@@ -17,14 +17,13 @@
 
  */
 
-#include <array>
+#include "JackShmMem.h"
 #include "JackCString.h"
 #include "JackError.h"
-#include "JackShmMem.h"
 #include <stdio.h>
+#include <array>
 
-namespace jackmini
-{
+namespace jackmini {
 
 static unsigned int fSegmentNum = 0;
 static std::uint32_t gSize = 0;
@@ -57,7 +56,7 @@ void* JackShmMem::operator new(size_t size, void* memory)
 
 void* JackShmMem::operator new(size_t size)
 {
-    std::array<char, 64> name{};
+    std::array<char, 64> name { };
 
     jackmini::FormatCString(name, "jack-shared{}", fSegmentNum++);
 
@@ -148,5 +147,4 @@ void UnlockAllMemory()
 }
 
 
-} // end of namespace
-
+} // namespace jackmini

@@ -22,13 +22,13 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #ifndef POST_PACKED_STRUCTURE
 
-    /* POST_PACKED_STRUCTURE needs to be a macro which expands into a
-       compiler directive. The directive must tell the compiler to arrange
-       the preceding structure declaration so that it is packed on
-       byte-boundaries rather than use the natural alignment of the
-       processor and/or compiler. */
-    #define PRE_PACKED_STRUCTURE
-    #define POST_PACKED_STRUCTURE __attribute__((__packed__))
+/* POST_PACKED_STRUCTURE needs to be a macro which expands into a
+   compiler directive. The directive must tell the compiler to arrange
+   the preceding structure declaration so that it is packed on
+   byte-boundaries rather than use the natural alignment of the
+   processor and/or compiler. */
+#define PRE_PACKED_STRUCTURE
+#define POST_PACKED_STRUCTURE __attribute__((__packed__))
 
 #endif
 
@@ -43,8 +43,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 typedef pthread_t jack_native_thread_t;
 
 #if defined(__arm__) || defined(__aarch64__) || defined(__mips__) || defined(__ppc__) || defined(__powerpc__)
-    #undef POST_PACKED_STRUCTURE
-    #define POST_PACKED_STRUCTURE
+#undef POST_PACKED_STRUCTURE
+#define POST_PACKED_STRUCTURE
 #endif /* __arm__ || __aarch64__ || __mips__ || __ppc__ || __powerpc__ */
 
 /** define JACK_LIB_EXPORT, useful for internal clients */

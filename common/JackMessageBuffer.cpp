@@ -20,33 +20,31 @@
  */
 
 #include "JackMessageBuffer.h"
-#include "JackGlobals.h"
 #include "JackError.h"
+#include "JackGlobals.h"
 #include "JackTime.h"
 #include <algorithm>
 #include <chrono>
 #include <string>
 #include <thread>
 
-namespace jackmini
-{
+namespace jackmini {
 
-namespace
-{
+namespace {
 // How often the flush thread drains the ring.  Producers never wake it.
 constexpr auto kPollInterval = std::chrono::milliseconds(5);
-}
+} // namespace
 
 JackMessageBuffer* JackMessageBuffer::fInstance = nullptr;
 
 JackMessageBuffer::JackMessageBuffer()
-    :fInit(nullptr),
-    fInitArg(NULL),
-    fEnqueuePos(0),
-    fDequeuePos(0),
-    fOverruns(0),
-    fThread(this),
-    fRunning(false)
+    : fInit(nullptr)
+    , fInitArg(NULL)
+    , fEnqueuePos(0)
+    , fDequeuePos(0)
+    , fOverruns(0)
+    , fThread(this)
+    , fRunning(false)
 {
     for (std::size_t i = 0; i < MB_BUFFERS; i++) {
         fSlots[i].sequence.store(i, std::memory_order_relaxed);
@@ -54,7 +52,8 @@ JackMessageBuffer::JackMessageBuffer()
 }
 
 JackMessageBuffer::~JackMessageBuffer()
-{}
+{
+}
 
 bool JackMessageBuffer::Start()
 {
@@ -121,7 +120,7 @@ void JackMessageBuffer::Flush()
         Slot& slot = fSlots[pos & (MB_BUFFERS - 1)];
         const std::size_t seq = slot.sequence.load(std::memory_order_acquire);
         if (static_cast<std::ptrdiff_t>(seq - (pos + 1)) < 0) {
-            return;     // empty
+            return; // empty
         }
         fDequeuePos.store(pos + 1, std::memory_order_relaxed);
         jack_log_direct(slot.entry.level, slot.entry.message.data());
@@ -183,7 +182,7 @@ bool JackMessageBuffer::Destroy()
     }
 }
 
-void JackMessageBufferAdd(int level, const char *message)
+void JackMessageBufferAdd(int level, const char* message)
 {
     if (jackmini::JackMessageBuffer::fInstance == nullptr) {
         /* Unable to print message with realtime safety. Complain and print it anyway. */
@@ -196,7 +195,7 @@ void JackMessageBufferAdd(int level, const char *message)
     }
 }
 
-int JackMessageBuffer::SetInitCallback(JackThreadInitCallback callback, void *arg)
+int JackMessageBuffer::SetInitCallback(JackThreadInitCallback callback, void* arg)
 {
     if (fInstance && callback && fRunning.load(std::memory_order_acquire)) {
         std::lock_guard<std::mutex> guard(fInitLock);
@@ -213,4 +212,4 @@ int JackMessageBuffer::SetInitCallback(JackThreadInitCallback callback, void *ar
     return -1;
 }
 
-};
+}; // namespace jackmini

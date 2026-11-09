@@ -24,19 +24,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <cstring>
 #include <span>
 
-namespace
-{
+namespace {
 
 int g_failures = 0;
 int g_checks = 0;
 
-#define CHECK(cond) do { \
-    g_checks++; \
-    if (!(cond)) { \
-        std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
-        g_failures++; \
-    } \
-} while (0)
+#define CHECK(cond)                                                                       \
+    do {                                                                                  \
+        g_checks++;                                                                       \
+        if (!(cond)) {                                                                    \
+            std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
+            g_failures++;                                                                 \
+        }                                                                                 \
+    } while (0)
 
 void TestFits()
 {
@@ -91,11 +91,11 @@ void TestLeadingInteger()
 
 void TestEmptyBuffer()
 {
-    jackmini::CopyCString(std::span<char>{}, "abc");
+    jackmini::CopyCString(std::span<char> { }, "abc");
     CHECK(true);
 }
 
-}
+} // namespace
 
 int main()
 {

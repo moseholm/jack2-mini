@@ -22,8 +22,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <alsa/asoundlib.h>
 #include <string>
 
-namespace jackmini
-{
+namespace jackmini {
 
 enum JackAlsaRateDirection {
     RateCapture = 0,
@@ -44,8 +43,14 @@ struct JackAlsaRateElement {
     bool user;
     bool writable;
 
-    JackAlsaRateElement() : numid(0), iface(0), index(0), user(false), writable(false)
-    {}
+    JackAlsaRateElement()
+        : numid(0)
+        , iface(0)
+        , index(0)
+        , user(false)
+        , writable(false)
+    {
+    }
 };
 
 // Control device for a PCM name, e.g. "hw:1,0" -> "hw:1".
@@ -71,18 +76,18 @@ selected, 1 when none is suitable (the caller then creates a JACK element), and
 -1 with *error set when a configured element cannot be used.
 */
 int JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection dir,
-                               const std::string& configured,
-                               JackAlsaRateElement* out, std::string* error);
+    const std::string& configured,
+    JackAlsaRateElement* out, std::string* error);
 
 // Create the JACK user element for a direction with the given initial rate.
 // A stale element with no owner is replaced; one held by a live client is an error.
 int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, int device, long initial,
-                              JackAlsaRateElement* out);
+    JackAlsaRateElement* out);
 
 int JackAlsaControlRemoveRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem);
 int JackAlsaControlReadRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, long* value);
 int JackAlsaControlWriteRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, long value);
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

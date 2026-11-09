@@ -19,14 +19,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
+#include "JackMidiPort.h"
 #include "JackError.h"
 #include "JackPortType.h"
-#include "JackMidiPort.h"
 #include <assert.h>
 #include <string.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
 LIB_EXPORT void JackMidiBuffer::Reset(jack_nframes_t nframes)
 {
@@ -39,7 +38,7 @@ LIB_EXPORT void JackMidiBuffer::Reset(jack_nframes_t nframes)
 
 LIB_EXPORT jack_shmsize_t JackMidiBuffer::MaxEventSize() const
 {
-    assert (((jack_shmsize_t) - 1) < 0); // jack_shmsize_t should be signed
+    assert(((jack_shmsize_t)-1) < 0); // jack_shmsize_t should be signed
     jack_shmsize_t left = buffer_size - (sizeof(JackMidiBuffer) + sizeof(JackMidiEvent) * (event_count + 1) + write_pos);
     if (left < 0) {
         return 0;
@@ -55,18 +54,19 @@ LIB_EXPORT jack_midi_data_t* JackMidiBuffer::ReserveEvent(jack_nframes_t time, j
     jack_shmsize_t space = MaxEventSize();
     if (space == 0 || size > space) {
         jack_error("JackMidiBuffer::ReserveEvent - the buffer does not have "
-                   "enough room to enqueue a %lu byte event", size);
+                   "enough room to enqueue a %lu byte event",
+            size);
         lost_events++;
         return 0;
     }
     JackMidiEvent* event = &events[event_count++];
     event->time = time;
     event->size = size;
-    
+
     if (size <= JackMidiEvent::INLINE_SIZE_MAX) {
         return event->data;
     }
-   
+
     write_pos += size;
     event->offset = buffer_size - write_pos;
     return (jack_midi_data_t*)this + event->offset;
@@ -138,7 +138,8 @@ static void MidiBufferMixdown(void* mixbuffer, void** src_buffers, int src_count
 
         // write the event
         jack_midi_data_t* dest = mix->ReserveEvent(next_event->time, next_event->size);
-        if (!dest) break;
+        if (!dest)
+            break;
 
         memcpy(dest, next_event->GetData(next_buf), next_event->size);
         mix_index[next_buf_index]++;
@@ -151,8 +152,7 @@ static size_t MidiBufferSize()
     return BUFFER_SIZE_MAX * sizeof(jack_default_audio_sample_t);
 }
 
-const JackPortType gMidiPortType =
-{
+const JackPortType gMidiPortType = {
     JACK_DEFAULT_MIDI_TYPE,
     MidiBufferSize,
     MidiBufferInit,

@@ -16,16 +16,15 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <array>
-#include "JackCString.h"
 #include "JackAlsaEnumerate.h"
+#include "JackCString.h"
 #include "JackError.h"
+#include <array>
 
 #include <alsa/asoundlib.h>
 #include <stdio.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
 // Maximum channels a stream of this device supports, or 0 if it cannot be opened.
 static int ProbeChannels(const std::string& pcm, snd_pcm_stream_t stream, std::string* error)
@@ -58,7 +57,7 @@ static bool HasStream(snd_ctl_t* ctl, int device, snd_pcm_stream_t stream)
 }
 
 static const JackAlsaPcmInfo* FindKnown(const std::vector<JackAlsaPcmInfo>& known,
-                                        const std::string& card_id, int device)
+    const std::string& card_id, int device)
 {
     for (size_t i = 0; i < known.size(); i++) {
         if (known[i].card_id == card_id && known[i].device == device) {
@@ -69,13 +68,13 @@ static const JackAlsaPcmInfo* FindKnown(const std::vector<JackAlsaPcmInfo>& know
 }
 
 std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcmInfo>& known,
-                                                   bool report)
+    bool report)
 {
     std::vector<JackAlsaPcmInfo> result;
     int card = -1;
 
     while (snd_card_next(&card) >= 0 && card >= 0) {
-        std::array<char, 32> ctl_name{};
+        std::array<char, 32> ctl_name { };
         jackmini::FormatCString(ctl_name, "hw:{}", card);
 
         snd_ctl_t* ctl;
@@ -131,7 +130,7 @@ std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcm
             if (info.playback_channels == 0 && info.capture_channels == 0) {
                 if (report) {
                     jack_info("ALSA device %s is not available now (%s); skipped",
-                              info.pcm.c_str(), error.c_str());
+                        info.pcm.c_str(), error.c_str());
                 }
                 continue;
             }
@@ -144,4 +143,4 @@ std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcm
     return result;
 }
 
-} // end of namespace
+} // namespace jackmini

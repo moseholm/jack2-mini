@@ -21,103 +21,97 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackPort__
 #define __JackPort__
 
-#include "types.h"
-#include "JackConstants.h"
 #include "JackCompilerDeps.h"
+#include "JackConstants.h"
+#include "types.h"
 #include <string_view>
 
-namespace jackmini
-{
+namespace jackmini {
 
-#define ALL_PORTS	0xFFFF
-#define NO_PORT		0xFFFE
+#define ALL_PORTS 0xFFFF
+#define NO_PORT 0xFFFE
 
 /*!
 \brief Base class for port.
 */
 
 
-class SERVER_EXPORT JackPort
-{
+class SERVER_EXPORT JackPort {
 
-        friend class JackGraphManager;
+    friend class JackGraphManager;
 
-    private:
+private:
+    int fTypeId;
+    enum JackPortFlags fFlags;
+    char fName[REAL_JACK_PORT_NAME_SIZE + 1];
+    char fAlias1[REAL_JACK_PORT_NAME_SIZE + 1];
+    char fAlias2[REAL_JACK_PORT_NAME_SIZE + 1];
+    int fRefNum;
 
-        int fTypeId;
-        enum JackPortFlags fFlags;
-        char fName[REAL_JACK_PORT_NAME_SIZE+1];
-        char fAlias1[REAL_JACK_PORT_NAME_SIZE+1];
-        char fAlias2[REAL_JACK_PORT_NAME_SIZE+1];
-        int fRefNum;
+    jack_nframes_t fLatency;
+    jack_nframes_t fTotalLatency;
+    jack_latency_range_t fPlaybackLatency;
+    jack_latency_range_t fCaptureLatency;
+    uint8_t fMonitorRequests;
 
-        jack_nframes_t fLatency;
-        jack_nframes_t fTotalLatency;
-        jack_latency_range_t  fPlaybackLatency;
-        jack_latency_range_t  fCaptureLatency;
-        uint8_t fMonitorRequests;
+    bool fInUse;
+    jack_port_id_t fTied; // Locally tied source port
+    jack_default_audio_sample_t fBuffer[BUFFER_SIZE_MAX + 8];
 
-        bool fInUse;
-        jack_port_id_t fTied;   // Locally tied source port
-        jack_default_audio_sample_t fBuffer[BUFFER_SIZE_MAX + 8];
+    bool IsUsed() const
+    {
+        return fInUse;
+    }
 
-        bool IsUsed() const
-        {
-            return fInUse;
-        }
+    // RT
+    void ClearBuffer(jack_nframes_t frames);
+    void MixBuffers(void** src_buffers, int src_count, jack_nframes_t frames);
 
-        // RT
-        void ClearBuffer(jack_nframes_t frames);
-        void MixBuffers(void** src_buffers, int src_count, jack_nframes_t frames);
+public:
+    JackPort();
 
-    public:
+    bool Allocate(int refnum, const char* port_name, const char* port_type, JackPortFlags flags);
+    void Release();
+    const char* GetName() const;
+    const char* GetShortName() const;
+    void SetName(const char* name);
 
-        JackPort();
+    int GetAliases(char* const aliases[2]);
+    int SetAlias(const char* alias);
+    int UnsetAlias(const char* alias);
+    bool NameEquals(std::string_view target);
 
-        bool Allocate(int refnum, const char* port_name, const char* port_type, JackPortFlags flags);
-        void Release();
-        const char* GetName() const;
-        const char* GetShortName() const;
-        void SetName(const char* name);
+    int GetFlags() const;
+    const char* GetType() const;
 
-        int GetAliases(char* const aliases[2]);
-        int SetAlias(const char* alias);
-        int UnsetAlias(const char* alias);
-        bool NameEquals(std::string_view target);
+    int Tie(jack_port_id_t port_index);
+    int UnTie();
 
-        int	GetFlags() const;
-        const char* GetType() const;
+    jack_nframes_t GetLatency() const;
+    void SetLatency(jack_nframes_t latency);
 
-        int Tie(jack_port_id_t port_index);
-        int UnTie();
+    void SetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_range_t* range);
+    void GetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_range_t* range) const;
 
-        jack_nframes_t GetLatency() const;
-        void SetLatency(jack_nframes_t latency);
+    jack_nframes_t GetTotalLatency() const;
 
-        void SetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_range_t* range);
-        void GetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_range_t* range) const;
+    int RequestMonitor(bool onoff);
+    int EnsureMonitor(bool onoff);
+    bool MonitoringInput()
+    {
+        return (fMonitorRequests > 0);
+    }
 
-        jack_nframes_t GetTotalLatency() const;
+    // Since we are in shared memory, the resulting pointer cannot be cached, so align it here...
+    jack_default_audio_sample_t* GetBuffer()
+    {
+        return (jack_default_audio_sample_t*)((uintptr_t)fBuffer & ~31L) + 8;
+    }
 
-        int RequestMonitor(bool onoff);
-        int EnsureMonitor(bool onoff);
-        bool MonitoringInput()
-        {
-            return (fMonitorRequests > 0);
-        }
-
-        // Since we are in shared memory, the resulting pointer cannot be cached, so align it here...
-        jack_default_audio_sample_t* GetBuffer()
-        {
-            return (jack_default_audio_sample_t*)((uintptr_t)fBuffer & ~31L) + 8;
-        }
-
-        int GetRefNum() const;
-
+    int GetRefNum() const;
 };
 
-} // end of namespace
+} // namespace jackmini
 
 
 #endif
-

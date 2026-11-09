@@ -20,56 +20,52 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackSocket__
 #define __JackSocket__
 
-#include <sys/types.h>
-#include <sys/un.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <sys/time.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/un.h>
 #include <unistd.h>
 #include <span>
 #include <vector>
 
 #include "JackChannel.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Client socket.
 */
 
-class JackClientSocket : public detail::JackClientRequestInterface
-{
+class JackClientSocket : public detail::JackClientRequestInterface {
 
-    private:
+private:
+    int fSocket = -1;
+    int fTimeOut = 0;
+    bool fNonBlocking = false; // the socket(int) constructor does not set it
+    bool fPromiscuous = false;
+    int fPromiscuousGid = -1;
 
-        int fSocket = -1;
-        int fTimeOut = 0;
-        bool fNonBlocking = false;   // the socket(int) constructor does not set it
-        bool fPromiscuous = false;
-        int fPromiscuousGid = -1;
+public:
+    JackClientSocket();
+    JackClientSocket(int socket);
 
-    public:
+    int Connect(const char* dir, const char* name, int which);
+    int Close();
+    int Read(void* data, int len);
+    int Write(void* data, int len);
+    int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) override;
+    int WriteWithFds(void* data, int len, std::span<const int> fds) override;
+    int GetFd()
+    {
+        return fSocket;
+    }
+    void SetReadTimeOut(long sec);
+    void SetWriteTimeOut(long sec);
 
-        JackClientSocket();
-        JackClientSocket(int socket);
-
-        int Connect(const char* dir, const char* name, int which);
-        int Close();
-        int Read(void* data, int len);
-        int Write(void* data, int len);
-        int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) override;
-        int WriteWithFds(void* data, int len, std::span<const int> fds) override;
-        int GetFd()
-        {
-            return fSocket;
-        }
-        void SetReadTimeOut(long sec);
-        void SetWriteTimeOut(long sec);
-
-        void SetNonBlocking(bool onoff);
+    void SetNonBlocking(bool onoff);
 };
 
 /*!
@@ -79,32 +75,29 @@ class JackClientSocket : public detail::JackClientRequestInterface
 #define SOCKET_MAX_NAME_SIZE 256
 
 
-class JackServerSocket
-{
+class JackServerSocket {
 
-    private:
+private:
+    int fSocket;
+    char fName[SOCKET_MAX_NAME_SIZE];
+    bool fPromiscuous;
+    int fPromiscuousGid;
 
-        int fSocket;
-        char fName[SOCKET_MAX_NAME_SIZE];
-        bool fPromiscuous;
-        int fPromiscuousGid;
+public:
+    JackServerSocket();
+    ~JackServerSocket()
+    {
+    }
 
-    public:
-
-        JackServerSocket();
-        ~JackServerSocket()
-        {}
-
-        int Bind(const char* dir, const char* name, int which);
-        JackClientSocket* Accept();
-        int Close();
-        int GetFd()
-        {
-            return fSocket;
-        }
+    int Bind(const char* dir, const char* name, int which);
+    JackClientSocket* Accept();
+    int Close();
+    int GetFd()
+    {
+        return fSocket;
+    }
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif
-

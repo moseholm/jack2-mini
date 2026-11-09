@@ -23,43 +23,42 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackAudioDriver.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief The timed driver.
 */
 
-class SERVER_EXPORT JackTimedDriver : public JackAudioDriver
-{
-    protected:
+class SERVER_EXPORT JackTimedDriver : public JackAudioDriver {
+protected:
+    int fCycleCount;
+    jack_time_t fAnchorTimeUsec;
 
-        int fCycleCount;
-        jack_time_t fAnchorTimeUsec;
+    int FirstCycle(jack_time_t cur_time);
+    int CurrentCycle(jack_time_t cur_time);
 
-        int FirstCycle(jack_time_t cur_time);
-        int CurrentCycle(jack_time_t cur_time);
+    void ProcessWait();
 
-        void ProcessWait();
+public:
+    JackTimedDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
+        : JackAudioDriver(name, alias, engine, table)
+        , fCycleCount(0)
+        , fAnchorTimeUsec(0)
+    {
+    }
+    virtual ~JackTimedDriver()
+    {
+    }
 
-    public:
+    // BufferSize can be changed
+    bool IsFixedBufferSize()
+    {
+        return false;
+    }
 
-        JackTimedDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
-                : JackAudioDriver(name, alias, engine, table), fCycleCount(0), fAnchorTimeUsec(0)
-        {}
-        virtual ~JackTimedDriver()
-        {}
-
-        // BufferSize can be changed
-        bool IsFixedBufferSize()
-        {
-            return false;
-        }
-
-        int Start();
-
+    int Start();
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

@@ -21,21 +21,19 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "pcm_cycle.hpp"
 
+#include <poll.h>
 #include <algorithm>
 #include <cstdint>
 #include <deque>
-#include <poll.h>
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace jackmini::alsa
-{
+namespace jackmini::alsa {
 
 // A device that never touches a card.  It records every call, scripts the poll and avail results, and keeps one float
 // buffer per channel, so the cycle logic and the adapter callbacks can be checked without ALSA.
-class FakePcmBackend
-{
+class FakePcmBackend {
 public:
     struct StreamState {
         bool present = false;
@@ -43,7 +41,7 @@ public:
         std::ptrdiff_t avail = 0;
         std::deque<std::ptrdiff_t> avail_script;
         unsigned short revents = 0;
-        std::size_t contiguous = 0;  // 0 means "as much as requested"
+        std::size_t contiguous = 0; // 0 means "as much as requested"
         std::vector<std::vector<float>> data;
         int prepare_result = 0;
         int start_result = 0;
@@ -53,7 +51,7 @@ public:
     };
 
     FakePcmBackend(bool capture, int capture_channels, bool playback, int playback_channels,
-                   std::size_t buffer_frames)
+        std::size_t buffer_frames)
         : buffer_frames_(buffer_frames)
     {
         capture_.present = capture;
@@ -138,8 +136,7 @@ public:
         mapped.frames = state.contiguous == 0 ? mapped.requested
                                               : std::min(mapped.requested, state.contiguous);
         for (std::size_t channel = 0; channel < mapped.channel_count; ++channel) {
-            mapped.channels[channel].data =
-                reinterpret_cast<std::byte*>(state.data[channel].data() + mapped.offset);
+            mapped.channels[channel].data = reinterpret_cast<std::byte*>(state.data[channel].data() + mapped.offset);
             mapped.channels[channel].stride = sizeof(float);
         }
         return 0;
@@ -148,16 +145,14 @@ public:
     int commit(Stream stream, std::size_t offset, std::size_t frames)
     {
         StreamState& state = stream_state(stream);
-        log_.push_back(std::string("commit:") + name(stream) + ":" + std::to_string(offset) + ":" +
-                       std::to_string(frames));
+        log_.push_back(std::string("commit:") + name(stream) + ":" + std::to_string(offset) + ":" + std::to_string(frames));
         return state.commit_result;
     }
 
     void silence(Stream stream, std::size_t channel, std::size_t frames)
     {
         StreamState& state = stream_state(stream);
-        log_.push_back(std::string("silence:") + name(stream) + ":" + std::to_string(channel) + ":" +
-                       std::to_string(frames));
+        log_.push_back(std::string("silence:") + name(stream) + ":" + std::to_string(channel) + ":" + std::to_string(frames));
         std::fill_n(state.data[channel].begin(), std::min(frames, state.data[channel].size()), 0.0f);
     }
 
@@ -229,7 +224,7 @@ private:
     std::deque<int> poll_script_;
     int poll_result_ = 1;
     int last_poll_ = 1;
-    nfds_t revents_nfds_[2] = {0, 0};
+    nfds_t revents_nfds_[2] = { 0, 0 };
     XrunStatus status_;
     int status_result_ = 0;
     std::uint64_t now_ = 0;

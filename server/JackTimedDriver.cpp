@@ -19,15 +19,14 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include "JackTimedDriver.h"
+#include "JackCompilerDeps.h"
 #include "JackEngineControl.h"
 #include "JackTime.h"
-#include "JackCompilerDeps.h"
-#include <iostream>
-#include <unistd.h>
 #include <math.h>
+#include <unistd.h>
+#include <iostream>
 
-namespace jackmini
-{
+namespace jackmini {
 
 int JackTimedDriver::FirstCycle(jack_time_t cur_time_usec)
 {
@@ -64,8 +63,8 @@ void JackTimedDriver::ProcessWait()
         jack_error("JackTimedDriver::Process XRun = %ld usec", (cur_time_usec - fBeginDateUst));
     }
 
-    //jack_log("JackTimedDriver::Process wait_time = %d", wait_time_usec);
+    // jack_log("JackTimedDriver::Process wait_time = %d", wait_time_usec);
     sleep_microseconds(wait_time_usec);
 }
 
-} // end of namespace
+} // namespace jackmini

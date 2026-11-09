@@ -25,50 +25,46 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackCompilerDeps.h"
 #include "types.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief A structure used for time management.
 */
 
 
-class SERVER_EXPORT JackTimer
-{
+class SERVER_EXPORT JackTimer {
 
     friend class JackFrameTimer;
 
-    private:
+private:
+    jack_nframes_t fFrames;
+    jack_time_t fCurrentWakeup;
+    jack_time_t fCurrentCallback;
+    jack_time_t fNextWakeUp;
+    float fPeriodUsecs;
+    float fFilterOmega; /* set once, never altered */
+    bool fInitialized;
 
-        jack_nframes_t fFrames;
-        jack_time_t	fCurrentWakeup;
-        jack_time_t	fCurrentCallback;
-        jack_time_t	fNextWakeUp;
-        float fPeriodUsecs;
-        float fFilterOmega; /* set once, never altered */
-        bool fInitialized;
+public:
+    JackTimer();
+    ~JackTimer()
+    {
+    }
 
-    public:
+    jack_nframes_t Time2Frames(jack_time_t time, jack_nframes_t buffer_size);
+    jack_time_t Frames2Time(jack_nframes_t frames, jack_nframes_t buffer_size);
+    jack_nframes_t FramesSinceCycleStart(jack_time_t cur_time, jack_nframes_t frames_rate);
+    int GetCycleTimes(jack_nframes_t* current_frames, jack_time_t* current_usecs, jack_time_t* next_usecs, float* period_usecs);
 
-        JackTimer();
-        ~JackTimer()
-        {}
+    jack_nframes_t CurFrame()
+    {
+        return fFrames;
+    }
 
-        jack_nframes_t Time2Frames(jack_time_t time, jack_nframes_t buffer_size);
-        jack_time_t Frames2Time(jack_nframes_t frames, jack_nframes_t buffer_size);
-        jack_nframes_t FramesSinceCycleStart(jack_time_t cur_time, jack_nframes_t frames_rate);
-        int GetCycleTimes(jack_nframes_t* current_frames, jack_time_t* current_usecs, jack_time_t* next_usecs, float* period_usecs);
-
-        jack_nframes_t CurFrame()
-        {
-            return fFrames;
-        }
-
-        jack_time_t CurTime()
-        {
-            return fCurrentWakeup;
-        }
-
+    jack_time_t CurTime()
+    {
+        return fCurrentWakeup;
+    }
 };
 
 /*!
@@ -76,30 +72,29 @@ class SERVER_EXPORT JackTimer
 */
 
 
-class SERVER_EXPORT JackFrameTimer : public JackAtomicState<JackTimer>
-{
+class SERVER_EXPORT JackFrameTimer : public JackAtomicState<JackTimer> {
 
-    private:
+private:
+    bool fFirstWakeUp;
+    void IncFrameTimeAux(jack_nframes_t buffer_size, jack_time_t callback_usecs, jack_time_t period_usecs);
+    void InitFrameTimeAux(jack_time_t callback_usecs, jack_time_t period_usecs);
 
-        bool fFirstWakeUp;
-        void IncFrameTimeAux(jack_nframes_t buffer_size, jack_time_t callback_usecs, jack_time_t period_usecs);
-        void InitFrameTimeAux(jack_time_t callback_usecs, jack_time_t period_usecs);
+public:
+    JackFrameTimer()
+        : fFirstWakeUp(true)
+    {
+    }
+    ~JackFrameTimer()
+    {
+    }
 
-    public:
-
-        JackFrameTimer(): fFirstWakeUp(true)
-        {}
-        ~JackFrameTimer()
-        {}
-
-        void InitFrameTime();
-        void ResetFrameTime(jack_time_t callback_usecs);
-        void IncFrameTime(jack_nframes_t buffer_size, jack_time_t callback_usecs, jack_time_t period_usecs);
-        void ReadFrameTime(JackTimer* timer);
-
+    void InitFrameTime();
+    void ResetFrameTime(jack_time_t callback_usecs);
+    void IncFrameTime(jack_nframes_t buffer_size, jack_time_t callback_usecs, jack_time_t period_usecs);
+    void ReadFrameTime(JackTimer* timer);
 };
 
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

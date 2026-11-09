@@ -23,23 +23,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define __JackRequest__
 
 #include "JackCString.h"
+#include "JackChannel.h"
 #include "JackConstants.h"
 #include "JackError.h"
-#include "JackPlatformPlug.h"
-#include "JackChannel.h"
 #include "JackMessage.h"
+#include "JackPlatformPlug.h"
 #include "JackShmMem.h"
 #include "JackTime.h"
 #include "types.h"
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <array>
 #include <list>
 #include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 #define JACK_CLIENT_NAME_SIZE_1 (JACK_CLIENT_NAME_SIZE + 1)
 #define JACK_MESSAGE_SIZE_1 (JACK_MESSAGE_SIZE + 1)
@@ -47,23 +46,22 @@ namespace jackmini
 #define JACK_PORT_TYPE_SIZE_1 (JACK_PORT_TYPE_SIZE + 1)
 #define REAL_JACK_PORT_NAME_SIZE_1 (REAL_JACK_PORT_NAME_SIZE + 1)
 
-#define CheckRes(exp) { \
-    int reserr = (exp); \
-    if (reserr < 0) { \
-        if (reserr != JACK_REQUEST_ERR_ABORTED) \
-            jack_error("CheckRes error for " #exp "in %s", __PRETTY_FUNCTION__); \
-        return reserr; \
-    } \
-}
-
+#define CheckRes(exp)                                                                \
+    {                                                                                \
+        int reserr = (exp);                                                          \
+        if (reserr < 0) {                                                            \
+            if (reserr != JACK_REQUEST_ERR_ABORTED)                                  \
+                jack_error("CheckRes error for " #exp "in %s", __PRETTY_FUNCTION__); \
+            return reserr;                                                           \
+        }                                                                            \
+    }
 
 
 /*!
 \brief Request from client to server.
 */
 
-struct JackRequest
-{
+struct JackRequest {
 
     enum RequestType {
         kRegisterPort = 1,
@@ -98,25 +96,29 @@ struct JackRequest
     std::uint32_t fRequestId;
 
     JackRequest(RequestType type)
-        : fType(type), fRequestId(NextJackRequestId())
-    {}
+        : fType(type)
+        , fRequestId(NextJackRequestId())
+    {
+    }
 
     virtual ~JackRequest()
-    {}
+    {
+    }
 
     virtual int Read(detail::JackChannelTransactionInterface* trans) = 0;
 
     virtual int Write(detail::JackChannelTransactionInterface* trans) = 0;
 };
 
-template<int DataSize>
-struct JackRequestImpl : JackRequest
-{
+template <int DataSize>
+struct JackRequestImpl : JackRequest {
     static constexpr int TotalSize = DataSize;
     static_assert(DataSize <= static_cast<int>(kJackMsgMaxPayload), "request payload larger than a message");
 
     JackRequestImpl(RequestType type)
-        : JackRequest(type), fPacketInit(false), fPacketPos(0)
+        : JackRequest(type)
+        , fPacketInit(false)
+        , fPacketPos(0)
     {
     }
 
@@ -147,11 +149,11 @@ struct JackRequestImpl : JackRequest
         }
         if (fPacketPos + len > TotalSize) {
             jack_error("JackRequestImpl::WritePacket failed for type %d because of too much data, pos %d, len %d, total size %d",
-                       fType, fPacketPos, len, TotalSize);
+                fType, fPacketPos, len, TotalSize);
             return -1;
         }
         jack_log("JackRequestImpl::WritePacket ok for type %d, pos %d, len %d, total size %d (new pos %d)",
-                 fType, fPacketPos, len, TotalSize, fPacketPos + len);
+            fType, fPacketPos, len, TotalSize, fPacketPos + len);
         memcpy(fPacketData.data() + fPacketPos, data, len);
         fPacketPos += len;
         return 0;
@@ -161,7 +163,7 @@ struct JackRequestImpl : JackRequest
     {
         if (!fPacketInit || fPacketPos != TotalSize) {
             jack_error("JackRequestImpl::Write failed for type %d because of incomplete data, pos %d, total size %d",
-                       fType, fPacketPos, TotalSize);
+                fType, fPacketPos, TotalSize);
             return -1;
         }
         // invalidate any more writes
@@ -173,8 +175,9 @@ struct JackRequestImpl : JackRequest
     }
 
     static constexpr int Size() { return DataSize; }
+
 private:
-    std::array<uint8_t, TotalSize> fPacketData{};
+    std::array<uint8_t, TotalSize> fPacketData { };
     bool fPacketInit;
     int fPacketPos;
 };
@@ -183,17 +186,21 @@ private:
 \brief Result from the server.
 */
 
-struct JackResult
-{
+struct JackResult {
 
     int fResult;
 
-    JackResult(): fResult( -1)
-    {}
-    JackResult(int result): fResult(result)
-    {}
+    JackResult()
+        : fResult(-1)
+    {
+    }
+    JackResult(int result)
+        : fResult(result)
+    {
+    }
     virtual ~JackResult()
-    {}
+    {
+    }
 
     virtual int Read(detail::JackChannelTransactionInterface* trans)
     {
@@ -204,7 +211,6 @@ struct JackResult
     {
         return trans->Write(&fResult, sizeof(int));
     }
-
 };
 
 // The reply to a request: the request's type and id, and the result as the payload.
@@ -222,7 +228,7 @@ inline int SendJackReply(detail::JackChannelTransactionInterface* trans, JackRes
 // and the payload must be read in full.
 inline int ReadJackReply(detail::JackClientRequestInterface* socket, std::uint16_t type, std::uint32_t request, JackResult& res)
 {
-    JackMsgHeader header{};
+    JackMsgHeader header { };
     std::vector<UniqueFd> fds;
     if (socket->ReadWithFds(&header, sizeof(header), fds) < 0) {
         return -1;
@@ -251,8 +257,7 @@ inline int ReadJackReply(detail::JackClientRequestInterface* socket, std::uint16
 \brief CheckClient request.
 */
 
-struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 + 3 * sizeof(int) + sizeof(jack_uuid_t)>
-{
+struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 + 3 * sizeof(int) + sizeof(jack_uuid_t)> {
 
     char fName[JACK_CLIENT_NAME_SIZE_1];
     int fProtocol;
@@ -261,13 +266,21 @@ struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 +
     jack_uuid_t fUUID;
 
     JackClientCheckRequest()
-        : JackRequestImpl(kClientCheck), fProtocol(0), fOptions(0), fOpen(0), fUUID(JACK_UUID_EMPTY_INITIALIZER)
+        : JackRequestImpl(kClientCheck)
+        , fProtocol(0)
+        , fOptions(0)
+        , fOpen(0)
+        , fUUID(JACK_UUID_EMPTY_INITIALIZER)
     {
         memset(fName, 0, sizeof(fName));
     }
 
     JackClientCheckRequest(const char* name, int protocol, int options, jack_uuid_t uuid, int open = false)
-        : JackRequestImpl(kClientCheck), fProtocol(protocol), fOptions(options), fOpen(open), fUUID(uuid)
+        : JackRequestImpl(kClientCheck)
+        , fProtocol(protocol)
+        , fOptions(options)
+        , fOpen(open)
+        , fUUID(uuid)
     {
         memset(fName, 0, sizeof(fName));
         CopyCString(fName, name);
@@ -294,25 +307,26 @@ struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 +
     }
 
     static constexpr int Size() { return sizeof(fName) + 3 * sizeof(int) + sizeof(jack_uuid_t); }
-
 };
 
 /*!
 \brief CheckClient result.
 */
 
-struct JackClientCheckResult : public JackResult
-{
+struct JackClientCheckResult : public JackResult {
 
-    char fName[JACK_CLIENT_NAME_SIZE+1];
+    char fName[JACK_CLIENT_NAME_SIZE + 1];
     int fStatus;
 
-    JackClientCheckResult(): JackResult(), fStatus(0)
+    JackClientCheckResult()
+        : JackResult()
+        , fStatus(0)
     {
         memset(fName, 0, sizeof(fName));
     }
     JackClientCheckResult(int32_t result, const char* name, int status)
-            : JackResult(result), fStatus(status)
+        : JackResult(result)
+        , fStatus(status)
     {
         memset(fName, 0, sizeof(fName));
         CopyCString(fName, name);
@@ -333,22 +347,22 @@ struct JackClientCheckResult : public JackResult
         CheckRes(trans->Write(&fStatus, sizeof(int)));
         return 0;
     }
-
 };
 
 /*!
 \brief NewClient request.
 */
 
-struct JackClientOpenRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_uuid_t) + JACK_CLIENT_NAME_SIZE_1>
-{
+struct JackClientOpenRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_uuid_t) + JACK_CLIENT_NAME_SIZE_1> {
 
     int fPID;
     jack_uuid_t fUUID;
     char fName[JACK_CLIENT_NAME_SIZE_1];
 
     JackClientOpenRequest()
-        : JackRequestImpl(kClientOpen), fPID(0), fUUID(JACK_UUID_EMPTY_INITIALIZER)
+        : JackRequestImpl(kClientOpen)
+        , fPID(0)
+        , fUUID(JACK_UUID_EMPTY_INITIALIZER)
     {
         memset(fName, 0, sizeof(fName));
     }
@@ -377,7 +391,6 @@ struct JackClientOpenRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_
         CheckRes(WritePacket(&fName, sizeof(fName)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
@@ -386,8 +399,7 @@ struct JackClientOpenRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_
 The payload is the status and the sizes of the three segments. The descriptors go with it as SCM_RIGHTS, in one message, in the order engine, graph, client control.
 */
 
-struct JackClientOpenResultPayload
-{
+struct JackClientOpenResultPayload {
     int32_t fResult;
     uint32_t fEngineSize;
     uint32_t fGraphSize;
@@ -395,20 +407,20 @@ struct JackClientOpenResultPayload
 };
 static_assert(sizeof(JackClientOpenResultPayload) == 16);
 
-struct JackClientOpenResult : public JackResult
-{
+struct JackClientOpenResult : public JackResult {
 
     JackShmSegment fSharedEngine;
     JackShmSegment fSharedClient;
     JackShmSegment fSharedGraph;
 
     JackClientOpenResult()
-            : JackResult()
-    {}
+        : JackResult()
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
-        JackClientOpenResultPayload payload{};
+        JackClientOpenResultPayload payload { };
         std::vector<UniqueFd> fds;
         CheckRes(trans->ReadWithFds(&payload, sizeof(payload), fds));
         fResult = payload.fResult;
@@ -419,40 +431,42 @@ struct JackClientOpenResult : public JackResult
             jack_error("JackClientOpenResult::Read expected 3 descriptors, got %zu", fds.size());
             return -1;
         }
-        fSharedEngine = JackShmSegment{ fds[0].release(), payload.fEngineSize };
-        fSharedGraph = JackShmSegment{ fds[1].release(), payload.fGraphSize };
-        fSharedClient = JackShmSegment{ fds[2].release(), payload.fClientSize };
+        fSharedEngine = JackShmSegment { fds[0].release(), payload.fEngineSize };
+        fSharedGraph = JackShmSegment { fds[1].release(), payload.fGraphSize };
+        fSharedClient = JackShmSegment { fds[2].release(), payload.fClientSize };
         return 0;
     }
 
     int Write(detail::JackChannelTransactionInterface* trans) override
     {
-        JackClientOpenResultPayload payload{ fResult, fSharedEngine.fSize, fSharedGraph.fSize, fSharedClient.fSize };
+        JackClientOpenResultPayload payload { fResult, fSharedEngine.fSize, fSharedGraph.fSize, fSharedClient.fSize };
         if (fResult != 0) {
-            return trans->WriteWithFds(&payload, sizeof(payload), {});
+            return trans->WriteWithFds(&payload, sizeof(payload), { });
         }
-        const std::array<int, 3> fds{ fSharedEngine.fFd, fSharedGraph.fFd, fSharedClient.fFd };
+        const std::array<int, 3> fds { fSharedEngine.fFd, fSharedGraph.fFd, fSharedClient.fFd };
         return trans->WriteWithFds(&payload, sizeof(payload), fds);
     }
-
 };
 
 /*!
 \brief CloseClient request.
 */
 
-struct JackClientCloseRequest : public JackRequestImpl<sizeof(int)>
-{
+struct JackClientCloseRequest : public JackRequestImpl<sizeof(int)> {
 
     int fRefNum;
 
     JackClientCloseRequest()
-        : JackRequestImpl(kClientClose), fRefNum(0)
-    {}
+        : JackRequestImpl(kClientClose)
+        , fRefNum(0)
+    {
+    }
 
     JackClientCloseRequest(int refnum)
-        : JackRequestImpl(kClientClose), fRefNum(refnum)
-    {}
+        : JackRequestImpl(kClientClose)
+        , fRefNum(refnum)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -465,26 +479,30 @@ struct JackClientCloseRequest : public JackRequestImpl<sizeof(int)>
         CheckRes(WritePacket(&fRefNum, sizeof(int)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief Activate request.
 */
 
-struct JackActivateRequest : public JackRequestImpl<2 * sizeof(int)>
-{
+struct JackActivateRequest : public JackRequestImpl<2 * sizeof(int)> {
 
     int fRefNum;
     int fIsRealTime;
 
     JackActivateRequest()
-        : JackRequestImpl(kActivateClient), fRefNum(0), fIsRealTime(0)
-    {}
+        : JackRequestImpl(kActivateClient)
+        , fRefNum(0)
+        , fIsRealTime(0)
+    {
+    }
 
     JackActivateRequest(int refnum, int is_real_time)
-        : JackRequestImpl(kActivateClient), fRefNum(refnum), fIsRealTime(is_real_time)
-    {}
+        : JackRequestImpl(kActivateClient)
+        , fRefNum(refnum)
+        , fIsRealTime(is_real_time)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -499,25 +517,27 @@ struct JackActivateRequest : public JackRequestImpl<2 * sizeof(int)>
         CheckRes(WritePacket(&fIsRealTime, sizeof(int)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief Deactivate request.
 */
 
-struct JackDeactivateRequest : public JackRequestImpl<sizeof(int)>
-{
+struct JackDeactivateRequest : public JackRequestImpl<sizeof(int)> {
 
     int fRefNum;
 
     JackDeactivateRequest()
-        : JackRequestImpl(kDeactivateClient), fRefNum(0)
-    {}
+        : JackRequestImpl(kDeactivateClient)
+        , fRefNum(0)
+    {
+    }
 
     JackDeactivateRequest(int refnum)
-        : JackRequestImpl(kDeactivateClient), fRefNum(refnum)
-    {}
+        : JackRequestImpl(kDeactivateClient)
+        , fRefNum(refnum)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -530,36 +550,40 @@ struct JackDeactivateRequest : public JackRequestImpl<sizeof(int)>
         CheckRes(WritePacket(&fRefNum, sizeof(int)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief PortRegister request.
 */
 
-struct JackPortRegisterRequest : public JackRequestImpl<sizeof(int) + JACK_PORT_NAME_SIZE_1 + JACK_PORT_TYPE_SIZE_1 + 2 * sizeof(unsigned int)>
-{
+struct JackPortRegisterRequest : public JackRequestImpl<sizeof(int) + JACK_PORT_NAME_SIZE_1 + JACK_PORT_TYPE_SIZE_1 + 2 * sizeof(unsigned int)> {
 
     int fRefNum;
-    char fName[JACK_PORT_NAME_SIZE_1];   // port short name
+    char fName[JACK_PORT_NAME_SIZE_1]; // port short name
     char fPortType[JACK_PORT_TYPE_SIZE_1];
     unsigned int fFlags;
     unsigned int fBufferSize;
 
     JackPortRegisterRequest()
-        : JackRequestImpl(kRegisterPort), fRefNum(0), fFlags(0), fBufferSize(0)
+        : JackRequestImpl(kRegisterPort)
+        , fRefNum(0)
+        , fFlags(0)
+        , fBufferSize(0)
     {
         memset(fName, 0, sizeof(fName));
         memset(fPortType, 0, sizeof(fPortType));
     }
 
     JackPortRegisterRequest(int refnum, const char* name, const char* port_type, unsigned int flags, unsigned int buffer_size)
-        : JackRequestImpl(kRegisterPort), fRefNum(refnum), fFlags(flags), fBufferSize(buffer_size)
+        : JackRequestImpl(kRegisterPort)
+        , fRefNum(refnum)
+        , fFlags(flags)
+        , fBufferSize(buffer_size)
     {
         memset(fName, 0, sizeof(fName));
         memset(fPortType, 0, sizeof(fPortType));
-        strncpy(fName, name, sizeof(fName)-1);
-        strncpy(fPortType, port_type, sizeof(fPortType)-1);
+        strncpy(fName, name, sizeof(fName) - 1);
+        strncpy(fPortType, port_type, sizeof(fPortType) - 1);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -582,20 +606,21 @@ struct JackPortRegisterRequest : public JackRequestImpl<sizeof(int) + JACK_PORT_
         CheckRes(WritePacket(&fBufferSize, sizeof(unsigned int)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief PortRegister result.
 */
 
-struct JackPortRegisterResult : public JackResult
-{
+struct JackPortRegisterResult : public JackResult {
 
     jack_port_id_t fPortIndex;
 
-    JackPortRegisterResult(): JackResult(), fPortIndex(NO_PORT)
-    {}
+    JackPortRegisterResult()
+        : JackResult()
+        , fPortIndex(NO_PORT)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -608,26 +633,30 @@ struct JackPortRegisterResult : public JackResult
         CheckRes(JackResult::Write(trans));
         return trans->Write(&fPortIndex, sizeof(jack_port_id_t));
     }
-
 };
 
 /*!
 \brief PortUnregister request.
 */
 
-struct JackPortUnRegisterRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_port_id_t)>
-{
+struct JackPortUnRegisterRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_port_id_t)> {
 
     int fRefNum;
     jack_port_id_t fPortIndex;
 
     JackPortUnRegisterRequest()
-        : JackRequestImpl(kUnRegisterPort), fRefNum(0), fPortIndex(0)
-    {}
+        : JackRequestImpl(kUnRegisterPort)
+        , fRefNum(0)
+        , fPortIndex(0)
+    {
+    }
 
     JackPortUnRegisterRequest(int refnum, jack_port_id_t index)
-        : JackRequestImpl(kUnRegisterPort), fRefNum(refnum), fPortIndex(index)
-    {}
+        : JackRequestImpl(kUnRegisterPort)
+        , fRefNum(refnum)
+        , fPortIndex(index)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -643,34 +672,34 @@ struct JackPortUnRegisterRequest : public JackRequestImpl<sizeof(int) + sizeof(j
         CheckRes(WritePacket(&fPortIndex, sizeof(jack_port_id_t)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief PortConnectName request.
 */
 
-struct JackPortConnectNameRequest : public JackRequestImpl<sizeof(int) + 2 * REAL_JACK_PORT_NAME_SIZE_1>
-{
+struct JackPortConnectNameRequest : public JackRequestImpl<sizeof(int) + 2 * REAL_JACK_PORT_NAME_SIZE_1> {
 
     int fRefNum;
-    char fSrc[REAL_JACK_PORT_NAME_SIZE_1];    // port full name
-    char fDst[REAL_JACK_PORT_NAME_SIZE_1];    // port full name
+    char fSrc[REAL_JACK_PORT_NAME_SIZE_1]; // port full name
+    char fDst[REAL_JACK_PORT_NAME_SIZE_1]; // port full name
 
     JackPortConnectNameRequest()
-        : JackRequestImpl(kConnectNamePorts), fRefNum(0)
+        : JackRequestImpl(kConnectNamePorts)
+        , fRefNum(0)
     {
         memset(fSrc, 0, sizeof(fSrc));
         memset(fDst, 0, sizeof(fDst));
     }
 
     JackPortConnectNameRequest(int refnum, const char* src_name, const char* dst_name)
-        : JackRequestImpl(kConnectNamePorts), fRefNum(refnum)
+        : JackRequestImpl(kConnectNamePorts)
+        , fRefNum(refnum)
     {
         memset(fSrc, 0, sizeof(fSrc));
         memset(fDst, 0, sizeof(fDst));
-        strncpy(fSrc, src_name, sizeof(fSrc)-1);
-        strncpy(fDst, dst_name, sizeof(fDst)-1);
+        strncpy(fSrc, src_name, sizeof(fSrc) - 1);
+        strncpy(fDst, dst_name, sizeof(fDst) - 1);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -689,34 +718,34 @@ struct JackPortConnectNameRequest : public JackRequestImpl<sizeof(int) + 2 * REA
         CheckRes(WritePacket(&fDst, sizeof(fDst)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief PortDisconnectName request.
 */
 
-struct JackPortDisconnectNameRequest : public JackRequestImpl<sizeof(int) + 2 * REAL_JACK_PORT_NAME_SIZE_1>
-{
+struct JackPortDisconnectNameRequest : public JackRequestImpl<sizeof(int) + 2 * REAL_JACK_PORT_NAME_SIZE_1> {
 
     int fRefNum;
-    char fSrc[REAL_JACK_PORT_NAME_SIZE_1];    // port full name
-    char fDst[REAL_JACK_PORT_NAME_SIZE_1];    // port full name
+    char fSrc[REAL_JACK_PORT_NAME_SIZE_1]; // port full name
+    char fDst[REAL_JACK_PORT_NAME_SIZE_1]; // port full name
 
     JackPortDisconnectNameRequest()
-        : JackRequestImpl(kDisconnectNamePorts), fRefNum(0)
+        : JackRequestImpl(kDisconnectNamePorts)
+        , fRefNum(0)
     {
         memset(fSrc, 0, sizeof(fSrc));
         memset(fDst, 0, sizeof(fDst));
     }
 
     JackPortDisconnectNameRequest(int refnum, const char* src_name, const char* dst_name)
-        : JackRequestImpl(kDisconnectNamePorts), fRefNum(refnum)
+        : JackRequestImpl(kDisconnectNamePorts)
+        , fRefNum(refnum)
     {
         memset(fSrc, 0, sizeof(fSrc));
         memset(fDst, 0, sizeof(fDst));
-        strncpy(fSrc, src_name, sizeof(fSrc)-1);
-        strncpy(fDst, dst_name, sizeof(fDst)-1);
+        strncpy(fSrc, src_name, sizeof(fSrc) - 1);
+        strncpy(fDst, dst_name, sizeof(fDst) - 1);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -735,27 +764,33 @@ struct JackPortDisconnectNameRequest : public JackRequestImpl<sizeof(int) + 2 * 
         CheckRes(WritePacket(&fDst, sizeof(fDst)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief PortConnect request.
 */
 
-struct JackPortConnectRequest : public JackRequestImpl<sizeof(int) + 2 * sizeof(jack_port_id_t)>
-{
+struct JackPortConnectRequest : public JackRequestImpl<sizeof(int) + 2 * sizeof(jack_port_id_t)> {
 
     int fRefNum;
     jack_port_id_t fSrc;
     jack_port_id_t fDst;
 
     JackPortConnectRequest()
-        : JackRequestImpl(kConnectPorts), fRefNum(0), fSrc(0), fDst(0)
-    {}
+        : JackRequestImpl(kConnectPorts)
+        , fRefNum(0)
+        , fSrc(0)
+        , fDst(0)
+    {
+    }
 
     JackPortConnectRequest(int refnum, jack_port_id_t src, jack_port_id_t dst)
-        : JackRequestImpl(kConnectPorts), fRefNum(refnum), fSrc(src), fDst(dst)
-    {}
+        : JackRequestImpl(kConnectPorts)
+        , fRefNum(refnum)
+        , fSrc(src)
+        , fDst(dst)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -773,27 +808,33 @@ struct JackPortConnectRequest : public JackRequestImpl<sizeof(int) + 2 * sizeof(
         CheckRes(WritePacket(&fDst, sizeof(jack_port_id_t)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief PortDisconnect request.
 */
 
-struct JackPortDisconnectRequest : public JackRequestImpl<sizeof(int) + 2 * sizeof(jack_port_id_t)>
-{
+struct JackPortDisconnectRequest : public JackRequestImpl<sizeof(int) + 2 * sizeof(jack_port_id_t)> {
 
     int fRefNum;
     jack_port_id_t fSrc;
     jack_port_id_t fDst;
 
     JackPortDisconnectRequest()
-        : JackRequestImpl(kDisconnectPorts), fRefNum(0), fSrc(0), fDst(0)
-    {}
+        : JackRequestImpl(kDisconnectPorts)
+        , fRefNum(0)
+        , fSrc(0)
+        , fDst(0)
+    {
+    }
 
     JackPortDisconnectRequest(int refnum, jack_port_id_t src, jack_port_id_t dst)
-        : JackRequestImpl(kDisconnectPorts), fRefNum(refnum), fSrc(src), fDst(dst)
-    {}
+        : JackRequestImpl(kDisconnectPorts)
+        , fRefNum(refnum)
+        , fSrc(src)
+        , fDst(dst)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -811,31 +852,33 @@ struct JackPortDisconnectRequest : public JackRequestImpl<sizeof(int) + 2 * size
         CheckRes(WritePacket(&fDst, sizeof(jack_port_id_t)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief PortRename request.
 */
 
-struct JackPortRenameRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_port_id_t) + JACK_PORT_NAME_SIZE_1>
-{
+struct JackPortRenameRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_port_id_t) + JACK_PORT_NAME_SIZE_1> {
 
     int fRefNum;
     jack_port_id_t fPort;
-    char fName[JACK_PORT_NAME_SIZE_1];   // port short name
+    char fName[JACK_PORT_NAME_SIZE_1]; // port short name
 
     JackPortRenameRequest()
-        : JackRequestImpl(kPortRename), fRefNum(0), fPort(0)
+        : JackRequestImpl(kPortRename)
+        , fRefNum(0)
+        , fPort(0)
     {
         memset(fName, 0, sizeof(fName));
     }
 
     JackPortRenameRequest(int refnum, jack_port_id_t port, const char* name)
-        : JackRequestImpl(kPortRename), fRefNum(refnum), fPort(port)
+        : JackRequestImpl(kPortRename)
+        , fRefNum(refnum)
+        , fPort(port)
     {
         memset(fName, 0, sizeof(fName));
-        strncpy(fName, name, sizeof(fName)-1);
+        strncpy(fName, name, sizeof(fName) - 1);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -854,25 +897,27 @@ struct JackPortRenameRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_
         CheckRes(WritePacket(&fName, sizeof(fName)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief SetBufferSize request.
 */
 
-struct JackSetBufferSizeRequest : public JackRequestImpl<sizeof(jack_nframes_t)>
-{
+struct JackSetBufferSizeRequest : public JackRequestImpl<sizeof(jack_nframes_t)> {
 
     jack_nframes_t fBufferSize;
 
     JackSetBufferSizeRequest()
-        : JackRequestImpl(kSetBufferSize), fBufferSize(0)
-    {}
+        : JackRequestImpl(kSetBufferSize)
+        , fBufferSize(0)
+    {
+    }
 
     JackSetBufferSizeRequest(jack_nframes_t buffer_size)
-        : JackRequestImpl(kSetBufferSize), fBufferSize(buffer_size)
-    {}
+        : JackRequestImpl(kSetBufferSize)
+        , fBufferSize(buffer_size)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -885,25 +930,27 @@ struct JackSetBufferSizeRequest : public JackRequestImpl<sizeof(jack_nframes_t)>
         CheckRes(WritePacket(&fBufferSize, sizeof(jack_nframes_t)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief SetFreeWheel request.
 */
 
-struct JackSetFreeWheelRequest : public JackRequestImpl<sizeof(int)>
-{
+struct JackSetFreeWheelRequest : public JackRequestImpl<sizeof(int)> {
 
     int fOnOff;
 
     JackSetFreeWheelRequest()
-        : JackRequestImpl(kSetFreeWheel), fOnOff(0)
-    {}
+        : JackRequestImpl(kSetFreeWheel)
+        , fOnOff(0)
+    {
+    }
 
     JackSetFreeWheelRequest(int onoff)
-        : JackRequestImpl(kSetFreeWheel), fOnOff(onoff)
-    {}
+        : JackRequestImpl(kSetFreeWheel)
+        , fOnOff(onoff)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -916,19 +963,18 @@ struct JackSetFreeWheelRequest : public JackRequestImpl<sizeof(int)>
         CheckRes(WritePacket(&fOnOff, sizeof(int)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief ComputeTotalLatencies request.
 */
 
-struct JackComputeTotalLatenciesRequest : public JackRequestImpl<0>
-{
+struct JackComputeTotalLatenciesRequest : public JackRequestImpl<0> {
 
     JackComputeTotalLatenciesRequest()
         : JackRequestImpl(kComputeTotalLatencies)
-    {}
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -940,25 +986,27 @@ struct JackComputeTotalLatenciesRequest : public JackRequestImpl<0>
         CheckRes(WritePacketInit());
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief ReleaseTimebase request.
 */
 
-struct JackReleaseTimebaseRequest : public JackRequestImpl<sizeof(int)>
-{
+struct JackReleaseTimebaseRequest : public JackRequestImpl<sizeof(int)> {
 
     int fRefNum;
 
     JackReleaseTimebaseRequest()
-        : JackRequestImpl(kReleaseTimebase), fRefNum(0)
-    {}
+        : JackRequestImpl(kReleaseTimebase)
+        , fRefNum(0)
+    {
+    }
 
     JackReleaseTimebaseRequest(int refnum)
-        : JackRequestImpl(kReleaseTimebase), fRefNum(refnum)
-    {}
+        : JackRequestImpl(kReleaseTimebase)
+        , fRefNum(refnum)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -971,26 +1019,30 @@ struct JackReleaseTimebaseRequest : public JackRequestImpl<sizeof(int)>
         CheckRes(WritePacket(&fRefNum, sizeof(int)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief SetTimebaseCallback request.
 */
 
-struct JackSetTimebaseCallbackRequest : public JackRequestImpl<sizeof(int) + sizeof(int)>
-{
+struct JackSetTimebaseCallbackRequest : public JackRequestImpl<sizeof(int) + sizeof(int)> {
 
     int fRefNum;
     int fConditionnal;
 
     JackSetTimebaseCallbackRequest()
-        : JackRequestImpl(kSetTimebaseCallback), fRefNum(0), fConditionnal(0)
-    {}
+        : JackRequestImpl(kSetTimebaseCallback)
+        , fRefNum(0)
+        , fConditionnal(0)
+    {
+    }
 
     JackSetTimebaseCallbackRequest(int refnum, int conditional)
-        : JackRequestImpl(kSetTimebaseCallback), fRefNum(refnum), fConditionnal(conditional)
-    {}
+        : JackRequestImpl(kSetTimebaseCallback)
+        , fRefNum(refnum)
+        , fConditionnal(conditional)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -1005,7 +1057,6 @@ struct JackSetTimebaseCallbackRequest : public JackRequestImpl<sizeof(int) + siz
         CheckRes(WritePacket(&fConditionnal, sizeof(int)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
@@ -1049,20 +1100,27 @@ struct JackSetTimebaseCallbackRequest : public JackRequestImpl<sizeof(int) + siz
 \brief ClientNotification request.
 */
 
-struct JackClientNotificationRequest : public JackRequestImpl<3 * sizeof(int)>
-{
+struct JackClientNotificationRequest : public JackRequestImpl<3 * sizeof(int)> {
 
     int fRefNum;
     int fNotify;
     int fValue;
 
     JackClientNotificationRequest()
-        : JackRequestImpl(kNotification), fRefNum(0), fNotify(0), fValue(0)
-    {}
+        : JackRequestImpl(kNotification)
+        , fRefNum(0)
+        , fNotify(0)
+        , fValue(0)
+    {
+    }
 
     JackClientNotificationRequest(int refnum, int notify, int value)
-        : JackRequestImpl(kNotification), fRefNum(refnum), fNotify(notify), fValue(value)
-    {}
+        : JackRequestImpl(kNotification)
+        , fRefNum(refnum)
+        , fNotify(notify)
+        , fValue(value)
+    {
+    }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
     {
@@ -1080,26 +1138,25 @@ struct JackClientNotificationRequest : public JackRequestImpl<3 * sizeof(int)>
         CheckRes(WritePacket(&fValue, sizeof(int)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 /*!
 \brief SessionNotify request.
 */
 
-struct JackClientNameResult : public JackResult
-{
-    char fName[JACK_CLIENT_NAME_SIZE+1];
+struct JackClientNameResult : public JackResult {
+    char fName[JACK_CLIENT_NAME_SIZE + 1];
 
-    JackClientNameResult(): JackResult()
+    JackClientNameResult()
+        : JackResult()
     {
         memset(fName, 0, sizeof(fName));
     }
     JackClientNameResult(int32_t result, const char* name)
-            : JackResult(result)
+        : JackResult(result)
     {
         memset(fName, 0, sizeof(fName));
-        strncpy(fName, name, sizeof(fName)-1);
+        strncpy(fName, name, sizeof(fName) - 1);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -1115,22 +1172,21 @@ struct JackClientNameResult : public JackResult
         CheckRes(trans->Write(&fName, sizeof(fName)));
         return 0;
     }
-
 };
 
-struct JackUUIDResult : public JackResult
-{
+struct JackUUIDResult : public JackResult {
     char fUUID[JACK_UUID_STRING_SIZE];
 
-    JackUUIDResult(): JackResult()
+    JackUUIDResult()
+        : JackResult()
     {
         memset(fUUID, 0, sizeof(fUUID));
     }
     JackUUIDResult(int32_t result, const char* uuid)
-            : JackResult(result)
+        : JackResult(result)
     {
         memset(fUUID, 0, sizeof(fUUID));
-        strncpy(fUUID, uuid, sizeof(fUUID)-1);
+        strncpy(fUUID, uuid, sizeof(fUUID) - 1);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -1146,11 +1202,9 @@ struct JackUUIDResult : public JackResult
         CheckRes(trans->Write(&fUUID, sizeof(fUUID)));
         return 0;
     }
-
 };
 
-struct JackGetUUIDRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1>
-{
+struct JackGetUUIDRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1> {
     char fName[JACK_CLIENT_NAME_SIZE_1];
 
     JackGetUUIDRequest()
@@ -1163,7 +1217,7 @@ struct JackGetUUIDRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1>
         : JackRequestImpl(kGetUUIDByClient)
     {
         memset(fName, 0, sizeof(fName));
-        strncpy(fName, client_name, sizeof(fName)-1);
+        strncpy(fName, client_name, sizeof(fName) - 1);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -1178,11 +1232,9 @@ struct JackGetUUIDRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1>
         CheckRes(WritePacket(&fName, sizeof(fName)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
-struct JackGetClientNameRequest : public JackRequestImpl<JACK_UUID_STRING_SIZE>
-{
+struct JackGetClientNameRequest : public JackRequestImpl<JACK_UUID_STRING_SIZE> {
     char fUUID[JACK_UUID_STRING_SIZE];
 
     JackGetClientNameRequest()
@@ -1195,7 +1247,7 @@ struct JackGetClientNameRequest : public JackRequestImpl<JACK_UUID_STRING_SIZE>
         : JackRequestImpl(kGetClientByUUID)
     {
         memset(fUUID, 0, sizeof(fUUID));
-        strncpy(fUUID, uuid, sizeof(fUUID)-1);
+        strncpy(fUUID, uuid, sizeof(fUUID) - 1);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -1210,29 +1262,29 @@ struct JackGetClientNameRequest : public JackRequestImpl<JACK_UUID_STRING_SIZE>
         CheckRes(WritePacket(&fUUID, sizeof(fUUID)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
-struct JackReserveNameRequest : public JackRequestImpl<sizeof(int) + JACK_CLIENT_NAME_SIZE_1 + JACK_UUID_STRING_SIZE>
-{
-    int  fRefNum;
+struct JackReserveNameRequest : public JackRequestImpl<sizeof(int) + JACK_CLIENT_NAME_SIZE_1 + JACK_UUID_STRING_SIZE> {
+    int fRefNum;
     char fName[JACK_CLIENT_NAME_SIZE_1];
     char fUUID[JACK_UUID_STRING_SIZE];
 
     JackReserveNameRequest()
-        : JackRequestImpl(kReserveClientName), fRefNum(0)
+        : JackRequestImpl(kReserveClientName)
+        , fRefNum(0)
     {
         memset(fName, 0, sizeof(fName));
         memset(fUUID, 0, sizeof(fUUID));
     }
 
-    JackReserveNameRequest(int refnum, const char *name, const char* uuid)
-        : JackRequestImpl(kReserveClientName), fRefNum(refnum)
+    JackReserveNameRequest(int refnum, const char* name, const char* uuid)
+        : JackRequestImpl(kReserveClientName)
+        , fRefNum(refnum)
     {
         memset(fName, 0, sizeof(fName));
         memset(fUUID, 0, sizeof(fUUID));
-        strncpy(fName, name, sizeof(fName)-1);
-        strncpy(fUUID, uuid, sizeof(fUUID)-1);
+        strncpy(fName, name, sizeof(fName) - 1);
+        strncpy(fUUID, uuid, sizeof(fUUID) - 1);
     }
 
     int Read(detail::JackChannelTransactionInterface* trans) override
@@ -1251,7 +1303,6 @@ struct JackReserveNameRequest : public JackRequestImpl<sizeof(int) + JACK_CLIENT
         CheckRes(WritePacket(&fRefNum, sizeof(fRefNum)));
         return JackRequestImpl::Write(trans);
     }
-
 };
 
 
@@ -1259,31 +1310,39 @@ struct JackReserveNameRequest : public JackRequestImpl<sizeof(int) + JACK_CLIENT
 \brief ClientNotification.
 */
 
-struct JackClientNotification
-{
+struct JackClientNotification {
     static constexpr int PayloadSize = (JACK_CLIENT_NAME_SIZE + 1) + 5 * sizeof(int) + (JACK_MESSAGE_SIZE + 1);
 
-    char fName[JACK_CLIENT_NAME_SIZE+1];
+    char fName[JACK_CLIENT_NAME_SIZE + 1];
     int fRefNum;
     int fNotify;
     int fValue1;
     int fValue2;
     int fSync;
-    char fMessage[JACK_MESSAGE_SIZE+1];
+    char fMessage[JACK_MESSAGE_SIZE + 1];
 
-    JackClientNotification(): fRefNum(0), fNotify(-1), fValue1(-1), fValue2(-1), fSync(0)
+    JackClientNotification()
+        : fRefNum(0)
+        , fNotify(-1)
+        , fValue1(-1)
+        , fValue2(-1)
+        , fSync(0)
     {
         memset(fName, 0, sizeof(fName));
         memset(fMessage, 0, sizeof(fMessage));
     }
     JackClientNotification(const char* name, int refnum, int notify, int sync, const char* message, int value1, int value2)
-            : fRefNum(refnum), fNotify(notify), fValue1(value1), fValue2(value2), fSync(sync)
+        : fRefNum(refnum)
+        , fNotify(notify)
+        , fValue1(value1)
+        , fValue2(value2)
+        , fSync(sync)
     {
         memset(fName, 0, sizeof(fName));
         memset(fMessage, 0, sizeof(fMessage));
-        strncpy(fName, name, sizeof(fName)-1);
+        strncpy(fName, name, sizeof(fName) - 1);
         if (message) {
-            strncpy(fMessage, message, sizeof(fMessage)-1);
+            strncpy(fMessage, message, sizeof(fMessage) - 1);
         }
     }
 
@@ -1303,7 +1362,7 @@ struct JackClientNotification
 
     int Write(detail::JackChannelTransactionInterface* trans, std::uint32_t request)
     {
-        std::array<std::byte, PayloadSize> payload{};
+        std::array<std::byte, PayloadSize> payload { };
         std::byte* out = payload.data();
         auto put = [&out](const void* data, std::size_t size) {
             memcpy(out, data, size);
@@ -1318,9 +1377,8 @@ struct JackClientNotification
         put(fMessage, sizeof(fMessage));
         return SendJackMessage(trans, MakeJackMsgHeader(static_cast<std::uint16_t>(fNotify), PayloadSize, request), payload.data(), PayloadSize);
     }
-
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

@@ -18,22 +18,21 @@
 
 */
 
-#include "JackSystemDeps.h"
 #include "JackFreewheelDriver.h"
 #include "JackEngineControl.h"
 #include "JackLockedEngine.h"
+#include "JackSystemDeps.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 // When used in "master" mode
 
 int JackFreewheelDriver::Process()
 {
-   jack_log("JackFreewheelDriver::Process master %lld", fEngineControl->fTimeOutUsecs);
-   JackDriver::CycleTakeBeginTime();
+    jack_log("JackFreewheelDriver::Process master %lld", fEngineControl->fTimeOutUsecs);
+    JackDriver::CycleTakeBeginTime();
 
-   if (fEngine->Process(fBeginDateUst, fEndDateUst)) {
+    if (fEngine->Process(fBeginDateUst, fEndDateUst)) {
 
         // Resume connected clients in the graph
         if (!ResumeRefNum()) {
@@ -45,11 +44,11 @@ int JackFreewheelDriver::Process()
             jack_error("JackFreewheelDriver::Process: SuspendRefNum error");
         }
 
-   } else { // Graph not finished: do not activate it
+    } else { // Graph not finished: do not activate it
         jack_error("JackFreewheelDriver::Process: Process error");
-   }
+    }
 
-   return 0;
+    return 0;
 }
 
 // When used in "slave" mode
@@ -57,7 +56,7 @@ int JackFreewheelDriver::Process()
 int JackFreewheelDriver::ProcessReadSync()
 {
     // Resume connected clients in the graph
-    if (!ResumeRefNum()) {      // Signal all clients
+    if (!ResumeRefNum()) { // Signal all clients
         jack_error("JackFreewheelDriver::ProcessReadSync: ResumeRefNum error");
         return -1;
     }
@@ -77,7 +76,7 @@ int JackFreewheelDriver::ProcessWriteSync()
 int JackFreewheelDriver::ProcessReadAsync()
 {
     // Resume connected clients in the graph
-    if (!ResumeRefNum()) {      // Signal all clients
+    if (!ResumeRefNum()) { // Signal all clients
         jack_error("JackFreewheelDriver::ProcessReadAsync: ResumeRefNum error");
         return -1;
     }
@@ -94,4 +93,4 @@ Result<void> JackFreewheelDriver::SuspendRefNum()
     return fGraphManager->SuspendRefNum(&fClientControl, fSynchroTable, FREEWHEEL_DRIVER_TIMEOUT * 1000000);
 }
 
-} // end of namespace
+} // namespace jackmini

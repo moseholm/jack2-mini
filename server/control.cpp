@@ -18,8 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "jackmini/control.hpp"
 
-#include "JackConstants.h"
 #include "JackCString.h"
+#include "JackConstants.h"
+#include "JackDriverInfo.h"
 #include "JackDriverLoader.h"
 #include "JackError.h"
 #include "JackServer.h"
@@ -27,23 +28,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackServerLock.h"
 #include "JackThread.h"
 #include "JackTools.h"
-#include "driver_interface.h"
-#include "JackDriverInfo.h"
 #include "jslist.h"
+#include "driver_interface.h"
 
+#include <getopt.h>
+#include <pthread.h>
+#include <signal.h>
+#include <strings.h>
+#include <unistd.h>
 #include <cerrno>
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <getopt.h>
 #include <optional>
-#include <pthread.h>
-#include <signal.h>
 #include <span>
-#include <strings.h>
 #include <system_error>
-#include <unistd.h>
 #include <utility>
 
 // The choices of the self connect mode.  The engine relies on these characters.
@@ -70,11 +70,9 @@ const char* jack_get_self_connect_mode_description(char mode)
     return nullptr;
 }
 
-namespace jackmini::control
-{
+namespace jackmini::control {
 
-namespace
-{
+namespace {
 
 // The index of each alternative of Value.  The C descriptors use the same five kinds.
 constexpr std::size_t kInt = 0;
@@ -107,22 +105,35 @@ using DescriptorPtr = std::unique_ptr<jack_driver_desc_t, DescriptorDeleter>;
 Value value_from_c(std::size_t kind, const jack_driver_param_value_t& value)
 {
     switch (kind) {
-    case kInt: return static_cast<std::int64_t>(value.i);
-    case kUInt: return static_cast<std::uint64_t>(value.ui);
-    case kBool: return value.i != 0;
-    case kChar: return value.c;
-    default: return std::string(value.str);
+    case kInt:
+        return static_cast<std::int64_t>(value.i);
+    case kUInt:
+        return static_cast<std::uint64_t>(value.ui);
+    case kBool:
+        return value.i != 0;
+    case kChar:
+        return value.c;
+    default:
+        return std::string(value.str);
     }
 }
 
 jack_driver_param_value_t value_to_c(const Value& value)
 {
-    jack_driver_param_value_t out{};
+    jack_driver_param_value_t out { };
     switch (value.index()) {
-    case kInt: out.i = static_cast<int32_t>(std::get<std::int64_t>(value)); break;
-    case kUInt: out.ui = static_cast<uint32_t>(std::get<std::uint64_t>(value)); break;
-    case kBool: out.i = std::get<bool>(value) ? 1 : 0; break;
-    case kChar: out.c = std::get<char>(value); break;
+    case kInt:
+        out.i = static_cast<int32_t>(std::get<std::int64_t>(value));
+        break;
+    case kUInt:
+        out.ui = static_cast<uint32_t>(std::get<std::uint64_t>(value));
+        break;
+    case kBool:
+        out.i = std::get<bool>(value) ? 1 : 0;
+        break;
+    case kChar:
+        out.c = std::get<char>(value);
+        break;
     default: {
         const std::string& text = std::get<std::string>(value);
         strncpy(out.str, text.c_str(), JACK_DRIVER_PARAM_STRING_MAX);
@@ -135,11 +146,16 @@ jack_driver_param_value_t value_to_c(const Value& value)
 std::size_t kind_of(jack_driver_param_type_t type)
 {
     switch (type) {
-    case JackDriverParamInt: return kInt;
-    case JackDriverParamUInt: return kUInt;
-    case JackDriverParamChar: return kChar;
-    case JackDriverParamString: return kString;
-    default: return kBool;
+    case JackDriverParamInt:
+        return kInt;
+    case JackDriverParamUInt:
+        return kUInt;
+    case JackDriverParamChar:
+        return kChar;
+    case JackDriverParamString:
+        return kString;
+    default:
+        return kBool;
     }
 }
 
@@ -189,20 +205,20 @@ std::vector<Parameter> server_parameters(const std::string& name)
 
     add("name", "Server name to use.", name);
     add("realtime", "Whether to use realtime mode.", true);
-    add("realtime-priority", "Scheduler priority when running in realtime mode.", std::int64_t{10});
+    add("realtime-priority", "Scheduler priority when running in realtime mode.", std::int64_t { 10 });
     add("temporary", "Exit once all clients have closed their connections.", false);
     add("freewheel", "Start in freewheel mode: cycles run as fast as possible, without the sound card.", false);
     add("verbose", "Verbose mode.", false);
-    add("client-timeout", "Client timeout limit in milliseconds.", std::int64_t{0});
-    add("clock-source", "Clocksource type : c(ycle) | h(pet) | s(ystem).", std::uint64_t{0});
+    add("client-timeout", "Client timeout limit in milliseconds.", std::int64_t { 0 });
+    add("clock-source", "Clocksource type : c(ycle) | h(pet) | s(ystem).", std::uint64_t { 0 });
     add("port-max", "Maximum number of ports.", static_cast<std::uint64_t>(PORT_NUM));
     add("sync", "Use server synchronous mode.", false);
     add("self-connect-mode", "Whether JACK clients are allowed to connect their own ports",
-        Value{static_cast<char>(JACK_DEFAULT_SELF_CONNECT_MODE)});
+        Value { static_cast<char>(JACK_DEFAULT_SELF_CONNECT_MODE) });
 
     Parameter& mode = parameters.back();
     for (const SelfConnectChoice& choice : kSelfConnectChoices) {
-        mode.choices.push_back(Choice{ Value{choice.mode}, choice.description });
+        mode.choices.push_back(Choice { Value { choice.mode }, choice.description });
     }
     return parameters;
 }
@@ -242,8 +258,8 @@ std::optional<DriverEntry> make_driver(DescriptorPtr descriptor)
             if (!is_range) {
                 for (uint32_t c = 0; c < constraint->constraint.enumeration.count; c++) {
                     const jack_driver_param_value_enum_t& possible = constraint->constraint.enumeration.possible_values_array[c];
-                    parameter.choices.push_back(Choice{ value_from_c(kind, possible.value),
-                                                        possible.short_desc ? possible.short_desc : "" });
+                    parameter.choices.push_back(Choice { value_from_c(kind, possible.value),
+                        possible.short_desc ? possible.short_desc : "" });
                 }
             }
         }
@@ -406,7 +422,7 @@ Result<void> Server::select_driver(std::string_view driver_name)
             return std::unexpected(Error::InvalidArgument);
         }
         fImpl->selected = i;
-        return {};
+        return { };
     }
     jack_error("Unknown driver \"%.*s\"", static_cast<int>(driver_name.size()), driver_name.data());
     return std::unexpected(Error::NotFound);
@@ -414,7 +430,7 @@ Result<void> Server::select_driver(std::string_view driver_name)
 
 std::vector<Parameter> Server::parameters() const
 {
-    return fImpl ? fImpl->parameters : std::vector<Parameter>{};
+    return fImpl ? fImpl->parameters : std::vector<Parameter> { };
 }
 
 Result<void> Server::set_parameter(std::string_view name, Value value)
@@ -429,7 +445,7 @@ Result<void> Server::set_parameter(std::string_view name, Value value)
     if (!assign(*parameter, std::move(value))) {
         return std::unexpected(Error::InvalidArgument);
     }
-    return {};
+    return { };
 }
 
 Result<void> Server::set_driver_parameter(std::string_view name, Value value)
@@ -444,7 +460,7 @@ Result<void> Server::set_driver_parameter(std::string_view name, Value value)
     if (!assign(*parameter, std::move(value))) {
         return std::unexpected(Error::InvalidArgument);
     }
-    return {};
+    return { };
 }
 
 Result<void> Server::parse_driver_arguments(int argc, char* argv[])
@@ -457,7 +473,7 @@ Result<void> Server::parse_driver_arguments(int argc, char* argv[])
     std::vector<Parameter>& parameters = entry.view.parameters;
 
     if (argc <= 1) {
-        return {};
+        return { };
     }
 
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
@@ -477,7 +493,7 @@ Result<void> Server::parse_driver_arguments(int argc, char* argv[])
 
     // The getopt string and the long options, one per parameter of the driver.
     std::vector<char> options(parameters.size() * 3 + 1, '\0');
-    std::vector<option> long_options(parameters.size() + 1, option{});
+    std::vector<option> long_options(parameters.size() + 1, option { });
     char* options_ptr = options.data();
     for (std::size_t i = 0; i < parameters.size(); i++) {
         jackmini::FormatCString(std::span<char>(options_ptr, 4), "{}::", parameters[i].short_name);
@@ -533,9 +549,7 @@ Result<void> Server::parse_driver_arguments(int argc, char* argv[])
                 assign(*parameter, std::string(optarg).substr(0, JACK_DRIVER_PARAM_STRING_MAX));
                 break;
             default: {
-                const bool off = strcasecmp("false", optarg) == 0 || strcasecmp("off", optarg) == 0 ||
-                                 strcasecmp("no", optarg) == 0 || strcasecmp("0", optarg) == 0 ||
-                                 strcasecmp("(null)", optarg) == 0;
+                const bool off = strcasecmp("false", optarg) == 0 || strcasecmp("off", optarg) == 0 || strcasecmp("no", optarg) == 0 || strcasecmp("0", optarg) == 0 || strcasecmp("(null)", optarg) == 0;
                 assign(*parameter, !off);
                 break;
             }
@@ -547,7 +561,7 @@ Result<void> Server::parse_driver_arguments(int argc, char* argv[])
             parameter->is_set = true;
         }
     }
-    return {};
+    return { };
 }
 
 Result<void> Server::start()
@@ -593,11 +607,11 @@ Result<void> Server::start()
     std::int64_t client_timeout = std::get<std::int64_t>(find_parameter(impl.parameters, "client-timeout")->value);
     const std::uint64_t port_max = std::get<std::uint64_t>(find_parameter(impl.parameters, "port-max")->value);
     if (!realtime && client_timeout == 0) {
-        client_timeout = 500;  // 0.5 sec; usable when non realtime.
+        client_timeout = 500; // 0.5 sec; usable when non realtime.
     }
     if (port_max > PORT_NUM_MAX) {
         jack_error("Jack server started with too much ports %llu (when port max can be %d)",
-                   static_cast<unsigned long long>(port_max), PORT_NUM_MAX);
+            static_cast<unsigned long long>(port_max), PORT_NUM_MAX);
         return fail(Error::InvalidArgument);
     }
 
@@ -638,7 +652,7 @@ Result<void> Server::start()
     }
 
     impl.running = true;
-    return {};
+    return { };
 }
 
 Result<void> Server::stop()
@@ -648,7 +662,7 @@ Result<void> Server::stop()
     }
     fImpl->engine->Stop();
     fImpl->close_engine();
-    return {};
+    return { };
 }
 
 SignalSet setup_signals()
@@ -660,7 +674,7 @@ SignalSet setup_signals()
 
     // The signals are blocked here, and every thread created later inherits the mask.  The thread that waits in
     // wait_for_signal() is the one that receives them, so the shutdown can use any function.
-    SignalSet set{};
+    SignalSet set { };
     sigemptyset(&set.signals);
     sigaddset(&set.signals, SIGHUP);
     sigaddset(&set.signals, SIGINT);
@@ -672,8 +686,8 @@ SignalSet setup_signals()
     pthread_sigmask(SIG_BLOCK, &set.signals, nullptr);
 
     // A handler that does nothing: the signals must have one before sigwait() is entered.
-    struct sigaction action {};
-    action.sa_handler = [](int) {};
+    struct sigaction action { };
+    action.sa_handler = [](int) { };
     sigfillset(&action.sa_mask);
     action.sa_flags = SA_RESTART | SA_RESETHAND;
     for (int i = 1; i < NSIG; i++) {

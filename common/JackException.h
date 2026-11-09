@@ -5,12 +5,12 @@
  it under the terms of the GNU Lesser General Public License as published by
  the Free Software Foundation; either version 2.1 of the License, or
  (at your option) any later version.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU Lesser General Public License for more details.
- 
+
  You should have received a copy of the GNU Lesser General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
@@ -22,18 +22,16 @@
 
 #include "JackCompilerDeps.h"
 
-#include <stdexcept>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 
-namespace jackmini
-{
+namespace jackmini {
 
-#define	ThrowIf(inCondition, inException)                                               \
-			if(inCondition)																\
-			{																			\
-				throw(inException);														\
-			}
+#define ThrowIf(inCondition, inException) \
+    if (inCondition) {                    \
+        throw(inException);               \
+    }
 
 
 /*!
@@ -42,23 +40,27 @@ namespace jackmini
 
 class SERVER_EXPORT JackException : public std::runtime_error {
 
-    public:
+public:
+    JackException(const std::string& msg)
+        : std::runtime_error(msg)
+    {
+    }
+    JackException(char* msg)
+        : std::runtime_error(msg)
+    {
+    }
+    JackException(const char* msg)
+        : std::runtime_error(msg)
+    {
+    }
 
-        JackException(const std::string& msg) : std::runtime_error(msg)
-        {}
-        JackException(char* msg) : std::runtime_error(msg)
-        {}
-        JackException(const char* msg) : std::runtime_error(msg)
-        {}
+    std::string Message()
+    {
+        return what();
+    }
 
-        std::string Message()
-        {
-            return what();
-        }
-
-        void PrintMessage();
-
- };
+    void PrintMessage();
+};
 
 /*!
  \brief Exception thrown by JackEngine in temporary mode.
@@ -66,16 +68,23 @@ class SERVER_EXPORT JackException : public std::runtime_error {
 
 class SERVER_EXPORT JackTemporaryException : public JackException {
 
-    public:
-
-        JackTemporaryException(const std::string& msg) : JackException(msg)
-        {}
-        JackTemporaryException(char* msg) : JackException(msg)
-        {}
-        JackTemporaryException(const char* msg) : JackException(msg)
-        {}
-        JackTemporaryException() : JackException("")
-        {}
+public:
+    JackTemporaryException(const std::string& msg)
+        : JackException(msg)
+    {
+    }
+    JackTemporaryException(char* msg)
+        : JackException(msg)
+    {
+    }
+    JackTemporaryException(const char* msg)
+        : JackException(msg)
+    {
+    }
+    JackTemporaryException()
+        : JackException("")
+    {
+    }
 };
 
 /*!
@@ -84,18 +93,25 @@ class SERVER_EXPORT JackTemporaryException : public JackException {
 
 class SERVER_EXPORT JackQuitException : public JackException {
 
-    public:
-
-        JackQuitException(const std::string& msg) : JackException(msg)
-        {}
-        JackQuitException(char* msg) : JackException(msg)
-        {}
-        JackQuitException(const char* msg) : JackException(msg)
-        {}
-        JackQuitException() : JackException("")
-        {}
+public:
+    JackQuitException(const std::string& msg)
+        : JackException(msg)
+    {
+    }
+    JackQuitException(char* msg)
+        : JackException(msg)
+    {
+    }
+    JackQuitException(const char* msg)
+        : JackException(msg)
+    {
+    }
+    JackQuitException()
+        : JackException("")
+    {
+    }
 };
 
-}
+} // namespace jackmini
 
 #endif

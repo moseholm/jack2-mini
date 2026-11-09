@@ -21,19 +21,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 // and its fields must sit at natural offsets.  The checks are static, so this
 // program only needs to compile.
 
-#include "JackConstants.h"
-#include "JackTypes.h"
-#include "JackTime.h"
 #include "JackActivationCount.h"
 #include "JackAtomicArrayState.h"
 #include "JackAtomicState.h"
 #include "JackClientControl.h"
 #include "JackConnectionManager.h"
+#include "JackConstants.h"
 #include "JackEngineControl.h"
 #include "JackFrameTimer.h"
 #include "JackGraphManager.h"
 #include "JackPort.h"
+#include "JackTime.h"
 #include "JackTransportEngine.h"
+#include "JackTypes.h"
 
 #include <atomic>
 #include <cstddef>

@@ -6,12 +6,12 @@
  it under the terms of the GNU Lesser General Public License as published by
  the Free Software Foundation; either version 2.1 of the License, or
  (at your option) any later version.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU Lesser General Public License for more details.
- 
+
  You should have received a copy of the GNU Lesser General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
@@ -24,17 +24,15 @@
 #include <cstdint>
 
 #include "JackCompilerDeps.h"
-#include "driver_interface.h"
 #include "JackPlatformPlug.h"
+#include "driver_interface.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 class JackDriverClientInterface;
 class JackLockedEngine;
 
-namespace driver
-{
+namespace driver {
 
 // The version of this interface. A module built for another version is refused when it is loaded.
 inline constexpr std::uint32_t kModuleVersion = 1;
@@ -49,8 +47,7 @@ using DescribeFunction = jack_driver_desc_t* (*)();
 // Returns NULL on failure.
 using InitializeFunction = JackDriverClientInterface* (*)(JackLockedEngine* engine, JackSynchro* table, const JSList* params);
 
-struct Module
-{
+struct Module {
     std::uint32_t version;
     DescribeFunction describe;
     InitializeFunction initialize;

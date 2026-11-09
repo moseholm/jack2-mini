@@ -25,23 +25,21 @@
 #ifndef __jack_jslist_h__
 #define __jack_jslist_h__
 
-#include <stdlib.h>
 #include <jack/systemdeps.h>
+#include <stdlib.h>
 
 typedef struct _JSList JSList;
 
-typedef int	(*JCompareFunc)	(void* a, void* b);
-struct _JSList
-{
-    void *data;
-    JSList *next;
+typedef int (*JCompareFunc)(void* a, void* b);
+struct _JSList {
+    void* data;
+    JSList* next;
 };
 
-static __inline__
-JSList*
-jack_slist_alloc (void)
+static __inline__ JSList*
+jack_slist_alloc(void)
 {
-    JSList *new_list;
+    JSList* new_list;
 
     new_list = (JSList*)malloc(sizeof(JSList));
     if (new_list) {
@@ -52,11 +50,10 @@ jack_slist_alloc (void)
     return new_list;
 }
 
-static __inline__
-JSList*
-jack_slist_prepend (JSList* list, void* data)
+static __inline__ JSList*
+jack_slist_prepend(JSList* list, void* data)
 {
-    JSList *new_list;
+    JSList* new_list;
 
     new_list = (JSList*)malloc(sizeof(JSList));
     if (new_list) {
@@ -67,10 +64,9 @@ jack_slist_prepend (JSList* list, void* data)
     return new_list;
 }
 
-#define jack_slist_next(slist)	((slist) ? (((JSList *)(slist))->next) : NULL)
-static __inline__
-JSList*
-jack_slist_last (JSList *list)
+#define jack_slist_next(slist) ((slist) ? (((JSList*)(slist))->next) : NULL)
+static __inline__ JSList*
+jack_slist_last(JSList* list)
 {
     if (list) {
         while (list->next)
@@ -80,13 +76,12 @@ jack_slist_last (JSList *list)
     return list;
 }
 
-static __inline__
-JSList*
-jack_slist_remove_link (JSList *list,
-                        JSList *link)
+static __inline__ JSList*
+jack_slist_remove_link(JSList* list,
+    JSList* link)
 {
-    JSList *tmp;
-    JSList *prev;
+    JSList* tmp;
+    JSList* prev;
 
     prev = NULL;
     tmp = list;
@@ -109,33 +104,30 @@ jack_slist_remove_link (JSList *list,
     return list;
 }
 
-static __inline__
-void
-jack_slist_free (JSList *list)
+static __inline__ void
+jack_slist_free(JSList* list)
 {
     while (list) {
-        JSList *next = list->next;
+        JSList* next = list->next;
         free(list);
         list = next;
     }
 }
 
-static __inline__
-void
-jack_slist_free_1 (JSList *list)
+static __inline__ void
+jack_slist_free_1(JSList* list)
 {
     if (list) {
         free(list);
     }
 }
 
-static __inline__
-JSList*
-jack_slist_remove (JSList *list,
-                   void *data)
+static __inline__ JSList*
+jack_slist_remove(JSList* list,
+    void* data)
 {
-    JSList *tmp;
-    JSList *prev;
+    JSList* tmp;
+    JSList* prev;
 
     prev = NULL;
     tmp = list;
@@ -148,7 +140,7 @@ jack_slist_remove (JSList *list,
                 list = list->next;
 
             tmp->next = NULL;
-            jack_slist_free (tmp);
+            jack_slist_free(tmp);
 
             break;
         }
@@ -160,9 +152,8 @@ jack_slist_remove (JSList *list,
     return list;
 }
 
-static __inline__
-unsigned int
-jack_slist_length (JSList *list)
+static __inline__ unsigned int
+jack_slist_length(JSList* list)
 {
     unsigned int length;
 
@@ -175,10 +166,9 @@ jack_slist_length (JSList *list)
     return length;
 }
 
-static __inline__
-JSList*
-jack_slist_find (JSList *list,
-                 void *data)
+static __inline__ JSList*
+jack_slist_find(JSList* list,
+    void* data)
 {
     while (list) {
         if (list->data == data)
@@ -189,21 +179,20 @@ jack_slist_find (JSList *list,
     return list;
 }
 
-static __inline__
-JSList*
-jack_slist_copy (JSList *list)
+static __inline__ JSList*
+jack_slist_copy(JSList* list)
 {
-    JSList *new_list = NULL;
+    JSList* new_list = NULL;
 
     if (list) {
-        JSList *last;
+        JSList* last;
 
-        new_list = jack_slist_alloc ();
+        new_list = jack_slist_alloc();
         new_list->data = list->data;
         last = new_list;
         list = list->next;
         while (list) {
-            last->next = jack_slist_alloc ();
+            last->next = jack_slist_alloc();
             last = last->next;
             last->data = list->data;
             list = list->next;
@@ -213,19 +202,18 @@ jack_slist_copy (JSList *list)
     return new_list;
 }
 
-static __inline__
-JSList*
-jack_slist_append (JSList *list,
-                   void *data)
+static __inline__ JSList*
+jack_slist_append(JSList* list,
+    void* data)
 {
-    JSList *new_list;
-    JSList *last;
+    JSList* new_list;
+    JSList* last;
 
-    new_list = jack_slist_alloc ();
+    new_list = jack_slist_alloc();
     new_list->data = data;
 
     if (list) {
-        last = jack_slist_last (list);
+        last = jack_slist_last(list);
         last->next = new_list;
 
         return list;
@@ -233,11 +221,10 @@ jack_slist_append (JSList *list,
         return new_list;
 }
 
-static __inline__
-JSList*
-jack_slist_sort_merge (JSList *l1,
-                       JSList *l2,
-                       JCompareFunc compare_func)
+static __inline__ JSList*
+jack_slist_sort_merge(JSList* l1,
+    JSList* l2,
+    JCompareFunc compare_func)
 {
     JSList list, *l;
 
@@ -257,10 +244,9 @@ jack_slist_sort_merge (JSList *l1,
     return list.next;
 }
 
-static __inline__
-JSList*
-jack_slist_sort (JSList *list,
-                 JCompareFunc compare_func)
+static __inline__ JSList*
+jack_slist_sort(JSList* list,
+    JCompareFunc compare_func)
 {
     JSList *l1, *l2;
 
@@ -280,10 +266,9 @@ jack_slist_sort (JSList *list,
     l2 = l1->next;
     l1->next = NULL;
 
-    return jack_slist_sort_merge (jack_slist_sort (list, compare_func),
-                                  jack_slist_sort (l2, compare_func),
-                                  compare_func);
+    return jack_slist_sort_merge(jack_slist_sort(list, compare_func),
+        jack_slist_sort(l2, compare_func),
+        compare_func);
 }
 
 #endif /* __jack_jslist_h__ */
-

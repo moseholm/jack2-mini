@@ -18,31 +18,31 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 #include "JackSocketServerChannel.h"
-#include "JackRequest.h"
-#include "JackServer.h"
-#include "JackLockedEngine.h"
-#include "JackRequestDecoder.h"
-#include "JackGlobals.h"
-#include "JackTools.h"
-#include "JackNotification.h"
 #include "JackException.h"
+#include "JackGlobals.h"
+#include "JackLockedEngine.h"
+#include "JackNotification.h"
+#include "JackRequest.h"
+#include "JackRequestDecoder.h"
+#include "JackServer.h"
+#include "JackTools.h"
 
 #include <assert.h>
 #include <signal.h>
 
 using namespace std;
 
-namespace jackmini
-{
+namespace jackmini {
 
-JackSocketServerChannel::JackSocketServerChannel():
-    fThread(this)
+JackSocketServerChannel::JackSocketServerChannel()
+    : fThread(this)
 {
     fRebuild = true;
 }
 
 JackSocketServerChannel::~JackSocketServerChannel()
-{}
+{
+}
 
 Result<void> JackSocketServerChannel::Open(const char* server_name, JackServer* server)
 {
@@ -59,15 +59,15 @@ Result<void> JackSocketServerChannel::Open(const char* server_name, JackServer* 
 
     fDecoder = std::make_unique<JackRequestDecoder>(server, this);
     fServer = server;
-    return {};
+    return { };
 }
 
 void JackSocketServerChannel::Close()
 {
-   fRequestListenSocket.Close();
+    fRequestListenSocket.Close();
 
     // Close remaining client sockets
-    std::map<int, std::pair<int, JackClientSocket*> >::iterator it;
+    std::map<int, std::pair<int, JackClientSocket*>>::iterator it;
 
     for (it = fSocketTable.begin(); it != fSocketTable.end(); it++) {
         pair<int, JackClientSocket*> elem = (*it).second;
@@ -86,7 +86,7 @@ Result<void> JackSocketServerChannel::Start()
         jack_error("Cannot start Jack server listener");
         return std::unexpected(Error::ServerFailure);
     } else {
-        return {};
+        return { };
     }
 }
 
@@ -109,7 +109,7 @@ void JackSocketServerChannel::ClientCreate()
 
 int JackSocketServerChannel::GetFd(JackClientSocket* socket_aux)
 {
-    std::map<int, std::pair<int, JackClientSocket*> >::iterator it;
+    std::map<int, std::pair<int, JackClientSocket*>>::iterator it;
 
     for (it = fSocketTable.begin(); it != fSocketTable.end(); it++) {
         pair<int, JackClientSocket*> elem = (*it).second;
@@ -121,7 +121,7 @@ int JackSocketServerChannel::GetFd(JackClientSocket* socket_aux)
     return -1;
 }
 
-void JackSocketServerChannel::ClientAdd(detail::JackChannelTransactionInterface* socket_aux, JackClientOpenRequest* req, JackClientOpenResult *res)
+void JackSocketServerChannel::ClientAdd(detail::JackChannelTransactionInterface* socket_aux, JackClientOpenRequest* req, JackClientOpenResult* res)
 {
     int refnum = -1;
     res->fResult = ReplyCode(fServer->GetEngine()->ClientExternalOpen(req->fName, req->fPID, req->fUUID, &refnum, &res->fSharedEngine, &res->fSharedClient, &res->fSharedGraph));
@@ -158,14 +158,14 @@ void JackSocketServerChannel::ClientKill(int fd)
     JackClientSocket* socket = elem.second;
     int refnum = elem.first;
     assert(socket);
-    
+
     jack_log("JackSocketServerChannel::ClientKill ref = %d fd = %d", refnum, fd);
-    if (refnum == -1) {  // Should never happen... correspond to a client that started the socket but never opened...
+    if (refnum == -1) { // Should never happen... correspond to a client that started the socket but never opened...
         jack_log("Client was not opened : probably correspond to server_check");
     } else {
         fServer->GetEngine()->ClientKill(refnum);
     }
-   
+
     fSocketTable.erase(fd);
     socket->Close();
     delete socket;
@@ -185,7 +185,7 @@ void JackSocketServerChannel::BuildPoolTable()
         fPollTable[0].events = POLLIN | POLLERR;
 
         // Next fd for clients
-        map<int, pair<int, JackClientSocket*> >::iterator it;
+        map<int, pair<int, JackClientSocket*>>::iterator it;
         int i;
 
         for (i = 1, it = fSocketTable.begin(); it != fSocketTable.end(); it++, i++) {
@@ -228,11 +228,11 @@ bool JackSocketServerChannel::Execute()
                     if (ReadJackMsgHeader(socket, header) < 0) {
                         jack_log("JackSocketServerChannel::Execute : cannot decode header");
                         ClientKill(fd);
-                    // A client of another protocol version is refused, and disconnected
+                        // A client of another protocol version is refused, and disconnected
                     } else if (header.version != kJackMsgVersion) {
                         fDecoder->Refuse(socket, header);
                         ClientKill(fd);
-                    // Decode request
+                        // Decode request
                     } else {
                         // Result is not needed here
                         fDecoder->HandleRequest(socket, header);
@@ -259,6 +259,4 @@ bool JackSocketServerChannel::Execute()
     }
 }
 
-} // end of namespace
-
-
+} // namespace jackmini

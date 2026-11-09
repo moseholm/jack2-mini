@@ -7,7 +7,7 @@
 #define JACK_SPA_SHIM_PARAM_AUDIO_FORMAT_H
 
 enum spa_audio_format {
-	SPA_AUDIO_FORMAT_F32 = 0x11c
+    SPA_AUDIO_FORMAT_F32 = 0x11c
 };
 
 #endif

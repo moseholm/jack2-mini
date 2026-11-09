@@ -25,78 +25,74 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #define RESAMPLE_DEFAULT_QUALITY 4
 #endif
 
-namespace jackmini
-{
+namespace jackmini {
 
-class JackPipeWireResampler : public JackResampler
-{
+class JackPipeWireResampler : public JackResampler {
 
-    private:
+private:
+    jack_pw_resampler* fHandle;
 
-        jack_pw_resampler* fHandle;
+public:
+    explicit JackPipeWireResampler(jack_pw_resampler* handle)
+        : fHandle(handle)
+    {
+    }
 
-    public:
+    virtual ~JackPipeWireResampler()
+    {
+        jack_pw_resampler_free(fHandle);
+    }
 
-        explicit JackPipeWireResampler(jack_pw_resampler* handle) : fHandle(handle)
-        {}
+    void Reset()
+    {
+        jack_pw_resampler_reset(fHandle);
+    }
 
-        virtual ~JackPipeWireResampler()
-        {
-            jack_pw_resampler_free(fHandle);
-        }
+    void SetRate(double rate)
+    {
+        jack_pw_resampler_set_rate(fHandle, rate);
+    }
 
-        void Reset()
-        {
-            jack_pw_resampler_reset(fHandle);
-        }
+    unsigned int InputLength(unsigned int out_len)
+    {
+        return jack_pw_resampler_in_len(fHandle, out_len);
+    }
 
-        void SetRate(double rate)
-        {
-            jack_pw_resampler_set_rate(fHandle, rate);
-        }
+    unsigned int OutputLength(unsigned int in_len)
+    {
+        return jack_pw_resampler_out_len(fHandle, in_len);
+    }
 
-        unsigned int InputLength(unsigned int out_len)
-        {
-            return jack_pw_resampler_in_len(fHandle, out_len);
-        }
+    void Process(const float* const* src, unsigned int* in_len,
+        float* const* dst, unsigned int* out_len)
+    {
+        jack_pw_resampler_process(fHandle, src, in_len, dst, out_len);
+    }
 
-        unsigned int OutputLength(unsigned int in_len)
-        {
-            return jack_pw_resampler_out_len(fHandle, in_len);
-        }
-
-        void Process(const float* const* src, unsigned int* in_len,
-                     float* const* dst, unsigned int* out_len)
-        {
-            jack_pw_resampler_process(fHandle, src, in_len, dst, out_len);
-        }
-
-        unsigned int Delay()
-        {
-            return jack_pw_resampler_delay(fHandle);
-        }
+    unsigned int Delay()
+    {
+        return jack_pw_resampler_delay(fHandle);
+    }
 };
 
-class JackPipeWireResamplerFactory : public JackResamplerFactory
-{
+class JackPipeWireResamplerFactory : public JackResamplerFactory {
 
-    public:
+public:
+    const char* Name() const
+    {
+        return "pipewire";
+    }
 
-        const char* Name() const
-        {
-            return "pipewire";
+    JackResampler* Create(const JackResamplerParams& params)
+    {
+        int quality = (params.quality < 0) ? RESAMPLE_DEFAULT_QUALITY : params.quality;
+        jack_pw_resampler* handle = jack_pw_resampler_new(params.channels, params.in_rate,
+            params.out_rate, quality);
+        if (handle == NULL) {
+            return NULL;
         }
-
-        JackResampler* Create(const JackResamplerParams& params)
-        {
-            int quality = (params.quality < 0) ? RESAMPLE_DEFAULT_QUALITY : params.quality;
-            jack_pw_resampler* handle = jack_pw_resampler_new(params.channels, params.in_rate,
-                                                              params.out_rate, quality);
-            if (handle == NULL) {
-                return NULL;
-            }
-            return new JackPipeWireResampler(handle);
-        }
+        return new JackPipeWireResampler(handle);
+    }
 };
 
 JackResamplerFactory* JackResamplerFactory::Find(const char* name)
@@ -116,4 +112,4 @@ JackResamplerFactory* JackResamplerFactory::Default()
     return Find("pipewire");
 }
 
-} // end of namespace
+} // namespace jackmini

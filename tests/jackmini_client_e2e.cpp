@@ -26,15 +26,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <atomic>
 #include <chrono>
 #include <cmath>
-#include <cstdio>
 #include <cstddef>
+#include <cstdio>
 #include <string>
 #include <thread>
 
 using namespace jackmini;
 
-namespace
-{
+namespace {
 
 int gFailures = 0;
 
@@ -76,18 +75,19 @@ int main(int argc, char** argv)
     Check("opened: sample rate is set", client.sample_rate() != 0);
     Check("opened: buffer size is set", client.buffer_size() != 0);
 
-    std::atomic<unsigned long> cycles{ 0 };
-    std::atomic<bool> xrun_called{ false };
+    std::atomic<unsigned long> cycles { 0 };
+    std::atomic<bool> xrun_called { false };
     Check("on_process while opened", client.on_process([&](const Cycle&) {
-        cycles++;
-        return true;
-    }).has_value());
+                                               cycles++;
+                                               return true;
+                                           })
+                                         .has_value());
     Check("on_xrun while opened", client.on_xrun([&] { xrun_called = true; }).has_value());
 
     Check("activate", client.activate().has_value());
     Check("active: is_active", client.is_active());
     Check("active: a second activate is refused", client.activate().error() == Error::InvalidState);
-    Check("active: callbacks cannot be set", client.on_shutdown([] {}).error() == Error::InvalidState);
+    Check("active: callbacks cannot be set", client.on_shutdown([] { }).error() == Error::InvalidState);
 
     // A clock client counts the cycles of the server; the checks below wait for cycles of the clock, not for time.
     auto clock_opened = Client::open("jackmini_clock", options);
@@ -96,11 +96,12 @@ int main(int argc, char** argv)
         return 1;
     }
     Client clock = std::move(*clock_opened);
-    std::atomic<unsigned long> clock_cycles{ 0 };
+    std::atomic<unsigned long> clock_cycles { 0 };
     Check("clock: on_process", clock.on_process([&](const Cycle&) {
-        clock_cycles++;
-        return true;
-    }).has_value());
+                                        clock_cycles++;
+                                        return true;
+                                    })
+                                   .has_value());
     Check("clock activates", clock.activate().has_value());
 
     Check("active: the process callback runs", WaitCycles(cycles, 10));
@@ -130,8 +131,7 @@ int main(int argc, char** argv)
     auto out = client.register_port("out", PortType::Audio, PortFlags::Output);
     Check("register an audio output", out.has_value());
     Check("the port's name is client:name", out && client.port_name(*out) == "jackmini_lifecycle:out");
-    Check("the port's type and flags", out && client.port_type(*out) == PortType::Audio &&
-                                       has_flag(client.port_flags(*out), PortFlags::Output));
+    Check("the port's type and flags", out && client.port_type(*out) == PortType::Audio && has_flag(client.port_flags(*out), PortFlags::Output));
     Check("a duplicate port name: NameTaken", out && client.register_port("out", PortType::Audio, PortFlags::Output).error() == Error::NameTaken);
     Check("a name with a colon: InvalidArgument", client.register_port("a:b", PortType::Audio, PortFlags::Output).error() == Error::InvalidArgument);
 
@@ -158,8 +158,7 @@ int main(int argc, char** argv)
     if (out && in) {
         Check("connect output to input", client.connect(*out, *in).has_value());
         Check("is_connected after connect", client.is_connected(*out, *in));
-        Check("connections lists the input", client.connections(*out).size() == 1 &&
-                                             client.connections(*out)[0] == "jackmini_peer:in");
+        Check("connections lists the input", client.connections(*out).size() == 1 && client.connections(*out)[0] == "jackmini_peer:in");
         Check("connecting twice: InvalidState", client.connect(*out, *in).error() == Error::InvalidState);
         Check("disconnect", client.disconnect(*out, *in).has_value());
         Check("is_connected after disconnect is false", !client.is_connected(*out, *in));
@@ -189,57 +188,57 @@ int main(int argc, char** argv)
         auto midi_in = dst.register_port("min", PortType::Midi, PortFlags::Input);
         Check("audio and MIDI ports register", audio_out && midi_out && audio_in && midi_in);
 
-        std::atomic<unsigned long> dst_cycles{ 0 };
-        std::atomic<float> last_sample{ -1.0f };
-        std::atomic<std::size_t> midi_seen{ 0 };
-        std::atomic<unsigned> first_byte{ 0 };
-        std::atomic<unsigned> event_size{ 0 };
+        std::atomic<unsigned long> dst_cycles { 0 };
+        std::atomic<float> last_sample { -1.0f };
+        std::atomic<std::size_t> midi_seen { 0 };
+        std::atomic<unsigned> first_byte { 0 };
+        std::atomic<unsigned> event_size { 0 };
         if (audio_out && midi_out && audio_in && midi_in) {
             Port aout = *audio_out;
             Port mout = *midi_out;
             Port ain = *audio_in;
             Port min = *midi_in;
             Check("source process: set", src.on_process([&src, aout, mout](const Cycle&) {
-                for (auto& sample : src.audio_buffer(aout)) {
-                    sample = 0.25f;
-                }
-                auto midi = src.midi_buffer(mout);
-                midi.clear();
-                const std::byte note[3] = { std::byte{ 0x90 }, std::byte{ 0x40 }, std::byte{ 0x7f } };
-                midi.write(5, note);
-                return true;
-            }).has_value());
+                                                for (auto& sample : src.audio_buffer(aout)) {
+                                                    sample = 0.25f;
+                                                }
+                                                auto midi = src.midi_buffer(mout);
+                                                midi.clear();
+                                                const std::byte note[3] = { std::byte { 0x90 }, std::byte { 0x40 }, std::byte { 0x7f } };
+                                                midi.write(5, note);
+                                                return true;
+                                            })
+                                             .has_value());
             Check("destination process: set", dst.on_process([&dst, ain, min, &dst_cycles, &last_sample, &midi_seen, &first_byte, &event_size](const Cycle&) {
-                dst_cycles++;
-                auto samples = dst.audio_buffer(ain);
-                if (!samples.empty()) {
-                    last_sample = samples.back();
-                }
-                auto midi = dst.midi_buffer(min);
-                midi_seen = midi.count();
-                if (midi.count() > 0) {
-                    const auto event = midi.event(0);
-                    first_byte = static_cast<unsigned>(event.data.empty() ? 0 : std::to_integer<unsigned>(event.data[0]));
-                    event_size = static_cast<unsigned>(event.data.size());
-                }
-                return true;
-            }).has_value());
+                                                     dst_cycles++;
+                                                     auto samples = dst.audio_buffer(ain);
+                                                     if (!samples.empty()) {
+                                                         last_sample = samples.back();
+                                                     }
+                                                     auto midi = dst.midi_buffer(min);
+                                                     midi_seen = midi.count();
+                                                     if (midi.count() > 0) {
+                                                         const auto event = midi.event(0);
+                                                         first_byte = static_cast<unsigned>(event.data.empty() ? 0 : std::to_integer<unsigned>(event.data[0]));
+                                                         event_size = static_cast<unsigned>(event.data.size());
+                                                     }
+                                                     return true;
+                                                 })
+                                                  .has_value());
         }
 
-        std::atomic<unsigned> latency_calls{ 0 };
+        std::atomic<unsigned> latency_calls { 0 };
         Check("latency callback: set while inactive", dst.on_latency([&](LatencyMode) { latency_calls++; }).has_value());
         Check("audio clients activate", src.activate().has_value() && dst.activate().has_value());
         if (audio_out) {
-            Check("latency range: set and read back", src.set_port_latency(*audio_out, LatencyMode::Playback, LatencyRange{ 10, 20 }).has_value() &&
-                                                       src.port_latency(*audio_out, LatencyMode::Playback) == (LatencyRange{ 10, 20 }));
+            Check("latency range: set and read back", src.set_port_latency(*audio_out, LatencyMode::Playback, LatencyRange { 10, 20 }).has_value() && src.port_latency(*audio_out, LatencyMode::Playback) == (LatencyRange { 10, 20 }));
         }
         auto aout_again = src.find_port("jackmini_src:aout");
         auto ain_again = src.find_port("jackmini_dst:ain");
         auto mout_again = src.find_port("jackmini_src:mout");
         auto min_again = src.find_port("jackmini_dst:min");
         if (aout_again && ain_again && mout_again && min_again) {
-            Check("connect audio and MIDI", src.connect(*aout_again, *ain_again).has_value() &&
-                                             src.connect(*mout_again, *min_again).has_value());
+            Check("connect audio and MIDI", src.connect(*aout_again, *ain_again).has_value() && src.connect(*mout_again, *min_again).has_value());
         }
         // Two cycles after the connections: the destination has run with them in place.
         Check("the destination reads the source's audio", WaitCycles(dst_cycles, 2) && std::fabs(last_sample.load() - 0.25f) < 1e-6f);

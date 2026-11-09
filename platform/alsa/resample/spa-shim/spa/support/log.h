@@ -11,17 +11,17 @@
 struct spa_log;
 
 struct spa_log_topic {
-	const char *topic;
+    const char* topic;
 };
 
-#define SPA_LOG_TOPIC_DEFINE(name,str) struct spa_log_topic name = { str }
+#define SPA_LOG_TOPIC_DEFINE(name, str) struct spa_log_topic name = { str }
 #define SPA_LOG_TOPIC_DEFAULT NULL
 
-#define spa_log_error(l,...) ((void)(l))
-#define spa_log_warn(l,...) ((void)(l))
-#define spa_log_info(l,...) ((void)(l))
-#define spa_log_debug(l,...) ((void)(l))
-#define spa_log_trace(l,...) ((void)(l))
-#define spa_log_trace_fp(l,...) ((void)(l))
+#define spa_log_error(l, ...) ((void)(l))
+#define spa_log_warn(l, ...) ((void)(l))
+#define spa_log_info(l, ...) ((void)(l))
+#define spa_log_debug(l, ...) ((void)(l))
+#define spa_log_trace(l, ...) ((void)(l))
+#define spa_log_trace_fp(l, ...) ((void)(l))
 
 #endif

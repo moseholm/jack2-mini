@@ -17,14 +17,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#include "JackAtomic.h"
 #include "JackActivationCount.h"
-#include "JackConstants.h"
+#include "JackAtomic.h"
 #include "JackClientControl.h"
+#include "JackConstants.h"
 #include "JackError.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 bool JackActivationCount::Signal(std::atomic<SInt32>& live, JackSynchro* synchro, JackClientControl* control)
 {
@@ -39,5 +38,4 @@ bool JackActivationCount::Signal(std::atomic<SInt32>& live, JackSynchro* synchro
     }
 }
 
-} // end of namespace
-
+} // namespace jackmini

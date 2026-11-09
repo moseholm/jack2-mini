@@ -20,25 +20,24 @@
 #ifndef __JackShmMem__
 #define __JackShmMem__
 
-#include "JackError.h"
 #include "JackCompilerDeps.h"
+#include "JackError.h"
 #include "JackFdSegment.h"
 
-#include <cstddef>
-#include <cstdint>
-#include <new>  // GCC 4.0
 #include <errno.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <cstddef>
+#include <cstdint>
+#include <new> // GCC 4.0
 
 #define CHECK_MLOCK(ptr, size) (mlock((ptr), (size)) == 0)
 #define CHECK_MUNLOCK(ptr, size) (munlock((ptr), (size)) == 0)
 #define CHECK_MLOCKALL() (mlockall(MCL_CURRENT | MCL_FUTURE) == 0)
 #define CHECK_MUNLOCKALL() (munlockall() == 0)
 
-namespace jackmini
-{
+namespace jackmini {
 
 void LockMemoryImp(void* ptr, size_t size);
 void InitLockMemoryImp(void* ptr, size_t size);
@@ -52,8 +51,7 @@ void UnlockAllMemory();
 The server keeps the descriptor of each segment it owns. A client receives its own descriptors with the open reply, maps them, and closes them.
 */
 
-struct JackShmSegment
-{
+struct JackShmSegment {
     int fFd = -1;
     std::uint32_t fSize = 0;
 };
@@ -62,43 +60,39 @@ struct JackShmSegment
 \brief A class which objects possibly want to be allocated in shared memory derives from this class.
 */
 
-class JackShmMemAble
-{
-    protected:
+class JackShmMemAble {
+protected:
+    std::uint32_t fSize;
+    void* fAddress;
+    int fFd;
 
-        std::uint32_t fSize;
-        void* fAddress;
-        int fFd;
+public:
+    void Init();
 
-    public:
+    int GetShmFd() const
+    {
+        return fFd;
+    }
 
-        void Init();
+    std::uint32_t GetShmSize() const
+    {
+        return fSize;
+    }
 
-        int GetShmFd() const
-        {
-            return fFd;
-        }
+    char* GetShmAddress()
+    {
+        return (char*)fAddress;
+    }
 
-        std::uint32_t GetShmSize() const
-        {
-            return fSize;
-        }
+    void LockMemory()
+    {
+        LockMemoryImp(this, fSize);
+    }
 
-        char* GetShmAddress()
-        {
-            return (char*)fAddress;
-        }
-
-        void LockMemory()
-        {
-            LockMemoryImp(this, fSize);
-        }
-
-        void UnlockMemory()
-        {
-            UnlockMemoryImp(this, fSize);
-        }
-
+    void UnlockMemory()
+    {
+        UnlockMemoryImp(this, fSize);
+    }
 };
 
 /*!
@@ -107,22 +101,18 @@ class JackShmMemAble
 A class which objects need to be allocated in shared memory derives from this class.
 */
 
-class SERVER_EXPORT JackShmMem : public JackShmMemAble
-{
+class SERVER_EXPORT JackShmMem : public JackShmMemAble {
 
-     protected:
+protected:
+    JackShmMem();
+    ~JackShmMem();
 
-        JackShmMem();
-        ~JackShmMem();
+public:
+    void* operator new(size_t size);
+    void* operator new(size_t size, void* memory);
 
-    public:
-
-        void* operator new(size_t size);
-        void* operator new(size_t size, void* memory);
-
-        void operator delete(void* p, size_t size);
-		void operator delete(void* p);
-
+    void operator delete(void* p, size_t size);
+    void operator delete(void* p);
 };
 
 /*!
@@ -132,70 +122,69 @@ The segment is mapped from the descriptor the server sent. The mapping is remove
 */
 
 template <class T>
-class JackShmReadWritePtr
-{
+class JackShmReadWritePtr {
 
-    private:
+private:
+    void* fAddress;
+    std::size_t fSize;
 
-        void* fAddress;
-        std::size_t fSize;
-
-        void Init(const JackShmSegment& segment)
-        {
-            if (fAddress == nullptr) {
-                jack_log("JackShmReadWritePtr::Init fd = %d size = %u", segment.fFd, segment.fSize);
-                auto mapped = MapSegment(segment.fFd, segment.fSize);
-                if (!mapped) {
-                    throw std::bad_alloc();
-                }
-                fAddress = *mapped;
-                fSize = segment.fSize;
-                GetShmAddress()->LockMemory();
+    void Init(const JackShmSegment& segment)
+    {
+        if (fAddress == nullptr) {
+            jack_log("JackShmReadWritePtr::Init fd = %d size = %u", segment.fFd, segment.fSize);
+            auto mapped = MapSegment(segment.fFd, segment.fSize);
+            if (!mapped) {
+                throw std::bad_alloc();
             }
+            fAddress = *mapped;
+            fSize = segment.fSize;
+            GetShmAddress()->LockMemory();
         }
+    }
 
-    public:
+public:
+    JackShmReadWritePtr()
+        : fAddress(nullptr)
+        , fSize(0)
+    {
+    }
 
-        JackShmReadWritePtr()
-            : fAddress(nullptr), fSize(0)
-        {}
+    JackShmReadWritePtr(const JackShmReadWritePtr&) = delete;
+    JackShmReadWritePtr& operator=(const JackShmReadWritePtr&) = delete;
 
-        JackShmReadWritePtr(const JackShmReadWritePtr&) = delete;
-        JackShmReadWritePtr& operator=(const JackShmReadWritePtr&) = delete;
-
-        ~JackShmReadWritePtr()
-        {
-            // Not mapped when the open that owns it failed early: nothing to undo.
-            if (fAddress == nullptr) {
-               return;
-            }
-            jack_log("JackShmReadWritePtr::~JackShmReadWritePtr");
-            GetShmAddress()->UnlockMemory();
-            UnmapSegment(fAddress, fSize);
-            fAddress = nullptr;
+    ~JackShmReadWritePtr()
+    {
+        // Not mapped when the open that owns it failed early: nothing to undo.
+        if (fAddress == nullptr) {
+            return;
         }
+        jack_log("JackShmReadWritePtr::~JackShmReadWritePtr");
+        GetShmAddress()->UnlockMemory();
+        UnmapSegment(fAddress, fSize);
+        fAddress = nullptr;
+    }
 
-        T* operator->() const
-        {
-            return (T*)fAddress;
-        }
+    T* operator->() const
+    {
+        return (T*)fAddress;
+    }
 
-        operator T*() const
-        {
-            return (T*)fAddress;
-        }
+    operator T*() const
+    {
+        return (T*)fAddress;
+    }
 
-        void Map(const JackShmSegment& segment)
-        {
-            Init(segment);
-        }
+    void Map(const JackShmSegment& segment)
+    {
+        Init(segment);
+    }
 
-        T* GetShmAddress()
-        {
-            return (T*)fAddress;
-        }
+    T* GetShmAddress()
+    {
+        return (T*)fAddress;
+    }
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

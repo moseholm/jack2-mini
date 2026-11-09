@@ -18,38 +18,37 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#include "JackSystemDeps.h"
-#include "JackServerGlobals.h"
 #include "JackServer.h"
-#include "JackDriverInfo.h"
-#include "driver_interface.h"
-#include "JackDriverLoader.h"
-#include "JackTime.h"
-#include "JackFreewheelDriver.h"
-#include "JackThreadedDriver.h"
-#include "JackGlobals.h"
-#include "JackLockedEngine.h"
 #include "JackAudioDriver.h"
 #include "JackChannel.h"
 #include "JackClientControl.h"
+#include "JackDriverInfo.h"
+#include "JackDriverLoader.h"
 #include "JackEngineControl.h"
-#include "JackGraphManager.h"
 #include "JackError.h"
+#include "JackFreewheelDriver.h"
+#include "JackGlobals.h"
+#include "JackGraphManager.h"
+#include "JackLockedEngine.h"
 #include "JackMessageBuffer.h"
+#include "JackServerGlobals.h"
+#include "JackSystemDeps.h"
+#include "JackThreadedDriver.h"
+#include "JackTime.h"
+#include "driver_interface.h"
 
-const char * jack_get_self_connect_mode_description(char mode);
+const char* jack_get_self_connect_mode_description(char mode);
 
-namespace jackmini
-{
+namespace jackmini {
 
 // The driver reports 0 on success and -1 on failure.
 static Result<void> DriverResult(int rc)
 {
-    return (rc < 0) ? Result<void>(std::unexpected(Error::ServerFailure)) : Result<void>{};
+    return (rc < 0) ? Result<void>(std::unexpected(Error::ServerFailure)) : Result<void> { };
 }
 
 //----------------
-// Server control 
+// Server control
 //----------------
 JackServer::JackServer(bool sync, bool temporary, int timeout, bool rt, int priority, int port_max, bool verbose, jack_timer_type_t clock, char self_connect_mode, const char* server_name)
 {
@@ -76,7 +75,7 @@ JackServer::JackServer(bool sync, bool temporary, int timeout, bool rt, int prio
     fDriverInfo = std::make_unique<JackDriverInfo>();
     fAudioDriver = NULL;
     fFreewheel = false;
-    JackServerGlobals::fInstance = this;   // Unique instance
+    JackServerGlobals::fInstance = this; // Unique instance
     JackGlobals::fVerbose = verbose;
 }
 
@@ -142,7 +141,7 @@ Result<void> JackServer::Open(jack_driver_desc_t* driver_desc, JSList* driver_pa
     fAudioDriver->AddSlave(fFreewheelDriver);
     init_time();
     set_clock_source(fEngineControl->fClockSource);
-    return {};
+    return { };
 }
 
 void JackServer::Close()
@@ -206,7 +205,7 @@ bool JackServer::IsRunning()
 }
 
 //---------------------------
-// From request thread : API 
+// From request thread : API
 //---------------------------
 
 Result<void> JackServer::SetBufferSize(jack_nframes_t buffer_size)
@@ -216,7 +215,7 @@ Result<void> JackServer::SetBufferSize(jack_nframes_t buffer_size)
 
     if (current_buffer_size == buffer_size) {
         jack_log("SetBufferSize: requirement for new buffer size equals current value");
-        return {};
+        return { };
     }
 
     if (fAudioDriver->IsFixedBufferSize()) {
@@ -263,7 +262,7 @@ Result<void> JackServer::SetFreewheel(bool onoff)
         } else {
             fFreewheel = false;
             fThreadedFreewheelDriver->Stop();
-            fGraphManager->Restore(&fConnectionState);   // Restore connection state
+            fGraphManager->Restore(&fConnectionState); // Restore connection state
             fEngine->NotifyFreewheel(onoff);
             fFreewheelDriver->SetMaster(false);
             fAudioDriver->SetMaster(true);
@@ -273,7 +272,7 @@ Result<void> JackServer::SetFreewheel(bool onoff)
         if (onoff) {
             fFreewheel = true;
             fAudioDriver->Stop();
-            fGraphManager->Save(&fConnectionState);     // Save connection state
+            fGraphManager->Save(&fConnectionState); // Save connection state
             // Disconnect all slaves
             std::list<JackDriverInterface*> slave_list = fAudioDriver->GetSlaves();
             std::list<JackDriverInterface*>::const_iterator it;
@@ -302,13 +301,13 @@ void JackServer::Notify(int refnum, int notify, int value)
 {
     switch (notify) {
 
-        case kGraphOrderCallback:
-            fEngine->NotifyGraphReorder();
-            break;
+    case kGraphOrderCallback:
+        fEngine->NotifyGraphReorder();
+        break;
 
-        case kXRunCallback:
-            fEngine->NotifyClientXRun(refnum);
-            break;
+    case kXRunCallback:
+        fEngine->NotifyClientXRun(refnum);
+        break;
     }
 }
 
@@ -350,5 +349,4 @@ JackGraphManager* JackServer::GetGraphManager()
     return fGraphManager;
 }
 
-} // end of namespace
-
+} // namespace jackmini

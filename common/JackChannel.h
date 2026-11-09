@@ -20,14 +20,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackChannel__
 #define __JackChannel__
 
-#include "types.h"
 #include "JackFdSegment.h"
+#include "types.h"
 
 #include <span>
 #include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 class JackClientInterface;
 class JackServer;
@@ -35,69 +34,64 @@ struct JackEngineControl;
 class JackGraphManager;
 struct JackShmSegment;
 
-namespace detail
-{
+namespace detail {
 
-class JackChannelTransactionInterface
-{
+class JackChannelTransactionInterface {
 
-    public:
+public:
+    JackChannelTransactionInterface()
+    {
+    }
+    virtual ~JackChannelTransactionInterface()
+    {
+    }
 
-        JackChannelTransactionInterface()
-        {}
-        virtual ~JackChannelTransactionInterface()
-        {}
+    virtual int Read(void* data, int len) = 0;
+    virtual int Write(void* data, int len) = 0;
 
-        virtual int Read(void* data, int len) = 0;
-        virtual int Write(void* data, int len) = 0;
-
-        // Writes data with descriptors, in one message. The receiver gets its own copies.
-        virtual int WriteWithFds(void* data, int len, std::span<const int> fds) { return -1; }
-        // Reads data and the descriptors sent with it. The caller owns the descriptors it gets.
-        virtual int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) { return -1; }
-
+    // Writes data with descriptors, in one message. The receiver gets its own copies.
+    virtual int WriteWithFds(void* data, int len, std::span<const int> fds) { return -1; }
+    // Reads data and the descriptors sent with it. The caller owns the descriptors it gets.
+    virtual int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) { return -1; }
 };
 
-class JackRequestInterface
-{
+class JackRequestInterface {
 
-    public:
+public:
+    JackRequestInterface()
+    {
+    }
+    virtual ~JackRequestInterface()
+    {
+    }
 
-        JackRequestInterface()
-        {}
-        virtual ~JackRequestInterface()
-        {}
-
-        virtual int Connect(const char* dir, const char* name, int which) = 0;
-        virtual int Close() = 0;
-
+    virtual int Connect(const char* dir, const char* name, int which) = 0;
+    virtual int Close() = 0;
 };
 
-class JackClientRequestInterface : public JackChannelTransactionInterface, public JackRequestInterface
-{
+class JackClientRequestInterface : public JackChannelTransactionInterface, public JackRequestInterface {
 
-    public:
+public:
+    JackClientRequestInterface()
+    {
+    }
+    virtual ~JackClientRequestInterface()
+    {
+    }
 
-        JackClientRequestInterface()
-        {}
-        virtual ~JackClientRequestInterface()
-        {}
+    virtual int Read(void* data, int len) { return -1; }
+    virtual int Write(void* data, int len) { return -1; }
 
-        virtual int Read(void* data, int len) { return -1; }
-        virtual int Write(void* data, int len) { return -1; }
-
-        virtual int Connect(const char* dir, const char* name, int which) { return -1; }
-        virtual int Close() { return -1; }
-
+    virtual int Connect(const char* dir, const char* name, int which) { return -1; }
+    virtual int Close() { return -1; }
 };
 
 /*!
 \brief Inter process channel for server/client bidirectionnal communication : request and (receiving) notifications.
 */
 
-}
+} // namespace detail
 
-} // end of namespace
+} // namespace jackmini
 
 #endif
-

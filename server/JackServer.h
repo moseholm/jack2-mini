@@ -22,19 +22,18 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #define __JackServer__
 
 #include "JackCompilerDeps.h"
-#include "driver_interface.h"
-#include "JackDriverLoader.h"
-#include "JackDriverInfo.h"
 #include "JackConnectionManager.h"
+#include "JackDriverInfo.h"
+#include "JackDriverLoader.h"
 #include "JackGlobals.h"
 #include "JackPlatformPlug.h"
-#include "jslist.h"
 #include "jackmini/error.hpp"
+#include "jslist.h"
+#include "driver_interface.h"
 
 #include <memory>
 
-namespace jackmini
-{
+namespace jackmini {
 
 class JackGraphManager;
 class JackDriverClientInterface;
@@ -45,58 +44,54 @@ class JackLockedEngine;
 \brief The Jack server.
 */
 
-class SERVER_EXPORT JackServer
-{
+class SERVER_EXPORT JackServer {
 
-    private:
-
-        std::unique_ptr<JackDriverInfo> fDriverInfo;
-        JackDriverClientInterface* fAudioDriver;
-        JackDriverClientInterface* fFreewheelDriver;   // Owned by fThreadedFreewheelDriver
-        std::unique_ptr<JackDriverClientInterface> fThreadedFreewheelDriver;
-        std::unique_ptr<JackLockedEngine> fEngine;
-        std::unique_ptr<JackEngineControl> fEngineControl;
-        JackGraphManager* fGraphManager;
-        JackServerChannel fRequestChannel;
-        JackConnectionManager fConnectionState;
-        JackSynchro fSynchroTable[CLIENT_NUM];
-        bool fFreewheel;
+private:
+    std::unique_ptr<JackDriverInfo> fDriverInfo;
+    JackDriverClientInterface* fAudioDriver;
+    JackDriverClientInterface* fFreewheelDriver; // Owned by fThreadedFreewheelDriver
+    std::unique_ptr<JackDriverClientInterface> fThreadedFreewheelDriver;
+    std::unique_ptr<JackLockedEngine> fEngine;
+    std::unique_ptr<JackEngineControl> fEngineControl;
+    JackGraphManager* fGraphManager;
+    JackServerChannel fRequestChannel;
+    JackConnectionManager fConnectionState;
+    JackSynchro fSynchroTable[CLIENT_NUM];
+    bool fFreewheel;
 
 
-    public:
+public:
+    JackServer(bool sync, bool temporary, int timeout, bool rt, int priority, int port_max, bool verbose, jack_timer_type_t clock, char self_connect_mode, const char* server_name);
+    ~JackServer();
 
-        JackServer(bool sync, bool temporary, int timeout, bool rt, int priority, int port_max, bool verbose, jack_timer_type_t clock, char self_connect_mode, const char* server_name);
-        ~JackServer();
+    // Server control
+    Result<void> Open(jack_driver_desc_t* driver_desc, JSList* driver_params);
+    void Close();
 
-        // Server control
-        Result<void> Open(jack_driver_desc_t* driver_desc, JSList* driver_params);
-        void Close();
+    Result<void> Start(bool freewheel = false);
+    Result<void> Stop();
 
-        Result<void> Start(bool freewheel = false);
-        Result<void> Stop();
+    bool IsRunning();
 
-        bool IsRunning();
+    // RT thread
+    void Notify(int refnum, int notify, int value);
 
-        // RT thread
-        void Notify(int refnum, int notify, int value);
+    // From request thread : API
+    Result<void> SetBufferSize(jack_nframes_t buffer_size);
+    Result<void> SetFreewheel(bool onoff);
 
-        // From request thread : API
-        Result<void> SetBufferSize(jack_nframes_t buffer_size);
-        Result<void> SetFreewheel(bool onoff);
+    // Transport management
+    Result<void> ReleaseTimebase(int refnum);
+    Result<void> SetTimebaseCallback(int refnum, int conditional);
 
-        // Transport management
-        Result<void> ReleaseTimebase(int refnum);
-        Result<void> SetTimebaseCallback(int refnum, int conditional);
-
-        // Object access
-        JackLockedEngine* GetEngine();
-        JackEngineControl* GetEngineControl();
-        JackSynchro* GetSynchroTable();
-        JackGraphManager* GetGraphManager();
-
+    // Object access
+    JackLockedEngine* GetEngine();
+    JackEngineControl* GetEngineControl();
+    JackSynchro* GetSynchroTable();
+    JackGraphManager* GetGraphManager();
 };
 
-} // end of namespace
+} // namespace jackmini
 
 
 #endif

@@ -23,79 +23,74 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackDriver.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief The base class for audio drivers: drivers with audio ports.
 
-A concrete derived class will have to be defined with a real audio driver API, 
+A concrete derived class will have to be defined with a real audio driver API,
 either callback based ones or blocking ones (like ALSA).
 
 Most of the generic audio handing code is part of this class :
-    - concrete callback basedd derived subclasses typically have to Open/Close the underlying audio API, 
+    - concrete callback basedd derived subclasses typically have to Open/Close the underlying audio API,
         setup the audio callback and implement the Read/Write methods
-    - concrete blocking based derived subclasses typically have to Open/Close the underlying audio API, 
+    - concrete blocking based derived subclasses typically have to Open/Close the underlying audio API,
         implement the Read/Write methods and "wraps" the driver with the JackThreadDriver class.
 */
 
-class SERVER_EXPORT JackAudioDriver : public JackDriver
-{
+class SERVER_EXPORT JackAudioDriver : public JackDriver {
 
-    protected:
+protected:
+    jack_default_audio_sample_t* GetInputBuffer(int port_index);
+    jack_default_audio_sample_t* GetOutputBuffer(int port_index);
+    jack_default_audio_sample_t* GetMonitorBuffer(int port_index);
 
-        jack_default_audio_sample_t* GetInputBuffer(int port_index);
-        jack_default_audio_sample_t* GetOutputBuffer(int port_index);
-        jack_default_audio_sample_t* GetMonitorBuffer(int port_index);
+    void HandleLatencyCallback(int status);
+    virtual void UpdateLatencies();
 
-        void HandleLatencyCallback(int status);
-        virtual void UpdateLatencies();
+    int ProcessAsync();
+    void ProcessGraphAsync();
+    void ProcessGraphAsyncMaster();
+    void ProcessGraphAsyncSlave();
 
-        int ProcessAsync();
-        void ProcessGraphAsync();
-        void ProcessGraphAsyncMaster();
-        void ProcessGraphAsyncSlave();
+    int ProcessSync();
+    void ProcessGraphSync();
+    void ProcessGraphSyncMaster();
+    void ProcessGraphSyncSlave();
 
-        int ProcessSync();
-        void ProcessGraphSync();
-        void ProcessGraphSyncMaster();
-        void ProcessGraphSyncSlave();
+public:
+    JackAudioDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table);
+    virtual ~JackAudioDriver();
 
-    public:
+    virtual int Open(jack_nframes_t buffer_size,
+        jack_nframes_t samplerate,
+        bool capturing,
+        bool playing,
+        int inchannels,
+        int outchannels,
+        bool monitor,
+        const char* capture_driver_name,
+        const char* playback_driver_name,
+        jack_nframes_t capture_latency,
+        jack_nframes_t playback_latency);
 
-        JackAudioDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table);
-        virtual ~JackAudioDriver();
+    /*
+        To be called by the underlying driver audio callback, or possibly by a RT thread (using JackThreadedDriver decorator)
+        when a blocking read/write underlying API is used (like ALSA)
+    */
+    virtual int Process();
 
-        virtual int Open(jack_nframes_t buffer_size,
-                        jack_nframes_t samplerate,
-                        bool capturing,
-                        bool playing,
-                        int inchannels,
-                        int outchannels,
-                        bool monitor,
-                        const char* capture_driver_name,
-                        const char* playback_driver_name,
-                        jack_nframes_t capture_latency,
-                        jack_nframes_t playback_latency);
+    virtual int Attach();
+    virtual int Detach();
 
-        /*
-            To be called by the underlying driver audio callback, or possibly by a RT thread (using JackThreadedDriver decorator) 
-            when a blocking read/write underlying API is used (like ALSA)
-        */
-        virtual int Process();
+    virtual int Write();
 
-        virtual int Attach();
-        virtual int Detach();
+    virtual int SetBufferSize(jack_nframes_t buffer_size);
+    virtual int SetSampleRate(jack_nframes_t sample_rate);
 
-        virtual int Write();
-
-        virtual int SetBufferSize(jack_nframes_t buffer_size);
-        virtual int SetSampleRate(jack_nframes_t sample_rate);
-
-        virtual int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
-
+    virtual int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

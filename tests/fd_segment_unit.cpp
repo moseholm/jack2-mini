@@ -20,27 +20,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackFdSegment.h"
 
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #include <array>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
-namespace
-{
+namespace {
 
 int g_failures = 0;
 int g_checks = 0;
 
-#define CHECK(cond) do { \
-    g_checks++; \
-    if (!(cond)) { \
-        std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
-        g_failures++; \
-    } \
-} while (0)
+#define CHECK(cond)                                                                       \
+    do {                                                                                  \
+        g_checks++;                                                                       \
+        if (!(cond)) {                                                                    \
+            std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
+            g_failures++;                                                                 \
+        }                                                                                 \
+    } while (0)
 
 using namespace jackmini;
 
@@ -58,12 +58,14 @@ void TestSegmentIsSharedAcrossMappings()
     constexpr std::size_t size = 4096;
     auto segment = CreateSegment(size, "jack-test");
     CHECK(segment.has_value());
-    if (!segment) return;
+    if (!segment)
+        return;
 
     auto first = MapSegment(segment->get(), size);
     auto second = MapSegment(segment->get(), size);
     CHECK(first.has_value() && second.has_value());
-    if (!first || !second) return;
+    if (!first || !second)
+        return;
 
     auto* a = static_cast<std::uint32_t*>(*first);
     auto* b = static_cast<std::uint32_t*>(*second);
@@ -79,11 +81,13 @@ void TestDescriptorArrivesAndMapsToSameMemory()
     constexpr std::size_t size = 8192;
     auto segment = CreateSegment(size, "jack-test-pass");
     CHECK(segment.has_value());
-    if (!segment) return;
+    if (!segment)
+        return;
 
     auto mine = MapSegment(segment->get(), size);
     CHECK(mine.has_value());
-    if (!mine) return;
+    if (!mine)
+        return;
     auto* words = static_cast<std::uint32_t*>(*mine);
     for (std::uint32_t i = 0; i < 16; i++) {
         words[i] = 0x1000 + i;
@@ -92,11 +96,11 @@ void TestDescriptorArrivesAndMapsToSameMemory()
     int pair[2];
     SocketPair(pair);
 
-    const std::array<std::byte, 5> message{std::byte{'h'}, std::byte{'e'}, std::byte{'l'}, std::byte{'l'}, std::byte{'o'}};
-    const std::array<int, 1> fds{segment->get()};
+    const std::array<std::byte, 5> message { std::byte { 'h' }, std::byte { 'e' }, std::byte { 'l' }, std::byte { 'l' }, std::byte { 'o' } };
+    const std::array<int, 1> fds { segment->get() };
     CHECK(SendWithFds(pair[0], message, fds).has_value());
 
-    std::array<std::byte, 16> got{};
+    std::array<std::byte, 16> got { };
     std::vector<UniqueFd> received;
     auto n = RecvWithFds(pair[1], got, received);
     CHECK(n.has_value() && *n == message.size());
@@ -127,7 +131,7 @@ void TestClosedPeerReadsZero()
     int pair[2];
     SocketPair(pair);
     close(pair[0]);
-    std::array<std::byte, 8> buf{};
+    std::array<std::byte, 8> buf { };
     std::vector<UniqueFd> none;
     auto n = RecvWithFds(pair[1], buf, none);
     CHECK(n.has_value() && *n == 0);
@@ -138,9 +142,10 @@ void TestTooManyDescriptorsRejected()
 {
     int pair[2];
     SocketPair(pair);
-    std::array<int, 9> fds{};
-    for (auto& fd : fds) fd = pair[0];
-    const std::array<std::byte, 1> one{std::byte{1}};
+    std::array<int, 9> fds { };
+    for (auto& fd : fds)
+        fd = pair[0];
+    const std::array<std::byte, 1> one { std::byte { 1 } };
     auto sent = SendWithFds(pair[0], one, fds);
     CHECK(!sent.has_value());
     close(pair[0]);

@@ -24,28 +24,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <string.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
-    LIB_EXPORT uint32_t jack_midi_get_event_count(void* port_buffer);
+LIB_EXPORT uint32_t jack_midi_get_event_count(void* port_buffer);
 
-    LIB_EXPORT int jack_midi_event_get(jack_midi_event_t* event,
-                                   void* port_buffer, uint32_t event_index);
+LIB_EXPORT int jack_midi_event_get(jack_midi_event_t* event,
+    void* port_buffer, uint32_t event_index);
 
-    LIB_EXPORT void jack_midi_clear_buffer(void* port_buffer);
-    
-    LIB_EXPORT void jack_midi_reset_buffer(void* port_buffer);
+LIB_EXPORT void jack_midi_clear_buffer(void* port_buffer);
 
-    LIB_EXPORT size_t jack_midi_max_event_size(void* port_buffer);
+LIB_EXPORT void jack_midi_reset_buffer(void* port_buffer);
 
-    LIB_EXPORT jack_midi_data_t* jack_midi_event_reserve(void* port_buffer,
-            jack_nframes_t time, size_t data_size);
+LIB_EXPORT size_t jack_midi_max_event_size(void* port_buffer);
 
-    LIB_EXPORT int jack_midi_event_write(void* port_buffer,
-                                     jack_nframes_t time, const jack_midi_data_t* data, size_t data_size);
+LIB_EXPORT jack_midi_data_t* jack_midi_event_reserve(void* port_buffer,
+    jack_nframes_t time, size_t data_size);
 
-    LIB_EXPORT jack_nframes_t jack_midi_get_lost_event_count(void* port_buffer);
+LIB_EXPORT int jack_midi_event_write(void* port_buffer,
+    jack_nframes_t time, const jack_midi_data_t* data, size_t data_size);
+
+LIB_EXPORT jack_nframes_t jack_midi_get_lost_event_count(void* port_buffer);
 
 #ifdef __cplusplus
 }
@@ -56,7 +55,7 @@ using namespace jackmini;
 LIB_EXPORT
 uint32_t jack_midi_get_event_count(void* port_buffer)
 {
-    JackMidiBuffer *buf = (JackMidiBuffer*)port_buffer;
+    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
     if (!buf || !buf->IsValid()) {
         return 0;
     }
@@ -64,9 +63,9 @@ uint32_t jack_midi_get_event_count(void* port_buffer)
 }
 
 LIB_EXPORT
-int jack_midi_event_get(jack_midi_event_t *event, void* port_buffer, uint32_t event_index)
+int jack_midi_event_get(jack_midi_event_t* event, void* port_buffer, uint32_t event_index)
 {
-    JackMidiBuffer *buf = (JackMidiBuffer*)port_buffer;
+    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
     if (!buf || !buf->IsValid()) {
         return -EINVAL;
     }
@@ -83,7 +82,7 @@ int jack_midi_event_get(jack_midi_event_t *event, void* port_buffer, uint32_t ev
 LIB_EXPORT
 void jack_midi_clear_buffer(void* port_buffer)
 {
-    JackMidiBuffer *buf = (JackMidiBuffer*)port_buffer;
+    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
     if (buf && buf->IsValid()) {
         buf->Reset(buf->nframes);
     }
@@ -98,7 +97,7 @@ void jack_midi_reset_buffer(void* port_buffer)
 LIB_EXPORT
 size_t jack_midi_max_event_size(void* port_buffer)
 {
-    JackMidiBuffer *buf = (JackMidiBuffer*)port_buffer;
+    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
     if (buf && buf->IsValid()) {
         return buf->MaxEventSize();
     }
@@ -108,18 +107,19 @@ size_t jack_midi_max_event_size(void* port_buffer)
 LIB_EXPORT
 jack_midi_data_t* jack_midi_event_reserve(void* port_buffer, jack_nframes_t time, size_t data_size)
 {
-    JackMidiBuffer *buf = (JackMidiBuffer*)port_buffer;
-    if (! buf) {
+    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
+    if (!buf) {
         jack_error("jack_midi_event_reserve: port buffer is set to NULL");
         return 0;
     }
-    if (! buf->IsValid()) {
+    if (!buf->IsValid()) {
         jack_error("jack_midi_event_reserve: port buffer is invalid");
         return 0;
     }
     if (time >= buf->nframes) {
         jack_error("jack_midi_event_reserve: time parameter is out of range "
-                   "(%lu >= %lu)", time, buf->nframes);
+                   "(%lu >= %lu)",
+            time, buf->nframes);
         return 0;
     }
     if (buf->event_count && (buf->events[buf->event_count - 1].time > time)) {
@@ -132,9 +132,9 @@ jack_midi_data_t* jack_midi_event_reserve(void* port_buffer, jack_nframes_t time
 
 LIB_EXPORT
 int jack_midi_event_write(void* port_buffer,
-                          jack_nframes_t time, const jack_midi_data_t* data, size_t data_size)
+    jack_nframes_t time, const jack_midi_data_t* data, size_t data_size)
 {
-    JackMidiBuffer *buf = (JackMidiBuffer*)port_buffer;
+    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
     if (!buf || !buf->IsValid()) {
         return -EINVAL;
     }
@@ -152,7 +152,7 @@ int jack_midi_event_write(void* port_buffer,
 LIB_EXPORT
 uint32_t jack_midi_get_lost_event_count(void* port_buffer)
 {
-    JackMidiBuffer *buf = (JackMidiBuffer*)port_buffer;
+    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
     if (buf && buf->IsValid()) {
         return buf->lost_events;
     }

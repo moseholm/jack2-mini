@@ -21,8 +21,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include <stddef.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Parameters used to create a resampler.
@@ -43,60 +42,58 @@ ALSA secondary card code.  The interface is deliberately small so that
 tests can supply fakes.
 */
 
-class JackResampler
-{
+class JackResampler {
 
-    public:
+public:
+    virtual ~JackResampler()
+    {
+    }
 
-        virtual ~JackResampler()
-        {}
+    // Clear filter history and any pending state.
+    virtual void Reset() = 0;
 
-        // Clear filter history and any pending state.
-        virtual void Reset() = 0;
+    // Ratio correction around nominal, 1.0 is nominal.  Used by the
+    // asynchronous drift controller.
+    virtual void SetRate(double rate) = 0;
 
-        // Ratio correction around nominal, 1.0 is nominal.  Used by the
-        // asynchronous drift controller.
-        virtual void SetRate(double rate) = 0;
+    // Number of input frames needed to produce out_len output frames.
+    virtual unsigned int InputLength(unsigned int out_len) = 0;
 
-        // Number of input frames needed to produce out_len output frames.
-        virtual unsigned int InputLength(unsigned int out_len) = 0;
+    // Number of output frames produced from in_len input frames.
+    virtual unsigned int OutputLength(unsigned int in_len) = 0;
 
-        // Number of output frames produced from in_len input frames.
-        virtual unsigned int OutputLength(unsigned int in_len) = 0;
+    // Consume up to *in_len input frames and produce up to *out_len
+    // output frames.  Both counts are updated to the frames actually used.
+    virtual void Process(const float* const* src, unsigned int* in_len,
+        float* const* dst, unsigned int* out_len) = 0;
 
-        // Consume up to *in_len input frames and produce up to *out_len
-        // output frames.  Both counts are updated to the frames actually used.
-        virtual void Process(const float* const* src, unsigned int* in_len,
-                             float* const* dst, unsigned int* out_len) = 0;
-
-        // Latency introduced by the filter, in output frames.
-        virtual unsigned int Delay() = 0;
+    // Latency introduced by the filter, in output frames.
+    virtual unsigned int Delay() = 0;
 };
 
 /*!
 \brief Creates resamplers.  Factories are looked up by name.
 */
 
-class JackResamplerFactory
-{
+class JackResamplerFactory {
 
-    public:
+public:
+    virtual ~JackResamplerFactory()
+    {
+    }
 
-        virtual ~JackResamplerFactory()
-        {}
+    virtual const char* Name() const = 0;
 
-        virtual const char* Name() const = 0;
+    // Returns NULL when the parameters cannot be supported.
+    virtual JackResampler* Create(const JackResamplerParams& params) = 0;
 
-        // Returns NULL when the parameters cannot be supported.
-        virtual JackResampler* Create(const JackResamplerParams& params) = 0;
+    // The factory used when no other is requested.
+    static JackResamplerFactory* Default();
 
-        // The factory used when no other is requested.
-        static JackResamplerFactory* Default();
-
-        // Returns NULL for unknown names.  Only "pipewire" exists.
-        static JackResamplerFactory* Find(const char* name);
+    // Returns NULL for unknown names.  Only "pipewire" exists.
+    static JackResamplerFactory* Find(const char* name);
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

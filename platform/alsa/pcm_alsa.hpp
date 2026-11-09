@@ -27,8 +27,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <cstdint>
 #include <vector>
 
-namespace jackmini::alsa
-{
+namespace jackmini::alsa {
 
 enum class SampleFormat {
     Any,
@@ -41,11 +40,11 @@ struct Request {
     std::uint32_t rate = 48000;
     std::uint32_t frames_per_cycle = 1024;
     std::uint32_t periods = 2;
-    std::uint32_t capture_channels = 0;   // 0 takes the device maximum
+    std::uint32_t capture_channels = 0; // 0 takes the device maximum
     std::uint32_t playback_channels = 0;
     SampleFormat format = SampleFormat::Any;
-    std::uint32_t sample_bytes = 4;  // 4 tries the 32-bit formats first, 2 the 16-bit ones first
-    bool soft_mode = false;          // the stop threshold is never reached: the stream runs until dropped
+    std::uint32_t sample_bytes = 4; // 4 tries the 32-bit formats first, 2 the 16-bit ones first
+    bool soft_mode = false; // the stop threshold is never reached: the stream runs until dropped
 };
 
 // What the device gave back for one stream.
@@ -54,7 +53,7 @@ struct StreamInfo {
     std::uint32_t channels = 0;
     std::uint32_t periods = 0;
     std::uint32_t sample_bytes = 0;
-    std::uint32_t sbits = 0;         // significant bits of a sample: 24 for a 32-bit format on a 24-bit device
+    std::uint32_t sbits = 0; // significant bits of a sample: 24 for a 32-bit format on a 24-bit device
     snd_pcm_format_t format = SND_PCM_FORMAT_UNKNOWN;
     bool interleaved = false;
     bool byte_swapped = false;
@@ -63,8 +62,7 @@ struct StreamInfo {
 // The libasound side of the cycle core: one capture and one playback stream, both memory-mapped.  It is the only
 // code that calls snd_pcm_*.  open() configures the streams and sizes every buffer the cycle uses, so the cycle
 // itself does not allocate.
-class Device
-{
+class Device {
 public:
     Device() = default;
     ~Device();
@@ -108,7 +106,7 @@ private:
     struct StreamState {
         snd_pcm_t* handle = nullptr;
         StreamInfo info;
-        std::vector<ChannelArea> areas;  // the areas of the current mapping, set by begin()
+        std::vector<ChannelArea> areas; // the areas of the current mapping, set by begin()
     };
 
     StreamState& state(Stream stream) { return stream == Stream::Capture ? capture_ : playback_; }

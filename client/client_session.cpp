@@ -32,22 +32,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackFrameTimer.h"
 
+#include <sys/socket.h>
 #include <array>
 #include <cerrno>
 #include <charconv>
 #include <climits>
 #include <cstdlib>
 #include <cstring>
-#include <sys/socket.h>
 
-#include "JackFdSegment.h"
 #include "JackCString.h"
+#include "JackFdSegment.h"
 
-namespace jackmini::client
-{
+namespace jackmini::client {
 
-namespace
-{
+namespace {
 
 // Set on the notification thread, so a call to the server from there is refused instead of deadlocking.
 thread_local bool on_notification_thread = false;
@@ -63,7 +61,7 @@ thread_local bool on_realtime_thread = false;
 // when the system knows it.
 int acquire_realtime(pthread_t thread, int priority)
 {
-    sched_param param{};
+    sched_param param { };
     param.sched_priority = priority;
     const int res = pthread_setschedparam(thread, SCHED_FIFO, &param);
     if (res == 0) {
@@ -78,7 +76,7 @@ int acquire_realtime(pthread_t thread, int priority)
 
 void drop_realtime(pthread_t thread)
 {
-    sched_param param{};
+    sched_param param { };
     if (pthread_setschedparam(thread, SCHED_OTHER, &param) != 0) {
         jack_error("Cannot switch to normal scheduling priority(%s)", strerror(errno));
     }
@@ -139,7 +137,8 @@ void setup_driver_sync(ProcessContext& context, bool freewheel)
 
 ClientSession::ClientSession()
     : context_(&ProcessContext::acquire())
-{}
+{
+}
 
 ClientSession::~ClientSession()
 {
@@ -239,7 +238,7 @@ Result<void> ClientSession::connect_and_register(std::string_view name_view, con
         }
     }
     set_clock_source(context.engine->fClockSource);
-    return {};
+    return { };
 }
 
 bool ClientSession::start_notifications()
@@ -269,7 +268,7 @@ void ClientSession::notification_loop()
     notify_fd_ = notify_->GetFd();
 
     while (true) {
-        JackMsgHeader header{};
+        JackMsgHeader header { };
         if (int err = ReadJackMsgHeader(notify_.get(), header); err < 0) {
             if (err != JACK_REQUEST_ERR_ABORTED && !closing_) {
                 jack_error("JackSocketClientChannel read fail");
@@ -283,7 +282,7 @@ void ClientSession::notification_loop()
 
         JackClientNotification event;
         {
-            JackPayloadReader payload(notify_.get(), header.length, {});
+            JackPayloadReader payload(notify_.get(), header.length, { });
             if (event.Read(&payload) < 0 || !payload.Done()) {
                 jack_error("JackSocketClientChannel: notification does not match its length");
                 break;
@@ -321,62 +320,62 @@ int ClientSession::handle_notification(const JackClientNotification& event)
     ProcessContext& context = *context_;
     int res = 0;
     switch (event.fNotify) {
-        case kAddClient: {
+    case kAddClient: {
+        std::lock_guard lock(context.synchro_mutex);
+        res = context.synchro[event.fRefNum].Connect(event.fName, server_name_.c_str()) ? 0 : -1;
+        break;
+    }
+    case kRemoveClient:
+        if (name_ != event.fName) {
             std::lock_guard lock(context.synchro_mutex);
-            res = context.synchro[event.fRefNum].Connect(event.fName, server_name_.c_str()) ? 0 : -1;
-            break;
+            res = context.synchro[event.fRefNum].Disconnect() ? 0 : -1;
         }
-        case kRemoveClient:
-            if (name_ != event.fName) {
-                std::lock_guard lock(context.synchro_mutex);
-                res = context.synchro[event.fRefNum].Disconnect() ? 0 : -1;
-            }
-            break;
-        case kShutDownCallback:
-            server_down_ = true;
-            if (is_active()) {
-                deliver_shutdown();
-            }
-            break;
-        case kLatencyCallback:
-            if (is_active()) {
-                res = handle_latency(event.fValue1);
-            }
-            break;
-        case kXRunCallback:
-            if (is_active() && xrun_) {
-                xrun_();
-            }
-            break;
-        case kBufferSizeCallback:
-            if (is_active() && buffer_size_) {
-                res = buffer_size_(event.fValue1) ? 0 : -1;
-            }
-            break;
-        case kSampleRateCallback:
-            if (is_active() && sample_rate_) {
-                res = sample_rate_(event.fValue1) ? 0 : -1;
-            }
-            break;
-        case kStartFreewheelCallback: {
-            setup_driver_sync(context, true);
-            // Freewheel runs the cycles without the sound card, so the realtime class is given up while it lasts.
-            std::lock_guard lock(realtime_mutex_);
-            if (realtime_running_ && is_active()) {
-                drop_realtime(realtime_thread_);
-            }
-            break;
+        break;
+    case kShutDownCallback:
+        server_down_ = true;
+        if (is_active()) {
+            deliver_shutdown();
         }
-        case kStopFreewheelCallback: {
-            setup_driver_sync(context, false);
-            std::lock_guard lock(realtime_mutex_);
-            if (context.engine->fRealTime && realtime_running_ && is_active()) {
-                if (acquire_realtime(realtime_thread_, context.engine->fClientPriority) < 0) {
-                    jack_error("JackClient::AcquireRealTime error");
-                }
-            }
-            break;
+        break;
+    case kLatencyCallback:
+        if (is_active()) {
+            res = handle_latency(event.fValue1);
         }
+        break;
+    case kXRunCallback:
+        if (is_active() && xrun_) {
+            xrun_();
+        }
+        break;
+    case kBufferSizeCallback:
+        if (is_active() && buffer_size_) {
+            res = buffer_size_(event.fValue1) ? 0 : -1;
+        }
+        break;
+    case kSampleRateCallback:
+        if (is_active() && sample_rate_) {
+            res = sample_rate_(event.fValue1) ? 0 : -1;
+        }
+        break;
+    case kStartFreewheelCallback: {
+        setup_driver_sync(context, true);
+        // Freewheel runs the cycles without the sound card, so the realtime class is given up while it lasts.
+        std::lock_guard lock(realtime_mutex_);
+        if (realtime_running_ && is_active()) {
+            drop_realtime(realtime_thread_);
+        }
+        break;
+    }
+    case kStopFreewheelCallback: {
+        setup_driver_sync(context, false);
+        std::lock_guard lock(realtime_mutex_);
+        if (context.engine->fRealTime && realtime_running_ && is_active()) {
+            if (acquire_realtime(realtime_thread_, context.engine->fClientPriority) < 0) {
+                jack_error("JackClient::AcquireRealTime error");
+            }
+        }
+        break;
+    }
     }
     return res;
 }
@@ -435,7 +434,7 @@ Result<void> ClientSession::unregister_port(jack_port_id_t port)
     if (transact(request, reply) < 0 || reply.fResult < 0) {
         return std::unexpected(Error::ServerFailure);
     }
-    return {};
+    return { };
 }
 
 Result<void> ClientSession::connect_ports(std::string_view source, std::string_view destination)
@@ -450,7 +449,7 @@ Result<void> ClientSession::connect_ports(std::string_view source, std::string_v
     if (transact(request, reply) < 0 || reply.fResult < 0) {
         return std::unexpected(Error::ServerFailure);
     }
-    return {};
+    return { };
 }
 
 Result<void> ClientSession::disconnect_ports(std::string_view source, std::string_view destination)
@@ -465,7 +464,7 @@ Result<void> ClientSession::disconnect_ports(std::string_view source, std::strin
     if (transact(request, reply) < 0 || reply.fResult < 0) {
         return std::unexpected(Error::ServerFailure);
     }
-    return {};
+    return { };
 }
 
 bool ClientSession::owns(jack_port_id_t port) const
@@ -476,7 +475,7 @@ bool ClientSession::owns(jack_port_id_t port) const
 std::string_view ClientSession::port_name(jack_port_id_t port) const
 {
     if (port == 0 || port >= PORT_NUM_MAX) {
-        return {};
+        return { };
     }
     return context_->graph->GetPort(port)->GetName();
 }
@@ -501,8 +500,7 @@ std::optional<jack_port_id_t> ClientSession::find_port(std::string_view full_nam
     return port;
 }
 
-namespace
-{
+namespace {
 
 // The graph gives a list of names that point into its own table, and a list that it allocated. The names are copied
 // and the list is freed.
@@ -582,7 +580,7 @@ int ClientSession::handle_latency(int status)
     for (jack_port_id_t port : ports) {
         JackPort* p = context.graph->GetPort(port);
         if (p->GetFlags() & measured) {
-            jack_latency_range_t other{};
+            jack_latency_range_t other { };
             p->GetLatencyRange(mode, &other);
             latency.max = std::max(latency.max, other.max);
             latency.min = std::min(latency.min, other.min);
@@ -603,7 +601,7 @@ int ClientSession::handle_latency(int status)
 jack_latency_range_t ClientSession::port_latency_range(jack_port_id_t port, jack_latency_callback_mode_t mode) const
 {
     wait_graph_change();
-    jack_latency_range_t range{};
+    jack_latency_range_t range { };
     context_->graph->GetPort(port)->GetLatencyRange(mode, &range);
     return range;
 }
@@ -621,7 +619,7 @@ Result<void> ClientSession::recompute_latencies()
     if (transact(request, reply) < 0 || reply.fResult < 0) {
         return std::unexpected(Error::ServerFailure);
     }
-    return {};
+    return { };
 }
 
 void ClientSession::transport_start() noexcept
@@ -636,7 +634,7 @@ void ClientSession::transport_stop() noexcept
 
 void ClientSession::transport_locate(jack_nframes_t frame) noexcept
 {
-    jack_position_t position{};
+    jack_position_t position { };
     position.frame = frame;
     position.valid = static_cast<jack_position_bits_t>(0);
     context_->engine->fTransport.RequestNewPos(&position);
@@ -692,7 +690,7 @@ Result<void> ClientSession::activate()
         return std::unexpected(Error::InvalidState);
     }
     if (is_active()) {
-        return {};
+        return { };
     }
 
     const bool real_time = static_cast<bool>(process_);
@@ -716,7 +714,7 @@ Result<void> ClientSession::activate()
         stop_realtime();
         return std::unexpected(Error::ServerFailure);
     }
-    return {};
+    return { };
 }
 
 Result<void> ClientSession::deactivate()
@@ -724,7 +722,7 @@ Result<void> ClientSession::deactivate()
     if (!is_active()) {
         // A thread that ended by itself after a failed cycle still has to be joined.
         stop_realtime();
-        return {};
+        return { };
     }
 
     std::atomic_ref<bool>(client_->fActive).store(false);
@@ -737,7 +735,7 @@ Result<void> ClientSession::deactivate()
     JackResult reply;
     const bool ok = transact(request, reply) == 0 && reply.fResult == 0;
     stop_realtime();
-    return ok ? Result<void>{} : std::unexpected(Error::ServerFailure);
+    return ok ? Result<void> { } : std::unexpected(Error::ServerFailure);
 }
 
 bool ClientSession::start_realtime()
@@ -878,7 +876,7 @@ void ClientSession::shut_down_sockets()
 Result<void> ClientSession::close()
 {
     if (closing_.exchange(true)) {
-        return {};
+        return { };
     }
 
     // An active client is deactivated first, which also stops its realtime thread.
@@ -912,7 +910,7 @@ Result<void> ClientSession::close()
     }
     request_.Close();
 
-    return (result == 0) ? Result<void>{} : std::unexpected(Error::ServerFailure);
+    return (result == 0) ? Result<void> { } : std::unexpected(Error::ServerFailure);
 }
 
-} // end of namespace
+} // namespace jackmini::client

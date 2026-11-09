@@ -19,12 +19,15 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaReconfigWorker.h"
 #include "JackError.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 JackAlsaReconfigWorker::JackAlsaReconfigWorker(JackAlsaRateRequestHandler* handler)
-    : fHandler(handler), fRunning(false), fSoundChanged(false), fThread(this)
-{}
+    : fHandler(handler)
+    , fRunning(false)
+    , fSoundChanged(false)
+    , fThread(this)
+{
+}
 
 JackAlsaReconfigWorker::~JackAlsaReconfigWorker()
 {
@@ -121,4 +124,4 @@ int JackAlsaReconfigWorker::Stop()
     return fThread.Stop();
 }
 
-} // end of namespace
+} // namespace jackmini

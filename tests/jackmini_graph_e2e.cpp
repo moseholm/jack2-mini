@@ -32,8 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 using namespace jackmini;
 
-namespace
-{
+namespace {
 
 int gFailures = 0;
 
@@ -83,8 +82,8 @@ int main(int argc, char** argv)
         auto snk_in = sink.register_port("in", PortType::Audio, PortFlags::Input);
         Check("chain: ports register", src_out && dbl_in && dbl_out && snk_in);
 
-        std::atomic<unsigned long> sink_cycles{ 0 };
-        std::atomic<float> sink_last{ -1.0f };
+        std::atomic<unsigned long> sink_cycles { 0 };
+        std::atomic<float> sink_last { -1.0f };
         if (src_out && dbl_in && dbl_out && snk_in) {
             const Port so = *src_out, di = *dbl_in, dO = *dbl_out, si = *snk_in;
             source.on_process([&source, so](const Cycle&) {
@@ -111,18 +110,16 @@ int main(int argc, char** argv)
             });
         }
 
-        Check("chain: clients activate", source.activate().has_value() && doubler.activate().has_value() &&
-                                         sink.activate().has_value());
+        Check("chain: clients activate", source.activate().has_value() && doubler.activate().has_value() && sink.activate().has_value());
         if (src_out && dbl_in && dbl_out && snk_in) {
             // A handle belongs to the client that obtained it: the other client's ports are reached with find_port.
             auto dbl_in_seen = source.find_port("chain_dbl:in");
             auto snk_in_seen = doubler.find_port("chain_snk:in");
             // A handle of another client is not a port of this one: it is refused, and nothing is connected.
             Check("chain: another client's handle is refused (NotFound)",
-                  source.connect(*src_out, *dbl_in).error() == Error::NotFound);
+                source.connect(*src_out, *dbl_in).error() == Error::NotFound);
             Check("chain: connect source -> doubler -> sink",
-                  dbl_in_seen && snk_in_seen && source.connect(*src_out, *dbl_in_seen).has_value() &&
-                  doubler.connect(*dbl_out, *snk_in_seen).has_value());
+                dbl_in_seen && snk_in_seen && source.connect(*src_out, *dbl_in_seen).has_value() && doubler.connect(*dbl_out, *snk_in_seen).has_value());
             // Two cycles after the connections: the sink has run with the whole chain in place.
             Check("chain: the sink runs", WaitCycles(sink_cycles, 2));
             Check("chain: the sink reads the doubled source (1.0)", std::fabs(sink_last.load() - 1.0f) < 1e-6f);
@@ -192,9 +189,9 @@ int main(int argc, char** argv)
                 Check("rules: output to output is refused", !a.connect(*out_a, *out_b_seen).has_value());
                 Check("rules: input to output is refused", !a.connect(*in_a, *out_b_seen).has_value());
                 Check("rules: output to input of another client is accepted",
-                      a.connect(*out_a, *in_b_seen).has_value());
+                    a.connect(*out_a, *in_b_seen).has_value());
                 Check("rules: the connection is listed on both ports",
-                      a.is_connected(*out_a, *in_b_seen) && b.is_connected(b.find_port("rules_a:out").value_or(Port{}), *in_b));
+                    a.is_connected(*out_a, *in_b_seen) && b.is_connected(b.find_port("rules_a:out").value_or(Port { }), *in_b));
             }
         }
         a.close();
@@ -282,10 +279,10 @@ int main(int argc, char** argv)
         if (opened) {
             Client cycle_client = std::move(*opened);
             const FrameCount buffer = cycle_client.buffer_size();
-            std::atomic<unsigned long> cycles{ 0 };
-            std::atomic<FrameCount> last_frames{ 0 };
-            std::atomic<std::uint64_t> last_usecs{ 0 };
-            std::atomic<bool> frames_ok{ true }, times_ok{ true }, flag_ok{ true }, period_ok{ true }, size_ok{ true };
+            std::atomic<unsigned long> cycles { 0 };
+            std::atomic<FrameCount> last_frames { 0 };
+            std::atomic<std::uint64_t> last_usecs { 0 };
+            std::atomic<bool> frames_ok { true }, times_ok { true }, flag_ok { true }, period_ok { true }, size_ok { true };
             cycle_client.on_process([&](const Cycle& cy) {
                 if (cy.frames != buffer) {
                     size_ok = false;

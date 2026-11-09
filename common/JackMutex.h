@@ -22,74 +22,70 @@
 #ifndef __JackMutex__
 #define __JackMutex__
 
-#include <assert.h>
 #include "JackError.h"
 #include "JackPlatformPlug.h"
+#include <assert.h>
 
 
-namespace jackmini
-{
+namespace jackmini {
 /*!
 \brief Base class for "lockable" objects.
 */
 
-class JackLockAble
-{
+class JackLockAble {
 
-    protected:
+protected:
+    JackMutex fMutex;
 
-        JackMutex fMutex;
+    JackLockAble(const char* name = NULL)
+        : fMutex(name)
+    {
+    }
+    ~JackLockAble()
+    {
+    }
 
-        JackLockAble(const char* name = NULL)
-            :fMutex(name)
-        {}
-        ~JackLockAble()
-        {}
+public:
+    bool Lock()
+    {
+        return fMutex.Lock();
+    }
 
-    public:
+    bool Trylock()
+    {
+        return fMutex.Trylock();
+    }
 
-        bool Lock()
-        {
-            return fMutex.Lock();
-        }
-
-        bool Trylock()
-        {
-            return fMutex.Trylock();
-        }
-
-        bool Unlock()
-        {
-            return fMutex.Unlock();
-        }
-
+    bool Unlock()
+    {
+        return fMutex.Unlock();
+    }
 };
 
-class JackLock
-{
-    private:
+class JackLock {
+private:
+    JackLockAble* fObj;
 
-        JackLockAble* fObj;
+public:
+    JackLock(JackLockAble* obj)
+        : fObj(obj)
+    {
+        fObj->Lock();
+    }
 
-    public:
+    JackLock(const JackLockAble* obj)
+        : fObj((JackLockAble*)obj)
+    {
+        fObj->Lock();
+    }
 
-        JackLock(JackLockAble* obj): fObj(obj)
-        {
-            fObj->Lock();
-        }
-
-        JackLock(const JackLockAble* obj): fObj((JackLockAble*)obj)
-        {
-            fObj->Lock();
-        }
-
-        ~JackLock()
-        {
-            fObj->Unlock();
-        }
+    ~JackLock()
+    {
+        fObj->Unlock();
+    }
 };
 
 
-} // namespace
+} // namespace jackmini
 
 #endif

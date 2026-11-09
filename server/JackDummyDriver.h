@@ -23,38 +23,36 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackTimedDriver.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief The dummy driver.
 */
 
-class JackDummyDriver : public JackTimedDriver
-{
+class JackDummyDriver : public JackTimedDriver {
 
-    public:
+public:
+    JackDummyDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
+        : JackTimedDriver(name, alias, engine, table)
+    {
+    }
+    virtual ~JackDummyDriver()
+    {
+    }
 
-        JackDummyDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
-                : JackTimedDriver(name, alias, engine, table)
-        {}
-        virtual ~JackDummyDriver()
-        {}
+    virtual int Process()
+    {
+        JackDriver::CycleTakeBeginTime();
 
-        virtual int Process()
-        {
-            JackDriver::CycleTakeBeginTime();
-
-            if (JackAudioDriver::Process() < 0) {
-                return -1;
-            } else {
-                ProcessWait();
-                return 0;
-            }
+        if (JackAudioDriver::Process() < 0) {
+            return -1;
+        } else {
+            ProcessWait();
+            return 0;
         }
-
+    }
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

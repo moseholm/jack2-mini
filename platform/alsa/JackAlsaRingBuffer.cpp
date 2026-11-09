@@ -17,19 +17,22 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include "JackAlsaRingBuffer.h"
+#include <sys/mman.h>
 #include <algorithm>
 #include <bit>
-#include <bit>
+#include <climits>
 #include <cstdint>
 #include <cstring>
-#include <climits>
-#include <sys/mman.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
 JackAlsaRingBuffer::JackAlsaRingBuffer(int channels, jack_nframes_t capacity)
-    : fChannels(0), fCapacity(0), fMask(0), fData(NULL), fReadPos(0), fWritePos(0)
+    : fChannels(0)
+    , fCapacity(0)
+    , fMask(0)
+    , fData(NULL)
+    , fReadPos(0)
+    , fWritePos(0)
 {
     Init(channels, capacity);
 }
@@ -186,4 +189,4 @@ jack_nframes_t JackAlsaRingBuffer::Read(float* const* dst, jack_nframes_t nframe
     return available;
 }
 
-} // end of namespace
+} // namespace jackmini

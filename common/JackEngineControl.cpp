@@ -18,20 +18,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#include "JackClientInterface.h"
 #include "JackEngineControl.h"
-#include "JackGraphManager.h"
 #include "JackClientControl.h"
-#include <algorithm>
+#include "JackClientInterface.h"
+#include "JackGraphManager.h"
 #include <math.h>
+#include <algorithm>
 
-namespace jackmini
-{
+namespace jackmini {
 
 void JackEngineControl::CalcCPULoad(std::atomic<JackClientInterface*>* table,
-                                    JackGraphManager* manager,
-                                    jack_time_t cur_cycle_begin,
-                                    jack_time_t prev_cycle_end)
+    JackGraphManager* manager,
+    jack_time_t cur_cycle_begin,
+    jack_time_t prev_cycle_end)
 {
     fPrevCycleTime = fCurCycleTime;
     fCurCycleTime = cur_cycle_begin;
@@ -69,8 +68,7 @@ void JackEngineControl::CalcCPULoad(std::atomic<JackClientInterface*>* table,
 
         fMaxUsecs = std::max(fMaxUsecs, max_usecs);
 
-        if (fRollingClientUsecsCnt == fRollingInterval)
-        {
+        if (fRollingClientUsecsCnt == fRollingInterval) {
             fMaxUsecs = max_usecs;
             fRollingClientUsecsCnt = 0;
         }
@@ -101,11 +99,11 @@ void JackEngineControl::ResetRollingUsecs()
 
 void JackEngineControl::NotifyXRun(jack_time_t callback_usecs, float delayed_usecs)
 {
-    ResetFrameTime(callback_usecs);  
+    ResetFrameTime(callback_usecs);
     fXrunDelayedUsecs = delayed_usecs;
     if (delayed_usecs > fMaxDelayedUsecs) {
         fMaxDelayedUsecs = delayed_usecs;
     }
 }
 
-} // end of namespace
+} // namespace jackmini

@@ -18,8 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#include "JackGlobals.h"
 #include "JackEngineControl.h"
+#include "JackGlobals.h"
 #include "JackPortType.h"
 
 #include <string.h>
@@ -30,8 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <arm_neon.h>
 #endif
 
-namespace jackmini
-{
+namespace jackmini {
 
 static void AudioBufferInit(void* buffer, size_t buffer_size, jack_nframes_t)
 {
@@ -44,21 +43,21 @@ static inline void MixAudioBuffer(jack_default_audio_sample_t* mixbuffer, jack_d
     frames = frames % 4;
 
     while (frames_group > 0) {
-    #if defined(__SSE__)
+#if defined(__SSE__)
         __m128 vec = _mm_add_ps(_mm_load_ps(mixbuffer), _mm_load_ps(buffer));
         _mm_store_ps(mixbuffer, vec);
 
         mixbuffer += 4;
         buffer += 4;
         frames_group--;
-    #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
         float32x4_t vec = vaddq_f32(vld1q_f32(mixbuffer), vld1q_f32(buffer));
         vst1q_f32(mixbuffer, vec);
 
         mixbuffer += 4;
         buffer += 4;
         frames_group--;
-    #else
+#else
         jack_default_audio_sample_t mixFloat1 = *mixbuffer;
         jack_default_audio_sample_t sourceFloat1 = *buffer;
         jack_default_audio_sample_t mixFloat2 = *(mixbuffer + 1);
@@ -82,7 +81,7 @@ static inline void MixAudioBuffer(jack_default_audio_sample_t* mixbuffer, jack_d
         *(mixbuffer + 3) = mixFloat4;
 
         mixbuffer += 4;
-    #endif
+#endif
     }
 
     while (frames > 0) {
@@ -153,8 +152,7 @@ static size_t AudioBufferSize()
     return GetEngineControl()->fBufferSize * sizeof(jack_default_audio_sample_t);
 }
 
-const JackPortType gAudioPortType =
-{
+const JackPortType gAudioPortType = {
     JACK_DEFAULT_AUDIO_TYPE,
     AudioBufferSize,
     AudioBufferInit,
@@ -162,4 +160,3 @@ const JackPortType gAudioPortType =
 };
 
 } // namespace jackmini
-

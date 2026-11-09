@@ -18,17 +18,16 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include "JackServerGlobals.h"
-#include "JackServer.h"
 #include "JackGlobals.h"
+#include "JackServer.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 JackServer* JackServerGlobals::fInstance = nullptr;
 
-bool (* JackServerGlobals::on_device_acquire)(const char * device_name) = nullptr;
-void (* JackServerGlobals::on_device_release)(const char * device_name) = nullptr;
-void (* JackServerGlobals::on_device_reservation_loop)(void) = nullptr;
+bool (*JackServerGlobals::on_device_acquire)(const char* device_name) = nullptr;
+void (*JackServerGlobals::on_device_release)(const char* device_name) = nullptr;
+void (*JackServerGlobals::on_device_reservation_loop)(void) = nullptr;
 
 // Used for the external C API (JackAPI.cpp)
 SERVER_EXPORT JackGraphManager* GetGraphManager()
@@ -46,4 +45,4 @@ SERVER_EXPORT JackSynchro* GetSynchroTable()
     return JackServerGlobals::fInstance->GetSynchroTable();
 }
 
-} // end of namespace
+} // namespace jackmini

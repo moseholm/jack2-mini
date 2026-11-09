@@ -24,89 +24,84 @@
 #include "JackDriver.h"
 #include "JackPlatformPlug.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief The base class for threaded drivers using a "decorator" pattern. Threaded drivers are used with blocking devices.
 */
 
-class SERVER_EXPORT JackThreadedDriver : public JackDriverClientInterface, public JackRunnableInterface
-{
+class SERVER_EXPORT JackThreadedDriver : public JackDriverClientInterface, public JackRunnableInterface {
 
-    protected:
+protected:
+    JackThread fThread;
+    JackDriver* fDriver;
 
-        JackThread fThread;
-        JackDriver* fDriver;
+    void SetRealTime();
 
-        void SetRealTime();
+public:
+    JackThreadedDriver(JackDriver* driver);
+    virtual ~JackThreadedDriver();
 
-    public:
+    virtual int Open();
+    virtual int Open(jack_nframes_t buffer_size,
+        jack_nframes_t samplerate,
+        bool capturing,
+        bool playing,
+        int inchannels,
+        int outchannels,
+        bool monitor,
+        const char* capture_driver_name,
+        const char* playback_driver_name,
+        jack_nframes_t capture_latency,
+        jack_nframes_t playback_latency);
+    virtual int Close();
 
-        JackThreadedDriver(JackDriver* driver);
-        virtual ~JackThreadedDriver();
+    virtual int Process();
 
-        virtual int Open();
-        virtual int Open(jack_nframes_t buffer_size,
-                         jack_nframes_t samplerate,
-                         bool capturing,
-                         bool playing,
-                         int inchannels,
-                         int outchannels,
-                         bool monitor,
-                         const char* capture_driver_name,
-                         const char* playback_driver_name,
-                         jack_nframes_t capture_latency,
-                         jack_nframes_t playback_latency);
-        virtual int Close();
+    virtual int Attach();
+    virtual int Detach();
 
-        virtual int Process();
+    virtual int Read();
+    virtual int Write();
 
-        virtual int Attach();
-        virtual int Detach();
+    virtual int Start();
+    virtual int Stop();
 
-        virtual int Read();
-        virtual int Write();
+    virtual bool IsFixedBufferSize();
+    virtual int SetBufferSize(jack_nframes_t buffer_size);
+    virtual int SetSampleRate(jack_nframes_t sample_rate);
 
-        virtual int Start();
-        virtual int Stop();
+    virtual void SetMaster(bool onoff);
+    virtual bool GetMaster();
 
-        virtual bool IsFixedBufferSize();
-        virtual int SetBufferSize(jack_nframes_t buffer_size);
-        virtual int SetSampleRate(jack_nframes_t sample_rate);
+    virtual void AddSlave(JackDriverInterface* slave);
+    virtual void RemoveSlave(JackDriverInterface* slave);
 
-        virtual void SetMaster(bool onoff);
-        virtual bool GetMaster();
+    virtual std::list<JackDriverInterface*> GetSlaves();
 
-        virtual void AddSlave(JackDriverInterface* slave);
-        virtual void RemoveSlave(JackDriverInterface* slave);
+    virtual int ProcessReadSlaves();
+    virtual int ProcessWriteSlaves();
 
-        virtual std::list<JackDriverInterface*> GetSlaves();
+    virtual int ProcessRead();
+    virtual int ProcessWrite();
 
-        virtual int ProcessReadSlaves();
-        virtual int ProcessWriteSlaves();
+    virtual int ProcessReadSync();
+    virtual int ProcessWriteSync();
 
-        virtual int ProcessRead();
-        virtual int ProcessWrite();
+    virtual int ProcessReadAsync();
+    virtual int ProcessWriteAsync();
 
-        virtual int ProcessReadSync();
-        virtual int ProcessWriteSync();
+    virtual int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
+    virtual JackClientControl* GetClientControl() const;
+    virtual bool IsRealTime() const;
+    virtual bool IsRunning() const;
 
-        virtual int ProcessReadAsync();
-        virtual int ProcessWriteAsync();
-
-        virtual int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
-        virtual JackClientControl* GetClientControl() const;
-        virtual bool IsRealTime() const;
-        virtual bool IsRunning() const;
-
-        // JackRunnableInterface interface
-        virtual bool Execute();
-        virtual bool Init();
-
+    // JackRunnableInterface interface
+    virtual bool Execute();
+    virtual bool Init();
 };
 
-} // end of namespace
+} // namespace jackmini
 
 
 #endif

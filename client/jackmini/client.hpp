@@ -35,8 +35,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <string_view>
 #include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 // The cycle a process callback runs in.  The server computes it at the start of the cycle, so every client of a cycle
 // sees the same values.  The times are in the server's clock.  In real time the next cycle is one period after the
@@ -44,12 +43,12 @@ namespace jackmini
 // them, and the period is measured, not nominal.  A client correcting for clock drift must skip that when freewheel is
 // set.
 struct Cycle {
-    FrameCount frames = 0;            // the buffer size of this cycle
-    FrameCount current_frames = 0;    // the frame at the start of this cycle
-    std::uint64_t current_usecs = 0;  // the time at the start of this cycle
-    std::uint64_t next_usecs = 0;     // the expected start of the next cycle
-    float period_usecs = 0.0f;        // the nominal period
-    bool freewheel = false;           // the server runs its cycles without the sound card
+    FrameCount frames = 0; // the buffer size of this cycle
+    FrameCount current_frames = 0; // the frame at the start of this cycle
+    std::uint64_t current_usecs = 0; // the time at the start of this cycle
+    std::uint64_t next_usecs = 0; // the expected start of the next cycle
+    float period_usecs = 0.0f; // the nominal period
+    bool freewheel = false; // the server runs its cycles without the sound card
 };
 
 // The lifecycle is three states.  A client is opened, then it may be activated
@@ -76,7 +75,7 @@ public:
     using SampleRateFn = std::move_only_function<bool(FrameCount rate)>;
     using LatencyFn = std::move_only_function<void(LatencyMode mode)>;
 
-    static Result<Client> open(std::string_view name, OpenOptions options = {});
+    static Result<Client> open(std::string_view name, OpenOptions options = { });
 
     Client(Client&& other) noexcept;
     Client& operator=(Client&& other) noexcept;
@@ -85,9 +84,9 @@ public:
     ~Client();
 
     // Lifecycle.
-    Result<void> activate();    // opened or inactive -> active
-    Result<void> deactivate();  // active -> inactive; joins the realtime thread
-    Result<void> close();       // any state -> closed
+    Result<void> activate(); // opened or inactive -> active
+    Result<void> deactivate(); // active -> inactive; joins the realtime thread
+    Result<void> close(); // any state -> closed
     bool is_active() const noexcept;
 
     // Callbacks.  Each is stored while the client is inactive.  Setting one
@@ -95,19 +94,20 @@ public:
     // from the next activate().
     template <std::invocable<const Cycle&> F>
         requires std::convertible_to<std::invoke_result_t<F&, const Cycle&>, bool>
-    Result<void> on_process(F&& fn) {
+    Result<void> on_process(F&& fn)
+    {
         return set_process(ProcessFn(std::forward<F>(fn)));
     }
     Result<void> on_xrun(XrunFn fn);
     Result<void> on_shutdown(ShutdownFn fn);
     Result<void> on_buffer_size(BufferSizeFn fn);
     Result<void> on_sample_rate(SampleRateFn fn);
-    Result<void> on_latency(LatencyFn fn);     // the server asks for the latency of this client's ports
+    Result<void> on_latency(LatencyFn fn); // the server asks for the latency of this client's ports
 
     // Latency.  The server computes the total latency of each path; a client sets the range of its ports.
     LatencyRange port_latency(Port port, LatencyMode mode) const;
     Result<void> set_port_latency(Port port, LatencyMode mode, LatencyRange range);
-    Result<void> recompute_latencies();        // asks the server to recompute the total latencies
+    Result<void> recompute_latencies(); // asks the server to recompute the total latencies
 
     // Identity and timing, valid at any time.
     std::string_view name() const noexcept;
@@ -143,7 +143,6 @@ public:
     Result<void> transport_locate(FrameCount frame);
 
 private:
-
     Client() = default;
     Result<void> set_process(ProcessFn fn);
 

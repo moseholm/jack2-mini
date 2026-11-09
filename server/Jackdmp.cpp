@@ -19,19 +19,19 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
+#include <getopt.h>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
-#include <getopt.h>
 #include <vector>
 
-#include "jackmini/control.hpp"
-#include "JackConstants.h"
 #include "JackCString.h"
-#include "JackPlatformPlug.h"
-#include "driver_interface.h"
+#include "JackConstants.h"
 #include "JackLog.h"
+#include "JackPlatformPlug.h"
 #include "JackTypes.h"
+#include "jackmini/control.hpp"
+#include "driver_interface.h"
 
 using jackmini::control::Choice;
 using jackmini::control::Driver;
@@ -40,17 +40,17 @@ using jackmini::control::Server;
 using jackmini::control::Value;
 
 // Prototype to be found in libjackserver
-void silent_jack_error_callback(const char *desc);
+void silent_jack_error_callback(const char* desc);
 
 static void copyright(FILE* file)
 {
     fprintf(file, "jackdmp " JACK_VERSION "\n"
-            "Copyright 2001-2005 Paul Davis and others.\n"
-            "Copyright 2004-2016 Grame.\n"
-            "Copyright 2016-2026 Filipe Coelho.\n"
-            "jackdmp comes with ABSOLUTELY NO WARRANTY\n"
-            "This is free software, and you are welcome to redistribute it\n"
-            "under certain conditions; see the file COPYING for details\n");
+                  "Copyright 2001-2005 Paul Davis and others.\n"
+                  "Copyright 2004-2016 Grame.\n"
+                  "Copyright 2016-2026 Filipe Coelho.\n"
+                  "jackdmp comes with ABSOLUTELY NO WARRANTY\n"
+                  "This is free software, and you are welcome to redistribute it\n"
+                  "under certain conditions; see the file COPYING for details\n");
 }
 
 static void print_server_drivers(const Server& server, FILE* file)
@@ -65,15 +65,15 @@ static void print_server_drivers(const Server& server, FILE* file)
 static void usage(FILE* file, const Server& server, bool full = true)
 {
     fprintf(file, "\n"
-            "Usage: jackdmp [ --no-realtime OR -r ]\n"
-            "               [ --realtime OR -R [ --realtime-priority OR -P priority ] ]\n"
-            "      (the two previous arguments are mutually exclusive. The default is --realtime)\n"
-            "               [ --name OR -n server-name ]\n"
-            "               [ --timeout OR -t client-timeout-in-msecs ]\n"
-            "               [ --port-max OR -p maximum-number-of-ports]\n"
-            "               [ --verbose OR -v ]\n"
-            "               [ --clocksource OR -c [ h(pet) | s(ystem) ]\n"
-            "               [ --autoconnect OR -a <modechar>]\n");
+                  "Usage: jackdmp [ --no-realtime OR -r ]\n"
+                  "               [ --realtime OR -R [ --realtime-priority OR -P priority ] ]\n"
+                  "      (the two previous arguments are mutually exclusive. The default is --realtime)\n"
+                  "               [ --name OR -n server-name ]\n"
+                  "               [ --timeout OR -t client-timeout-in-msecs ]\n"
+                  "               [ --port-max OR -p maximum-number-of-ports]\n"
+                  "               [ --verbose OR -v ]\n"
+                  "               [ --clocksource OR -c [ h(pet) | s(ystem) ]\n"
+                  "               [ --autoconnect OR -a <modechar>]\n");
 
     for (const Parameter& parameter : server.parameters()) {
         if (parameter.name != "self-connect-mode") {
@@ -91,14 +91,14 @@ static void usage(FILE* file, const Server& server, bool full = true)
     }
 
     fprintf(file,
-            "               [ --silent OR -s ]\n"
-            "               [ --sync OR -S ]\n"
-            "               [ --temporary OR -T ]\n"
-            "               [ --freewheel OR -F ]\n"
-            "               [ --version OR -V ]\n"
-            "         -d master-backend-name [ ... master-backend args ... ]\n"
-            "       jackdmp -d master-backend-name --help\n"
-            "             to display options for each master backend\n\n");
+        "               [ --silent OR -s ]\n"
+        "               [ --sync OR -S ]\n"
+        "               [ --temporary OR -T ]\n"
+        "               [ --freewheel OR -F ]\n"
+        "               [ --version OR -V ]\n"
+        "         -d master-backend-name [ ... master-backend args ... ]\n"
+        "       jackdmp -d master-backend-name --help\n"
+        "             to display options for each master backend\n\n");
 
     if (full) {
         print_server_drivers(server, file);
@@ -107,9 +107,9 @@ static void usage(FILE* file, const Server& server, bool full = true)
 
 static void print_version()
 {
-    printf( "jackdmp version " JACK_VERSION " tmpdir "
-            jack_server_dir " protocol %d" "\n",
-            JACK_PROTOCOL_VERSION);
+    printf("jackdmp version " JACK_VERSION " tmpdir " jack_server_dir " protocol %d"
+           "\n",
+        JACK_PROTOCOL_VERSION);
 }
 
 // The self connect mode is one of the characters the server offers.
@@ -171,86 +171,85 @@ int main(int argc, char** argv)
     opterr = 0;
     int opt = 0;
     int option_index = 0;
-    while (!master_driver_name &&
-           (opt = getopt_long(argc, argv, options, long_options, &option_index)) != EOF) {
+    while (!master_driver_name && (opt = getopt_long(argc, argv, options, long_options, &option_index)) != EOF) {
         switch (opt) {
 
-            case 'c':
-                if (tolower(optarg[0]) == 'h') {
-                    server.set_parameter("clock-source", static_cast<std::uint64_t>(JACK_TIMER_HPET));
-                } else if (tolower(optarg[0]) == 'c' || tolower(optarg[0]) == 's') {
-                    // The cycle clock is not offered: a request for it gets the system clock, as before.
-                    server.set_parameter("clock-source", static_cast<std::uint64_t>(JACK_TIMER_SYSTEM_CLOCK));
-                } else {
-                    usage(stdout, server);
-                    return -1;
-                }
-                break;
-
-            case 'a':
-                if (!self_connect_mode_is_valid(server, optarg[0])) {
-                    usage(stdout, server);
-                    return -1;
-                }
-                server.set_parameter("self-connect-mode", Value{optarg[0]});
-                break;
-
-            case 'd':
-                master_driver_name = optarg;
-                break;
-
-            case 'p':
-                server.set_parameter("port-max", static_cast<std::uint64_t>(jackmini::ParseLeadingInteger<unsigned int>(optarg)));
-                break;
-
-            case 'v':
-                server.set_parameter("verbose", true);
-                break;
-
-            case 's':
-                jack_error_callback = silent_jack_error_callback;
-                break;
-
-            case 'S':
-                server.set_parameter("sync", true);
-                break;
-
-            case 'n':
-                server.set_parameter("name", std::string(optarg).substr(0, JACK_DRIVER_PARAM_STRING_MAX));
-                break;
-
-            case 'P':
-                server.set_parameter("realtime-priority", static_cast<std::int64_t>(jackmini::ParseLeadingInteger<int>(optarg)));
-                break;
-
-            case 'r':
-                server.set_parameter("realtime", false);
-                break;
-
-            case 'R':
-                server.set_parameter("realtime", true);
-                break;
-
-            case 'T':
-                server.set_parameter("temporary", true);
-                break;
-
-            case 'F':
-                server.set_parameter("freewheel", true);
-                break;
-
-            case 't':
-                server.set_parameter("client-timeout", static_cast<std::int64_t>(jackmini::ParseLeadingInteger<int>(optarg)));
-                break;
-
-            case 'h':
-                usage(stdout, server);
-                return 0;
-
-            default:
-                fprintf(stderr, "unknown option character %c\n", optopt);
+        case 'c':
+            if (tolower(optarg[0]) == 'h') {
+                server.set_parameter("clock-source", static_cast<std::uint64_t>(JACK_TIMER_HPET));
+            } else if (tolower(optarg[0]) == 'c' || tolower(optarg[0]) == 's') {
+                // The cycle clock is not offered: a request for it gets the system clock, as before.
+                server.set_parameter("clock-source", static_cast<std::uint64_t>(JACK_TIMER_SYSTEM_CLOCK));
+            } else {
                 usage(stdout, server);
                 return -1;
+            }
+            break;
+
+        case 'a':
+            if (!self_connect_mode_is_valid(server, optarg[0])) {
+                usage(stdout, server);
+                return -1;
+            }
+            server.set_parameter("self-connect-mode", Value { optarg[0] });
+            break;
+
+        case 'd':
+            master_driver_name = optarg;
+            break;
+
+        case 'p':
+            server.set_parameter("port-max", static_cast<std::uint64_t>(jackmini::ParseLeadingInteger<unsigned int>(optarg)));
+            break;
+
+        case 'v':
+            server.set_parameter("verbose", true);
+            break;
+
+        case 's':
+            jack_error_callback = silent_jack_error_callback;
+            break;
+
+        case 'S':
+            server.set_parameter("sync", true);
+            break;
+
+        case 'n':
+            server.set_parameter("name", std::string(optarg).substr(0, JACK_DRIVER_PARAM_STRING_MAX));
+            break;
+
+        case 'P':
+            server.set_parameter("realtime-priority", static_cast<std::int64_t>(jackmini::ParseLeadingInteger<int>(optarg)));
+            break;
+
+        case 'r':
+            server.set_parameter("realtime", false);
+            break;
+
+        case 'R':
+            server.set_parameter("realtime", true);
+            break;
+
+        case 'T':
+            server.set_parameter("temporary", true);
+            break;
+
+        case 'F':
+            server.set_parameter("freewheel", true);
+            break;
+
+        case 't':
+            server.set_parameter("client-timeout", static_cast<std::int64_t>(jackmini::ParseLeadingInteger<int>(optarg)));
+            break;
+
+        case 'h':
+            usage(stdout, server);
+            return 0;
+
+        default:
+            fprintf(stderr, "unknown option character %c\n", optopt);
+            usage(stdout, server);
+            return -1;
         }
     }
 
@@ -264,7 +263,7 @@ int main(int argc, char** argv)
     }
 
     // The driver's arguments are the rest of the command line, after its name.
-    std::vector<char*> driver_args{ master_driver_name };
+    std::vector<char*> driver_args { master_driver_name };
     for (int i = optind; i < argc; i++) {
         driver_args.push_back(argv[i]);
     }

@@ -18,18 +18,16 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackFdSegment.h"
 
-#include <array>
-#include <cerrno>
-#include <cstring>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <array>
+#include <cerrno>
+#include <cstring>
 
-namespace jackmini
-{
+namespace jackmini {
 
-namespace
-{
+namespace {
 
 std::error_code LastError()
 {
@@ -70,8 +68,8 @@ void UniqueFd::reset(int fd) noexcept
 }
 
 std::expected<void, std::error_code> SendWithFds(int socket,
-                                                 std::span<const std::byte> data,
-                                                 std::span<const int> fds)
+    std::span<const std::byte> data,
+    std::span<const int> fds)
 {
     if (fds.size() > kMaxFds) {
         return std::unexpected(std::make_error_code(std::errc::invalid_argument));
@@ -80,12 +78,12 @@ std::expected<void, std::error_code> SendWithFds(int socket,
     // The descriptors travel with the first part; a stream socket may take the rest in later calls.
     std::size_t done = 0;
     while (done < data.size()) {
-        iovec iov{};
+        iovec iov { };
         iov.iov_base = const_cast<std::byte*>(data.data() + done);
         iov.iov_len = data.size() - done;
 
-        alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(int))> control{};
-        msghdr msg{};
+        alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(int))> control { };
+        msghdr msg { };
         msg.msg_iov = &iov;
         msg.msg_iovlen = 1;
         if (done == 0 && !fds.empty()) {
@@ -107,19 +105,19 @@ std::expected<void, std::error_code> SendWithFds(int socket,
         }
         done += static_cast<std::size_t>(sent);
     }
-    return {};
+    return { };
 }
 
 std::expected<std::size_t, std::error_code> RecvWithFds(int socket,
-                                                        std::span<std::byte> data,
-                                                        std::vector<UniqueFd>& fds)
+    std::span<std::byte> data,
+    std::vector<UniqueFd>& fds)
 {
-    iovec iov{};
+    iovec iov { };
     iov.iov_base = data.data();
     iov.iov_len = data.size();
 
-    alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(int))> control{};
-    msghdr msg{};
+    alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(int))> control { };
+    msghdr msg { };
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
     msg.msg_control = control.data();

@@ -27,19 +27,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <thread>
 #include <vector>
 
-namespace
-{
+namespace {
 
 int g_failures = 0;
 int g_checks = 0;
 
-#define CHECK(cond) do { \
-    g_checks++; \
-    if (!(cond)) { \
-        std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
-        g_failures++; \
-    } \
-} while (0)
+#define CHECK(cond)                                                                       \
+    do {                                                                                  \
+        g_checks++;                                                                       \
+        if (!(cond)) {                                                                    \
+            std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
+            g_failures++;                                                                 \
+        }                                                                                 \
+    } while (0)
 
 using jackmini::RingBuffer;
 
@@ -56,7 +56,7 @@ void TestRingSingleThread()
     CHECK(ring.read_space() == 0);
     CHECK(ring.write_space() == 4);
 
-    const std::array<int, 3> in{1, 2, 3};
+    const std::array<int, 3> in { 1, 2, 3 };
     CHECK(ring.write(in) == 3);
     CHECK(ring.read_space() == 3);
 
@@ -64,16 +64,16 @@ void TestRingSingleThread()
     CHECK(ring.write(in) == 1);
     CHECK(ring.write_space() == 0);
 
-    std::array<int, 8> out{};
+    std::array<int, 8> out { };
     CHECK(ring.read(out) == 4);
     CHECK(out[0] == 1 && out[1] == 2 && out[2] == 3 && out[3] == 1);
     CHECK(ring.read(out) == 0);
 
     // Indices wrap around the storage many times.
     for (int round = 0; round < 1000; round++) {
-        const std::array<int, 2> pair{round, round + 1};
+        const std::array<int, 2> pair { round, round + 1 };
         CHECK(ring.write(pair) == 2);
-        std::array<int, 2> got{};
+        std::array<int, 2> got { };
         CHECK(ring.read(got) == 2);
         CHECK(got == pair);
     }
@@ -92,7 +92,7 @@ void TestRingProducerConsumer()
 
     std::thread producer([&] {
         std::uint32_t next = 0;
-        std::array<std::uint32_t, 17> chunk{};
+        std::array<std::uint32_t, 17> chunk { };
         while (next < total) {
             const std::size_t n = std::min<std::size_t>(chunk.size(), total - next);
             for (std::size_t i = 0; i < n; i++) {
@@ -112,7 +112,7 @@ void TestRingProducerConsumer()
 
     std::thread consumer([&] {
         std::uint32_t expected = 0;
-        std::array<std::uint32_t, 13> chunk{};
+        std::array<std::uint32_t, 13> chunk { };
         while (expected < total) {
             const std::size_t n = ring.read(chunk);
             for (std::size_t i = 0; i < n; i++) {
@@ -135,14 +135,14 @@ void TestRingProducerConsumer()
 
 void TestUuid()
 {
-    const jackmini::Uuid id{0x0123456789abcdefULL};
+    const jackmini::Uuid id { 0x0123456789abcdefULL };
     CHECK(id.to_string() == "0123456789abcdef");
     const auto parsed = jackmini::Uuid::parse(id.to_string());
     CHECK(parsed.has_value() && *parsed == id);
     CHECK(!jackmini::Uuid::parse("0123").has_value());
     CHECK(!jackmini::Uuid::parse("0123456789abcdeg").has_value());
-    CHECK(jackmini::Uuid{}.empty());
-    CHECK(jackmini::Uuid{1} < jackmini::Uuid{2});
+    CHECK(jackmini::Uuid { }.empty());
+    CHECK(jackmini::Uuid { 1 } < jackmini::Uuid { 2 });
 }
 
 void TestErrorText()

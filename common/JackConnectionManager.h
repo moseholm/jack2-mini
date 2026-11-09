@@ -20,16 +20,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackConnectionManager__
 #define __JackConnectionManager__
 
-#include "JackConstants.h"
 #include "JackActivationCount.h"
+#include "JackCompilerDeps.h"
+#include "JackConstants.h"
 #include "JackError.h"
 #include "jackmini/error.hpp"
-#include "JackCompilerDeps.h"
-#include <vector>
 #include <assert.h>
+#include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 struct JackClientControl;
 
@@ -39,122 +38,81 @@ struct JackClientControl;
 
 
 template <int SIZE>
-class JackFixedArray
-{
+class JackFixedArray {
 
-    private:
+private:
+    jack_int_t fTable[SIZE];
+    uint32_t fCounter;
 
-        jack_int_t fTable[SIZE];
-        uint32_t fCounter;
+public:
+    JackFixedArray()
+    {
+        Init();
+    }
 
-    public:
+    void Init()
+    {
+        for (int i = 0; i < SIZE; i++)
+            fTable[i] = EMPTY;
+        fCounter = 0;
+    }
 
-        JackFixedArray()
-        {
-            Init();
-        }
-
-        void Init()
-        {
-            for (int i = 0; i < SIZE; i++)
-                fTable[i] = EMPTY;
-            fCounter = 0;
-        }
-
-        bool AddItem(jack_int_t index)
-        {
-            for (int i = 0; i < SIZE; i++) {
-                if (fTable[i] == EMPTY) {
-                    fTable[i] = index;
-                    fCounter++;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        bool RemoveItem(jack_int_t index)
-        {
-            for (int i = 0; i < SIZE; i++) {
-                if (fTable[i] == index) {
-                    fCounter--;
-                    // Shift all indexes
-                    if (i == SIZE - 1) {
-                        fTable[i] = EMPTY;
-                    } else {
-                        int j;
-                        for (j = i; j <= SIZE - 2 && fTable[j] != EMPTY; j++) {
-                            fTable[j] = fTable[j + 1];
-                        }
-                        fTable[j] = EMPTY;
-                    }
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        jack_int_t GetItem(jack_int_t index) const
-        {
-            return (index < SIZE) ? fTable[index] : EMPTY;
-        }
-
-        const jack_int_t* GetItems() const
-        {
-            return fTable;
-        }
-
-        bool CheckItem(jack_int_t index) const
-        {
-            for (int i = 0; i < SIZE && fTable[i] != EMPTY; i++) {
-                if (fTable[i] == index)
-                    return true;
-            }
-            return false;
-        }
-
-        uint32_t GetItemCount() const
-        {
-            return fCounter;
-        }
-
-};
-
-/*!
-\brief Utility class.
-*/
-
-
-template <int SIZE>
-class JackFixedArray1 : public JackFixedArray<SIZE>
-{
-    private:
-
-        bool fUsed;
-
-    public:
-
-        JackFixedArray1()
-        {
-            Init();
-        }
-
-        void Init()
-        {
-            JackFixedArray<SIZE>::Init();
-            fUsed = false;
-        }
-
-        bool IsAvailable()
-        {
-            if (fUsed) {
-                return false;
-            } else {
-                fUsed = true;
+    bool AddItem(jack_int_t index)
+    {
+        for (int i = 0; i < SIZE; i++) {
+            if (fTable[i] == EMPTY) {
+                fTable[i] = index;
+                fCounter++;
                 return true;
             }
         }
+        return false;
+    }
 
+    bool RemoveItem(jack_int_t index)
+    {
+        for (int i = 0; i < SIZE; i++) {
+            if (fTable[i] == index) {
+                fCounter--;
+                // Shift all indexes
+                if (i == SIZE - 1) {
+                    fTable[i] = EMPTY;
+                } else {
+                    int j;
+                    for (j = i; j <= SIZE - 2 && fTable[j] != EMPTY; j++) {
+                        fTable[j] = fTable[j + 1];
+                    }
+                    fTable[j] = EMPTY;
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    jack_int_t GetItem(jack_int_t index) const
+    {
+        return (index < SIZE) ? fTable[index] : EMPTY;
+    }
+
+    const jack_int_t* GetItems() const
+    {
+        return fTable;
+    }
+
+    bool CheckItem(jack_int_t index) const
+    {
+        for (int i = 0; i < SIZE && fTable[i] != EMPTY; i++) {
+            if (fTable[i] == index)
+                return true;
+        }
+        return false;
+    }
+
+    uint32_t GetItemCount() const
+    {
+        return fCounter;
+    }
 };
 
 /*!
@@ -163,94 +121,31 @@ class JackFixedArray1 : public JackFixedArray<SIZE>
 
 
 template <int SIZE>
-class JackFixedMatrix
-{
-    private:
+class JackFixedArray1 : public JackFixedArray<SIZE> {
+private:
+    bool fUsed;
 
-        jack_int_t fTable[SIZE][SIZE];
+public:
+    JackFixedArray1()
+    {
+        Init();
+    }
 
-    public:
+    void Init()
+    {
+        JackFixedArray<SIZE>::Init();
+        fUsed = false;
+    }
 
-        JackFixedMatrix()
-        {}
-
-        void Init(jack_int_t index)
-        {
-            for (int i = 0; i < SIZE; i++) {
-                fTable[index][i] = 0;
-                fTable[i][index] = 0;
-            }
-        }
-
-        const jack_int_t* GetItems(jack_int_t index) const
-        {
-            return fTable[index];
-        }
-
-        jack_int_t IncItem(jack_int_t index1, jack_int_t index2)
-        {
-            fTable[index1][index2]++;
-            return fTable[index1][index2];
-        }
-
-        jack_int_t DecItem(jack_int_t index1, jack_int_t index2)
-        {
-            fTable[index1][index2]--;
-            return fTable[index1][index2];
-        }
-
-        jack_int_t GetItemCount(jack_int_t index1, jack_int_t index2) const
-        {
-            return fTable[index1][index2];
-        }
-
-        void ClearItem(jack_int_t index1, jack_int_t index2)
-        {
-            fTable[index1][index2] = 0;
-        }
-
-        /*!
-        	\brief Get the output indexes of a given index.
-        */
-        void GetOutputTable(jack_int_t index, jack_int_t* output) const
-        {
-            int i, j;
-
-            for (i = 0; i < SIZE; i++)
-                output[i] = EMPTY;
-
-            for (i = 0, j = 0; i < SIZE; i++) {
-                if (fTable[index][i] > 0) {
-                    output[j] = i;
-                    j++;
-                }
-            }
-        }
-
-        void GetOutputTable1(jack_int_t index, jack_int_t* output) const
-        {
-            for (int i = 0; i < SIZE; i++) {
-                output[i] = fTable[i][index];
-            }
-        }
-
-        bool IsInsideTable(jack_int_t index, jack_int_t* output) const
-        {
-            for (int i = 0; i < SIZE && output[i] != EMPTY; i++) {
-                if (output[i] == index)
-                    return true;
-            }
+    bool IsAvailable()
+    {
+        if (fUsed) {
             return false;
+        } else {
+            fUsed = true;
+            return true;
         }
-
-        void Copy(JackFixedMatrix& copy)
-        {
-            for (int i = 0; i < SIZE; i++) {
-                memcpy(copy.fTable[i], fTable[i], sizeof(jack_int_t) * SIZE);
-            }
-        }
-
-
+    }
 };
 
 /*!
@@ -259,112 +154,200 @@ class JackFixedMatrix
 
 
 template <int SIZE>
-class JackLoopFeedback
-{
-    private:
+class JackFixedMatrix {
+private:
+    jack_int_t fTable[SIZE][SIZE];
 
-        int fTable[SIZE][3];
+public:
+    JackFixedMatrix()
+    {
+    }
 
-        /*!
-        	\brief Add a feedback connection between 2 refnum.
-        */
-        bool AddConnectionAux(int ref1, int ref2)
-        {
-            for (int i = 0; i < SIZE; i++) {
-                if (fTable[i][0] == EMPTY) {
-                    fTable[i][0] = ref1;
-                    fTable[i][1] = ref2;
-                    fTable[i][2] = 1;
-                    jack_log("JackLoopFeedback::AddConnectionAux ref1 = %ld ref2 = %ld", ref1, ref2);
-                    return true;
-                }
+    void Init(jack_int_t index)
+    {
+        for (int i = 0; i < SIZE; i++) {
+            fTable[index][i] = 0;
+            fTable[i][index] = 0;
+        }
+    }
+
+    const jack_int_t* GetItems(jack_int_t index) const
+    {
+        return fTable[index];
+    }
+
+    jack_int_t IncItem(jack_int_t index1, jack_int_t index2)
+    {
+        fTable[index1][index2]++;
+        return fTable[index1][index2];
+    }
+
+    jack_int_t DecItem(jack_int_t index1, jack_int_t index2)
+    {
+        fTable[index1][index2]--;
+        return fTable[index1][index2];
+    }
+
+    jack_int_t GetItemCount(jack_int_t index1, jack_int_t index2) const
+    {
+        return fTable[index1][index2];
+    }
+
+    void ClearItem(jack_int_t index1, jack_int_t index2)
+    {
+        fTable[index1][index2] = 0;
+    }
+
+    /*!
+            \brief Get the output indexes of a given index.
+    */
+    void GetOutputTable(jack_int_t index, jack_int_t* output) const
+    {
+        int i, j;
+
+        for (i = 0; i < SIZE; i++)
+            output[i] = EMPTY;
+
+        for (i = 0, j = 0; i < SIZE; i++) {
+            if (fTable[index][i] > 0) {
+                output[j] = i;
+                j++;
             }
-            jack_error("Feedback table is full !!\n");
-            return false;
         }
+    }
 
-        /*!
-        	\brief Remove a feedback connection between 2 refnum.
-        */
-        bool RemoveConnectionAux(int ref1, int ref2)
-        {
-            for (int i = 0; i < SIZE; i++) {
-                if (fTable[i][0] == ref1 && fTable[i][1] == ref2) {
-                    fTable[i][0] = EMPTY;
-                    fTable[i][1] = EMPTY;
-                    fTable[i][2] = 0;
-                    jack_log("JackLoopFeedback::RemoveConnectionAux ref1 = %ld ref2 = %ld", ref1, ref2);
-                    return true;
-                }
+    void GetOutputTable1(jack_int_t index, jack_int_t* output) const
+    {
+        for (int i = 0; i < SIZE; i++) {
+            output[i] = fTable[i][index];
+        }
+    }
+
+    bool IsInsideTable(jack_int_t index, jack_int_t* output) const
+    {
+        for (int i = 0; i < SIZE && output[i] != EMPTY; i++) {
+            if (output[i] == index)
+                return true;
+        }
+        return false;
+    }
+
+    void Copy(JackFixedMatrix& copy)
+    {
+        for (int i = 0; i < SIZE; i++) {
+            memcpy(copy.fTable[i], fTable[i], sizeof(jack_int_t) * SIZE);
+        }
+    }
+};
+
+/*!
+\brief Utility class.
+*/
+
+
+template <int SIZE>
+class JackLoopFeedback {
+private:
+    int fTable[SIZE][3];
+
+    /*!
+            \brief Add a feedback connection between 2 refnum.
+    */
+    bool AddConnectionAux(int ref1, int ref2)
+    {
+        for (int i = 0; i < SIZE; i++) {
+            if (fTable[i][0] == EMPTY) {
+                fTable[i][0] = ref1;
+                fTable[i][1] = ref2;
+                fTable[i][2] = 1;
+                jack_log("JackLoopFeedback::AddConnectionAux ref1 = %ld ref2 = %ld", ref1, ref2);
+                return true;
             }
-            jack_error("Feedback connection not found\n");
-            return false;
         }
+        jack_error("Feedback table is full !!\n");
+        return false;
+    }
 
-        int IncConnection(int index)
-        {
-            fTable[index][2]++;
-            return fTable[index][2];
-        }
-
-        int DecConnection(int index)
-        {
-            fTable[index][2]--;
-            return fTable[index][2];
-        }
-
-    public:
-
-        JackLoopFeedback()
-        {
-            Init();
-        }
-
-        void Init()
-        {
-            for (int i = 0; i < SIZE; i++) {
+    /*!
+            \brief Remove a feedback connection between 2 refnum.
+    */
+    bool RemoveConnectionAux(int ref1, int ref2)
+    {
+        for (int i = 0; i < SIZE; i++) {
+            if (fTable[i][0] == ref1 && fTable[i][1] == ref2) {
                 fTable[i][0] = EMPTY;
                 fTable[i][1] = EMPTY;
                 fTable[i][2] = 0;
-            }
-        }
-
-        bool IncConnection(int ref1, int ref2)
-        {
-            int index = GetConnectionIndex(ref1, ref2);
-
-            if (index >= 0) { // Feedback connection is already added, increment counter
-                IncConnection(index);
+                jack_log("JackLoopFeedback::RemoveConnectionAux ref1 = %ld ref2 = %ld", ref1, ref2);
                 return true;
-            } else {
-                return AddConnectionAux(ref1, ref2); // Add the feedback connection
             }
         }
+        jack_error("Feedback connection not found\n");
+        return false;
+    }
 
-        bool DecConnection(int ref1, int ref2)
-        {
-            int index = GetConnectionIndex(ref1, ref2);
+    int IncConnection(int index)
+    {
+        fTable[index][2]++;
+        return fTable[index][2];
+    }
 
-            if (index >= 0) {
-                jack_log("JackLoopFeedback::DecConnection ref1 = %ld ref2 = %ld index = %ld", ref1, ref2, index);
-                return (DecConnection(index) == 0) ? RemoveConnectionAux(ref1, ref2) : true;
-            } else {
-                return false;
-            }
+    int DecConnection(int index)
+    {
+        fTable[index][2]--;
+        return fTable[index][2];
+    }
+
+public:
+    JackLoopFeedback()
+    {
+        Init();
+    }
+
+    void Init()
+    {
+        for (int i = 0; i < SIZE; i++) {
+            fTable[i][0] = EMPTY;
+            fTable[i][1] = EMPTY;
+            fTable[i][2] = 0;
         }
+    }
 
-        /*!
-        	\brief Test if a connection between 2 refnum is a feedback connection.
-        */
-        int GetConnectionIndex(int ref1, int ref2) const
-        {
-            for (int i = 0; i < SIZE; i++) {
-                if (fTable[i][0] == ref1 && fTable[i][1] == ref2)
-                    return i;
-            }
-            return -1;
+    bool IncConnection(int ref1, int ref2)
+    {
+        int index = GetConnectionIndex(ref1, ref2);
+
+        if (index >= 0) { // Feedback connection is already added, increment counter
+            IncConnection(index);
+            return true;
+        } else {
+            return AddConnectionAux(ref1, ref2); // Add the feedback connection
         }
+    }
 
+    bool DecConnection(int ref1, int ref2)
+    {
+        int index = GetConnectionIndex(ref1, ref2);
+
+        if (index >= 0) {
+            jack_log("JackLoopFeedback::DecConnection ref1 = %ld ref2 = %ld index = %ld", ref1, ref2, index);
+            return (DecConnection(index) == 0) ? RemoveConnectionAux(ref1, ref2) : true;
+        } else {
+            return false;
+        }
+    }
+
+    /*!
+            \brief Test if a connection between 2 refnum is a feedback connection.
+    */
+    int GetConnectionIndex(int ref1, int ref2) const
+    {
+        for (int i = 0; i < SIZE; i++) {
+            if (fTable[i][0] == ref1 && fTable[i][1] == ref2)
+                return i;
+        }
+        return -1;
+    }
 };
 
 /*!
@@ -372,8 +355,7 @@ class JackLoopFeedback
 */
 
 
-struct JackClientTiming
-{
+struct JackClientTiming {
     jack_time_t fSignaledAt;
     jack_time_t fAwakeAt;
     jack_time_t fFinishedAt;
@@ -384,7 +366,8 @@ struct JackClientTiming
         Init();
     }
     ~JackClientTiming()
-    {}
+    {
+    }
 
     void Init()
     {
@@ -393,7 +376,6 @@ struct JackClientTiming
         fFinishedAt = 0;
         fStatus = NotTriggered;
     }
-
 };
 
 /*!
@@ -409,96 +391,91 @@ struct JackClientTiming
 */
 
 
-class SERVER_EXPORT JackConnectionManager
-{
+class SERVER_EXPORT JackConnectionManager {
 
-    private:
+private:
+    JackFixedArray<CONNECTION_NUM_FOR_PORT> fConnection[PORT_NUM_MAX]; /*! Connection matrix: list of connected ports for a given port: needed to compute Mix buffer */
+    JackFixedArray1<PORT_NUM_FOR_CLIENT> fInputPort[CLIENT_NUM]; /*! Table of input port per refnum : to find a refnum for a given port */
+    JackFixedArray<PORT_NUM_FOR_CLIENT> fOutputPort[CLIENT_NUM]; /*! Table of output port per refnum : to find a refnum for a given port */
+    JackFixedMatrix<CLIENT_NUM> fConnectionRef; /*! Table of port connections by (refnum , refnum) */
+    alignas(UInt32) alignas(JackActivationCount) JackActivationCount fInputCounter[CLIENT_NUM]; /*! Activation counter per refnum */
+    UInt32 fInactive[CLIENT_NUM]; /*! 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed */
+    JackLoopFeedback<CONNECTION_NUM_FOR_PORT> fLoopFeedback; /*! Loop feedback connections */
 
-        JackFixedArray<CONNECTION_NUM_FOR_PORT> fConnection[PORT_NUM_MAX];  /*! Connection matrix: list of connected ports for a given port: needed to compute Mix buffer */
-        JackFixedArray1<PORT_NUM_FOR_CLIENT> fInputPort[CLIENT_NUM];	/*! Table of input port per refnum : to find a refnum for a given port */
-        JackFixedArray<PORT_NUM_FOR_CLIENT> fOutputPort[CLIENT_NUM];	/*! Table of output port per refnum : to find a refnum for a given port */
-        JackFixedMatrix<CLIENT_NUM> fConnectionRef;						/*! Table of port connections by (refnum , refnum) */
-        alignas(UInt32) alignas(JackActivationCount) JackActivationCount fInputCounter[CLIENT_NUM];	/*! Activation counter per refnum */
-        UInt32 fInactive[CLIENT_NUM];	/*! 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed */
-        JackLoopFeedback<CONNECTION_NUM_FOR_PORT> fLoopFeedback;		/*! Loop feedback connections */
+    bool IsLoopPathAux(int ref1, int ref2) const;
 
-        bool IsLoopPathAux(int ref1, int ref2) const;
+public:
+    JackConnectionManager();
+    ~JackConnectionManager();
 
-    public:
+    // Connections management
+    Result<void> Connect(jack_port_id_t port_src, jack_port_id_t port_dst);
+    Result<void> Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst);
+    bool IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst) const;
 
-        JackConnectionManager();
-        ~JackConnectionManager();
+    /*!
+      \brief Get the connection number of a given port.
+    */
+    jack_int_t Connections(jack_port_id_t port_index) const
+    {
+        return fConnection[port_index].GetItemCount();
+    }
 
-        // Connections management
-        Result<void> Connect(jack_port_id_t port_src, jack_port_id_t port_dst);
-        Result<void> Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst);
-        bool IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst) const;
+    jack_port_id_t GetPort(jack_port_id_t port_index, int connection) const
+    {
+        assert(connection < CONNECTION_NUM_FOR_PORT);
+        return (jack_port_id_t)fConnection[port_index].GetItem(connection);
+    }
 
-        /*!
-          \brief Get the connection number of a given port.
-        */
-        jack_int_t Connections(jack_port_id_t port_index) const
-        {
-            return fConnection[port_index].GetItemCount();
-        }
+    const jack_int_t* GetConnections(jack_port_id_t port_index) const;
 
-        jack_port_id_t GetPort(jack_port_id_t port_index, int connection) const
-        {
-            assert(connection < CONNECTION_NUM_FOR_PORT);
-            return (jack_port_id_t)fConnection[port_index].GetItem(connection);
-        }
+    bool IncFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
+    bool DecFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
+    bool IsFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst) const;
 
-        const jack_int_t* GetConnections(jack_port_id_t port_index) const;
+    bool IsLoopPath(jack_port_id_t port_src, jack_port_id_t port_dst) const;
+    void IncDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
+    void DecDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
 
-        bool IncFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
-        bool DecFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
-        bool IsFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst) const;
+    // Ports management
+    Result<void> AddInputPort(int refnum, jack_port_id_t port_index);
+    Result<void> AddOutputPort(int refnum, jack_port_id_t port_index);
 
-        bool IsLoopPath(jack_port_id_t port_src, jack_port_id_t port_dst) const;
-        void IncDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
-        void DecDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
+    Result<void> RemoveInputPort(int refnum, jack_port_id_t port_index);
+    Result<void> RemoveOutputPort(int refnum, jack_port_id_t port_index);
 
-        // Ports management
-        Result<void> AddInputPort(int refnum, jack_port_id_t port_index);
-        Result<void> AddOutputPort(int refnum, jack_port_id_t port_index);
+    const jack_int_t* GetInputPorts(int refnum);
+    const jack_int_t* GetOutputPorts(int refnum);
 
-        Result<void> RemoveInputPort(int refnum, jack_port_id_t port_index);
-        Result<void> RemoveOutputPort(int refnum, jack_port_id_t port_index);
+    // Client management
+    void InitRefNum(int refnum);
+    int GetInputRefNum(jack_port_id_t port_index) const;
+    int GetOutputRefNum(jack_port_id_t port_index) const;
 
-        const jack_int_t* GetInputPorts(int refnum);
-        const jack_int_t* GetOutputPorts(int refnum);
+    // Connect/Disconnect 2 refnum "directly"
+    bool IsDirectConnection(int ref1, int ref2) const;
+    void DirectConnect(int ref1, int ref2);
+    void DirectDisconnect(int ref1, int ref2);
 
-        // Client management
-        void InitRefNum(int refnum);
-        int GetInputRefNum(jack_port_id_t port_index) const;
-        int GetOutputRefNum(jack_port_id_t port_index) const;
-
-        // Connect/Disconnect 2 refnum "directly"
-        bool IsDirectConnection(int ref1, int ref2) const;
-        void DirectConnect(int ref1, int ref2);
-        void DirectDisconnect(int ref1, int ref2);
-
-        // A deactivated client keeps its connections, but they stop counting toward the clients they feed, and its
-        // ports are silent (protocol.md section 6).
-        void SetInactive(int refnum, bool inactive);
-        // A port with no owner has been released; the RT thread can still see it in the connections of the current
-        // state, so it counts as inactive (silent) rather than indexing the table with -1.
-        bool IsInactive(int refnum) const
-        {
-            return refnum < 0 || fInactive[refnum] != 0;
-        }
+    // A deactivated client keeps its connections, but they stop counting toward the clients they feed, and its
+    // ports are silent (protocol.md section 6).
+    void SetInactive(int refnum, bool inactive);
+    // A port with no owner has been released; the RT thread can still see it in the connections of the current
+    // state, so it counts as inactive (silent) rather than indexing the table with -1.
+    bool IsInactive(int refnum) const
+    {
+        return refnum < 0 || fInactive[refnum] != 0;
+    }
 
 
-        // Graph
-        // The live activation counters are passed in: they are not part of this (copied) state.
-        void ResetGraph(JackClientTiming* timing, std::atomic<SInt32>* live);
-        Result<void> ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live);
-        Result<void> SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, long time_out_usec);
-        void TopologicalSort(std::vector<jack_int_t>& sorted);
-
+    // Graph
+    // The live activation counters are passed in: they are not part of this (copied) state.
+    void ResetGraph(JackClientTiming* timing, std::atomic<SInt32>* live);
+    Result<void> ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live);
+    Result<void> SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, long time_out_usec);
+    void TopologicalSort(std::vector<jack_int_t>& sorted);
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif
-

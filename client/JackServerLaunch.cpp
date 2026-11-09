@@ -17,16 +17,16 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
+#include "JackServerLaunch.h"
+#include "JackConstants.h"
+#include "JackPlatformPlug.h"
+#include "JackSocket.h"
+#include "JackTime.h"
 #include <format>
 #include <fstream>
 #include <string>
 #include <string_view>
 #include <vector>
-#include "JackConstants.h"
-#include "JackServerLaunch.h"
-#include "JackSocket.h"
-#include "JackTime.h"
-#include "JackPlatformPlug.h"
 
 #include <sys/wait.h>
 
@@ -89,7 +89,7 @@ static std::string ReadJackdrc()
         }
         return joined;
     }
-    return {};
+    return { };
 }
 
 /* Exec the JACK server in this process.  Does not return. */
@@ -133,29 +133,29 @@ static int start_server_classic(const char* server_name)
      * virtual memory tricks, the overhead of the second fork() is
      * probably relatively small.
      */
-     
+
     int status;
     pid_t first_child_pid;
-    
+
     first_child_pid = fork();
     switch (first_child_pid) {
-        case 0:					/* child process */
-            switch (fork()) {
-                case 0:			/* grandchild process */
-                    start_server_classic_aux(server_name);
-                    _exit(99);	/* exec failed */
-                case - 1:
-                    _exit(98);
-                default:
-                    _exit(0);
-            }
-        case - 1:			/* fork() error */
-            return 1;		/* failed to start server */
+    case 0: /* child process */
+        switch (fork()) {
+        case 0: /* grandchild process */
+            start_server_classic_aux(server_name);
+            _exit(99); /* exec failed */
+        case -1:
+            _exit(98);
+        default:
+            _exit(0);
+        }
+    case -1: /* fork() error */
+        return 1; /* failed to start server */
     }
     waitpid(first_child_pid, &status, 0);
 
     /* only the original parent process goes here */
-    return 0;			/* (probably) successful */
+    return 0; /* (probably) successful */
 }
 
 static int start_server(const char* server_name, jack_options_t options)
@@ -173,7 +173,7 @@ static int server_connect(const char* server_name)
     int res = socket.Connect(jack_server_dir, server_name, 0);
     socket.Close();
     sleep_microseconds(2000); // Added by JE - 02-01-2009 (gives
-                     // the channel some time to close)
+                              // the channel some time to close)
     return res;
 }
 

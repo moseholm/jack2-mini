@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 1999-2000 Paul Davis 
+    Copyright (C) 1999-2000 Paul Davis
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,11 +25,11 @@
 #include "types.h"
 
 
-typedef	enum  {
-	None,
-	Rectangular,
-	Triangular,
-	Shaped
+typedef enum {
+    None,
+    Rectangular,
+    Triangular,
+    Shaped
 } DitherAlgorithm;
 
 #define DITHER_BUF_SIZE 8
@@ -43,64 +43,62 @@ typedef struct {
 } dither_state_t;
 
 /* float functions */
-void sample_move_floatLE_sSs (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long dst_skip);
-void sample_move_dS_floatLE (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
+void sample_move_floatLE_sSs(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long dst_skip);
+void sample_move_dS_floatLE(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
 
 /* integer functions */
-void sample_move_d32_sSs             (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_d32_sS              (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_d32u24_sSs          (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_d32u24_sS           (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_d32l24_sSs          (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_d32l24_sS           (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_d24_sSs             (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_d24_sS              (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_d16_sSs             (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_d16_sS              (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
+void sample_move_d32_sSs(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_d32_sS(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_d32u24_sSs(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_d32u24_sS(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_d32l24_sSs(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_d32l24_sS(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_d24_sSs(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_d24_sS(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_d16_sSs(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_d16_sS(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
 
-void sample_move_dither_rect_d16_sSs      (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_dither_rect_d16_sS       (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_dither_tri_d16_sSs       (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_dither_tri_d16_sS        (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_dither_shaped_d16_sSs    (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
-void sample_move_dither_shaped_d16_sS     (char *dst, jack_default_audio_sample_t *src, unsigned long nsamples, unsigned long dst_skip, dither_state_t *state);
+void sample_move_dither_rect_d16_sSs(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_dither_rect_d16_sS(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_dither_tri_d16_sSs(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_dither_tri_d16_sS(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_dither_shaped_d16_sSs(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
+void sample_move_dither_shaped_d16_sS(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state);
 
-void sample_move_dS_s32s             (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip);
-void sample_move_dS_s32              (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip);
-void sample_move_dS_s32u24s          (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip);
-void sample_move_dS_s32u24           (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip);
-void sample_move_dS_s32l24s          (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip);
-void sample_move_dS_s32l24           (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip);
-void sample_move_dS_s24s             (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip);
-void sample_move_dS_s24              (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip);
-void sample_move_dS_s16s             (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip);
-void sample_move_dS_s16              (jack_default_audio_sample_t *dst, char *src, unsigned long nsamples, unsigned long src_skip);
+void sample_move_dS_s32s(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip);
+void sample_move_dS_s32(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip);
+void sample_move_dS_s32u24s(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip);
+void sample_move_dS_s32u24(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip);
+void sample_move_dS_s32l24s(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip);
+void sample_move_dS_s32l24(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip);
+void sample_move_dS_s24s(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip);
+void sample_move_dS_s24(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip);
+void sample_move_dS_s16s(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip);
+void sample_move_dS_s16(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip);
 
 
 static __inline__ void
-sample_merge (jack_default_audio_sample_t *dst, jack_default_audio_sample_t *src, unsigned long cnt)
+sample_merge(jack_default_audio_sample_t* dst, jack_default_audio_sample_t* src, unsigned long cnt)
 {
-	while (cnt--) {
-		*dst += *src;
-		dst++;
-		src++;
-	}
+    while (cnt--) {
+        *dst += *src;
+        dst++;
+        src++;
+    }
 }
 
 static __inline__ void
-sample_memcpy (jack_default_audio_sample_t *dst, jack_default_audio_sample_t *src, unsigned long cnt)
+sample_memcpy(jack_default_audio_sample_t* dst, jack_default_audio_sample_t* src, unsigned long cnt)
 {
-	memcpy (dst, src, cnt * sizeof (jack_default_audio_sample_t));
+    memcpy(dst, src, cnt * sizeof(jack_default_audio_sample_t));
 }
 
-void memset_interleave               (char *dst, char val, unsigned long bytes, unsigned long unit_bytes, unsigned long skip_bytes);
-void memcpy_fake                     (char *dst, char *src, unsigned long src_bytes, unsigned long foo, unsigned long bar);
+void memset_interleave(char* dst, char val, unsigned long bytes, unsigned long unit_bytes, unsigned long skip_bytes);
+void memcpy_fake(char* dst, char* src, unsigned long src_bytes, unsigned long foo, unsigned long bar);
 
-void memcpy_interleave_d16_s16       (char *dst, char *src, unsigned long src_bytes, unsigned long dst_skip_bytes, unsigned long src_skip_bytes);
-void memcpy_interleave_d24_s24       (char *dst, char *src, unsigned long src_bytes, unsigned long dst_skip_bytes, unsigned long src_skip_bytes);
-void memcpy_interleave_d32_s32       (char *dst, char *src, unsigned long src_bytes, unsigned long dst_skip_bytes, unsigned long src_skip_bytes);
-
-
+void memcpy_interleave_d16_s16(char* dst, char* src, unsigned long src_bytes, unsigned long dst_skip_bytes, unsigned long src_skip_bytes);
+void memcpy_interleave_d24_s24(char* dst, char* src, unsigned long src_bytes, unsigned long dst_skip_bytes, unsigned long src_skip_bytes);
+void memcpy_interleave_d32_s32(char* dst, char* src, unsigned long src_bytes, unsigned long dst_skip_bytes, unsigned long src_skip_bytes);
 
 
 #endif /* __jack_memops_h__ */

@@ -22,22 +22,21 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <string>
 #include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief One PCM device (subdevice 0) of an ALSA card.
 */
 
 struct JackAlsaPcmInfo {
-    std::string card_id;       // ALSA card id, e.g. "NVidia"
-    int card_num;              // card index when enumerated
-    int device;                // PCM device number
-    std::string pcm;           // stable name, "hw:CARD=<id>,DEV=<n>"
-    bool playback;             // has a playback stream
-    bool capture;              // has a capture stream
-    int playback_channels;     // maximum channels, 0 if no playback stream
-    int capture_channels;      // maximum channels, 0 if no capture stream
+    std::string card_id; // ALSA card id, e.g. "NVidia"
+    int card_num; // card index when enumerated
+    int device; // PCM device number
+    std::string pcm; // stable name, "hw:CARD=<id>,DEV=<n>"
+    bool playback; // has a playback stream
+    bool capture; // has a capture stream
+    int playback_channels; // maximum channels, 0 if no playback stream
+    int capture_channels; // maximum channels, 0 if no capture stream
 };
 
 /*
@@ -49,8 +48,8 @@ listing, so a device in use is not taken to be gone.  A device with no known
 counts and no open is left out.  \a report turns the log lines on.
 */
 std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcmInfo>& known,
-                                                   bool report);
+    bool report);
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

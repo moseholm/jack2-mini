@@ -23,32 +23,28 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackSocket.h"
 #include "jackmini/error.hpp"
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief JackServerNotifyChannel using sockets.
 */
 
-class JackSocketServerNotifyChannel
-{
-    private:
+class JackSocketServerNotifyChannel {
+private:
+    JackClientSocket fRequestSocket;
 
-        JackClientSocket fRequestSocket;
+public:
+    JackSocketServerNotifyChannel()
+    {
+    }
 
-    public:
+    Result<void> Open(const char* server_name);
+    void Close();
 
-        JackSocketServerNotifyChannel()
-        {}
-
-        Result<void> Open(const char* server_name);
-        void Close();
-
-        void Notify(int refnum, int notify, int value);
-        void NotifyQuit();
+    void Notify(int refnum, int notify, int value);
+    void NotifyQuit();
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif
-

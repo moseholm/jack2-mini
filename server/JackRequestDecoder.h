@@ -26,8 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <expected>
 
-namespace jackmini
-{
+namespace jackmini {
 
 class JackServer;
 
@@ -44,33 +43,30 @@ struct JackClientHandlerInterface {
 
     virtual void ClientAdd(detail::JackChannelTransactionInterface* socket, JackClientOpenRequest* req, JackClientOpenResult* res) = 0;
     virtual void ClientRemove(detail::JackChannelTransactionInterface* socket, int refnum) = 0;
-    
-    virtual ~JackClientHandlerInterface()
-    {}
 
+    virtual ~JackClientHandlerInterface()
+    {
+    }
 };
 
 /*!
 \brief Request decoder
 */
 
-class JackRequestDecoder
-{
-    private:
+class JackRequestDecoder {
+private:
+    JackServer* fServer;
+    JackClientHandlerInterface* fHandler;
 
-        JackServer* fServer;
-        JackClientHandlerInterface* fHandler;
+public:
+    JackRequestDecoder(JackServer* server, JackClientHandlerInterface* handler);
+    virtual ~JackRequestDecoder();
 
-    public:
-
-        JackRequestDecoder(JackServer* server, JackClientHandlerInterface* handler);
-        virtual ~JackRequestDecoder();
-
-        int HandleRequest(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
-        // Refuses a message of another protocol version: the reply carries the protocol error.
-        int Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
+    int HandleRequest(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
+    // Refuses a message of another protocol version: the reply carries the protocol error.
+    int Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

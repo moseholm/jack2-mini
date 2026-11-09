@@ -24,22 +24,22 @@
 
 #if __GNUC__
 
-    #define MEM_ALIGN(x,y) x __attribute__((aligned(y)))
-    #define LIB_EXPORT __attribute__((visibility("default")))
-    #ifdef SERVER_SIDE
-        #if (__GNUC__ < 4)
-            #define SERVER_EXPORT
-        #else
-            #define SERVER_EXPORT __attribute__((visibility("default")))
-        #endif
-    #else
-        #define SERVER_EXPORT __attribute__((visibility("hidden")))
-    #endif
+#define MEM_ALIGN(x, y) x __attribute__((aligned(y)))
+#define LIB_EXPORT __attribute__((visibility("default")))
+#ifdef SERVER_SIDE
+#if (__GNUC__ < 4)
+#define SERVER_EXPORT
+#else
+#define SERVER_EXPORT __attribute__((visibility("default")))
+#endif
+#else
+#define SERVER_EXPORT __attribute__((visibility("hidden")))
+#endif
 
 #else
-    #define MEM_ALIGN(x,y) x
-    #define LIB_EXPORT
-    #define SERVER_EXPORT
+#define MEM_ALIGN(x, y) x
+#define LIB_EXPORT
+#define SERVER_EXPORT
 #endif
 
 #endif

@@ -32,16 +32,16 @@ using namespace jackmini::alsa;
 static int g_failures = 0;
 static int g_checks = 0;
 
-#define CHECK(cond) do { \
-        g_checks++; \
-        if (!(cond)) { \
-            g_failures++; \
+#define CHECK(cond)                                                         \
+    do {                                                                    \
+        g_checks++;                                                         \
+        if (!(cond)) {                                                      \
+            g_failures++;                                                   \
             std::printf("  FAILED %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-        } \
+        }                                                                   \
     } while (0)
 
-namespace
-{
+namespace {
 
 using FakeCycle = Cycle<FakePcmBackend>;
 
@@ -89,7 +89,7 @@ void ReadThunk(void* arg, FakeCycle&, const MappedFrames& mapped, std::uint32_t 
 }
 
 void WriteThunk(void* arg, FakeCycle& cycle, const MappedFrames& mapped, std::uint32_t orig_frames,
-                std::ptrdiff_t nwritten)
+    std::ptrdiff_t nwritten)
 {
     auto& context = *static_cast<IoContext*>(arg);
     context.write_offsets.push_back(nwritten);
@@ -101,8 +101,7 @@ void WriteThunk(void* arg, FakeCycle& cycle, const MappedFrames& mapped, std::ui
         auto* destination = reinterpret_cast<float*>(mapped.channels[channel].data);
         const std::size_t stride = mapped.channels[channel].stride / sizeof(float);
         for (std::size_t frame = 0; frame < mapped.frames; ++frame) {
-            destination[frame * stride] =
-                context.playback_in[channel][static_cast<std::size_t>(nwritten) + frame];
+            destination[frame * stride] = context.playback_in[channel][static_cast<std::size_t>(nwritten) + frame];
         }
         if (context.mark_done) {
             cycle.mark_channel_done(channel);
@@ -188,7 +187,7 @@ void TestXrunOnAvail()
     // The xrun is reported after the first process call, as in the old driver.
     CHECK(cycle.write(0) == 0);
 
-    backend.set_status({false, true, 1234.0f});
+    backend.set_status({ false, true, 1234.0f });
     backend.capture().avail_script.push_back(-EPIPE);
 
     const WaitResult result = cycle.wait();
@@ -215,7 +214,7 @@ void TestXrunOnRevents()
     cycle.set_callbacks(callbacks);
 
     CHECK(cycle.write(0) == 0);
-    backend.set_status({false, true, 999.0f});
+    backend.set_status({ false, true, 999.0f });
     backend.capture().revents = POLLIN | POLLERR;
 
     const WaitResult result = cycle.wait();
@@ -238,7 +237,7 @@ void TestSuspended()
     callbacks.restart = RestartThunk;
     cycle.set_callbacks(callbacks);
 
-    backend.set_status({true, false, 0.0f});
+    backend.set_status({ true, false, 0.0f });
     backend.script_poll(0);
     backend.script_poll(1);
     backend.capture().avail = 64;
@@ -393,8 +392,7 @@ void TestReadWrite()
     CHECK(cycle.write(64) == 0);
     for (std::size_t channel = 0; channel < 2; ++channel) {
         for (std::size_t frame = 0; frame < 64; ++frame) {
-            CHECK(backend.playback().data[channel][frame] ==
-                  static_cast<float>(channel * 100 + frame));
+            CHECK(backend.playback().data[channel][frame] == static_cast<float>(channel * 100 + frame));
         }
     }
 }
@@ -438,7 +436,7 @@ void TestSilenceUntouched()
 
     IoContext context;
     context.playback_in.assign(2, std::vector<float>(64, 7.0f));
-    context.mark_channels = 1;  // only channel 0 is written
+    context.mark_channels = 1; // only channel 0 is written
     for (std::size_t channel = 0; channel < 2; ++channel) {
         std::fill(backend.playback().data[channel].begin(), backend.playback().data[channel].end(), 1.0f);
     }

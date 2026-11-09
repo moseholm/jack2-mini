@@ -19,14 +19,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackGlobals.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
-std::atomic<bool> JackGlobals::fVerbose{false};
+std::atomic<bool> JackGlobals::fVerbose { false };
 
 jack_tls_key JackGlobals::fKeyLogFunction;
 static bool fKeyLogFunctionInitialized = jack_tls_allocate_key(&JackGlobals::fKeyLogFunction);
 
 jack_thread_creator_t JackGlobals::fJackThreadCreator = pthread_create;
 
-} // end of namespace
+} // namespace jackmini

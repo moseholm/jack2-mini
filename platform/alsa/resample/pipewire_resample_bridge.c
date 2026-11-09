@@ -44,8 +44,7 @@ static uint32_t jack_pw_detect_cpu_flags(void)
     flags |= SPA_CPU_FLAG_NEON;
 #endif
 
-#if (defined(__GNUC__) || defined(__clang__)) && \
-    (defined(__x86_64__) || defined(__i386__))
+#if (defined(__GNUC__) || defined(__clang__)) && (defined(__x86_64__) || defined(__i386__))
     __builtin_cpu_init();
 #ifdef HAVE_SSE
     if (__builtin_cpu_supports("sse")) {
@@ -67,12 +66,12 @@ static uint32_t jack_pw_detect_cpu_flags(void)
     return flags;
 }
 
-struct jack_pw_resampler *jack_pw_resampler_new(unsigned int channels,
-                                                unsigned int in_rate,
-                                                unsigned int out_rate,
-                                                int quality)
+struct jack_pw_resampler* jack_pw_resampler_new(unsigned int channels,
+    unsigned int in_rate,
+    unsigned int out_rate,
+    int quality)
 {
-    struct jack_pw_resampler *res;
+    struct jack_pw_resampler* res;
 
     if (channels == 0 || in_rate == 0 || out_rate == 0) {
         return NULL;
@@ -100,7 +99,7 @@ struct jack_pw_resampler *jack_pw_resampler_new(unsigned int channels,
     return res;
 }
 
-void jack_pw_resampler_free(struct jack_pw_resampler *r)
+void jack_pw_resampler_free(struct jack_pw_resampler* r)
 {
     if (r == NULL) {
         return;
@@ -109,39 +108,39 @@ void jack_pw_resampler_free(struct jack_pw_resampler *r)
     free(r);
 }
 
-void jack_pw_resampler_reset(struct jack_pw_resampler *r)
+void jack_pw_resampler_reset(struct jack_pw_resampler* r)
 {
     resample_reset(&r->r);
 }
 
-void jack_pw_resampler_set_rate(struct jack_pw_resampler *r, double rate)
+void jack_pw_resampler_set_rate(struct jack_pw_resampler* r, double rate)
 {
     resample_update_rate(&r->r, rate);
 }
 
-unsigned int jack_pw_resampler_in_len(struct jack_pw_resampler *r, unsigned int out_len)
+unsigned int jack_pw_resampler_in_len(struct jack_pw_resampler* r, unsigned int out_len)
 {
     return resample_in_len(&r->r, out_len);
 }
 
-unsigned int jack_pw_resampler_out_len(struct jack_pw_resampler *r, unsigned int in_len)
+unsigned int jack_pw_resampler_out_len(struct jack_pw_resampler* r, unsigned int in_len)
 {
     return resample_out_len(&r->r, in_len);
 }
 
-void jack_pw_resampler_process(struct jack_pw_resampler *r,
-                               const float *const *src, unsigned int *in_len,
-                               float *const *dst, unsigned int *out_len)
+void jack_pw_resampler_process(struct jack_pw_resampler* r,
+    const float* const* src, unsigned int* in_len,
+    float* const* dst, unsigned int* out_len)
 {
-    resample_process(&r->r, (const void **)src, in_len, (void **)dst, out_len);
+    resample_process(&r->r, (const void**)src, in_len, (void**)dst, out_len);
 }
 
-unsigned int jack_pw_resampler_delay(struct jack_pw_resampler *r)
+unsigned int jack_pw_resampler_delay(struct jack_pw_resampler* r)
 {
     return resample_delay(&r->r);
 }
 
-const char *jack_pw_resampler_kernel_name(struct jack_pw_resampler *r)
+const char* jack_pw_resampler_kernel_name(struct jack_pw_resampler* r)
 {
     if (r == NULL || r->r.func_name == NULL) {
         return "unknown";

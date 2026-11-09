@@ -19,11 +19,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 #include "JackTransportEngine.h"
-#include "JackClientInterface.h"
 #include "JackClientControl.h"
+#include "JackClientInterface.h"
 #include "JackEngineControl.h"
-#include "JackGlobals.h"
 #include "JackError.h"
+#include "JackGlobals.h"
 #include "JackTime.h"
 #include <assert.h>
 #include <math.h>
@@ -31,16 +31,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 using namespace std;
 
-namespace jackmini
-{
+namespace jackmini {
 
-JackTransportEngine::JackTransportEngine(): JackAtomicArrayState<jack_position_t>()
+JackTransportEngine::JackTransportEngine()
+    : JackAtomicArrayState<jack_position_t>()
 {
     static_assert(offsetof(JackTransportEngine, fWriteCounter) % sizeof(fWriteCounter) == 0,
-                  "fWriteCounter must be first member of JackTransportEngine to ensure its alignment");
+        "fWriteCounter must be first member of JackTransportEngine to ensure its alignment");
     fTransportState = JackTransportStopped;
     fTransportCmd = fPreviousCmd = TransportCommandStop;
-    fSyncTimeout = 10000000;	/* 10 seconds default */
+    fSyncTimeout = 10000000; /* 10 seconds default */
     fSyncTimeLeft = 0;
     fTimeBaseMaster = -1;
     fWriteCounter = 0;
@@ -65,7 +65,7 @@ Result<void> JackTransportEngine::ResetTimebase(int refnum)
         request->valid = (jack_position_bits_t)0;
         WriteNextStateStop(2);
         fTimeBaseMaster = -1;
-        return {};
+        return { };
     } else {
         return std::unexpected(Error::InvalidState);
     }
@@ -80,13 +80,13 @@ Result<void> JackTransportEngine::SetTimebaseMaster(int refnum, bool conditionna
             return std::unexpected(Error::InvalidState);
         } else {
             jack_log("ref = %ld was already timebase master", refnum);
-            return {};
+            return { };
         }
     } else {
         fTimeBaseMaster = refnum;
         fConditionnal = conditionnal;
         jack_log("new timebase master: ref = %ld", refnum);
-        return {};
+        return { };
     }
 }
 
@@ -162,7 +162,7 @@ void JackTransportEngine::CycleBegin(jack_nframes_t frame_rate, jack_time_t time
 // RT
 void JackTransportEngine::CycleEnd(std::atomic<JackClientInterface*>* table, jack_nframes_t frame_rate, jack_nframes_t buffer_size)
 {
-    TrySwitchState(1);	// Switch from "pending" to "current", it always works since there is always a pending state
+    TrySwitchState(1); // Switch from "pending" to "current", it always works since there is always a pending state
 
     /* Handle any new transport command from the last cycle. */
     transport_command_t cmd = fTransportCmd;
@@ -176,58 +176,58 @@ void JackTransportEngine::CycleEnd(std::atomic<JackClientInterface*>* table, jac
     /* state transition switch */
     switch (fTransportState) {
 
-        case JackTransportStopped:
-            // Set a JackTransportStarting for the current cycle, if all clients are ready (no slow_sync) ==> JackTransportRolling next state
-            if (cmd == TransportCommandStart) {
-                jack_log("transport stopped ==> starting frame = %d", ReadCurrentState()->frame);
-                fTransportState = JackTransportStarting;
-                MakeAllStartingLocating(table);
-                SyncTimeout(frame_rate, buffer_size);
-            } else if (fPendingPos) {
-                jack_log("transport stopped ==> stopped (locating) frame = %d", ReadCurrentState()->frame);
-                MakeAllLocating(table);
+    case JackTransportStopped:
+        // Set a JackTransportStarting for the current cycle, if all clients are ready (no slow_sync) ==> JackTransportRolling next state
+        if (cmd == TransportCommandStart) {
+            jack_log("transport stopped ==> starting frame = %d", ReadCurrentState()->frame);
+            fTransportState = JackTransportStarting;
+            MakeAllStartingLocating(table);
+            SyncTimeout(frame_rate, buffer_size);
+        } else if (fPendingPos) {
+            jack_log("transport stopped ==> stopped (locating) frame = %d", ReadCurrentState()->frame);
+            MakeAllLocating(table);
+        }
+        break;
+
+    case JackTransportStarting:
+        if (cmd == TransportCommandStop) {
+            jack_log("transport starting ==> stopped frame = %d", ReadCurrentState()->frame);
+            fTransportState = JackTransportStopped;
+            MakeAllStopping(table);
+        } else if (fPendingPos) {
+            jack_log("transport starting ==> starting frame = %d", ReadCurrentState()->frame);
+            fTransportState = JackTransportStarting;
+            MakeAllStartingLocating(table);
+            SyncTimeout(frame_rate, buffer_size);
+        } else if (--fSyncTimeLeft == 0 || CheckAllRolling(table)) { // Slow clients may still catch up
+            if (fNetworkSync) {
+                jack_log("transport starting ==> netstarting frame = %d");
+                fTransportState = JackTransportNetStarting;
+            } else {
+                jack_log("transport starting ==> rolling fSyncTimeLeft = %ld", fSyncTimeLeft);
+                fTransportState = JackTransportRolling;
             }
-            break;
+        }
+        break;
 
-        case JackTransportStarting:
-            if (cmd == TransportCommandStop) {
-                jack_log("transport starting ==> stopped frame = %d", ReadCurrentState()->frame);
-                fTransportState = JackTransportStopped;
-                MakeAllStopping(table);
-            } else if (fPendingPos) {
-                jack_log("transport starting ==> starting frame = %d", ReadCurrentState()->frame);
-                fTransportState = JackTransportStarting;
-                MakeAllStartingLocating(table);
-                SyncTimeout(frame_rate, buffer_size);
-            } else if (--fSyncTimeLeft == 0 || CheckAllRolling(table)) {  // Slow clients may still catch up
-                if (fNetworkSync) {
-                    jack_log("transport starting ==> netstarting frame = %d");
-                    fTransportState = JackTransportNetStarting;
-                } else {
-                    jack_log("transport starting ==> rolling fSyncTimeLeft = %ld", fSyncTimeLeft);
-                    fTransportState = JackTransportRolling;
-                }
-            }
-            break;
+    case JackTransportRolling:
+        if (cmd == TransportCommandStop) {
+            jack_log("transport rolling ==> stopped");
+            fTransportState = JackTransportStopped;
+            MakeAllStopping(table);
+        } else if (fPendingPos) {
+            jack_log("transport rolling ==> starting");
+            fTransportState = JackTransportStarting;
+            MakeAllStartingLocating(table);
+            SyncTimeout(frame_rate, buffer_size);
+        }
+        break;
 
-        case JackTransportRolling:
-            if (cmd == TransportCommandStop) {
-                jack_log("transport rolling ==> stopped");
-                fTransportState = JackTransportStopped;
-                MakeAllStopping(table);
-            } else if (fPendingPos) {
-                jack_log("transport rolling ==> starting");
-                fTransportState = JackTransportStarting;
-                MakeAllStartingLocating(table);
-                SyncTimeout(frame_rate, buffer_size);
-            }
-            break;
+    case JackTransportNetStarting:
+        break;
 
-        case JackTransportNetStarting:
-            break;
-
-        default:
-            jack_error("Invalid JACK transport state: %d", fTransportState);
+    default:
+        jack_error("Invalid JACK transport state: %d", fTransportState);
     }
 
     /* Update timebase, if needed. */
@@ -282,7 +282,7 @@ jack_nframes_t JackTransportEngine::GetCurrentFrame()
 
     if (fTransportState == JackTransportRolling) {
         float usecs = get_microseconds() - pos.usecs;
-        jack_nframes_t elapsed = (jack_nframes_t)floor((((float) pos.frame_rate) / 1000000.0f) * usecs);
+        jack_nframes_t elapsed = (jack_nframes_t)floor((((float)pos.frame_rate) / 1000000.0f) * usecs);
         return pos.frame + elapsed;
     } else {
         return pos.frame;
@@ -317,4 +317,4 @@ void JackTransportEngine::CopyPosition(jack_position_t* from, jack_position_t* t
 }
 
 
-} // end of namespace
+} // namespace jackmini

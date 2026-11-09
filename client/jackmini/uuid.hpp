@@ -25,14 +25,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <string>
 #include <string_view>
 
-namespace jackmini
-{
+namespace jackmini {
 
 // Identifies a client or a port across the server.  Zero is the empty value.
 class Uuid {
 public:
     constexpr Uuid() noexcept = default;
-    constexpr explicit Uuid(std::uint64_t value) noexcept : fValue(value) {}
+    constexpr explicit Uuid(std::uint64_t value) noexcept
+        : fValue(value)
+    {
+    }
 
     constexpr std::uint64_t value() const noexcept { return fValue; }
     constexpr bool empty() const noexcept { return fValue == 0; }

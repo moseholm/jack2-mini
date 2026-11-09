@@ -32,19 +32,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <thread>
 #include <vector>
 
-namespace
-{
+namespace {
 
 int g_failures = 0;
 int g_checks = 0;
 
-#define CHECK(cond) do { \
-    g_checks++; \
-    if (!(cond)) { \
-        std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
-        g_failures++; \
-    } \
-} while (0)
+#define CHECK(cond)                                                                       \
+    do {                                                                                  \
+        g_checks++;                                                                       \
+        if (!(cond)) {                                                                    \
+            std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
+            g_failures++;                                                                 \
+        }                                                                                 \
+    } while (0)
 
 std::mutex g_lock;
 std::vector<std::string> g_received;
@@ -135,7 +135,7 @@ void TestTruncation()
     }
 }
 
-}
+} // namespace
 
 int main()
 {

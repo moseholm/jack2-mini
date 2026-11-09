@@ -25,44 +25,48 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <system_error>
 #include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 // A file descriptor that is closed when it goes out of scope.  Moving it
 // transfers ownership; it is never copied.
-class UniqueFd
-{
-    public:
-        UniqueFd() noexcept = default;
-        explicit UniqueFd(int fd) noexcept : fFd(fd) {}
-        UniqueFd(UniqueFd&& other) noexcept : fFd(other.release()) {}
-        UniqueFd& operator=(UniqueFd&& other) noexcept;
-        UniqueFd(const UniqueFd&) = delete;
-        UniqueFd& operator=(const UniqueFd&) = delete;
-        ~UniqueFd();
+class UniqueFd {
+public:
+    UniqueFd() noexcept = default;
+    explicit UniqueFd(int fd) noexcept
+        : fFd(fd)
+    {
+    }
+    UniqueFd(UniqueFd&& other) noexcept
+        : fFd(other.release())
+    {
+    }
+    UniqueFd& operator=(UniqueFd&& other) noexcept;
+    UniqueFd(const UniqueFd&) = delete;
+    UniqueFd& operator=(const UniqueFd&) = delete;
+    ~UniqueFd();
 
-        int get() const noexcept { return fFd; }
-        bool valid() const noexcept { return fFd >= 0; }
-        int release() noexcept;
-        void reset(int fd = -1) noexcept;
+    int get() const noexcept { return fFd; }
+    bool valid() const noexcept { return fFd >= 0; }
+    int release() noexcept;
+    void reset(int fd = -1) noexcept;
 
-    private:
-        int fFd = -1;
+private:
+    int fFd = -1;
 };
 
 // Sends a message and file descriptors on a connected Unix socket, in one
 // sendmsg().  The descriptors are duplicated into the receiver.  The caller
 // keeps its copies, which it closes when it no longer needs them.
 std::expected<void, std::error_code> SendWithFds(int socket,
-                                                 std::span<const std::byte> data,
-                                                 std::span<const int> fds);
+    std::span<const std::byte> data,
+    std::span<const int> fds);
 
 // Receives a message and any descriptors sent with it.  The descriptors are
 // close-on-exec.  Returns the number of data bytes read; 0 means the peer
 // closed the connection.
 std::expected<std::size_t, std::error_code> RecvWithFds(int socket,
-                                                        std::span<std::byte> data,
-                                                        std::vector<UniqueFd>& fds);
+    std::span<std::byte> data,
+    std::vector<UniqueFd>& fds);
 
 // Creates an anonymous shared-memory segment of the given size.  It is not
 // visible in any directory and disappears when its last descriptor closes.

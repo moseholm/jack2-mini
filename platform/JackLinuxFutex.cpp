@@ -18,28 +18,31 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#include <array>
-#include "JackCString.h"
 #include "JackLinuxFutex.h"
-#include "JackTools.h"
+#include "JackCString.h"
 #include "JackConstants.h"
 #include "JackError.h"
+#include "JackTools.h"
 #include "promiscuous.hpp"
-#include <climits>
 #include <fcntl.h>
+#include <linux/futex.h>
 #include <stdio.h>
 #include <sys/mman.h>
 #include <syscall.h>
-#include <linux/futex.h>
+#include <array>
+#include <climits>
 
 #if !defined(SYS_futex) && defined(SYS_futex_time64)
 #define SYS_futex SYS_futex_time64
 #endif
 
-namespace jackmini
-{
+namespace jackmini {
 
-JackLinuxFutex::JackLinuxFutex() : JackSynchro(), fSharedMem(-1), fFutex(NULL), fPrivate(false)
+JackLinuxFutex::JackLinuxFutex()
+    : JackSynchro()
+    , fSharedMem(-1)
+    , fFutex(NULL)
+    , fPrivate(false)
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
     fPromiscuous = (promiscuous != NULL);
@@ -48,7 +51,7 @@ JackLinuxFutex::JackLinuxFutex() : JackSynchro(), fSharedMem(-1), fFutex(NULL), 
 
 void JackLinuxFutex::BuildName(const char* client_name, const char* server_name, char* res, int size)
 {
-    std::array<char, SYNC_MAX_NAME_SIZE + 1> ext_client_name{};
+    std::array<char, SYNC_MAX_NAME_SIZE + 1> ext_client_name { };
     JackTools::RewriteName(client_name, ext_client_name.data());
     if (fPromiscuous) {
         jackmini::FormatCString(std::span<char>(res, size), "jack_sem.{}_{}", server_name, ext_client_name.data());
@@ -68,10 +71,10 @@ bool JackLinuxFutex::Signal()
         return true;
     }
 
-    if (! __sync_bool_compare_and_swap(&fFutex->futex, 0, 1))
-    {
+    if (!__sync_bool_compare_and_swap(&fFutex->futex, 0, 1)) {
         // already unlocked, do not wake futex
-        if (! fFutex->internal) return true;
+        if (!fFutex->internal)
+            return true;
     }
 
     ::syscall(SYS_futex, fFutex, fFutex->internal ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE, 1, NULL, NULL, 0);
@@ -90,16 +93,14 @@ bool JackLinuxFutex::Wait()
         return false;
     }
 
-    if (fFutex->needsChange)
-    {
+    if (fFutex->needsChange) {
         fFutex->needsChange = false;
         fFutex->internal = !fFutex->internal;
     }
 
     const int wait_mode = fFutex->internal ? FUTEX_WAIT_PRIVATE : FUTEX_WAIT;
 
-    for (;;)
-    {
+    for (;;) {
         if (__sync_bool_compare_and_swap(&fFutex->futex, 1, 0))
             return true;
 
@@ -117,22 +118,20 @@ bool JackLinuxFutex::TimedWait(long usec)
     if (!fFutex) {
         jack_error("JackLinuxFutex::TimedWait name = %s already deallocated!!", fName);
         return false;
-     }
+    }
 
-    if (fFutex->needsChange)
-    {
+    if (fFutex->needsChange) {
         fFutex->needsChange = false;
         fFutex->internal = !fFutex->internal;
     }
 
-    const uint secs  =  usec / 1000000;
-    const int  nsecs = (usec % 1000000) * 1000;
+    const uint secs = usec / 1000000;
+    const int nsecs = (usec % 1000000) * 1000;
 
     const timespec timeout = { static_cast<time_t>(secs), nsecs };
     const int wait_mode = fFutex->internal ? FUTEX_WAIT_PRIVATE : FUTEX_WAIT;
 
-    for (;;)
-    {
+    for (;;) {
         if (__sync_bool_compare_and_swap(&fFutex->futex, 1, 0))
             return true;
 
@@ -165,11 +164,11 @@ bool JackLinuxFutex::Allocate(const char* name, const char* server_name, int val
         return false;
     }
 
-    FutexData* futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_LOCKED, fSharedMem, 0);
+    FutexData* futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, fSharedMem, 0);
 
     // try without MAP_LOCKED
     if (futex == NULL || futex == MAP_FAILED) {
-        futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ|PROT_WRITE, MAP_SHARED, fSharedMem, 0);
+        futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED, fSharedMem, 0);
     }
 
     if (futex == NULL || futex == MAP_FAILED) {
@@ -208,11 +207,11 @@ bool JackLinuxFutex::Connect(const char* name, const char* server_name)
         return false;
     }
 
-    FutexData* futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_LOCKED, fSharedMem, 0);
+    FutexData* futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, fSharedMem, 0);
 
     // try without MAP_LOCKED
     if (futex == NULL || futex == MAP_FAILED) {
-        futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ|PROT_WRITE, MAP_SHARED, fSharedMem, 0);
+        futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED, fSharedMem, 0);
     }
 
     if (futex == NULL || futex == MAP_FAILED) {
@@ -222,12 +221,10 @@ bool JackLinuxFutex::Connect(const char* name, const char* server_name)
         return false;
     }
 
-    if (! fPrivate && futex->wasInternal)
-    {
+    if (!fPrivate && futex->wasInternal) {
         const char* externalSync = getenv("JACK_INTERNAL_CLIENT_SYNC");
 
-        if (externalSync != NULL && strstr(fName, externalSync) != NULL && ++futex->externalCount == 1)
-        {
+        if (externalSync != NULL && strstr(fName, externalSync) != NULL && ++futex->externalCount == 1) {
             jack_error("Note: client %s running as external client temporarily", fName);
             futex->needsChange = true;
         }
@@ -253,12 +250,10 @@ bool JackLinuxFutex::Disconnect()
         return true;
     }
 
-    if (! fPrivate && fFutex->wasInternal)
-    {
+    if (!fPrivate && fFutex->wasInternal) {
         const char* externalSync = getenv("JACK_INTERNAL_CLIENT_SYNC");
 
-        if (externalSync != NULL && strstr(fName, externalSync) != NULL && --fFutex->externalCount == 0)
-        {
+        if (externalSync != NULL && strstr(fName, externalSync) != NULL && --fFutex->externalCount == 0) {
             jack_error("Note: client %s now running as internal client again", fName);
             fFutex->needsChange = true;
         }
@@ -288,5 +283,4 @@ void JackLinuxFutex::Destroy()
     shm_unlink(fName);
 }
 
-} // end of namespace
-
+} // namespace jackmini

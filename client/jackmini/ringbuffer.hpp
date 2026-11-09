@@ -26,8 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <memory>
 #include <span>
 
-namespace jackmini
-{
+namespace jackmini {
 
 // A single-producer, single-consumer ring of T.  Storage is allocated in the
 // constructor.  Reading and writing do not allocate and do not block.
@@ -40,10 +39,11 @@ template <class T>
 class RingBuffer {
 public:
     explicit RingBuffer(std::size_t min_capacity)
-        : fCapacity(std::bit_ceil(std::max<std::size_t>(min_capacity, 2))),
-          fMask(fCapacity - 1),
-          fStorage(std::make_unique<T[]>(fCapacity))
-    {}
+        : fCapacity(std::bit_ceil(std::max<std::size_t>(min_capacity, 2)))
+        , fMask(fCapacity - 1)
+        , fStorage(std::make_unique<T[]>(fCapacity))
+    {
+    }
 
     RingBuffer(const RingBuffer&) = delete;
     RingBuffer& operator=(const RingBuffer&) = delete;
@@ -101,8 +101,8 @@ private:
     const std::size_t fCapacity;
     const std::size_t fMask;
     std::unique_ptr<T[]> fStorage;
-    alignas(64) std::atomic<std::size_t> fWrite{0};
-    alignas(64) std::atomic<std::size_t> fRead{0};
+    alignas(64) std::atomic<std::size_t> fWrite { 0 };
+    alignas(64) std::atomic<std::size_t> fRead { 0 };
 };
 
 } // namespace jackmini

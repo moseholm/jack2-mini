@@ -18,20 +18,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 #include "JackSocket.h"
-#include "JackConstants.h"
-#include "JackTools.h"
-#include "JackError.h"
-#include "promiscuous.hpp"
 #include "JackCString.h"
+#include "JackConstants.h"
+#include "JackError.h"
+#include "JackTools.h"
+#include "promiscuous.hpp"
+#include <fcntl.h>
+#include <pthread.h>
+#include <string.h>
 #include <array>
 #include <format>
 #include <span>
-#include <string.h>
-#include <pthread.h>
-#include <fcntl.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
 static void BuildName(const char* client_name, char* res, const char* dir, int which, int size, bool promiscuous)
 {
@@ -44,15 +43,25 @@ static void BuildName(const char* client_name, char* res, const char* dir, int w
     *end.out = '\0';
 }
 
-JackClientSocket::JackClientSocket(): JackClientRequestInterface(), fSocket(-1), fTimeOut(0), fNonBlocking(false)
+JackClientSocket::JackClientSocket()
+    : JackClientRequestInterface()
+    , fSocket(-1)
+    , fTimeOut(0)
+    , fNonBlocking(false)
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
     fPromiscuous = (promiscuous != NULL);
     fPromiscuousGid = jackmini::group_to_gid(promiscuous);
 }
 
-JackClientSocket::JackClientSocket(int socket): JackClientRequestInterface(), fSocket(socket),fTimeOut(0), fPromiscuous(false), fPromiscuousGid(-1)
-{}
+JackClientSocket::JackClientSocket(int socket)
+    : JackClientRequestInterface()
+    , fSocket(socket)
+    , fTimeOut(0)
+    , fPromiscuous(false)
+    , fPromiscuousGid(-1)
+{
+}
 
 void JackClientSocket::SetReadTimeOut(long sec)
 {
@@ -67,7 +76,7 @@ void JackClientSocket::SetReadTimeOut(long sec)
 void JackClientSocket::SetWriteTimeOut(long sec)
 {
     struct timeval timout;
-    timout.tv_sec = sec ;
+    timout.tv_sec = sec;
     timout.tv_usec = 0;
     if (setsockopt(fSocket, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timout, sizeof(timeval)) < 0) {
         jack_error("SetWriteTimeOut fd = %ld err = %s", fSocket, strerror(errno));
@@ -217,7 +226,8 @@ int JackClientSocket::ReadWithFds(void* data, int len, std::vector<UniqueFd>& fd
     return Read(static_cast<uint8_t*>(data) + *got, len - static_cast<int>(*got));
 }
 
-JackServerSocket::JackServerSocket(): fSocket( -1)
+JackServerSocket::JackServerSocket()
+    : fSocket(-1)
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
     fPromiscuous = (promiscuous != NULL);
@@ -237,7 +247,7 @@ int JackServerSocket::Bind(const char* dir, const char* name, int which) // A re
     // Socket name has to be kept in fName to be "unlinked".
     BuildName(name, fName, dir, which, sizeof(addr.sun_path), fPromiscuous);
     CopyCString(addr.sun_path, fName);
-   
+
     jack_log("JackServerSocket::Bind : addr.sun_path %s", addr.sun_path);
     unlink(fName); // Security...
 
@@ -265,7 +275,7 @@ error:
 
 JackClientSocket* JackServerSocket::Accept()
 {
-    struct sockaddr_un client_addr{};
+    struct sockaddr_un client_addr { };
     socklen_t client_addrlen;
 
     client_addrlen = sizeof(client_addr);
@@ -293,6 +303,4 @@ int JackServerSocket::Close()
     }
 }
 
-} // end of namespace
-
-
+} // namespace jackmini

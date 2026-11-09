@@ -24,8 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <cstdint>
 #include <string_view>
 
-namespace jackmini
-{
+namespace jackmini {
 
 using FrameCount = std::uint32_t;
 
@@ -61,10 +60,12 @@ enum class PortFlags : std::uint32_t {
     Terminal = 1u << 4,
 };
 
-constexpr PortFlags operator|(PortFlags a, PortFlags b) noexcept {
+constexpr PortFlags operator|(PortFlags a, PortFlags b) noexcept
+{
     return static_cast<PortFlags>(static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b));
 }
-constexpr bool has_flag(PortFlags set, PortFlags flag) noexcept {
+constexpr bool has_flag(PortFlags set, PortFlags flag) noexcept
+{
     return (static_cast<std::uint32_t>(set) & static_cast<std::uint32_t>(flag)) != 0;
 }
 
@@ -85,9 +86,13 @@ public:
 
 private:
     friend class Client;
-    constexpr Port(std::uint32_t id, std::uint32_t owner) noexcept : fId(id), fOwner(owner) {}
+    constexpr Port(std::uint32_t id, std::uint32_t owner) noexcept
+        : fId(id)
+        , fOwner(owner)
+    {
+    }
     std::uint32_t fId = 0;
-    std::uint32_t fOwner = 0;  // the client that issued the handle: the ids of two clients are not the same ports
+    std::uint32_t fOwner = 0; // the client that issued the handle: the ids of two clients are not the same ports
 };
 
 } // namespace jackmini

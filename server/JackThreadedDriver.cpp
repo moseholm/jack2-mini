@@ -18,18 +18,20 @@
 
 */
 
-#include "JackSystemDeps.h"
 #include "JackThreadedDriver.h"
-#include "JackError.h"
-#include "JackTools.h"
-#include "JackGlobals.h"
 #include "JackEngineControl.h"
+#include "JackError.h"
+#include "JackGlobals.h"
+#include "JackSystemDeps.h"
+#include "JackTools.h"
 
-namespace jackmini
+namespace jackmini {
+
+JackThreadedDriver::JackThreadedDriver(JackDriver* driver)
+    : fThread(this)
+    , fDriver(driver)
 {
-
-JackThreadedDriver::JackThreadedDriver(JackDriver* driver):fThread(this),fDriver(driver)
-{}
+}
 
 JackThreadedDriver::~JackThreadedDriver()
 {
@@ -42,23 +44,23 @@ int JackThreadedDriver::Open()
 }
 
 int JackThreadedDriver::Open(jack_nframes_t buffer_size,
-                             jack_nframes_t samplerate,
-                             bool capturing,
-                             bool playing,
-                             int inchannels,
-                             int outchannels,
-                             bool monitor,
-                             const char* capture_driver_name,
-                             const char* playback_driver_name,
-                             jack_nframes_t capture_latency,
-                             jack_nframes_t playback_latency)
+    jack_nframes_t samplerate,
+    bool capturing,
+    bool playing,
+    int inchannels,
+    int outchannels,
+    bool monitor,
+    const char* capture_driver_name,
+    const char* playback_driver_name,
+    jack_nframes_t capture_latency,
+    jack_nframes_t playback_latency)
 {
     return fDriver->Open(buffer_size,
-                        samplerate, capturing,
-                        playing, inchannels,
-                        outchannels, monitor,
-                        capture_driver_name, playback_driver_name,
-                        capture_latency, playback_latency);
+        samplerate, capturing,
+        playing, inchannels,
+        outchannels, monitor,
+        capture_driver_name, playback_driver_name,
+        capture_latency, playback_latency);
 }
 
 int JackThreadedDriver::Close()
@@ -213,23 +215,23 @@ int JackThreadedDriver::Stop()
 
     switch (fThread.GetStatus()) {
 
-        // Kill the thread in Init phase
-        case JackThread::kStarting:
-        case JackThread::kIniting:
-            if (fThread.Kill() < 0) {
-                jack_error("Cannot kill thread");
-            }
-            break;
+    // Kill the thread in Init phase
+    case JackThread::kStarting:
+    case JackThread::kIniting:
+        if (fThread.Kill() < 0) {
+            jack_error("Cannot kill thread");
+        }
+        break;
 
-        // Stop when the thread cycle is finished
-        case JackThread::kRunning:
-            if (fThread.Stop() < 0) {
-                jack_error("Cannot stop thread");
-            }
-            break;
+    // Stop when the thread cycle is finished
+    case JackThread::kRunning:
+        if (fThread.Stop() < 0) {
+            jack_error("Cannot stop thread");
+        }
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 
     if (fDriver->Stop() < 0) {
@@ -246,7 +248,7 @@ bool JackThreadedDriver::Execute()
 
 bool JackThreadedDriver::Init()
 {
-    if (fDriver->Initialize())  {
+    if (fDriver->Initialize()) {
         SetRealTime();
         return true;
     } else {
@@ -273,4 +275,4 @@ void JackThreadedDriver::SetRealTime()
 }
 
 
-} // end of namespace
+} // namespace jackmini

@@ -20,17 +20,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackSocketServerChannel__
 #define __JackSocketServerChannel__
 
-#include "JackSocket.h"
 #include "JackPlatformPlug.h"
 #include "JackRequestDecoder.h"
+#include "JackSocket.h"
 
 #include <poll.h>
 #include <map>
 #include <memory>
 #include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 class JackServer;
 
@@ -38,47 +37,43 @@ class JackServer;
 \brief JackServerChannel using sockets.
 */
 
-class JackSocketServerChannel : public JackRunnableInterface, public JackClientHandlerInterface
-{
+class JackSocketServerChannel : public JackRunnableInterface, public JackClientHandlerInterface {
 
-    private:
+private:
+    JackServerSocket fRequestListenSocket; // Socket to create request socket for the client
+    JackThread fThread; // Thread to execute the event loop
+    std::unique_ptr<JackRequestDecoder> fDecoder;
+    JackServer* fServer;
 
-        JackServerSocket fRequestListenSocket;  // Socket to create request socket for the client
-        JackThread fThread;                     // Thread to execute the event loop
-        std::unique_ptr<JackRequestDecoder> fDecoder;
-        JackServer* fServer;
+    std::vector<pollfd> fPollTable;
+    bool fRebuild;
+    std::map<int, std::pair<int, JackClientSocket*>> fSocketTable;
 
-        std::vector<pollfd> fPollTable;
-        bool fRebuild;
-        std::map<int, std::pair<int, JackClientSocket*> > fSocketTable;
+    void BuildPoolTable();
 
-        void BuildPoolTable();
+    void ClientCreate();
+    void ClientKill(int fd);
 
-        void ClientCreate();
-        void ClientKill(int fd);
-  
-        void ClientAdd(detail::JackChannelTransactionInterface* socket, JackClientOpenRequest* req, JackClientOpenResult *res);
-        void ClientRemove(detail::JackChannelTransactionInterface* socket, int refnum);
+    void ClientAdd(detail::JackChannelTransactionInterface* socket, JackClientOpenRequest* req, JackClientOpenResult* res);
+    void ClientRemove(detail::JackChannelTransactionInterface* socket, int refnum);
 
-        int GetFd(JackClientSocket* socket);
+    int GetFd(JackClientSocket* socket);
 
-    public:
+public:
+    JackSocketServerChannel();
+    ~JackSocketServerChannel();
 
-        JackSocketServerChannel();
-        ~JackSocketServerChannel();
+    Result<void> Open(const char* server_name, JackServer* server); // Open the Server/Client connection
+    void Close(); // Close the Server/Client connection
 
-        Result<void> Open(const char* server_name, JackServer* server);  // Open the Server/Client connection
-        void Close();                                           // Close the Server/Client connection
+    Result<void> Start();
+    void Stop();
 
-        Result<void> Start();
-        void Stop();
-
-        // JackRunnableInterface interface
-        bool Init();
-        bool Execute();
+    // JackRunnableInterface interface
+    bool Init();
+    bool Execute();
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif
-

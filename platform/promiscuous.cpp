@@ -21,17 +21,16 @@
 
 #include "JackError.h"
 
-#include <cerrno>
-#include <cstdlib>
-#include <cstring>
 #include <fcntl.h>
 #include <grp.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
 #include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 int group_to_gid(const char* group)
 {
@@ -76,4 +75,4 @@ int set_promiscuous_perms(int fd, const char* path, gid_t gid)
     return 0;
 }
 
-} // end of namespace
+} // namespace jackmini

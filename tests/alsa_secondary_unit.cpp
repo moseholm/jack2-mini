@@ -20,12 +20,12 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 // hardware: the card's control, stream and thread code is covered by the live
 // checks described in docs/secondary-alsa-cards.md.
 
+#include "JackAlsaCardDiff.h"
 #include "JackAlsaDriftController.h"
 #include "JackAlsaRateConverter.h"
 #include "JackAlsaRingBuffer.h"
-#include "JackAlsaSlotTable.h"
 #include "JackAlsaSecondaryConfig.h"
-#include "JackAlsaCardDiff.h"
+#include "JackAlsaSlotTable.h"
 #include "resample/JackResampler.h"
 #include "resample/pipewire_resample_bridge.h"
 
@@ -40,37 +40,40 @@ using namespace jackmini;
 static int g_failures = 0;
 static int g_checks = 0;
 
-#define CHECK(cond) do { \
-        g_checks++; \
-        if (!(cond)) { \
-            g_failures++; \
+#define CHECK(cond)                                                    \
+    do {                                                               \
+        g_checks++;                                                    \
+        if (!(cond)) {                                                 \
+            g_failures++;                                              \
             printf("  FAILED %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-        } \
+        }                                                              \
     } while (0)
 
 // A test-only resampler that passes samples through unchanged.  It shows that
 // the converter works with any JackResampler, not only the PipeWire one.
-class PassThroughResampler : public JackResampler
-{
-    public:
-        PassThroughResampler() : fRate(1.0) {}
-        virtual void Reset() {}
-        virtual void SetRate(double rate) { fRate = rate; }
-        virtual unsigned int InputLength(unsigned int out_len) { return out_len; }
-        virtual unsigned int OutputLength(unsigned int in_len) { return in_len; }
-        virtual void Process(const float* const* src, unsigned int* in_len,
-                             float* const* dst, unsigned int* out_len)
-        {
-            unsigned int n = (*in_len < *out_len) ? *in_len : *out_len;
-            // Only the first two channels are used by these tests.
-            for (int c = 0; c < 2; c++) {
-                memcpy(dst[c], src[c], sizeof(float) * n);
-            }
-            *in_len = n;
-            *out_len = n;
+class PassThroughResampler : public JackResampler {
+public:
+    PassThroughResampler()
+        : fRate(1.0)
+    {
+    }
+    virtual void Reset() { }
+    virtual void SetRate(double rate) { fRate = rate; }
+    virtual unsigned int InputLength(unsigned int out_len) { return out_len; }
+    virtual unsigned int OutputLength(unsigned int in_len) { return in_len; }
+    virtual void Process(const float* const* src, unsigned int* in_len,
+        float* const* dst, unsigned int* out_len)
+    {
+        unsigned int n = (*in_len < *out_len) ? *in_len : *out_len;
+        // Only the first two channels are used by these tests.
+        for (int c = 0; c < 2; c++) {
+            memcpy(dst[c], src[c], sizeof(float) * n);
         }
-        virtual unsigned int Delay() { return 0; }
-        double fRate;
+        *in_len = n;
+        *out_len = n;
+    }
+    virtual unsigned int Delay() { return 0; }
+    double fRate;
 };
 
 static void TestConfigDefaults()
@@ -109,7 +112,7 @@ static void TestConfigErrors()
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;clock=fast", &c, &err));
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;rate=1", &c, &err));
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;wat=1", &c, &err));
-    CHECK(!JackAlsaSecondaryConfigParse("name=x", &c, &err));       // no device
+    CHECK(!JackAlsaSecondaryConfigParse("name=x", &c, &err)); // no device
     CHECK(!JackAlsaSecondaryConfigParse("", &c, &err));
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;channels=2x", &c, &err));
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;channels=+-2", &c, &err));
@@ -172,7 +175,7 @@ static void TestConfigFile()
     fclose(f);
     cards.clear();
     CHECK(!JackAlsaSecondaryConfigLoadFile(bad, &cards, &err));
-    CHECK(err.find(":2:") != std::string::npos);   // names the line
+    CHECK(err.find(":2:") != std::string::npos); // names the line
     remove(good);
     remove(bad);
 }
@@ -184,17 +187,22 @@ static void TestRing()
     float a[2][5], b[2][6];
     float* out[2] = { b[0], b[1] };
     const float* in[2] = { a[0], a[1] };
-    for (int i = 0; i < 5; i++) { a[0][i] = (float)i; a[1][i] = 100.0f + i; }
+    for (int i = 0; i < 5; i++) {
+        a[0][i] = (float)i;
+        a[1][i] = 100.0f + i;
+    }
 
     CHECK(ring.Write(in, 5) == 5);
-    CHECK(ring.Write(in, 5) == 3);              // only 3 slots free
-    CHECK(ring.Read(out, 6) == 8);              // 8 buffered
+    CHECK(ring.Write(in, 5) == 3); // only 3 slots free
+    CHECK(ring.Read(out, 6) == 8); // 8 buffered
     CHECK(b[0][4] == 4.0f && b[1][0] == 100.0f);
-    CHECK(ring.Write(in, 4) == 4);              // wraps past the end
-    float c[2][6]; float* cp[2] = { c[0], c[1] };
-    CHECK(ring.Read(cp, 6) == 6);               // the 2 left over plus the 4 new
+    CHECK(ring.Write(in, 4) == 4); // wraps past the end
+    float c[2][6];
+    float* cp[2] = { c[0], c[1] };
+    CHECK(ring.Read(cp, 6) == 6); // the 2 left over plus the 4 new
     CHECK(c[0][0] == 1.0f && c[0][2] == 0.0f && c[0][5] == 3.0f);
-    float z[2][4]; float* zp[2] = { z[0], z[1] };
+    float z[2][4];
+    float* zp[2] = { z[0], z[1] };
     CHECK(ring.Read(zp, 4) == 0);
     CHECK(z[0][0] == 0.0f && z[1][3] == 0.0f);
 
@@ -248,10 +256,7 @@ static void TestResamplerFactories()
     if (pw != NULL) {
         const char* kernel = jack_pw_resampler_kernel_name(pw);
         printf("resampler: selected '%s' kernel\n", kernel);
-        bool known = strcmp(kernel, "full_c") == 0 || strcmp(kernel, "inter_c") == 0 ||
-                     strcmp(kernel, "full_sse") == 0 || strcmp(kernel, "inter_sse") == 0 ||
-                     strcmp(kernel, "full_avx2") == 0 || strcmp(kernel, "inter_avx2") == 0 ||
-                     strcmp(kernel, "full_neon") == 0 || strcmp(kernel, "inter_neon") == 0;
+        bool known = strcmp(kernel, "full_c") == 0 || strcmp(kernel, "inter_c") == 0 || strcmp(kernel, "full_sse") == 0 || strcmp(kernel, "inter_sse") == 0 || strcmp(kernel, "full_avx2") == 0 || strcmp(kernel, "inter_avx2") == 0 || strcmp(kernel, "full_neon") == 0 || strcmp(kernel, "inter_neon") == 0;
         CHECK(known);
         jack_pw_resampler_free(pw);
     }
@@ -268,14 +273,14 @@ static void TestSlotTable()
     CHECK(table.Assign(&a) == 0);
     CHECK(table.Assign(&b) == 1);
     CHECK(table.Assign(&c) == 2);
-    CHECK(table.Assign(&d) == -1);                  // full
+    CHECK(table.Assign(&d) == -1); // full
     CHECK(table.Count() == 3);
     CHECK(table.Get(1) == &b);
     CHECK(table.Remove(&b) == 1);
     CHECK(table.Get(1) == NULL);
     CHECK(table.Count() == 2);
-    CHECK(table.Remove(&b) == 0);                   // already gone
-    CHECK(table.Assign(&d) == 1);                   // the freed slot is reused
+    CHECK(table.Remove(&b) == 0); // already gone
+    CHECK(table.Assign(&d) == 1); // the freed slot is reused
     CHECK(table.Remove(&a) == 1);
     CHECK(table.Remove(&c) == 1);
     CHECK(table.Remove(&d) == 1);
@@ -299,20 +304,27 @@ static void TestCardDiff()
     JackAlsaCardChanges c = JackAlsaDiffCards(cur, want);
     CHECK(c.retire.empty() && c.add.empty());
 
-    cur.push_back("nvidia_d3|p"); cur.push_back("loop_d0|cp");
-    want.push_back("loop_d0|cp"); want.push_back("nvidia_d3|p"); want.push_back("nvidia_d7|p");
+    cur.push_back("nvidia_d3|p");
+    cur.push_back("loop_d0|cp");
+    want.push_back("loop_d0|cp");
+    want.push_back("nvidia_d3|p");
+    want.push_back("nvidia_d7|p");
     c = JackAlsaDiffCards(cur, want);
     CHECK(c.retire.empty());
     CHECK(c.add.size() == 1 && c.add[0] == 2);
 
-    cur.clear(); cur.push_back("hdmi_d3|p");
-    want.clear(); want.push_back("nvidia_d7|p");
+    cur.clear();
+    cur.push_back("hdmi_d3|p");
+    want.clear();
+    want.push_back("nvidia_d7|p");
     c = JackAlsaDiffCards(cur, want);
     CHECK(c.retire.size() == 1 && c.retire[0] == 0);
     CHECK(c.add.size() == 1 && c.add[0] == 0);
 
-    cur.clear(); cur.push_back("loop_d1|c");
-    want.clear(); want.push_back("loop_d1|cp");
+    cur.clear();
+    cur.push_back("loop_d1|c");
+    want.clear();
+    want.push_back("loop_d1|cp");
     c = JackAlsaDiffCards(cur, want);
     CHECK(c.retire.size() == 1 && c.add.size() == 1);
 }
@@ -467,9 +479,9 @@ static void TestDriftLimits()
 {
     printf("drift: the correction is clamped and slew limited\n");
     JackAlsaDriftController c;
-    double rate = c.Update(100000.0, 0.0, 470.0);   // huge error
+    double rate = c.Update(100000.0, 0.0, 470.0); // huge error
     CHECK(fabs(rate - 1.0) <= 1000e-6 + 1e-12);
-    CHECK(fabs(c.Correction()) <= 20e-6 + 1e-12);   // one slew step at most
+    CHECK(fabs(c.Correction()) <= 20e-6 + 1e-12); // one slew step at most
     c.Reset();
     CHECK(c.Correction() == 0.0);
 }

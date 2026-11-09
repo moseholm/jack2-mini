@@ -23,8 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackCompilerDeps.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 struct JackClientControl;
 
@@ -32,24 +31,24 @@ struct JackClientControl;
 \brief Client interface.
 */
 
-class SERVER_EXPORT JackClientInterface
-{
+class SERVER_EXPORT JackClientInterface {
 
-     public:
+public:
+    JackClientInterface()
+    {
+    }
+    virtual ~JackClientInterface()
+    {
+    }
 
-        JackClientInterface()
-        {}
-        virtual ~JackClientInterface()
-        {}
+    virtual int Close() = 0;
 
-        virtual int Close() = 0;
+    virtual int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2) = 0;
 
-        virtual int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2) = 0;
-
-        virtual JackClientControl* GetClientControl() const = 0;
+    virtual JackClientControl* GetClientControl() const = 0;
 };
 
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

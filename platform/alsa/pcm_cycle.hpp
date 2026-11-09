@@ -19,17 +19,16 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef JACKMINI_ALSA_PCM_CYCLE_HPP
 #define JACKMINI_ALSA_PCM_CYCLE_HPP
 
+#include <poll.h>
 #include <algorithm>
 #include <cerrno>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <poll.h>
 #include <vector>
 
-namespace jackmini::alsa
-{
+namespace jackmini::alsa {
 
 enum class Stream {
     Capture,
@@ -39,14 +38,14 @@ enum class Stream {
 // One channel of a mapped device buffer.  The core never looks at the sample format; the backend and the adapter do.
 struct ChannelArea {
     std::byte* data = nullptr;
-    std::size_t stride = 0;  // bytes between two frames of this channel
+    std::size_t stride = 0; // bytes between two frames of this channel
 };
 
 // A contiguous piece of a device buffer.  The backend fills the channel areas; the core sets requested before begin().
 struct MappedFrames {
-    std::size_t offset = 0;       // frame offset for commit
-    std::size_t frames = 0;       // contiguous frames the backend can give
-    std::size_t requested = 0;    // contiguous frames the caller wants
+    std::size_t offset = 0; // frame offset for commit
+    std::size_t frames = 0; // contiguous frames the backend can give
+    std::size_t requested = 0; // contiguous frames the caller wants
     ChannelArea* channels = nullptr;
     std::size_t channel_count = 0;
 };
@@ -58,14 +57,14 @@ struct XrunStatus {
 };
 
 struct WaitResult {
-    std::ptrdiff_t frames = 0;     // ready frames rounded down to a period; 0 after a recovered xrun
-    int status = -1;               // 0 is a normal cycle; the negatives follow the old ALSA driver
+    std::ptrdiff_t frames = 0; // ready frames rounded down to a period; 0 after a recovered xrun
+    int status = -1; // 0 is a normal cycle; the negatives follow the old ALSA driver
     float delayed_usecs = 0.0f;
 };
 
 struct Config {
     std::uint32_t frames_per_cycle = 0;
-    std::uint32_t buffer_frames = 0;  // frames in the device buffer, usually frames_per_cycle * periods
+    std::uint32_t buffer_frames = 0; // frames in the device buffer, usually frames_per_cycle * periods
     std::uint64_t period_usecs = 0;
     bool capture_and_playback_not_synced = false;
 };
@@ -75,15 +74,15 @@ struct Config {
 // change while the cycle runs.
 template <class B>
 concept PcmBackend = requires(B& backend,
-                              Stream stream,
-                              struct pollfd* fds,
-                              nfds_t nfds,
-                              unsigned short* revents,
-                              MappedFrames& mapped,
-                              std::size_t offset,
-                              std::size_t frames,
-                              std::size_t channel,
-                              XrunStatus& xrun_status) {
+    Stream stream,
+    struct pollfd* fds,
+    nfds_t nfds,
+    unsigned short* revents,
+    MappedFrames& mapped,
+    std::size_t offset,
+    std::size_t frames,
+    std::size_t channel,
+    XrunStatus& xrun_status) {
     { backend.has_capture() } -> std::convertible_to<bool>;
     { backend.has_playback() } -> std::convertible_to<bool>;
     { backend.capture_channels() } -> std::convertible_to<std::size_t>;
@@ -106,16 +105,15 @@ concept PcmBackend = requires(B& backend,
 // The device cycle: start, wait, read, write, stop, and the xrun recovery.  The cycle itself allocates only in its
 // constructor.  The callbacks are plain function pointers, and the backend is a template parameter.
 template <PcmBackend Backend>
-class Cycle
-{
+class Cycle {
 public:
     struct Callbacks {
         void* arg = nullptr;
         // The mapped buffer belongs to the cycle and is valid only during the call.
         void (*read_input)(void* arg, Cycle& cycle, const MappedFrames& mapped,
-                           std::uint32_t orig_frames, std::ptrdiff_t nread) = nullptr;
+            std::uint32_t orig_frames, std::ptrdiff_t nread) = nullptr;
         void (*write_output)(void* arg, Cycle& cycle, const MappedFrames& mapped,
-                             std::uint32_t orig_frames, std::ptrdiff_t nwritten) = nullptr;
+            std::uint32_t orig_frames, std::ptrdiff_t nwritten) = nullptr;
         void (*clear_output)(void* arg) = nullptr;
         int (*restart)(void* arg) = nullptr;
         void (*set_time)(void* arg, std::uint64_t usecs) = nullptr;
@@ -177,8 +175,8 @@ private:
 
 template <PcmBackend Backend>
 Cycle<Backend>::Cycle(Backend& backend, const Config& config)
-    : backend_(backend),
-      config_(config)
+    : backend_(backend)
+    , config_(config)
 {
     const int capture_nfds = backend_.has_capture() ? backend_.poll_descriptor_count(Stream::Capture) : 0;
     const int playback_nfds = backend_.has_playback() ? backend_.poll_descriptor_count(Stream::Playback) : 0;
@@ -194,9 +192,9 @@ Cycle<Backend>::Cycle(Backend& backend, const Config& config)
     const std::size_t channels = std::max(backend_.capture_channels(), backend_.playback_channels());
     channels_not_done_.resize((channels + 63) / 64);
     if (channels % 64 != 0) {
-        channel_mask_last_ = (std::uint64_t{1} << (channels % 64)) - 1;
+        channel_mask_last_ = (std::uint64_t { 1 } << (channels % 64)) - 1;
     } else if (channels != 0) {
-        channel_mask_last_ = ~std::uint64_t{0};
+        channel_mask_last_ = ~std::uint64_t { 0 };
     }
 
     silent_.assign(backend_.playback_channels(), 0);
@@ -370,7 +368,8 @@ WaitResult Cycle<Backend>::wait()
         if (need_playback) {
             unsigned short revents = 0;
             if (backend_.poll_revents(Stream::Playback, poll_fds_.data(), static_cast<nfds_t>(playback_nfds),
-                                      &revents) < 0) {
+                    &revents)
+                < 0) {
                 result.status = -6;
                 return result;
             }
@@ -389,7 +388,8 @@ WaitResult Cycle<Backend>::wait()
         if (need_capture) {
             unsigned short revents = 0;
             if (backend_.poll_revents(Stream::Capture, poll_fds_.data() + capture_index,
-                                      static_cast<nfds_t>(nfds - capture_index), &revents) < 0) {
+                    static_cast<nfds_t>(nfds - capture_index), &revents)
+                < 0) {
                 result.status = -6;
                 return result;
             }
@@ -407,10 +407,8 @@ WaitResult Cycle<Backend>::wait()
     }
 
     constexpr std::ptrdiff_t kNoStream = std::numeric_limits<std::ptrdiff_t>::max();
-    const std::ptrdiff_t capture_avail =
-        backend_.has_capture() ? backend_.avail(Stream::Capture) : kNoStream;
-    const std::ptrdiff_t playback_avail =
-        backend_.has_playback() ? backend_.avail(Stream::Playback) : kNoStream;
+    const std::ptrdiff_t capture_avail = backend_.has_capture() ? backend_.avail(Stream::Capture) : kNoStream;
+    const std::ptrdiff_t playback_avail = backend_.has_playback() ? backend_.avail(Stream::Playback) : kNoStream;
 
     if (capture_avail == -EPIPE || playback_avail == -EPIPE) {
         xrun_detected = true;
@@ -552,7 +550,7 @@ int Cycle<Backend>::write(std::uint32_t frames)
 template <PcmBackend Backend>
 void Cycle<Backend>::mark_channel_done(std::size_t channel)
 {
-    channels_not_done_[channel / 64] &= ~(std::uint64_t{1} << (channel % 64));
+    channels_not_done_[channel / 64] &= ~(std::uint64_t { 1 } << (channel % 64));
     silent_[channel] = 0;
 }
 
@@ -570,7 +568,7 @@ void Cycle<Backend>::silence_untouched(std::size_t frames)
 template <PcmBackend Backend>
 void Cycle<Backend>::reset_channels_not_done()
 {
-    std::fill(channels_not_done_.begin(), channels_not_done_.end(), ~std::uint64_t{0});
+    std::fill(channels_not_done_.begin(), channels_not_done_.end(), ~std::uint64_t { 0 });
     if (!channels_not_done_.empty()) {
         channels_not_done_.back() = channel_mask_last_;
     }
@@ -579,7 +577,7 @@ void Cycle<Backend>::reset_channels_not_done()
 template <PcmBackend Backend>
 bool Cycle<Backend>::channel_not_done(std::size_t channel) const
 {
-    return (channels_not_done_[channel / 64] & (std::uint64_t{1} << (channel % 64))) != 0;
+    return (channels_not_done_[channel / 64] & (std::uint64_t { 1 } << (channel % 64))) != 0;
 }
 
 } // namespace jackmini::alsa

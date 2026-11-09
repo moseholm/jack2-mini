@@ -21,11 +21,9 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackError.h"
 #include "JackLog.h"
 
-namespace jackmini::alsa
-{
+namespace jackmini::alsa {
 
-namespace
-{
+namespace {
 
 // The copy from a JACK float buffer to a device playback area.  Null when the format has no conversion.
 WriteCopyFunction select_write(const StreamInfo& info, DitherAlgorithm dither)
@@ -152,7 +150,7 @@ int Session::open(const char* capture_name, const char* playback_name, Request& 
     frames_per_cycle_ = request.frames_per_cycle;
     periods_ = timing.periods;
     rate_ = request.rate;
-    dither_.assign(device_.playback_channels(), dither_state_t{});
+    dither_.assign(device_.playback_channels(), dither_state_t { });
 
     Config config;
     config.frames_per_cycle = frames_per_cycle_;
@@ -191,7 +189,7 @@ void Session::read_channel(const ChannelArea& area, jack_default_audio_sample_t*
 }
 
 void Session::write_channel(std::size_t channel, const ChannelArea& area, jack_default_audio_sample_t* buf,
-                            std::size_t frames)
+    std::size_t frames)
 {
     write_copy_(reinterpret_cast<char*>(area.data), buf, frames, area.stride, &dither_[channel]);
     cycle_->mark_channel_done(channel);

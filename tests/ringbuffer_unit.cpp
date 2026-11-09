@@ -24,23 +24,22 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <thread>
 #include <vector>
 
-namespace
-{
+namespace {
 
 int failures = 0;
 
-#define CHECK(cond)                                                    \
-    do {                                                               \
-        if (!(cond)) {                                                 \
-            std::fprintf(stderr, "FAILED %s:%d: %s\n", __FILE__,       \
-                         __LINE__, #cond);                             \
-            ++failures;                                                \
-        }                                                              \
+#define CHECK(cond)                                              \
+    do {                                                         \
+        if (!(cond)) {                                           \
+            std::fprintf(stderr, "FAILED %s:%d: %s\n", __FILE__, \
+                __LINE__, #cond);                                \
+            ++failures;                                          \
+        }                                                        \
     } while (0)
 
 void check_sizes()
 {
-    for (size_t requested : {size_t(0), size_t(1), size_t(2)}) {
+    for (size_t requested : { size_t(0), size_t(1), size_t(2) }) {
         jack_ringbuffer_t* rb = jack_ringbuffer_create(requested);
         CHECK(rb != nullptr);
         CHECK(jack_ringbuffer_write_space(rb) == 1);
@@ -67,7 +66,7 @@ void check_round_trip_and_wrap()
     // Fill 5 of the 7 usable bytes, read 3, then write 6: the write wraps past the end.
     const char first[] = "abcde";
     CHECK(jack_ringbuffer_write(rb, first, 5) == 5);
-    char out[16] = {};
+    char out[16] = { };
     CHECK(jack_ringbuffer_read(rb, out, 3) == 3);
     CHECK(std::memcmp(out, "abc", 3) == 0);
     CHECK(jack_ringbuffer_read_space(rb) == 2);
@@ -91,7 +90,7 @@ void check_peek_and_advance()
     jack_ringbuffer_t* rb = jack_ringbuffer_create(16);
     CHECK(jack_ringbuffer_write(rb, "0123456789", 10) == 10);
 
-    char out[16] = {};
+    char out[16] = { };
     CHECK(jack_ringbuffer_peek(rb, out, 4) == 4);
     CHECK(std::memcmp(out, "0123", 4) == 0);
     CHECK(jack_ringbuffer_read_space(rb) == 10);
@@ -118,7 +117,7 @@ void check_vectors()
     jack_ringbuffer_get_write_vector(rb, vec);
     CHECK(vec[0].len == 7);
     CHECK(jack_ringbuffer_write(rb, "uvwxyz", 6) == 6);
-    char out[8] = {};
+    char out[8] = { };
     CHECK(jack_ringbuffer_read(rb, out, 5) == 5);
 
     jack_ringbuffer_get_write_vector(rb, vec);

@@ -32,8 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <type_traits>
 #include <utility>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Copy text into a fixed-size C string buffer.
@@ -99,11 +98,11 @@ template <std::integral T>
 T ParseLeadingInteger(std::string_view text)
 {
     text = SkipNumericPrefix(text);
-    T value{};
+    T value { };
     const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
-    return ec == std::errc() ? value : T{};
+    return ec == std::errc() ? value : T { };
 }
 
-}
+} // namespace jackmini
 
 #endif

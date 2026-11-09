@@ -27,8 +27,7 @@ using namespace jackmini;
 
 const double PI = 3.14;
 
-namespace
-{
+namespace {
 
 // The keys are read as they are typed.  EOF ends the wait, so that a closed input does not spin.
 bool WaitForKey(int key)

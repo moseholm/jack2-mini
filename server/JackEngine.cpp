@@ -17,35 +17,34 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#include <array>
-#include <iostream>
-#include <fstream>
-#include <set>
 #include <assert.h>
 #include <ctype.h>
+#include <array>
+#include <fstream>
+#include <iostream>
+#include <set>
 
 #include "JackCString.h"
-#include "JackSystemDeps.h"
-#include "JackLockedEngine.h"
-#include "JackExternalClient.h"
-#include "JackEngineControl.h"
-#include "JackClientControl.h"
-#include "JackServerGlobals.h"
-#include "JackServer.h"
-#include "JackGlobals.h"
 #include "JackChannel.h"
+#include "JackClientControl.h"
+#include "JackEngineControl.h"
 #include "JackError.h"
+#include "JackExternalClient.h"
+#include "JackGlobals.h"
+#include "JackLockedEngine.h"
+#include "JackServer.h"
+#include "JackServerGlobals.h"
+#include "JackSystemDeps.h"
 #include "jack/uuid.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 JackEngine::JackEngine(JackGraphManager* manager,
-                       JackSynchro* table,
-                       JackEngineControl* control,
-                       char self_connect_mode)
-                    : JackLockAble(control->fServerName),
-                    fSignal(control->fServerName)
+    JackSynchro* table,
+    JackEngineControl* control,
+    char self_connect_mode)
+    : JackLockAble(control->fServerName)
+    , fSignal(control->fServerName)
 {
     fGraphManager = manager;
     fSynchroTable = table;
@@ -60,7 +59,8 @@ JackEngine::JackEngine(JackGraphManager* manager,
 }
 
 JackEngine::~JackEngine()
-{}
+{
+}
 
 Result<void> JackEngine::Open()
 {
@@ -86,7 +86,7 @@ Result<void> JackEngine::Close()
         }
     }
 
-    return {};
+    return { };
 }
 
 void JackEngine::NotifyQuit()
@@ -137,11 +137,11 @@ void JackEngine::ReleaseRefnum(int refnum)
 void JackEngine::ProcessNext(jack_time_t cur_cycle_begin)
 {
     fLastSwitchUsecs = cur_cycle_begin;
-    if (fGraphManager->RunNextGraph())  {   // True if the graph actually switched to a new state
+    if (fGraphManager->RunNextGraph()) { // True if the graph actually switched to a new state
         fChannel.Notify(ALL_CLIENTS, kGraphOrderCallback, 0);
     }
     fSwitchCount.fetch_add(1);
-    fSignal.Signal();                       // Signal for threads waiting for a switch
+    fSignal.Signal(); // Signal for threads waiting for a switch
 }
 
 bool JackEngine::WaitForSwitches(unsigned long count)
@@ -207,20 +207,20 @@ correctly mixed in the time window: callbackUsecs <==> Read <==> Write.
 static const char* State2String(jack_client_state_t state)
 {
     switch (state) {
-        case NotTriggered:
-            return "NotTriggered";
-        case Triggered:
-            return "Triggered";
-        case Running:
-            return "Running";
-        case Finished:
-            return "Finished";
-        default:
-            return "";
+    case NotTriggered:
+        return "NotTriggered";
+    case Triggered:
+        return "Triggered";
+    case Running:
+        return "Running";
+    case Finished:
+        return "Finished";
+    default:
+        return "";
     }
 }
 
-void JackEngine::CheckXRun(jack_time_t callback_usecs)  // REVOIR les conditions de fin
+void JackEngine::CheckXRun(jack_time_t callback_usecs) // REVOIR les conditions de fin
 {
     for (int i = fEngineControl->fDriverNum; i < CLIENT_NUM; i++) {
         JackClientInterface* client = fClientTable[i];
@@ -231,12 +231,12 @@ void JackEngine::CheckXRun(jack_time_t callback_usecs)  // REVOIR les conditions
 
             if (status != NotTriggered && status != Finished) {
                 jack_error("JackEngine::XRun: client = %s was not finished, state = %s", client->GetClientControl()->fName, State2String(status));
-                fChannel.Notify(ALL_CLIENTS, kXRunCallback, 0);  // Notify all clients
+                fChannel.Notify(ALL_CLIENTS, kXRunCallback, 0); // Notify all clients
             }
 
             if (status == Finished && (long)(finished_date - callback_usecs) > 0) {
                 jack_error("JackEngine::XRun: client %s finished after current callback", client->GetClientControl()->fName);
-                fChannel.Notify(ALL_CLIENTS, kXRunCallback, 0);  // Notify all clients
+                fChannel.Notify(ALL_CLIENTS, kXRunCallback, 0); // Notify all clients
             }
         }
     }
@@ -264,7 +264,7 @@ Result<void> JackEngine::ComputeTotalLatencies()
         NotifyClient(*rit, kLatencyCallback, true, "", 1, 0);
     }
 
-    return {};
+    return { };
 }
 
 //--------------
@@ -280,15 +280,15 @@ Result<void> JackEngine::ClientNotify(JackClientInterface* client, int refnum, c
     // Check if notification is needed
     if (!client->GetClientControl()->fCallback[notify]) {
         jack_log("JackEngine::ClientNotify: no callback for notification = %ld", notify);
-        return {};
+        return { };
     }
 
     int res1;
 
     // External client
     if (dynamic_cast<JackExternalClient*>(client)) {
-       res1 = client->ClientNotify(refnum, name, notify, sync, message, value1, value2);
-    // Important for internal client : unlock before calling the notification callbacks
+        res1 = client->ClientNotify(refnum, name, notify, sync, message, value1, value2);
+        // Important for internal client : unlock before calling the notification callbacks
     } else {
         bool res2 = Unlock();
         res1 = client->ClientNotify(refnum, name, notify, sync, message, value1, value2);
@@ -301,7 +301,7 @@ Result<void> JackEngine::ClientNotify(JackClientInterface* client, int refnum, c
         jack_error("ClientNotify fails name = %s notification = %ld val1 = %ld val2 = %ld", name, notify, value1, value2);
         return std::unexpected(Error::ServerFailure);
     }
-    return {};
+    return { };
 }
 
 void JackEngine::NotifyClient(int refnum, int event, int sync, const char* message, int value1, int value2)
@@ -339,7 +339,7 @@ Result<void> JackEngine::NotifyAddClient(JackClientInterface* new_client, const 
         }
     }
 
-    return {};
+    return { };
 }
 
 void JackEngine::NotifyRemoveClient(const char* name, int refnum)
@@ -448,7 +448,7 @@ Result<void> JackEngine::ClientCheck(const char* name, jack_uuid_t uuid, char* n
         return std::unexpected(Error::Protocol);
     }
 
-    std::map<int,std::string>::iterator res = fReservationMap.find(uuid);
+    std::map<int, std::string>::iterator res = fReservationMap.find(uuid);
 
     if (res != fReservationMap.end()) {
         strncpy(name_res, res->second.c_str(), JACK_CLIENT_NAME_SIZE);
@@ -468,7 +468,7 @@ Result<void> JackEngine::ClientCheck(const char* name, jack_uuid_t uuid, char* n
         }
     }
 
-    return {};
+    return { };
 }
 
 bool JackEngine::GenerateUniqueName(char* name)
@@ -478,7 +478,7 @@ bool JackEngine::GenerateUniqueName(char* name)
 
     if (length > JACK_CLIENT_NAME_SIZE - 4) {
         jack_error("%s exists and is too long to make unique", name);
-        return true;            /* failure */
+        return true; /* failure */
     }
 
     /*  generate a unique name by appending "-01".."-99" */
@@ -513,7 +513,7 @@ bool JackEngine::ClientCheckName(const char* name)
         }
     }
 
-    for (std::map<int,std::string>::iterator i = fReservationMap.begin(); i != fReservationMap.end(); i++) {
+    for (std::map<int, std::string>::iterator i = fReservationMap.begin(); i != fReservationMap.end(); i++) {
         if (i->second == name) {
             return true;
         }
@@ -531,7 +531,7 @@ void JackEngine::EnsureUUID(jack_uuid_t uuid)
         JackClientInterface* client = fClientTable[i];
         if (client && jack_uuid_compare(client->GetClientControl()->fSessionID, uuid) == 0) {
             // FIXME? this code does nothing, but jack1 has it like this too..
-            jack_uuid_clear (&uuid);
+            jack_uuid_clear(&uuid);
             // client->GetClientControl()->fSessionID = jack_client_uuid_generate();
         }
     }
@@ -564,7 +564,7 @@ Result<int> JackEngine::GetClientRefNum(const char* name)
 // Used for external clients
 Result<void> JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager)
 {
-    std::array<char, JACK_CLIENT_NAME_SIZE + 1> real_name{};
+    std::array<char, JACK_CLIENT_NAME_SIZE + 1> real_name { };
 
     if (jack_uuid_empty(uuid)) {
         uuid = jack_client_uuid_generate();
@@ -622,10 +622,10 @@ Result<void> JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid
 
     fGraphManager->InitRefNum(refnum);
     fRollingResetPending = true;
-    *shared_engine = JackShmSegment{ fEngineControl->GetShmFd(), fEngineControl->GetShmSize() };
-    *shared_graph_manager = JackShmSegment{ fGraphManager->GetShmFd(), fGraphManager->GetShmSize() };
+    *shared_engine = JackShmSegment { fEngineControl->GetShmFd(), fEngineControl->GetShmSize() };
+    *shared_graph_manager = JackShmSegment { fGraphManager->GetShmFd(), fGraphManager->GetShmSize() };
     *ref = refnum;
-    return {};
+    return { };
 
 error:
     // Cleanup...
@@ -671,7 +671,7 @@ Result<void> JackEngine::RegisterDriver(const char* name, int* ref, JackEngineCo
     *shared_engine = fEngineControl;
     *shared_manager = fGraphManager;
     *ref = refnum;
-    return {};
+    return { };
 
 error:
     // Cleanup...
@@ -707,7 +707,7 @@ Result<void> JackEngine::ClientCloseAux(int refnum, bool wait)
     fEngineControl->fTransport.ResetTimebase(refnum);
 
     jack_uuid_t uuid = JACK_UUID_EMPTY_INITIALIZER;
-    jack_uuid_copy (&uuid, client->GetClientControl()->fSessionID);
+    jack_uuid_copy(&uuid, client->GetClientControl()->fSessionID);
 
     // Unregister all ports ==> notifications are sent
     jack_int_t ports[PORT_NUM_FOR_CLIENT];
@@ -742,7 +742,7 @@ Result<void> JackEngine::ClientCloseAux(int refnum, bool wait)
     // Cleanup...
     fSynchroTable[refnum].Destroy();
     fRollingResetPending = true;
-    return {};
+    return { };
 }
 
 Result<void> JackEngine::ClientActivate(int refnum, bool is_real_time, bool wait)
@@ -775,7 +775,7 @@ Result<void> JackEngine::ClientActivate(int refnum, bool is_real_time, bool wait
             NotifyPortRegistation(output_ports[i], true);
         }
 
-        return {};
+        return { };
     }
 }
 
@@ -801,7 +801,7 @@ Result<void> JackEngine::ClientDeactivate(int refnum, bool wait)
         jack_error("JackEngine::ClientDeactivate wait error ref = %ld name = %s", refnum, client->GetClientControl()->fName);
         return std::unexpected(Error::ServerFailure);
     } else {
-        return {};
+        return { };
     }
 }
 
@@ -820,7 +820,7 @@ void JackEngine::ClientKill(int refnum)
 // Port management
 //-----------------
 
-Result<void> JackEngine::PortRegister(int refnum, const char* name, const char *type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port_index)
+Result<void> JackEngine::PortRegister(int refnum, const char* name, const char* type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port_index)
 {
     jack_log("JackEngine::PortRegister ref = %ld name = %s type = %s flags = %d buffer_size = %d", refnum, name, type, flags, buffer_size);
     JackClientInterface* client = fClientTable[refnum];
@@ -837,7 +837,7 @@ Result<void> JackEngine::PortRegister(int refnum, const char* name, const char *
         if (client->GetClientControl()->fActive) {
             NotifyPortRegistation(*port_index, true);
         }
-        return {};
+        return { };
     } else {
         return std::unexpected(Error::ServerFailure);
     }
@@ -856,7 +856,7 @@ Result<void> JackEngine::PortUnRegister(int refnum, jack_port_id_t port_index)
         if (client->GetClientControl()->fActive) {
             NotifyPortRegistation(port_index, false);
         }
-        return {};
+        return { };
     } else {
         return std::unexpected(Error::ServerFailure);
     }
@@ -866,33 +866,36 @@ Result<void> JackEngine::PortUnRegister(int refnum, jack_port_id_t port_index)
 // TODO: make this work with multiple clients per app
 Result<bool> JackEngine::CheckPortsConnect(int refnum, jack_port_id_t src, jack_port_id_t dst)
 {
-    if (fSelfConnectMode == ' ') return true;
+    if (fSelfConnectMode == ' ')
+        return true;
 
     JackPort* src_port = fGraphManager->GetPort(src);
     JackPort* dst_port = fGraphManager->GetPort(dst);
 
     jack_log("JackEngine::CheckPortsConnect(ref = %d, src = %d, dst = %d)", refnum, src_port->GetRefNum(), dst_port->GetRefNum());
 
-    //jack_log("%s -> %s", src_port->GetName(), dst_port->GetName());
-    //jack_log("mode = '%c'", fSelfConnectMode);
+    // jack_log("%s -> %s", src_port->GetName(), dst_port->GetName());
+    // jack_log("mode = '%c'", fSelfConnectMode);
 
     int src_self = src_port->GetRefNum() == refnum ? 1 : 0;
     int dst_self = dst_port->GetRefNum() == refnum ? 1 : 0;
 
-    //jack_log("src_self is %s", src_self ? "true" : "false");
-    //jack_log("dst_self is %s", dst_self ? "true" : "false");
+    // jack_log("src_self is %s", src_self ? "true" : "false");
+    // jack_log("dst_self is %s", dst_self ? "true" : "false");
 
     // 0 means client is connecting other client ports (control app patchbay functionality)
     // 1 means client is connecting its own port to port of other client (e.g. self connecting into "system" client)
     // 2 means client is connecting its own ports (for app internal functionality)
     int sum = src_self + dst_self;
-    //jack_log("sum = %d", sum);
-    if (sum == 0) return true;
+    // jack_log("sum = %d", sum);
+    if (sum == 0)
+        return true;
     char lmode = tolower(fSelfConnectMode);
-    //jack_log("lmode = '%c'", lmode);
-    if (sum == 2 && lmode == 'e') return true;
+    // jack_log("lmode = '%c'", lmode);
+    if (sum == 2 && lmode == 'e')
+        return true;
     bool fail = lmode != fSelfConnectMode; // fail modes are upper case
-    //jack_log("fail = %d", (int)fail);
+    // jack_log("fail = %d", (int)fail);
 
     jack_info(
         "%s port self connect request%s (%s -> %s)",
@@ -934,7 +937,8 @@ Result<void> JackEngine::PortConnect(int refnum, jack_port_id_t src, jack_port_i
     assert(client);
     if (!client->GetClientControl()->fActive) {
         jack_error("Cannot connect ports owned by inactive clients:"
-                   " \"%s\" is not active", client->GetClientControl()->fName);
+                   " \"%s\" is not active",
+            client->GetClientControl()->fName);
         return std::unexpected(Error::InvalidState);
     }
 
@@ -944,7 +948,8 @@ Result<void> JackEngine::PortConnect(int refnum, jack_port_id_t src, jack_port_i
     assert(client);
     if (!client->GetClientControl()->fActive) {
         jack_error("Cannot connect ports owned by inactive clients:"
-                   " \"%s\" is not active", client->GetClientControl()->fName);
+                   " \"%s\" is not active",
+            client->GetClientControl()->fName);
         return std::unexpected(Error::InvalidState);
     }
 
@@ -953,7 +958,7 @@ Result<void> JackEngine::PortConnect(int refnum, jack_port_id_t src, jack_port_i
         return std::unexpected(allowed.error());
     }
     if (!*allowed) {
-        return {};
+        return { };
     }
 
     auto connected = fGraphManager->Connect(src, dst);
@@ -961,7 +966,7 @@ Result<void> JackEngine::PortConnect(int refnum, jack_port_id_t src, jack_port_i
         return connected;
     }
     NotifyPortConnect(src, dst, true);
-    return {};
+    return { };
 }
 
 Result<void> JackEngine::PortDisconnect(int refnum, const char* src, const char* dst)
@@ -1003,7 +1008,7 @@ Result<void> JackEngine::PortDisconnect(int refnum, jack_port_id_t src, jack_por
         if (failed) {
             return std::unexpected(Error::ServerFailure);
         }
-        return {};
+        return { };
     }
 
     if (!fGraphManager->CheckPorts(src, dst)) {
@@ -1015,7 +1020,7 @@ Result<void> JackEngine::PortDisconnect(int refnum, jack_port_id_t src, jack_por
         return std::unexpected(allowed.error());
     }
     if (!*allowed) {
-        return {};
+        return { };
     }
 
     auto disconnected = fGraphManager->Disconnect(src, dst);
@@ -1023,36 +1028,36 @@ Result<void> JackEngine::PortDisconnect(int refnum, jack_port_id_t src, jack_por
         return disconnected;
     }
     NotifyPortConnect(src, dst, false);
-    return {};
+    return { };
 }
 
 Result<void> JackEngine::PortRename(int refnum, jack_port_id_t port, const char* name)
 {
-    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> old_name{};
+    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> old_name { };
     strcpy(old_name.data(), fGraphManager->GetPort(port)->GetName());
     fGraphManager->GetPort(port)->SetName(name);
     NotifyPortRename(port, old_name.data());
-    return {};
+    return { };
 }
 
 //--------------------
 //--------------------
 
-Result<void> JackEngine::GetUUIDForClientName(const char *client_name, char *uuid_res)
+Result<void> JackEngine::GetUUIDForClientName(const char* client_name, char* uuid_res)
 {
     for (int i = 0; i < CLIENT_NUM; i++) {
         JackClientInterface* client = fClientTable[i];
 
         if (client && (strcmp(client_name, client->GetClientControl()->fName) == 0)) {
             jack_uuid_unparse(client->GetClientControl()->fSessionID, uuid_res);
-            return {};
+            return { };
         }
     }
     // Did not find name.
     return std::unexpected(Error::NotFound);
 }
 
-Result<void> JackEngine::GetClientNameForUUID(const char *uuid_buf, char *name_res)
+Result<void> JackEngine::GetClientNameForUUID(const char* uuid_buf, char* name_res)
 {
     jack_uuid_t uuid;
     if (jack_uuid_parse(uuid_buf, &uuid) != 0)
@@ -1067,14 +1072,14 @@ Result<void> JackEngine::GetClientNameForUUID(const char *uuid_buf, char *name_r
 
         if (jack_uuid_compare(client->GetClientControl()->fSessionID, uuid) == 0) {
             strncpy(name_res, client->GetClientControl()->fName, JACK_CLIENT_NAME_SIZE);
-            return {};
+            return { };
         }
     }
     // Did not find uuid.
     return std::unexpected(Error::NotFound);
 }
 
-Result<void> JackEngine::ReserveClientName(const char *name, const char *uuidstr)
+Result<void> JackEngine::ReserveClientName(const char* name, const char* uuidstr)
 {
     jack_log("JackEngine::ReserveClientName ( name = %s, uuid = %s )", name, uuidstr);
 
@@ -1091,8 +1096,7 @@ Result<void> JackEngine::ReserveClientName(const char *name, const char *uuidstr
 
     EnsureUUID(uuid);
     fReservationMap[uuid] = name;
-    return {};
+    return { };
 }
 
-} // end of namespace
-
+} // namespace jackmini

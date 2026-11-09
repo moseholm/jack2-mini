@@ -18,37 +18,38 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#include <array>
-#include "JackCString.h"
-#include "JackSystemDeps.h"
 #include "JackAudioDriver.h"
-#include "JackTime.h"
-#include "JackError.h"
+#include "JackCString.h"
 #include "JackEngineControl.h"
-#include "JackPort.h"
+#include "JackError.h"
+#include "JackException.h"
 #include "JackGraphManager.h"
 #include "JackLockedEngine.h"
-#include "JackException.h"
+#include "JackPort.h"
+#include "JackSystemDeps.h"
+#include "JackTime.h"
 #include <assert.h>
+#include <array>
 
 using namespace std;
 
-namespace jackmini
-{
+namespace jackmini {
 
 JackAudioDriver::JackAudioDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
-        : JackDriver(name, alias, engine, table)
-{}
+    : JackDriver(name, alias, engine, table)
+{
+}
 
 JackAudioDriver::~JackAudioDriver()
-{}
+{
+}
 
 int JackAudioDriver::SetBufferSize(jack_nframes_t buffer_size)
 {
     // Update engine and graph manager state
     fEngineControl->fBufferSize = buffer_size;
     fGraphManager->SetBufferSize(buffer_size);
-    
+
     fEngineControl->UpdateTimeOut();
     UpdateLatencies();
 
@@ -66,16 +67,16 @@ int JackAudioDriver::SetSampleRate(jack_nframes_t sample_rate)
 }
 
 int JackAudioDriver::Open(jack_nframes_t buffer_size,
-                          jack_nframes_t samplerate,
-                          bool capturing,
-                          bool playing,
-                          int inchannels,
-                          int outchannels,
-                          bool monitor,
-                          const char* capture_driver_name,
-                          const char* playback_driver_name,
-                          jack_nframes_t capture_latency,
-                          jack_nframes_t playback_latency)
+    jack_nframes_t samplerate,
+    bool capturing,
+    bool playing,
+    int inchannels,
+    int outchannels,
+    bool monitor,
+    const char* capture_driver_name,
+    const char* playback_driver_name,
+    jack_nframes_t capture_latency,
+    jack_nframes_t playback_latency)
 {
     fCaptureChannels = inchannels;
     fPlaybackChannels = outchannels;
@@ -99,7 +100,7 @@ void JackAudioDriver::UpdateLatencies()
     }
 
     for (int i = 0; i < fPlaybackChannels; i++) {
-        output_range.max = output_range.min  = fPlaybackLatency;
+        output_range.max = output_range.min = fPlaybackLatency;
         if (fEngineControl->fSyncMode) {
             output_range.max = output_range.min += fEngineControl->fBufferSize;
         } else {
@@ -117,8 +118,8 @@ int JackAudioDriver::Attach()
 {
     JackPort* port;
     jack_port_id_t port_index;
-    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> name{};
-    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> alias{};
+    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> name { };
+    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias { };
     int i;
 
     jack_log("JackAudioDriver::Attach fBufferSize = %ld fSampleRate = %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
@@ -310,7 +311,7 @@ void JackAudioDriver::ProcessGraphSync()
     // Process graph
     if (fIsMaster) {
         ProcessGraphSyncMaster();
-     } else {
+    } else {
         ProcessGraphSyncSlave();
     }
 }
@@ -382,13 +383,13 @@ int JackAudioDriver::ClientNotify(int refnum, const char* name, int notify, int 
 {
     switch (notify) {
 
-        case kLatencyCallback:
-            HandleLatencyCallback(value1);
-            break;
+    case kLatencyCallback:
+        HandleLatencyCallback(value1);
+        break;
 
-        default:
-            JackDriver::ClientNotify(refnum, name, notify, sync, message, value1, value2);
-            break;
+    default:
+        JackDriver::ClientNotify(refnum, name, notify, sync, message, value1, value2);
+        break;
     }
 
     return 0;
@@ -400,15 +401,15 @@ void JackAudioDriver::HandleLatencyCallback(int status)
 
     for (int i = 0; i < fCaptureChannels; i++) {
         if (mode == JackPlaybackLatency) {
-           fGraphManager->RecalculateLatency(fCapturePortList[i], mode);
-		}
-	}
+            fGraphManager->RecalculateLatency(fCapturePortList[i], mode);
+        }
+    }
 
     for (int i = 0; i < fPlaybackChannels; i++) {
         if (mode == JackCaptureLatency) {
             fGraphManager->RecalculateLatency(fPlaybackPortList[i], mode);
-		}
-	}
+        }
+    }
 }
 
-} // end of namespace
+} // namespace jackmini

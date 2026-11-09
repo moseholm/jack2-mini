@@ -19,11 +19,10 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef __JackAlsaSlotTable__
 #define __JackAlsaSlotTable__
 
-#include <atomic>
 #include <stddef.h>
+#include <atomic>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief A fixed table of pointers that the RT thread can read without locks.
@@ -36,71 +35,68 @@ thread has stopped using the object before destroying it.
 */
 
 template <class T, size_t N>
-class JackAlsaSlotTable
-{
+class JackAlsaSlotTable {
 
-    private:
+private:
+    std::atomic<T*> fSlots[N];
 
-        std::atomic<T*> fSlots[N];
+    JackAlsaSlotTable(const JackAlsaSlotTable&);
+    JackAlsaSlotTable& operator=(const JackAlsaSlotTable&);
 
-        JackAlsaSlotTable(const JackAlsaSlotTable&);
-        JackAlsaSlotTable& operator=(const JackAlsaSlotTable&);
+public:
+    JackAlsaSlotTable()
+    {
+        for (size_t i = 0; i < N; i++) {
+            fSlots[i].store(NULL, std::memory_order_relaxed);
+        }
+    }
 
-    public:
+    static size_t Capacity() { return N; }
 
-        JackAlsaSlotTable()
-        {
-            for (size_t i = 0; i < N; i++) {
-                fSlots[i].store(NULL, std::memory_order_relaxed);
+    // Returns the slot index, or -1 if the table is full.  Not for the RT thread.
+    int Assign(T* object)
+    {
+        for (size_t i = 0; i < N; i++) {
+            if (fSlots[i].load(std::memory_order_relaxed) == NULL) {
+                fSlots[i].store(object, std::memory_order_release);
+                return (int)i;
             }
         }
+        return -1;
+    }
 
-        static size_t Capacity() { return N; }
-
-        // Returns the slot index, or -1 if the table is full.  Not for the RT thread.
-        int Assign(T* object)
-        {
-            for (size_t i = 0; i < N; i++) {
-                if (fSlots[i].load(std::memory_order_relaxed) == NULL) {
-                    fSlots[i].store(object, std::memory_order_release);
-                    return (int)i;
-                }
+    // Empties every slot holding this object.  Returns how many were emptied.
+    size_t Remove(T* object)
+    {
+        size_t removed = 0;
+        for (size_t i = 0; i < N; i++) {
+            T* expected = object;
+            if (fSlots[i].compare_exchange_strong(expected, NULL, std::memory_order_release)) {
+                removed++;
             }
-            return -1;
         }
+        return removed;
+    }
 
-        // Empties every slot holding this object.  Returns how many were emptied.
-        size_t Remove(T* object)
-        {
-            size_t removed = 0;
-            for (size_t i = 0; i < N; i++) {
-                T* expected = object;
-                if (fSlots[i].compare_exchange_strong(expected, NULL, std::memory_order_release)) {
-                    removed++;
-                }
+    // Safe to call from the RT thread.
+    T* Get(size_t index) const
+    {
+        return fSlots[index].load(std::memory_order_acquire);
+    }
+
+    // Number of occupied slots.
+    size_t Count() const
+    {
+        size_t count = 0;
+        for (size_t i = 0; i < N; i++) {
+            if (fSlots[i].load(std::memory_order_acquire) != NULL) {
+                count++;
             }
-            return removed;
         }
-
-        // Safe to call from the RT thread.
-        T* Get(size_t index) const
-        {
-            return fSlots[index].load(std::memory_order_acquire);
-        }
-
-        // Number of occupied slots.
-        size_t Count() const
-        {
-            size_t count = 0;
-            for (size_t i = 0; i < N; i++) {
-                if (fSlots[i].load(std::memory_order_acquire) != NULL) {
-                    count++;
-                }
-            }
-            return count;
-        }
+        return count;
+    }
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

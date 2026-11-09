@@ -19,19 +19,21 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include "JackExternalClient.h"
-#include "JackClientControl.h"
-#include "JackGlobals.h"
 #include "JackChannel.h"
+#include "JackClientControl.h"
 #include "JackError.h"
+#include "JackGlobals.h"
 
-namespace jackmini
+namespace jackmini {
+
+JackExternalClient::JackExternalClient()
+    : fClientControl(NULL)
 {
-
-JackExternalClient::JackExternalClient(): fClientControl(NULL)
-{}
+}
 
 JackExternalClient::~JackExternalClient()
-{}
+{
+}
 
 int JackExternalClient::ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2)
 {
@@ -48,8 +50,8 @@ Result<void> JackExternalClient::OpenClient(const char* name, int pid, int refnu
         // Use "placement new" to allocate object in shared memory
         JackShmMemAble* shared_mem = static_cast<JackShmMemAble*>(JackShmMem::operator new(sizeof(JackClientControl)));
         shared_mem->Init();
-        const JackShmSegment segment{ shared_mem->GetShmFd(), shared_mem->GetShmSize() };
-        fClientControl = new(shared_mem) JackClientControl(name, pid, refnum, uuid);
+        const JackShmSegment segment { shared_mem->GetShmFd(), shared_mem->GetShmSize() };
+        fClientControl = new (shared_mem) JackClientControl(name, pid, refnum, uuid);
 
         if (!fClientControl) {
             jack_error("Cannot allocate client shared memory segment");
@@ -58,7 +60,7 @@ Result<void> JackExternalClient::OpenClient(const char* name, int pid, int refnu
 
         *shared_client = segment;
         jack_log("JackExternalClient::Open name = %s fd = %d size = %u base = %p", name, segment.fFd, segment.fSize, shared_mem->GetShmAddress());
-        return {};
+        return { };
 
     } catch (std::exception&) {
         return std::unexpected(Error::ServerFailure);
@@ -71,7 +73,7 @@ Result<void> JackExternalClient::OpenChannel(const char* name)
         jack_error("Cannot connect to client name = %s\n", name);
         return std::unexpected(Error::ServerFailure);
     }
-    return {};
+    return { };
 }
 
 int JackExternalClient::Close()
@@ -90,4 +92,4 @@ JackClientControl* JackExternalClient::GetClientControl() const
     return fClientControl;
 }
 
-} // end of namespace
+} // namespace jackmini

@@ -12,7 +12,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software 
+along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
@@ -20,83 +20,80 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackSynchro__
 #define __JackSynchro__
 
-#include <atomic>
 #include "JackConstants.h"
+#include <atomic>
 
-namespace jackmini
-{
+namespace jackmini {
 
-namespace detail
-{
+namespace detail {
 
 /*!
 \brief An inter process synchronization primitive.
 */
 
-class JackSynchro
-{
+class JackSynchro {
 
-    protected:
+protected:
+    char fName[SYNC_MAX_NAME_SIZE];
+    std::atomic<bool> fFlush; // If true, signal are "flushed" : used for drivers that do no consume the signal
 
-        char fName[SYNC_MAX_NAME_SIZE];
-        std::atomic<bool> fFlush; // If true, signal are "flushed" : used for drivers that do no consume the signal
+public:
+    JackSynchro()
+        : fFlush(false)
+    {
+    }
+    ~JackSynchro()
+    {
+    }
 
-    public:
+    bool Signal()
+    {
+        return true;
+    }
+    bool SignalAll()
+    {
+        return true;
+    }
+    bool Wait()
+    {
+        return true;
+    }
+    bool TimedWait(long usec)
+    {
+        return true;
+    }
+    bool Allocate(const char* name, const char* server_name, int value)
+    {
+        return true;
+    }
+    bool Connect(const char* name, const char* server_name)
+    {
+        return true;
+    }
+    bool ConnectInput(const char* name, const char* server_name)
+    {
+        return true;
+    }
+    bool ConnectOutput(const char* name, const char* server_name)
+    {
+        return true;
+    }
+    bool Disconnect()
+    {
+        return true;
+    }
+    void Destroy()
+    {
+    }
 
-        JackSynchro(): fFlush(false)
-        {}
-        ~JackSynchro()
-        {}
-
-        bool Signal()
-        {
-            return true;
-        }
-        bool SignalAll()
-        {
-            return true;
-        }
-        bool Wait()
-        {
-            return true;
-        }
-        bool TimedWait(long usec)
-        {
-            return true;
-        }
-        bool Allocate(const char* name, const char* server_name, int value)
-        {
-            return true;
-        }
-        bool Connect(const char* name, const char* server_name)
-        {
-            return true;
-        }
-        bool ConnectInput(const char* name, const char* server_name)
-        {
-            return true;
-        }
-        bool ConnectOutput(const char* name, const char* server_name)
-        {
-            return true;
-        }
-        bool Disconnect()
-        {
-            return true;
-        }
-        void Destroy()
-        {}
-
-        void SetFlush(bool mode)
-        {
-            fFlush = mode;
-        }
-
+    void SetFlush(bool mode)
+    {
+        fFlush = mode;
+    }
 };
 
-}
+} // namespace detail
 
-} // end of namespace
+} // namespace jackmini
 
 #endif
-

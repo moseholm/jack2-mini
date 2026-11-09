@@ -20,8 +20,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 // writer and reader.  The transport is a byte buffer, so the test needs no server.
 
 #include "JackMessage.h"
-#include "JackRequest.h"
 #include "JackNotification.h"
+#include "JackRequest.h"
 
 #include <cstdio>
 #include <cstring>
@@ -29,48 +29,45 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 using namespace jackmini;
 
-namespace
-{
+namespace {
 
 int gFailures = 0;
 
-#define CHECK(cond)                                                    \
-    do {                                                               \
-        if (!(cond)) {                                                 \
+#define CHECK(cond)                                                     \
+    do {                                                                \
+        if (!(cond)) {                                                  \
             std::printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-            gFailures++;                                               \
-        }                                                              \
+            gFailures++;                                                \
+        }                                                               \
     } while (0)
 
 // A transport over a byte buffer: writes append, reads consume.
-class BufferTransport : public detail::JackChannelTransactionInterface
-{
-    public:
+class BufferTransport : public detail::JackChannelTransactionInterface {
+public:
+    std::vector<std::byte> fBytes;
+    std::size_t fPos = 0;
 
-        std::vector<std::byte> fBytes;
-        std::size_t fPos = 0;
-
-        int Read(void* data, int len) override
-        {
-            if (fPos + len > fBytes.size()) {
-                return -1;
-            }
-            std::memcpy(data, fBytes.data() + fPos, len);
-            fPos += len;
-            return 0;
+    int Read(void* data, int len) override
+    {
+        if (fPos + len > fBytes.size()) {
+            return -1;
         }
+        std::memcpy(data, fBytes.data() + fPos, len);
+        fPos += len;
+        return 0;
+    }
 
-        int Write(void* data, int len) override
-        {
-            const auto* bytes = static_cast<const std::byte*>(data);
-            fBytes.insert(fBytes.end(), bytes, bytes + len);
-            return 0;
-        }
+    int Write(void* data, int len) override
+    {
+        const auto* bytes = static_cast<const std::byte*>(data);
+        fBytes.insert(fBytes.end(), bytes, bytes + len);
+        return 0;
+    }
 
-        int WriteWithFds(void* data, int len, std::span<const int> fds) override
-        {
-            return Write(data, len);
-        }
+    int WriteWithFds(void* data, int len, std::span<const int> fds) override
+    {
+        return Write(data, len);
+    }
 };
 
 void TestHeaderLayout()
@@ -88,15 +85,15 @@ void TestRoundTrip()
     CHECK(SendJackMessage(&wire, sent, payload, sizeof(payload)) == 0);
     CHECK(wire.fBytes.size() == 16 + sizeof(payload));
 
-    JackMsgHeader got{};
+    JackMsgHeader got { };
     CHECK(ReadJackMsgHeader(&wire, got) == 0);
     CHECK(got.type == 23);
     CHECK(got.length == sizeof(payload));
     CHECK(got.request == 42);
     CHECK(got.version == kJackMsgVersion);
 
-    JackPayloadReader body(&wire, got.length, {});
-    char back[sizeof(payload)] = {};
+    JackPayloadReader body(&wire, got.length, { });
+    char back[sizeof(payload)] = { };
     CHECK(body.Read(back, sizeof(back)) == 0);
     CHECK(std::strcmp(back, payload) == 0);
     CHECK(body.Done());
@@ -105,27 +102,27 @@ void TestRoundTrip()
 void TestOverrunIsRefused()
 {
     BufferTransport wire;
-    const char payload[8] = {};
+    const char payload[8] = { };
     SendJackMessage(&wire, MakeJackMsgHeader(1, sizeof(payload), 1), payload, sizeof(payload));
-    JackMsgHeader got{};
+    JackMsgHeader got { };
     ReadJackMsgHeader(&wire, got);
 
     // Reading more than the header's length is an error, even though the bytes are there.
-    JackPayloadReader body(&wire, got.length, {});
-    char big[sizeof(payload) + 1] = {};
+    JackPayloadReader body(&wire, got.length, { });
+    char big[sizeof(payload) + 1] = { };
     CHECK(body.Read(big, sizeof(big)) < 0);
 }
 
 void TestShortReadIsNotDone()
 {
     BufferTransport wire;
-    const char payload[8] = {};
+    const char payload[8] = { };
     SendJackMessage(&wire, MakeJackMsgHeader(1, sizeof(payload), 1), payload, sizeof(payload));
-    JackMsgHeader got{};
+    JackMsgHeader got { };
     ReadJackMsgHeader(&wire, got);
 
-    JackPayloadReader body(&wire, got.length, {});
-    char part[4] = {};
+    JackPayloadReader body(&wire, got.length, { });
+    char part[4] = { };
     CHECK(body.Read(part, sizeof(part)) == 0);
     CHECK(!body.Done());
 }
@@ -136,7 +133,7 @@ void TestBadMagicIsRefused()
     JackMsgHeader bad = MakeJackMsgHeader(1, 0, 1);
     bad.magic = 0x12345678;
     SendJackMessage(&wire, bad, nullptr, 0);
-    JackMsgHeader got{};
+    JackMsgHeader got { };
     CHECK(ReadJackMsgHeader(&wire, got) < 0);
 }
 
@@ -156,14 +153,14 @@ void TestNotificationRoundTrip()
     JackClientNotification sent("system", 3, jackmini::kXRunCallback, 1, "msg", 5, 6);
     CHECK(sent.Write(&wire, 91) == 0);
 
-    JackMsgHeader got{};
+    JackMsgHeader got { };
     CHECK(ReadJackMsgHeader(&wire, got) == 0);
     CHECK(got.type == jackmini::kXRunCallback);
     CHECK(got.request == 91);
     CHECK(got.length == JackClientNotification::PayloadSize);
 
     JackClientNotification back;
-    JackPayloadReader body(&wire, got.length, {});
+    JackPayloadReader body(&wire, got.length, { });
     CHECK(back.Read(&body) == 0);
     CHECK(body.Done());
     CHECK(std::strcmp(back.fName, "system") == 0);
@@ -180,14 +177,16 @@ void TestSyncReplyEchoesRequest()
     JackResult res(42);
     CHECK(SendJackReply(&wire, res, MakeJackMsgHeader(jackmini::kXRunCallback, 0, 91)) == 0);
 
-    class ReplySocket : public detail::JackClientRequestInterface
-    {
-        public:
-            BufferTransport& fWire;
-            explicit ReplySocket(BufferTransport& wire) : fWire(wire) {}
-            int Read(void* data, int len) override { return fWire.Read(data, len); }
-            int Write(void* data, int len) override { return fWire.Write(data, len); }
-            int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) override { return fWire.Read(data, len); }
+    class ReplySocket : public detail::JackClientRequestInterface {
+    public:
+        BufferTransport& fWire;
+        explicit ReplySocket(BufferTransport& wire)
+            : fWire(wire)
+        {
+        }
+        int Read(void* data, int len) override { return fWire.Read(data, len); }
+        int Write(void* data, int len) override { return fWire.Write(data, len); }
+        int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) override { return fWire.Read(data, len); }
     } socket(wire);
 
     JackResult back;

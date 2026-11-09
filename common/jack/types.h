@@ -30,12 +30,12 @@ typedef int32_t jack_shmsize_t;
 /**
  * Type used to represent sample frame counts.
  */
-typedef uint32_t        jack_nframes_t;
+typedef uint32_t jack_nframes_t;
 
 /**
  * Maximum value that can be stored in jack_nframes_t
  */
-#define JACK_MAX_FRAMES (4294967295U)   /* This should be UINT32_MAX, but C++ has a problem with that. */
+#define JACK_MAX_FRAMES (4294967295U) /* This should be UINT32_MAX, but C++ has a problem with that. */
 
 /**
  * Type used to represent the value of free running
@@ -104,17 +104,17 @@ enum JackOptions {
      */
     JackLoadInit = 0x10,
 
-     /**
-      * pass a SessionID Token this allows the sessionmanager to identify the client again.
-      */
+    /**
+     * pass a SessionID Token this allows the sessionmanager to identify the client again.
+     */
     JackSessionID = 0x20
 };
 
 /** Valid options for opening an external client. */
-#define JackOpenOptions (JackSessionID|JackServerName|JackNoStartServer|JackUseExactName)
+#define JackOpenOptions (JackSessionID | JackServerName | JackNoStartServer | JackUseExactName)
 
 /** Valid options for loading an internal client. */
-#define JackLoadOptions (JackLoadInit|JackLoadName|JackUseExactName)
+#define JackLoadOptions (JackLoadInit | JackLoadName | JackUseExactName)
 
 /**
  *  Options for several JACK operations, formed by OR-ing together the
@@ -213,19 +213,19 @@ typedef enum JackStatus jack_status_t;
  */
 enum JackLatencyCallbackMode {
 
-     /**
-      * Latency Callback for Capture Latency.
-      * Input Ports have their latency value setup.
-      * In the Callback the client needs to set the latency of the output ports
-      */
-     JackCaptureLatency,
+    /**
+     * Latency Callback for Capture Latency.
+     * Input Ports have their latency value setup.
+     * In the Callback the client needs to set the latency of the output ports
+     */
+    JackCaptureLatency,
 
-     /**
-      * Latency Callback for Playback Latency.
-      * Output Ports have their latency value setup.
-      * In the Callback the client needs to set the latency of the input ports
-      */
-     JackPlaybackLatency
+    /**
+     * Latency Callback for Playback Latency.
+     * Output Ports have their latency value setup.
+     * In the Callback the client needs to set the latency of the input ports
+     */
+    JackPlaybackLatency
 
 };
 
@@ -243,14 +243,13 @@ typedef enum JackLatencyCallbackMode jack_latency_callback_mode_t;
  *
  * @return zero on success, non-zero on error
  */
-typedef void (*JackLatencyCallback)(jack_latency_callback_mode_t mode, void *arg);
+typedef void (*JackLatencyCallback)(jack_latency_callback_mode_t mode, void* arg);
 
 /**
  * the new latency API operates on Ranges.
  */
 PRE_PACKED_STRUCTURE
-struct _jack_latency_range
-{
+struct _jack_latency_range {
     /**
      * minimum latency
      */
@@ -275,7 +274,7 @@ typedef struct _jack_latency_range jack_latency_range_t;
  *
  * @return zero on success, non-zero on error
  */
-typedef int (*JackProcessCallback)(jack_nframes_t nframes, void *arg);
+typedef int (*JackProcessCallback)(jack_nframes_t nframes, void* arg);
 
 /**
  * Prototype for the client thread routine called
@@ -284,7 +283,7 @@ typedef int (*JackProcessCallback)(jack_nframes_t nframes, void *arg);
  * @param arg pointer to a client supplied structure
  *
  */
-typedef void *(*JackThreadCallback)(void* arg);
+typedef void* (*JackThreadCallback)(void* arg);
 
 /**
  * Prototype for the client supplied function that is called
@@ -298,7 +297,7 @@ typedef void *(*JackThreadCallback)(void* arg);
  *
  * @return void
  */
-typedef void (*JackThreadInitCallback)(void *arg);
+typedef void (*JackThreadInitCallback)(void* arg);
 
 /**
  * Prototype for the client supplied function that is called
@@ -308,7 +307,7 @@ typedef void (*JackThreadInitCallback)(void *arg);
  *
  * @return zero on success, non-zero on error
  */
-typedef int (*JackGraphOrderCallback)(void *arg);
+typedef int (*JackGraphOrderCallback)(void* arg);
 
 /**
  * Prototype for the client-supplied function that is called whenever
@@ -320,7 +319,7 @@ typedef int (*JackGraphOrderCallback)(void *arg);
  *
  * @return zero on success, non-zero on error
  */
-typedef int (*JackXRunCallback)(void *arg);
+typedef int (*JackXRunCallback)(void* arg);
 
 /**
  * Prototype for the @a bufsize_callback that is invoked whenever the
@@ -336,7 +335,7 @@ typedef int (*JackXRunCallback)(void *arg);
  *
  * @return zero on success, non-zero on error
  */
-typedef int (*JackBufferSizeCallback)(jack_nframes_t nframes, void *arg);
+typedef int (*JackBufferSizeCallback)(jack_nframes_t nframes, void* arg);
 
 /**
  * Prototype for the client supplied function that is called
@@ -347,14 +346,14 @@ typedef int (*JackBufferSizeCallback)(jack_nframes_t nframes, void *arg);
  *
  * @return zero on success, non-zero on error
  */
-typedef int (*JackSampleRateCallback)(jack_nframes_t nframes, void *arg);
+typedef int (*JackSampleRateCallback)(jack_nframes_t nframes, void* arg);
 
 /**
  * Direction bits passed to a JackSecondarySampleRateCallback.  A card whose
  * capture and playback share one clock reports both bits in one call.
  */
 enum JackSecondaryRateDirection {
-    JackSecondaryRateCapture  = 0x1,
+    JackSecondaryRateCapture = 0x1,
     JackSecondaryRatePlayback = 0x2
 };
 
@@ -369,7 +368,7 @@ enum JackSecondaryRateDirection {
  *
  * @return zero on success, non-zero on error
  */
-typedef int (*JackSecondarySampleRateCallback)(jack_nframes_t rate, const char *card, int direction, void *arg);
+typedef int (*JackSecondarySampleRateCallback)(jack_nframes_t rate, const char* card, int direction, void* arg);
 
 /**
  * Prototype for the client supplied function that is called
@@ -380,7 +379,7 @@ typedef int (*JackSecondarySampleRateCallback)(jack_nframes_t rate, const char *
  * @param register non-zero if the port is being registered,
  *                     zero if the port is being unregistered
  */
-typedef void (*JackPortRegistrationCallback)(jack_port_id_t port, int /* register */, void *arg);
+typedef void (*JackPortRegistrationCallback)(jack_port_id_t port, int /* register */, void* arg);
 
 /**
  * Prototype for the client supplied function that is called
@@ -391,7 +390,7 @@ typedef void (*JackPortRegistrationCallback)(jack_port_id_t port, int /* registe
  *                     zero if the client is being unregistered
  * @param arg pointer to a client supplied structure
  */
-typedef void (*JackClientRegistrationCallback)(const char* name, int /* register */, void *arg);
+typedef void (*JackClientRegistrationCallback)(const char* name, int /* register */, void* arg);
 
 /**
  * Prototype for the client supplied function that is called
@@ -413,7 +412,7 @@ typedef void (*JackPortConnectCallback)(jack_port_id_t a, jack_port_id_t b, int 
  * @param new_name the new name
  * @param arg pointer to a client supplied structure
  */
-typedef void (*JackPortRenameCallback)(jack_port_id_t port, const char* old_name, const char* new_name, void *arg);
+typedef void (*JackPortRenameCallback)(jack_port_id_t port, const char* old_name, const char* new_name, void* arg);
 
 /**
  * Prototype for the client supplied function that is called
@@ -422,7 +421,7 @@ typedef void (*JackPortRenameCallback)(jack_port_id_t port, const char* old_name
  * @param starting non-zero if we start starting to freewheel, zero otherwise
  * @param arg pointer to a client supplied structure
  */
-typedef void (*JackFreewheelCallback)(int starting, void *arg);
+typedef void (*JackFreewheelCallback)(int starting, void* arg);
 
 /**
  * Prototype for the client supplied function that is called
@@ -435,7 +434,7 @@ typedef void (*JackFreewheelCallback)(int starting, void *arg);
  *
  * @param arg pointer to a client supplied structure
  */
-typedef void (*JackShutdownCallback)(void *arg);
+typedef void (*JackShutdownCallback)(void* arg);
 
 /**
  * Prototype for the client supplied function that is called
@@ -447,11 +446,11 @@ typedef void (*JackShutdownCallback)(void *arg);
  * the callback context.
 
  * @param code a status word, formed by OR-ing together the relevant @ref JackStatus bits.
- * @param reason a string describing the shutdown reason (backend failure, server crash... etc...). 
+ * @param reason a string describing the shutdown reason (backend failure, server crash... etc...).
  * Note that this string will not be available anymore after the callback returns, so possibly copy it.
  * @param arg pointer to a client supplied structure
  */
-typedef void (*JackInfoShutdownCallback)(jack_status_t code, const char* reason, void *arg);
+typedef void (*JackInfoShutdownCallback)(jack_status_t code, const char* reason, void* arg);
 
 /**
  * Used for the type argument of jack_port_register() for default
@@ -532,32 +531,32 @@ enum JackPortFlags {
 typedef enum {
 
     /* the order matters for binary compatibility */
-    JackTransportStopped = 0,       /**< Transport halted */
-    JackTransportRolling = 1,       /**< Transport playing */
-    JackTransportLooping = 2,       /**< For OLD_TRANSPORT, now ignored */
-    JackTransportStarting = 3,      /**< Waiting for sync ready */
-    JackTransportNetStarting = 4,       /**< Waiting for sync ready on the network*/
+    JackTransportStopped = 0, /**< Transport halted */
+    JackTransportRolling = 1, /**< Transport playing */
+    JackTransportLooping = 2, /**< For OLD_TRANSPORT, now ignored */
+    JackTransportStarting = 3, /**< Waiting for sync ready */
+    JackTransportNetStarting = 4, /**< Waiting for sync ready on the network*/
 
 } jack_transport_state_t;
 
-typedef uint64_t jack_unique_t;         /**< Unique ID (opaque) */
+typedef uint64_t jack_unique_t; /**< Unique ID (opaque) */
 
 /**
  * Optional struct jack_position_t fields.
  */
 typedef enum {
 
-    JackPositionBBT      = 0x10,  /**< Bar, Beat, Tick */
-    JackPositionTimecode = 0x20,  /**< External timecode */
-    JackBBTFrameOffset   = 0x40,  /**< Frame offset of BBT information */
-    JackAudioVideoRatio  = 0x80,  /**< audio frames per video frame */
+    JackPositionBBT = 0x10, /**< Bar, Beat, Tick */
+    JackPositionTimecode = 0x20, /**< External timecode */
+    JackBBTFrameOffset = 0x40, /**< Frame offset of BBT information */
+    JackAudioVideoRatio = 0x80, /**< audio frames per video frame */
     JackVideoFrameOffset = 0x100, /**< frame offset of first video frame */
-    JackTickDouble       = 0x200, /**< double-resolution tick */
+    JackTickDouble = 0x200, /**< double-resolution tick */
 
 } jack_position_bits_t;
 
 /** all valid position bits */
-#define JACK_POSITION_MASK (JackPositionBBT|JackPositionTimecode)
+#define JACK_POSITION_MASK (JackPositionBBT | JackPositionTimecode)
 #define EXTENDED_TIME_INFO
 
 /** transport tick_double member is available for use */
@@ -567,146 +566,146 @@ PRE_PACKED_STRUCTURE
 struct _jack_position {
 
     /* these four cannot be set from clients: the server sets them */
-    jack_unique_t       unique_1;       /**< unique ID */
-    jack_time_t         usecs;          /**< monotonic, free-rolling */
-    jack_nframes_t      frame_rate;     /**< current frame rate (per second) */
-    jack_nframes_t      frame;          /**< frame number, always present */
+    jack_unique_t unique_1; /**< unique ID */
+    jack_time_t usecs; /**< monotonic, free-rolling */
+    jack_nframes_t frame_rate; /**< current frame rate (per second) */
+    jack_nframes_t frame; /**< frame number, always present */
 
-    jack_position_bits_t valid;         /**< which other fields are valid */
+    jack_position_bits_t valid; /**< which other fields are valid */
 
     /* JackPositionBBT fields: */
-    int32_t             bar;            /**< current bar */
-    int32_t             beat;           /**< current beat-within-bar */
-    int32_t             tick;           /**< current tick-within-beat */
-    double              bar_start_tick;
+    int32_t bar; /**< current bar */
+    int32_t beat; /**< current beat-within-bar */
+    int32_t tick; /**< current tick-within-beat */
+    double bar_start_tick;
 
-    float               beats_per_bar;  /**< time signature "numerator" */
-    float               beat_type;      /**< time signature "denominator" */
-    double              ticks_per_beat;
-    double              beats_per_minute;
+    float beats_per_bar; /**< time signature "numerator" */
+    float beat_type; /**< time signature "denominator" */
+    double ticks_per_beat;
+    double beats_per_minute;
 
     /* JackPositionTimecode fields:     (EXPERIMENTAL: could change) */
-    double              frame_time;     /**< current time in seconds */
-    double              next_time;      /**< next sequential frame_time
-                         (unless repositioned) */
+    double frame_time; /**< current time in seconds */
+    double next_time; /**< next sequential frame_time
+       (unless repositioned) */
 
     /* JackBBTFrameOffset fields: */
-    jack_nframes_t      bbt_offset;     /**< frame offset for the BBT fields
-                         (the given bar, beat, and tick
-                         values actually refer to a time
-                         frame_offset frames before the
-                         start of the cycle), should
-                         be assumed to be 0 if
-                         JackBBTFrameOffset is not
-                         set. If JackBBTFrameOffset is
-                         set and this value is zero, the BBT
-                         time refers to the first frame of this
-                         cycle. If the value is positive,
-                         the BBT time refers to a frame that
-                         many frames before the start of the
-                         cycle. */
+    jack_nframes_t bbt_offset; /**< frame offset for the BBT fields
+                (the given bar, beat, and tick
+                values actually refer to a time
+                frame_offset frames before the
+                start of the cycle), should
+                be assumed to be 0 if
+                JackBBTFrameOffset is not
+                set. If JackBBTFrameOffset is
+                set and this value is zero, the BBT
+                time refers to the first frame of this
+                cycle. If the value is positive,
+                the BBT time refers to a frame that
+                many frames before the start of the
+                cycle. */
 
     /* JACK video positional data (experimental) */
 
-    float               audio_frames_per_video_frame; /**< number of audio frames
-                         per video frame. Should be assumed
-                         zero if JackAudioVideoRatio is not
-                         set. If JackAudioVideoRatio is set
-                         and the value is zero, no video
-                         data exists within the JACK graph */
+    float audio_frames_per_video_frame; /**< number of audio frames
+           per video frame. Should be assumed
+           zero if JackAudioVideoRatio is not
+           set. If JackAudioVideoRatio is set
+           and the value is zero, no video
+           data exists within the JACK graph */
 
-    jack_nframes_t      video_offset;   /**< audio frame at which the first video
-                         frame in this cycle occurs. Should
-                         be assumed to be 0 if JackVideoFrameOffset
-                         is not set. If JackVideoFrameOffset is
-                         set, but the value is zero, there is
-                         no video frame within this cycle. */
+    jack_nframes_t video_offset; /**< audio frame at which the first video
+                  frame in this cycle occurs. Should
+                  be assumed to be 0 if JackVideoFrameOffset
+                  is not set. If JackVideoFrameOffset is
+                  set, but the value is zero, there is
+                  no video frame within this cycle. */
 
     /* JACK extra transport fields */
 
-    double              tick_double; /**< current tick-within-beat in double resolution.
-                         Should be assumed zero if JackTickDouble is not set.
-                         Since older versions of JACK do not expose this variable,
-                         the macro JACK_TICK_DOUBLE is provided,
-                         which can be used as build-time detection. */
+    double tick_double; /**< current tick-within-beat in double resolution.
+            Should be assumed zero if JackTickDouble is not set.
+            Since older versions of JACK do not expose this variable,
+            the macro JACK_TICK_DOUBLE is provided,
+            which can be used as build-time detection. */
 
     /* For binary compatibility, new fields should be allocated from
      * this padding area with new valid bits controlling access, so
      * the existing structure size and offsets are preserved. */
-    int32_t             padding[5];
+    int32_t padding[5];
 
     /* When (unique_1 == unique_2) the contents are consistent. */
-    jack_unique_t       unique_2;       /**< unique ID */
+    jack_unique_t unique_2; /**< unique ID */
 
 } POST_PACKED_STRUCTURE;
 
 typedef struct _jack_position jack_position_t;
 
 /**
-    * Prototype for the @a sync_callback defined by slow-sync clients.
-    * When the client is active, this callback is invoked just before
-    * process() in the same thread.  This occurs once after registration,
-    * then subsequently whenever some client requests a new position, or
-    * the transport enters the ::JackTransportStarting state.  This
-    * realtime function must not wait.
-    *
-    * The transport @a state will be:
-    *
-    *   - ::JackTransportStopped when a new position is requested;
-    *   - ::JackTransportStarting when the transport is waiting to start;
-    *   - ::JackTransportRolling when the timeout has expired, and the
-    *   position is now a moving target.
-    *
-    * @param state current transport state.
-    * @param pos new transport position.
-    * @param arg the argument supplied by jack_set_sync_callback().
-    *
-    * @return TRUE (non-zero) when ready to roll.
-    */
+ * Prototype for the @a sync_callback defined by slow-sync clients.
+ * When the client is active, this callback is invoked just before
+ * process() in the same thread.  This occurs once after registration,
+ * then subsequently whenever some client requests a new position, or
+ * the transport enters the ::JackTransportStarting state.  This
+ * realtime function must not wait.
+ *
+ * The transport @a state will be:
+ *
+ *   - ::JackTransportStopped when a new position is requested;
+ *   - ::JackTransportStarting when the transport is waiting to start;
+ *   - ::JackTransportRolling when the timeout has expired, and the
+ *   position is now a moving target.
+ *
+ * @param state current transport state.
+ * @param pos new transport position.
+ * @param arg the argument supplied by jack_set_sync_callback().
+ *
+ * @return TRUE (non-zero) when ready to roll.
+ */
 typedef int (*JackSyncCallback)(jack_transport_state_t state,
-                                jack_position_t *pos,
-                                void *arg);
+    jack_position_t* pos,
+    void* arg);
 
 
 /**
-  * Prototype for the @a timebase_callback used to provide extended
-  * position information.  Its output affects all of the following
-  * process cycle.  This realtime function must not wait.
-  *
-  * This function is called immediately after process() in the same
-  * thread whenever the transport is rolling, or when any client has
-  * requested a new position in the previous cycle.  The first cycle
-  * after jack_set_timebase_callback() is also treated as a new
-  * position, or the first cycle after jack_activate() if the client
-  * had been inactive.
-  *
-  * The timebase master may not use its @a pos argument to set @a
-  * pos->frame.  To change position, use jack_transport_reposition() or
-  * jack_transport_locate().  These functions are realtime-safe, the @a
-  * timebase_callback can call them directly.
-  *
-  * @param state current transport state.
-  * @param nframes number of frames in current period.
-  * @param pos address of the position structure for the next cycle; @a
-  * pos->frame will be its frame number.  If @a new_pos is FALSE, this
-  * structure contains extended position information from the current
-  * cycle.  If TRUE, it contains whatever was set by the requester.
-  * The @a timebase_callback's task is to update the extended
-  * information here.
-  * @param new_pos TRUE (non-zero) for a newly requested @a pos, or for
-  * the first cycle after the @a timebase_callback is defined.
-  * @param arg the argument supplied by jack_set_timebase_callback().
-  */
+ * Prototype for the @a timebase_callback used to provide extended
+ * position information.  Its output affects all of the following
+ * process cycle.  This realtime function must not wait.
+ *
+ * This function is called immediately after process() in the same
+ * thread whenever the transport is rolling, or when any client has
+ * requested a new position in the previous cycle.  The first cycle
+ * after jack_set_timebase_callback() is also treated as a new
+ * position, or the first cycle after jack_activate() if the client
+ * had been inactive.
+ *
+ * The timebase master may not use its @a pos argument to set @a
+ * pos->frame.  To change position, use jack_transport_reposition() or
+ * jack_transport_locate().  These functions are realtime-safe, the @a
+ * timebase_callback can call them directly.
+ *
+ * @param state current transport state.
+ * @param nframes number of frames in current period.
+ * @param pos address of the position structure for the next cycle; @a
+ * pos->frame will be its frame number.  If @a new_pos is FALSE, this
+ * structure contains extended position information from the current
+ * cycle.  If TRUE, it contains whatever was set by the requester.
+ * The @a timebase_callback's task is to update the extended
+ * information here.
+ * @param new_pos TRUE (non-zero) for a newly requested @a pos, or for
+ * the first cycle after the @a timebase_callback is defined.
+ * @param arg the argument supplied by jack_set_timebase_callback().
+ */
 typedef void (*JackTimebaseCallback)(jack_transport_state_t state,
-                                     jack_nframes_t nframes,
-                                     jack_position_t *pos,
-                                     int new_pos,
-                                     void *arg);
+    jack_nframes_t nframes,
+    jack_position_t* pos,
+    int new_pos,
+    void* arg);
 
 /*********************************************************************
-    * The following interfaces are DEPRECATED.  They are only provided
-    * for compatibility with the earlier JACK transport implementation.
-    *********************************************************************/
+ * The following interfaces are DEPRECATED.  They are only provided
+ * for compatibility with the earlier JACK transport implementation.
+ *********************************************************************/
 
 /**
  * Optional struct jack_transport_info_t fields.
@@ -715,11 +714,11 @@ typedef void (*JackTimebaseCallback)(jack_transport_state_t state,
  */
 typedef enum {
 
-    JackTransportState = 0x1,   /**< Transport state */
-    JackTransportPosition = 0x2,        /**< Frame number */
-    JackTransportLoop = 0x4,    /**< Loop boundaries (ignored) */
-    JackTransportSMPTE = 0x8,   /**< SMPTE (ignored) */
-    JackTransportBBT = 0x10     /**< Bar, Beat, Tick */
+    JackTransportState = 0x1, /**< Transport state */
+    JackTransportPosition = 0x2, /**< Frame number */
+    JackTransportLoop = 0x4, /**< Loop boundaries (ignored) */
+    JackTransportSMPTE = 0x8, /**< SMPTE (ignored) */
+    JackTransportBBT = 0x10 /**< Bar, Beat, Tick */
 
 } jack_transport_bits_t;
 
@@ -733,17 +732,17 @@ typedef struct {
 
     /* these two cannot be set from clients: the server sets them */
 
-    jack_nframes_t frame_rate;          /**< current frame rate (per second) */
-    jack_time_t usecs;          /**< monotonic, free-rolling */
+    jack_nframes_t frame_rate; /**< current frame rate (per second) */
+    jack_time_t usecs; /**< monotonic, free-rolling */
 
-    jack_transport_bits_t valid;        /**< which fields are legal to read */
+    jack_transport_bits_t valid; /**< which fields are legal to read */
     jack_transport_state_t transport_state;
     jack_nframes_t frame;
     jack_nframes_t loop_start;
     jack_nframes_t loop_end;
 
-    long smpte_offset;  /**< SMPTE offset (from frame 0) */
-    float smpte_frame_rate;     /**< 29.97, 30, 24 etc. */
+    long smpte_offset; /**< SMPTE offset (from frame 0) */
+    float smpte_frame_rate; /**< 29.97, 30, 24 etc. */
 
     int bar;
     int beat;

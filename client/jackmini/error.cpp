@@ -18,20 +18,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "error.hpp"
 
-namespace jackmini
-{
+namespace jackmini {
 
 std::string_view to_string(Error error)
 {
     switch (error) {
-    case Error::InvalidArgument: return "invalid argument";
-    case Error::InvalidState:    return "operation not allowed in the current state";
-    case Error::NameTaken:       return "name already in use";
-    case Error::NotFound:        return "not found";
-    case Error::NoServer:        return "server not running and could not be started";
-    case Error::ServerFailure:   return "server failed the request";
-    case Error::Protocol:        return "unexpected reply from the server";
-    case Error::Io:              return "connection to the server failed";
+    case Error::InvalidArgument:
+        return "invalid argument";
+    case Error::InvalidState:
+        return "operation not allowed in the current state";
+    case Error::NameTaken:
+        return "name already in use";
+    case Error::NotFound:
+        return "not found";
+    case Error::NoServer:
+        return "server not running and could not be started";
+    case Error::ServerFailure:
+        return "server failed the request";
+    case Error::Protocol:
+        return "unexpected reply from the server";
+    case Error::Io:
+        return "connection to the server failed";
     }
     return "unknown error";
 }

@@ -20,20 +20,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackConnectionManager.h"
 #include "JackClientControl.h"
 #include "JackEngineControl.h"
-#include "JackGlobals.h"
 #include "JackError.h"
-#include <set>
-#include <iostream>
+#include "JackGlobals.h"
 #include <assert.h>
+#include <iostream>
+#include <set>
 
-namespace jackmini
-{
+namespace jackmini {
 
 JackConnectionManager::JackConnectionManager()
 {
     int i;
     static_assert(offsetof(JackConnectionManager, fInputCounter) % sizeof(UInt32) == 0,
-                  "fInputCounter must be aligned within JackConnectionManager");
+        "fInputCounter must be aligned within JackConnectionManager");
 
     jack_log("JackConnectionManager::InitConnections size = %ld ", sizeof(JackConnectionManager));
 
@@ -50,7 +49,8 @@ JackConnectionManager::JackConnectionManager()
 }
 
 JackConnectionManager::~JackConnectionManager()
-{}
+{
+}
 
 //--------------
 // Internal API
@@ -62,7 +62,7 @@ bool JackConnectionManager::IsLoopPathAux(int ref1, int ref2) const
 
     if (ref1 < GetEngineControl()->fDriverNum || ref2 < GetEngineControl()->fDriverNum) {
         return false;
-    } else if (ref1 == ref2) {	// Same refnum
+    } else if (ref1 == ref2) { // Same refnum
         return true;
     } else {
         jack_int_t output[CLIENT_NUM];
@@ -93,7 +93,7 @@ Result<void> JackConnectionManager::Connect(jack_port_id_t port_src, jack_port_i
     jack_log("JackConnectionManager::Connect port_src = %ld port_dst = %ld", port_src, port_dst);
 
     if (fConnection[port_src].AddItem(port_dst)) {
-        return {};
+        return { };
     } else {
         jack_error("Connection table is full !!");
         return std::unexpected(Error::ServerFailure);
@@ -108,7 +108,7 @@ Result<void> JackConnectionManager::Disconnect(jack_port_id_t port_src, jack_por
     jack_log("JackConnectionManager::Disconnect port_src = %ld port_dst = %ld", port_src, port_dst);
 
     if (fConnection[port_src].RemoveItem(port_dst)) {
-        return {};
+        return { };
     } else {
         jack_error("Connection not found !!");
         return std::unexpected(Error::NotFound);
@@ -142,7 +142,7 @@ Result<void> JackConnectionManager::AddInputPort(int refnum, jack_port_id_t port
 {
     if (fInputPort[refnum].AddItem(port_index)) {
         jack_log("JackConnectionManager::AddInputPort ref = %ld port = %ld", refnum, port_index);
-        return {};
+        return { };
     } else {
         jack_error("Maximum number of input ports is reached for application ref = %ld", refnum);
         return std::unexpected(Error::ServerFailure);
@@ -156,7 +156,7 @@ Result<void> JackConnectionManager::AddOutputPort(int refnum, jack_port_id_t por
 {
     if (fOutputPort[refnum].AddItem(port_index)) {
         jack_log("JackConnectionManager::AddOutputPort ref = %ld port = %ld", refnum, port_index);
-        return {};
+        return { };
     } else {
         jack_error("Maximum number of output ports is reached for application ref = %ld", refnum);
         return std::unexpected(Error::ServerFailure);
@@ -171,7 +171,7 @@ Result<void> JackConnectionManager::RemoveInputPort(int refnum, jack_port_id_t p
     jack_log("JackConnectionManager::RemoveInputPort ref = %ld port_index = %ld ", refnum, port_index);
 
     if (fInputPort[refnum].RemoveItem(port_index)) {
-        return {};
+        return { };
     } else {
         jack_error("Input port index = %ld not found for application ref = %ld", port_index, refnum);
         return std::unexpected(Error::NotFound);
@@ -186,7 +186,7 @@ Result<void> JackConnectionManager::RemoveOutputPort(int refnum, jack_port_id_t 
     jack_log("JackConnectionManager::RemoveOutputPort ref = %ld port_index = %ld ", refnum, port_index);
 
     if (fOutputPort[refnum].RemoveItem(port_index)) {
-        return {};
+        return { };
     } else {
         jack_error("Output port index = %ld not found for application ref = %ld", port_index, refnum);
         return std::unexpected(Error::NotFound);
@@ -246,7 +246,7 @@ Result<void> JackConnectionManager::SuspendRefNum(JackClientControl* control, Ja
     if (!res) {
         return std::unexpected(Error::ServerFailure);
     }
-    return {};
+    return { };
 }
 
 /*!
@@ -284,7 +284,8 @@ Result<void> JackConnectionManager::ResumeRefNum(JackClientControl* control, Jac
 static bool HasNoConnection(jack_int_t* table)
 {
     for (int ref = 0; ref < CLIENT_NUM; ref++) {
-        if (table[ref] > 0) return false;
+        if (table[ref] > 0)
+            return false;
     }
     return true;
 }
@@ -485,6 +486,4 @@ bool JackConnectionManager::DecFeedbackConnection(jack_port_id_t port_src, jack_
     return fLoopFeedback.DecConnection(ref1, ref2); // Remove the feedback connection
 }
 
-} // end of namespace
-
-
+} // namespace jackmini

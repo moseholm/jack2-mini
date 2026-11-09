@@ -17,15 +17,15 @@
 
 */
 
-#include <array>
-#include <string>
-#include <filesystem>
-#include <system_error>
+#include "JackTools.h"
 #include "JackCString.h"
 #include "JackConstants.h"
-#include "driver_interface.h"
-#include "JackTools.h"
 #include "JackError.h"
+#include <array>
+#include <filesystem>
+#include <string>
+#include <system_error>
+#include "driver_interface.h"
 
 #include <assert.h>
 #include <dlfcn.h>
@@ -40,176 +40,176 @@ using namespace std;
 namespace jackmini {
 
 #define DEFAULT_TMP_DIR "/tmp"
-    std::string jack_tmpdir = DEFAULT_TMP_DIR;
+std::string jack_tmpdir = DEFAULT_TMP_DIR;
 
-    void JackTools::KillServer()
-    {
-        kill(GetPID(), SIGINT);
+void JackTools::KillServer()
+{
+    kill(GetPID(), SIGINT);
+}
+
+int JackTools::MkDir(const char* path)
+{
+    std::error_code ec;
+    // create_directory() reports an existing directory as "not created", which is an error here.
+    return !std::filesystem::create_directory(path, ec);
+}
+
+int JackTools::GetPID()
+{
+    return getpid();
+}
+
+int JackTools::GetUID()
+{
+    return geteuid();
+}
+
+const char* JackTools::DefaultServerName()
+{
+    const char* server_name;
+    if ((server_name = getenv("JACK_DEFAULT_SERVER")) == NULL) {
+        server_name = JACK_DEFAULT_SERVER_NAME;
     }
+    return server_name;
+}
 
-    int JackTools::MkDir(const char* path)
-    {
-        std::error_code ec;
-        // create_directory() reports an existing directory as "not created", which is an error here.
-        return !std::filesystem::create_directory(path, ec);
-    }
+/* returns the name of the per-user subdirectory of jack_tmpdir */
+const char* JackTools::UserDir()
+{
+    static char user_dir[JACK_PATH_MAX + 1] = "";
 
-    int JackTools::GetPID()
-    {
-        return getpid();
-    }
-
-    int JackTools::GetUID()
-    {
-        return geteuid();
-    }
-
-    const char* JackTools::DefaultServerName()
-    {
-        const char* server_name;
-        if ((server_name = getenv("JACK_DEFAULT_SERVER")) == NULL) {
-            server_name = JACK_DEFAULT_SERVER_NAME;
-        }
-        return server_name;
-    }
-
-    /* returns the name of the per-user subdirectory of jack_tmpdir */
-    const char* JackTools::UserDir()
-    {
-        static char user_dir[JACK_PATH_MAX + 1] = "";
-
-        /* format the path name on the first call */
-        if (user_dir[0] == '\0') {
-            if (getenv("JACK_PROMISCUOUS_SERVER")) {
-                jackmini::FormatCString(user_dir, "{}/jack", jack_tmpdir);
-            } else {
-                jackmini::FormatCString(user_dir, "{}/jack-{}", jack_tmpdir, GetUID());
-            }
-        }
-
-        return user_dir;
-    }
-
-    /* returns the name of the per-server subdirectory of jack_user_dir() */
-    const char* JackTools::ServerDir(const char* server_name, char* server_dir)
-    {
-        /* format the path name into the suppled server_dir char array,
-        * assuming that server_dir is at least as large as JACK_PATH_MAX + 1 */
-
-        jackmini::FormatCString(std::span<char>(server_dir, JACK_PATH_MAX + 1), "{}/{}", UserDir(), server_name);
-        return server_dir;
-    }
-
-    void JackTools::CleanupFiles(const char* server_name)
-    {
-        std::array<char, JACK_PATH_MAX + 1> dir_name{};
-        ServerDir(server_name, dir_name.data());
-
-        /* On termination, we remove all files that jackd creates so
-        * subsequent attempts to start jackd will not believe that an
-        * instance is already running. If the server crashes or is
-        * terminated with SIGKILL, this is not possible. So, cleanup
-        * is also attempted when jackd starts.
-        *
-        * There are several tricky issues. First, the previous JACK
-        * server may have run for a different user ID, so its files
-        * may be inaccessible. This is handled by using a separate
-        * JACK_TMP_DIR subdirectory for each user. Second, there may
-        * be other servers running with different names. Each gets
-        * its own subdirectory within the per-user directory. The
-        * current process has already registered as `server_name', so
-        * we know there is no other server actively using that name.
-        */
-
-        std::error_code ec;
-        const std::filesystem::path server_dir(dir_name.data());
-
-        /* nothing to do if the server directory does not exist */
-        if (!std::filesystem::is_directory(server_dir, ec)) {
-            return;
-        }
-
-        /* remove all the files in this directory, they are mine */
-        for (std::filesystem::directory_iterator it(server_dir, ec), end; !ec && it != end; it.increment(ec)) {
-            std::error_code remove_ec;
-            std::filesystem::remove(it->path(), remove_ec);
-            if (remove_ec) {
-                jack_error("cannot unlink `%s' (%s)", it->path().c_str(), remove_ec.message().c_str());
-            }
-        }
-
-        /* now, delete the per-server subdirectory, itself */
-        std::error_code rmdir_ec;
-        std::filesystem::remove(server_dir, rmdir_ec);
-        if (rmdir_ec) {
-            jack_error("cannot remove `%s' (%s)", dir_name.data(), rmdir_ec.message().c_str());
-        }
-
-        /* finally, delete the per-user subdirectory, if empty */
-        std::error_code user_ec;
-        std::filesystem::remove(UserDir(), user_ec);
-        if (user_ec && user_ec != std::make_error_code(std::errc::directory_not_empty)) {
-            jack_error("cannot remove `%s' (%s)", UserDir(), user_ec.message().c_str());
+    /* format the path name on the first call */
+    if (user_dir[0] == '\0') {
+        if (getenv("JACK_PROMISCUOUS_SERVER")) {
+            jackmini::FormatCString(user_dir, "{}/jack", jack_tmpdir);
+        } else {
+            jackmini::FormatCString(user_dir, "{}/jack-{}", jack_tmpdir, GetUID());
         }
     }
 
-    int JackTools::GetTmpdir()
-    {
-        FILE* in;
-        size_t len;
-        std::array<char, JACK_PATH_MAX + 2> buf{}; /* allow tmpdir to live anywhere, plus newline, plus null */
+    return user_dir;
+}
 
-        if ((in = popen("jackd -l", "r")) == NULL) {
-            return -1;
+/* returns the name of the per-server subdirectory of jack_user_dir() */
+const char* JackTools::ServerDir(const char* server_name, char* server_dir)
+{
+    /* format the path name into the suppled server_dir char array,
+     * assuming that server_dir is at least as large as JACK_PATH_MAX + 1 */
+
+    jackmini::FormatCString(std::span<char>(server_dir, JACK_PATH_MAX + 1), "{}/{}", UserDir(), server_name);
+    return server_dir;
+}
+
+void JackTools::CleanupFiles(const char* server_name)
+{
+    std::array<char, JACK_PATH_MAX + 1> dir_name { };
+    ServerDir(server_name, dir_name.data());
+
+    /* On termination, we remove all files that jackd creates so
+     * subsequent attempts to start jackd will not believe that an
+     * instance is already running. If the server crashes or is
+     * terminated with SIGKILL, this is not possible. So, cleanup
+     * is also attempted when jackd starts.
+     *
+     * There are several tricky issues. First, the previous JACK
+     * server may have run for a different user ID, so its files
+     * may be inaccessible. This is handled by using a separate
+     * JACK_TMP_DIR subdirectory for each user. Second, there may
+     * be other servers running with different names. Each gets
+     * its own subdirectory within the per-user directory. The
+     * current process has already registered as `server_name', so
+     * we know there is no other server actively using that name.
+     */
+
+    std::error_code ec;
+    const std::filesystem::path server_dir(dir_name.data());
+
+    /* nothing to do if the server directory does not exist */
+    if (!std::filesystem::is_directory(server_dir, ec)) {
+        return;
+    }
+
+    /* remove all the files in this directory, they are mine */
+    for (std::filesystem::directory_iterator it(server_dir, ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code remove_ec;
+        std::filesystem::remove(it->path(), remove_ec);
+        if (remove_ec) {
+            jack_error("cannot unlink `%s' (%s)", it->path().c_str(), remove_ec.message().c_str());
         }
+    }
 
-        if (fgets(buf.data(), sizeof(buf), in) == NULL) {
-            pclose(in);
-            return -1;
-        }
+    /* now, delete the per-server subdirectory, itself */
+    std::error_code rmdir_ec;
+    std::filesystem::remove(server_dir, rmdir_ec);
+    if (rmdir_ec) {
+        jack_error("cannot remove `%s' (%s)", dir_name.data(), rmdir_ec.message().c_str());
+    }
 
-        len = strlen(buf.data());
+    /* finally, delete the per-user subdirectory, if empty */
+    std::error_code user_ec;
+    std::filesystem::remove(UserDir(), user_ec);
+    if (user_ec && user_ec != std::make_error_code(std::errc::directory_not_empty)) {
+        jack_error("cannot remove `%s' (%s)", UserDir(), user_ec.message().c_str());
+    }
+}
 
-        if (buf[len - 1] != '\n') {
-            /* didn't get a whole line */
-            pclose(in);
-            return -1;
-        }
+int JackTools::GetTmpdir()
+{
+    FILE* in;
+    size_t len;
+    std::array<char, JACK_PATH_MAX + 2> buf { }; /* allow tmpdir to live anywhere, plus newline, plus null */
 
-        jack_tmpdir.assign(buf.data(), len - 1);
+    if ((in = popen("jackd -l", "r")) == NULL) {
+        return -1;
+    }
 
+    if (fgets(buf.data(), sizeof(buf), in) == NULL) {
         pclose(in);
-        return 0;
+        return -1;
     }
 
-    void JackTools::RewriteName(const char* name, char* new_name)
-    {
-        size_t i;
-        for (i = 0; i < strlen(name); i++) {
-            if ((name[i] == '/') || (name[i] == '\\')) {
-                new_name[i] = '_';
-            } else {
-                new_name[i] = name[i];
-            }
+    len = strlen(buf.data());
+
+    if (buf[len - 1] != '\n') {
+        /* didn't get a whole line */
+        pclose(in);
+        return -1;
+    }
+
+    jack_tmpdir.assign(buf.data(), len - 1);
+
+    pclose(in);
+    return 0;
+}
+
+void JackTools::RewriteName(const char* name, char* new_name)
+{
+    size_t i;
+    for (i = 0; i < strlen(name); i++) {
+        if ((name[i] == '/') || (name[i] == '\\')) {
+            new_name[i] = '_';
+        } else {
+            new_name[i] = name[i];
         }
-        new_name[i] = '\0';
     }
+    new_name[i] = '\0';
+}
 
-    void PrintLoadError(const char* so_name)
-    {
-        jack_log("error loading %s err = %s", so_name, dlerror());
-    }
+void PrintLoadError(const char* so_name)
+{
+    jack_log("error loading %s err = %s", so_name, dlerror());
+}
 
-    void BuildClientPath(char* path_to_so, int path_len, const char* so_name)
-    {
-        const char* internal_dir;
-        if ((internal_dir = getenv("JACK_INTERNAL_DIR")) == 0) {
-            if ((internal_dir = getenv("JACK_DRIVER_DIR")) == 0) {
-                internal_dir = ADDON_DIR;
-            }
+void BuildClientPath(char* path_to_so, int path_len, const char* so_name)
+{
+    const char* internal_dir;
+    if ((internal_dir = getenv("JACK_INTERNAL_DIR")) == 0) {
+        if ((internal_dir = getenv("JACK_DRIVER_DIR")) == 0) {
+            internal_dir = ADDON_DIR;
         }
-
-        jackmini::FormatCString(std::span<char>(path_to_so, path_len), "{}/{}.so", internal_dir, so_name);
     }
 
-}  // end of namespace
+    jackmini::FormatCString(std::span<char>(path_to_so, path_len), "{}/{}.so", internal_dir, so_name);
+}
+
+} // namespace jackmini

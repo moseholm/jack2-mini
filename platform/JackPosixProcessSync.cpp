@@ -1,4 +1,4 @@
- /*
+/*
 Copyright (C) 2004-2008 Grame
 
 This program is free software; you can redistribute it and/or modify
@@ -21,8 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackError.h"
 #include <chrono>
 
-namespace jackmini
-{
+namespace jackmini {
 
 // pthread_cond_timedwait() takes an absolute CLOCK_REALTIME deadline, which is
 // what std::chrono::system_clock is on Linux.
@@ -31,7 +30,7 @@ static timespec RealtimeDeadline(long usec)
     const auto deadline = std::chrono::system_clock::now() + std::chrono::microseconds(usec);
     const auto secs = std::chrono::time_point_cast<std::chrono::seconds>(deadline);
     const auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(deadline - secs);
-    return timespec{static_cast<time_t>(secs.time_since_epoch().count()), static_cast<long>(nanos.count())};
+    return timespec { static_cast<time_t>(secs.time_since_epoch().count()), static_cast<long>(nanos.count()) };
 }
 
 void JackPosixProcessSync::Signal()
@@ -133,7 +132,7 @@ bool JackPosixProcessSync::TimedWait(long usec)
     }
 
     jack_log("JackPosixProcessSync::TimedWait finished delta = %5.1lf",
-             std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count());
+        std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count());
 
     return (res == 0);
 }
@@ -163,11 +162,10 @@ bool JackPosixProcessSync::LockedTimedWait(long usec)
     }
 
     jack_log("JackPosixProcessSync::TimedWait finished delta = %5.1lf",
-             std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count());
+        std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count());
 
     return (res2 == 0);
 }
 
 
-} // end of namespace
-
+} // namespace jackmini

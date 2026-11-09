@@ -23,8 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <string_view>
 #include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 enum JackAlsaSecondaryMode {
     SecondaryModeDuplex = 0,
@@ -108,8 +107,8 @@ A bare value without '=' is treated as device=<value>.  Values may be quoted.
 Returns false and fills error on failure.
 */
 bool JackAlsaSecondaryConfigParse(std::string_view spec,
-                                  JackAlsaSecondaryConfig* config,
-                                  std::string* error);
+    JackAlsaSecondaryConfig* config,
+    std::string* error);
 
 /*!
 \brief Load a list of secondary cards from a file.
@@ -118,8 +117,8 @@ One card per line, using the same key=value syntax.  Blank lines and lines
 whose first non-space character is '#' are ignored.
 */
 bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
-                                     std::vector<JackAlsaSecondaryConfig>* configs,
-                                     std::string* error);
+    std::vector<JackAlsaSecondaryConfig>* configs,
+    std::string* error);
 
 /*!
 \brief Turn an arbitrary string into a valid JACK port name component.
@@ -136,6 +135,6 @@ bool JackAlsaCardExcluded(std::string_view card_id, const std::vector<std::strin
 
 std::string JackAlsaSecondarySanitizeName(std::string_view name);
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

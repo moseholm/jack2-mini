@@ -24,8 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackCompilerDeps.h"
 #include "JackTypes.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 SERVER_EXPORT void init_time();
 SERVER_EXPORT void end_time();
@@ -35,6 +34,6 @@ SERVER_EXPORT void sleep_microseconds(long usec);
 void set_clock_source(jack_timer_type_t source);
 const char* clock_source_name(jack_timer_type_t source);
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

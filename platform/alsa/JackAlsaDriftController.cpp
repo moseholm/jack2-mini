@@ -18,8 +18,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackAlsaDriftController.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 static double Clamp(double v, double limit)
 {
@@ -33,10 +32,15 @@ static double Clamp(double v, double limit)
 }
 
 JackAlsaDriftController::JackAlsaDriftController(double kp, double ki,
-                                                 double max_correction, double slew)
-    : fKp(kp), fKi(ki), fMaxCorrection(max_correction), fSlew(slew),
-      fIntegral(0.0), fApplied(0.0)
-{}
+    double max_correction, double slew)
+    : fKp(kp)
+    , fKi(ki)
+    , fMaxCorrection(max_correction)
+    , fSlew(slew)
+    , fIntegral(0.0)
+    , fApplied(0.0)
+{
+}
 
 void JackAlsaDriftController::Reset()
 {
@@ -61,4 +65,4 @@ double JackAlsaDriftController::Update(double fill, double target, double period
     return 1.0 + fApplied;
 }
 
-} // end of namespace
+} // namespace jackmini

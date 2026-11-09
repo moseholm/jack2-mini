@@ -25,11 +25,14 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
 JackAlsaControlMonitor::JackAlsaControlMonitor(JackAlsaControlListener* listener)
-    : fListener(listener), fThread(this), fWakeFd(-1), fUpdateFd(-1), fEvent(NULL)
+    : fListener(listener)
+    , fThread(this)
+    , fWakeFd(-1)
+    , fUpdateFd(-1)
+    , fEvent(NULL)
 {
     fUpdateFd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 }
@@ -67,7 +70,7 @@ void JackAlsaControlMonitor::RemoveWatches(int card)
 }
 
 void JackAlsaControlMonitor::QueueWatch(int card, const std::string& ctl_name,
-                                        const JackAlsaRateElement& elem, JackAlsaRateDirection dir)
+    const JackAlsaRateElement& elem, JackAlsaRateDirection dir)
 {
     PendingWatch watch;
     watch.card = card;
@@ -101,7 +104,7 @@ void JackAlsaControlMonitor::AddPendingWatch(const PendingWatch& pending)
         int err = snd_ctl_open(&ctl, pending.ctl_name.c_str(), 0);
         if (err < 0) {
             jack_error("control monitor: cannot open %s for events (%s)",
-                       pending.ctl_name.c_str(), snd_strerror(err));
+                pending.ctl_name.c_str(), snd_strerror(err));
             return;
         }
         device = new Device;
@@ -154,7 +157,7 @@ void JackAlsaControlMonitor::ApplyUpdates()
 }
 
 int JackAlsaControlMonitor::AddWatch(int card, const std::string& ctl_name,
-                                     const JackAlsaRateElement& elem, JackAlsaRateDirection dir)
+    const JackAlsaRateElement& elem, JackAlsaRateDirection dir)
 {
     Device* device = NULL;
     for (size_t i = 0; i < fDevices.size(); i++) {
@@ -169,7 +172,7 @@ int JackAlsaControlMonitor::AddWatch(int card, const std::string& ctl_name,
         int err = snd_ctl_open(&ctl, ctl_name.c_str(), 0);
         if (err < 0) {
             jack_error("secondary card control '%s': cannot open for events (%s)",
-                       ctl_name.c_str(), snd_strerror(err));
+                ctl_name.c_str(), snd_strerror(err));
             return err;
         }
         device = new Device;
@@ -245,7 +248,7 @@ void JackAlsaControlMonitor::MarkDead(Device* device)
     }
     device->dead = true;
     jack_error("ALSA control device %s went away; its rate controls are no longer monitored",
-               device->name.c_str());
+        device->name.c_str());
 }
 
 bool JackAlsaControlMonitor::Execute()
@@ -268,8 +271,7 @@ bool JackAlsaControlMonitor::Execute()
         }
         struct pollfd pfd[8];
         int count = snd_ctl_poll_descriptors_count(device->ctl);
-        if (count <= 0 || count > 8 ||
-            snd_ctl_poll_descriptors(device->ctl, pfd, count) < 0) {
+        if (count <= 0 || count > 8 || snd_ctl_poll_descriptors(device->ctl, pfd, count) < 0) {
             MarkDead(device);
             continue;
         }
@@ -314,7 +316,8 @@ bool JackAlsaControlMonitor::Execute()
         Device* device = ranges[i].device;
         unsigned short revents = 0;
         if (snd_ctl_poll_descriptors_revents(device->ctl, &fds[ranges[i].begin],
-                                             ranges[i].count, &revents) < 0) {
+                ranges[i].count, &revents)
+            < 0) {
             MarkDead(device);
             continue;
         }
@@ -363,4 +366,4 @@ int JackAlsaControlMonitor::Stop()
     return fThread.Stop();
 }
 
-} // end of namespace
+} // namespace jackmini

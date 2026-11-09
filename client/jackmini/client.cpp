@@ -36,8 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <unordered_map>
 #include <vector>
 
-namespace jackmini
-{
+namespace jackmini {
 
 struct Client::Impl {
     std::unique_ptr<client::ClientSession> session;
@@ -47,7 +46,7 @@ struct Client::Impl {
     // reused: a handle to an unregistered port stays invalid.  The table holds kMaxPortHandles; a client that uses more
     // fails.
     static constexpr std::uint32_t kMaxPortHandles = 4096;
-    std::array<std::atomic<jack_port_id_t>, kMaxPortHandles> slots{};
+    std::array<std::atomic<jack_port_id_t>, kMaxPortHandles> slots { };
     std::uint32_t used = 1;
     // The token of this client: its handles carry it, and a handle with another token is not a port of this client.
     std::uint32_t token = 0;
@@ -93,8 +92,7 @@ struct Client::Impl {
     }
 };
 
-namespace
-{
+namespace {
 
 unsigned long to_c_flags(PortFlags flags)
 {
@@ -159,7 +157,7 @@ Result<Client> Client::open(std::string_view name, OpenOptions options)
 
     Client client;
     client.fImpl = std::make_unique<Impl>();
-    static std::atomic<std::uint32_t> next_token{ 1 };
+    static std::atomic<std::uint32_t> next_token { 1 };
     client.fImpl->token = next_token.fetch_add(1);
     client.fImpl->session = std::move(*session);
     return client;
@@ -204,7 +202,7 @@ Result<void> Client::deactivate()
 Result<void> Client::close()
 {
     if (!fImpl || !fImpl->session) {
-        return {};
+        return { };
     }
     auto result = fImpl->session->close();
     fImpl->session.reset();
@@ -246,7 +244,7 @@ Result<void> Client::unregister_port(Port port)
         return result;
     }
     fImpl->forget(index);
-    return {};
+    return { };
 }
 
 // For a port that is not known, the name is empty, the type is audio, and the flags are none: the accessors have no error
@@ -287,7 +285,7 @@ Result<Port> Client::find_port(std::string_view full_name) const
 std::vector<std::string> Client::port_names(PortType type, PortFlags required) const
 {
     if (!fImpl || !fImpl->session) {
-        return {};
+        return { };
     }
     return fImpl->session->port_names(to_c_type(type), to_c_flags(required));
 }
@@ -303,9 +301,8 @@ Result<void> Client::connect(Port source, Port destination)
         return std::unexpected(Error::NotFound);
     }
     // The server refuses a connection without a reason, so the reasons are checked here first.
-    if (port_type(source) != port_type(destination) ||
-        !has_flag(port_flags(source), PortFlags::Output) || !has_flag(port_flags(destination), PortFlags::Input)) {
-        return std::unexpected(Error::InvalidArgument);  // different types, or not an output to an input
+    if (port_type(source) != port_type(destination) || !has_flag(port_flags(source), PortFlags::Output) || !has_flag(port_flags(destination), PortFlags::Input)) {
+        return std::unexpected(Error::InvalidArgument); // different types, or not an output to an input
     }
     if (is_connected(source, destination)) {
         return std::unexpected(Error::InvalidState);
@@ -340,7 +337,7 @@ std::vector<std::string> Client::connections(Port port) const
 {
     const jack_port_id_t index = fImpl && fImpl->session ? fImpl->port_of(port) : 0;
     if (index == 0) {
-        return {};
+        return { };
     }
     return fImpl->session->connections(index);
 }
@@ -351,7 +348,7 @@ Result<void> Client::set_process(ProcessFn fn)
         return std::unexpected(Error::InvalidState);
     }
     fImpl->session->set_process(std::move(fn));
-    return {};
+    return { };
 }
 
 Result<void> Client::on_xrun(XrunFn fn)
@@ -360,7 +357,7 @@ Result<void> Client::on_xrun(XrunFn fn)
         return std::unexpected(Error::InvalidState);
     }
     fImpl->session->set_xrun_handler(std::move(fn));
-    return {};
+    return { };
 }
 
 Result<void> Client::on_shutdown(ShutdownFn fn)
@@ -369,7 +366,7 @@ Result<void> Client::on_shutdown(ShutdownFn fn)
         return std::unexpected(Error::InvalidState);
     }
     fImpl->session->set_shutdown_handler(std::move(fn));
-    return {};
+    return { };
 }
 
 Result<void> Client::on_buffer_size(BufferSizeFn fn)
@@ -378,7 +375,7 @@ Result<void> Client::on_buffer_size(BufferSizeFn fn)
         return std::unexpected(Error::InvalidState);
     }
     fImpl->session->set_buffer_size_handler(std::move(fn));
-    return {};
+    return { };
 }
 
 Result<void> Client::on_sample_rate(SampleRateFn fn)
@@ -387,7 +384,7 @@ Result<void> Client::on_sample_rate(SampleRateFn fn)
         return std::unexpected(Error::InvalidState);
     }
     fImpl->session->set_sample_rate_handler(std::move(fn));
-    return {};
+    return { };
 }
 
 Result<void> Client::on_latency(LatencyFn fn)
@@ -396,17 +393,17 @@ Result<void> Client::on_latency(LatencyFn fn)
         return std::unexpected(Error::InvalidState);
     }
     fImpl->session->set_latency_handler(std::move(fn));
-    return {};
+    return { };
 }
 
 LatencyRange Client::port_latency(Port port, LatencyMode mode) const
 {
     const jack_port_id_t index = fImpl && fImpl->session ? fImpl->port_of(port) : 0;
     if (index == 0) {
-        return {};
+        return { };
     }
     const jack_latency_range_t range = fImpl->session->port_latency_range(index, to_c_mode(mode));
-    return LatencyRange{ range.min, range.max };
+    return LatencyRange { range.min, range.max };
 }
 
 Result<void> Client::set_port_latency(Port port, LatencyMode mode, LatencyRange range)
@@ -418,8 +415,8 @@ Result<void> Client::set_port_latency(Port port, LatencyMode mode, LatencyRange 
     if (index == 0) {
         return std::unexpected(Error::NotFound);
     }
-    fImpl->session->set_port_latency_range(index, to_c_mode(mode), jack_latency_range_t{ range.min, range.max });
-    return {};
+    fImpl->session->set_port_latency_range(index, to_c_mode(mode), jack_latency_range_t { range.min, range.max });
+    return { };
 }
 
 Result<void> Client::recompute_latencies()
@@ -438,7 +435,7 @@ std::string_view Client::name() const noexcept
 Uuid Client::uuid() const noexcept
 {
     if (!fImpl || !fImpl->session) {
-        return {};
+        return { };
     }
     auto uuid = fImpl->session->lookup_uuid();
     return uuid ? *uuid : Uuid();
@@ -464,7 +461,7 @@ std::span<float> Client::audio_buffer(Port port) noexcept
 {
     const jack_port_id_t index = fImpl ? fImpl->port_of(port) : 0;
     if (index == 0 || std::strcmp(fImpl->session->port_type(index), JACK_DEFAULT_AUDIO_TYPE) != 0) {
-        return {};
+        return { };
     }
     const jack_nframes_t frames = fImpl->session->buffer_size();
     return std::span<float>(static_cast<float*>(fImpl->session->port_buffer(index, frames)), frames);
@@ -479,8 +476,7 @@ midi::Buffer Client::midi_buffer(Port port) noexcept
     return midi::Buffer(fImpl->session->port_buffer(index, fImpl->session->buffer_size()));
 }
 
-namespace midi
-{
+namespace midi {
 
 std::size_t Buffer::count() const noexcept
 {
@@ -489,11 +485,11 @@ std::size_t Buffer::count() const noexcept
 
 Event Buffer::event(std::size_t index) const noexcept
 {
-    jack_midi_event_t raw{};
+    jack_midi_event_t raw { };
     if (fHandle == nullptr || jack_midi_event_get(&raw, fHandle, index) != 0) {
-        return {};
+        return { };
     }
-    return Event{ raw.time, std::span<const std::byte>(reinterpret_cast<const std::byte*>(raw.buffer), raw.size) };
+    return Event { raw.time, std::span<const std::byte>(reinterpret_cast<const std::byte*>(raw.buffer), raw.size) };
 }
 
 bool Buffer::write(FrameCount time, std::span<const std::byte> data) noexcept
@@ -519,12 +515,16 @@ TransportState Client::transport_state() const noexcept
     if (!fImpl || !fImpl->session) {
         return TransportState::Stopped;
     }
-    jack_position_t position{};
+    jack_position_t position { };
     switch (fImpl->session->transport_query(&position)) {
-    case JackTransportRolling:  return TransportState::Rolling;
-    case JackTransportStarting: return TransportState::Starting;
-    case JackTransportLooping:  return TransportState::Looping;
-    default:                    return TransportState::Stopped;
+    case JackTransportRolling:
+        return TransportState::Rolling;
+    case JackTransportStarting:
+        return TransportState::Starting;
+    case JackTransportLooping:
+        return TransportState::Looping;
+    default:
+        return TransportState::Stopped;
     }
 }
 
@@ -534,7 +534,7 @@ Result<void> Client::transport_start()
         return std::unexpected(Error::InvalidState);
     }
     fImpl->session->transport_start();
-    return {};
+    return { };
 }
 
 Result<void> Client::transport_stop()
@@ -543,7 +543,7 @@ Result<void> Client::transport_stop()
         return std::unexpected(Error::InvalidState);
     }
     fImpl->session->transport_stop();
-    return {};
+    return { };
 }
 
 Result<void> Client::transport_locate(FrameCount frame)
@@ -552,7 +552,7 @@ Result<void> Client::transport_locate(FrameCount frame)
         return std::unexpected(Error::InvalidState);
     }
     fImpl->session->transport_locate(frame);
-    return {};
+    return { };
 }
 
 } // namespace jackmini

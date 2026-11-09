@@ -25,8 +25,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackPlatformPlug.h"
 #include "jackmini/error.hpp"
 
-namespace jackmini
-{
+namespace jackmini {
 
 struct JackClientControl;
 
@@ -34,31 +33,28 @@ struct JackClientControl;
 \brief Server side implementation of library clients.
 */
 
-class JackExternalClient : public JackClientInterface
-{
+class JackExternalClient : public JackClientInterface {
 
-    private:
+private:
+    JackNotifyChannel fChannel; /*! Server/client communication channel */
+    JackClientControl* fClientControl; /*! Client control in shared memory     */
 
-        JackNotifyChannel fChannel;           /*! Server/client communication channel */
-        JackClientControl* fClientControl;    /*! Client control in shared memory     */
+public:
+    JackExternalClient();
+    virtual ~JackExternalClient();
 
-    public:
+    // The shared client control is allocated first; the notification channel is opened only once the driver is
+    // known to be running, so a refused open does not create a writer thread.
+    Result<void> OpenClient(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client);
+    Result<void> OpenChannel(const char* name);
+    int Close();
 
-        JackExternalClient();
-        virtual ~JackExternalClient();
+    int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
 
-        // The shared client control is allocated first; the notification channel is opened only once the driver is
-        // known to be running, so a refused open does not create a writer thread.
-        Result<void> OpenClient(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client);
-        Result<void> OpenChannel(const char* name);
-        int Close();
-
-        int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
-
-        JackClientControl* GetClientControl() const;
+    JackClientControl* GetClientControl() const;
 };
 
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

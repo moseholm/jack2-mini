@@ -18,44 +18,43 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#define __STDC_FORMAT_MACROS   // For inttypes.h to work in C++
+#define __STDC_FORMAT_MACROS // For inttypes.h to work in C++
 
-#include <array>
-#include <iostream>
-#include <math.h>
-#include <stdio.h>
-#include <memory.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include <errno.h>
-#include <stdarg.h>
+#include <math.h>
+#include <memory.h>
 #include <signal.h>
-#include <sys/types.h>
-#include <sys/time.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <algorithm>
-#include <string_view>
+#include <array>
 #include <atomic>
 #include <chrono>
+#include <iostream>
+#include <string_view>
 #include <thread>
 #include <utility>
 
 #include "JackAlsaDriver.h"
 #include "JackAlsaEnumerate.h"
 #include "JackCString.h"
-#include "JackTools.h"
-#include "JackEngineControl.h"
 #include "JackClientControl.h"
-#include "JackPort.h"
+#include "JackCompilerDeps.h"
+#include "JackEngineControl.h"
 #include "JackGraphManager.h"
 #include "JackLockedEngine.h"
+#include "JackPort.h"
 #include "JackPosixThread.h"
-#include "JackCompilerDeps.h"
 #include "JackServerGlobals.h"
+#include "JackTools.h"
 #include "driver_module.h"
 
-static struct jack_constraint_enum_char_descriptor dither_constraint_descr_array[] =
-{
+static struct jack_constraint_enum_char_descriptor dither_constraint_descr_array[] = {
     { 'n', "none" },
     { 'r', "rectangular" },
     { 's', "shaped" },
@@ -63,16 +62,15 @@ static struct jack_constraint_enum_char_descriptor dither_constraint_descr_array
     { 0 }
 };
 
-namespace jackmini
-{
+namespace jackmini {
 
-static std::atomic<bool> device_reservation_loop_running{false};
+static std::atomic<bool> device_reservation_loop_running { false };
 
 static void* on_device_reservation_loop(void*)
 {
     while (device_reservation_loop_running && JackServerGlobals::on_device_reservation_loop != NULL) {
         JackServerGlobals::on_device_reservation_loop();
-        usleep(50*1000);
+        usleep(50 * 1000);
     }
 
     return NULL;
@@ -85,7 +83,7 @@ static void* on_device_reservation_loop(void*)
  */
 
 static void AlsaReadInputThunk(void* arg, jackmini::alsa::PcmCycle&, const jackmini::alsa::MappedFrames& mapped,
-                               std::uint32_t orig_frames, std::ptrdiff_t nread)
+    std::uint32_t orig_frames, std::ptrdiff_t nread)
 {
     static_cast<JackAlsaDriver*>(arg)->ReadInputAux(orig_frames, mapped, nread);
 }
@@ -96,7 +94,7 @@ static void AlsaClearOutputThunk(void* arg)
 }
 
 static void AlsaWriteOutputThunk(void* arg, jackmini::alsa::PcmCycle&, const jackmini::alsa::MappedFrames& mapped,
-                                 std::uint32_t orig_frames, std::ptrdiff_t nwritten)
+    std::uint32_t orig_frames, std::ptrdiff_t nwritten)
 {
     static_cast<JackAlsaDriver*>(arg)->WriteOutputAux(orig_frames, mapped, nwritten);
 }
@@ -142,7 +140,8 @@ int JackAlsaDriver::OpenPrimary(jack_nframes_t frames_per_cycle)
     jackmini::alsa::Request request = fRequest;
     request.frames_per_cycle = frames_per_cycle;
     if (fSession.open(fCaptureDevice.empty() ? NULL : fCaptureDevice.c_str(),
-                      fPlaybackDevice.empty() ? NULL : fPlaybackDevice.c_str(), request, fDither) < 0) {
+            fPlaybackDevice.empty() ? NULL : fPlaybackDevice.c_str(), request, fDither)
+        < 0) {
         return -1;
     }
     fRequest.rate = request.rate;
@@ -163,7 +162,7 @@ int JackAlsaDriver::SetBufferSize(jack_nframes_t buffer_size)
     int res = OpenPrimary(buffer_size);
 
     if (res == 0) { // update fEngineControl and fGraphManager
-        JackAudioDriver::SetBufferSize(buffer_size);  // Generic change, never fails
+        JackAudioDriver::SetBufferSize(buffer_size); // Generic change, never fails
         // ALSA specific
         UpdateLatencies();
     } else {
@@ -189,7 +188,7 @@ JackAlsaSecondaryCard* JackAlsaDriver::FindCard(int id)
 // at Attach, before the RT thread starts.
 bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
 {
-    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> name{};
+    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> name { };
     jack_port_id_t port_index;
     std::vector<jack_port_id_t>& capture_ports = card->CapturePorts();
     std::vector<jack_port_id_t>& playback_ports = card->PlaybackPorts();
@@ -216,7 +215,7 @@ bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
 
     if (fSlots.Assign(card) < 0) {
         jack_error("secondary card '%s' cannot be used: all %zu secondary card slots are in use",
-                   card->Name().c_str(), JackAlsaCardSlots::Capacity());
+            card->Name().c_str(), JackAlsaCardSlots::Capacity());
         UnregisterCardPorts(card);
         return false;
     }
@@ -278,7 +277,7 @@ void JackAlsaDriver::RetireCard(JackAlsaSecondaryCard* card)
         // The RT thread did not reach a safe point.  Leak the card rather than free
         // memory the RT thread may still use.
         jack_error("secondary card '%s' could not be removed safely; it is left unused",
-                   card->Name().c_str());
+            card->Name().c_str());
         return;
     }
 
@@ -286,7 +285,7 @@ void JackAlsaDriver::RetireCard(JackAlsaSecondaryCard* card)
         fControlMonitor->RemoveWatches(card->Id());
     }
     UnregisterCardPorts(card);
-    delete card;   // stops the card's thread, closes its controls and stream
+    delete card; // stops the card's thread, closes its controls and stream
     UpdateSecondaryLatencies();
 }
 
@@ -299,8 +298,7 @@ void JackAlsaDriver::PrimaryFailed(int status)
         return;
     }
     const char* name = fCaptureDriverName[0] != '\0' ? fCaptureDriverName.data() : fPlaybackDriverName.data();
-    std::string message = std::string("the primary ALSA device ") + name + " failed (status " +
-                          std::to_string(status) + "); the server stops";
+    std::string message = std::string("the primary ALSA device ") + name + " failed (status " + std::to_string(status) + "); the server stops";
     jack_error("%s", message.c_str());
     NotifyFailure(JackBackendError, message.c_str());
     JackTools::KillServer();
@@ -313,7 +311,7 @@ void JackAlsaDriver::HandleCardFailure(int card_id)
         return;
     }
     jack_error("secondary card '%s' failed; it has been removed and its ports are gone",
-               card->Name().c_str());
+        card->Name().c_str());
     RetireCard(card);
 }
 
@@ -348,8 +346,7 @@ void JackAlsaDriver::UpdateLatencies()
 
     for (int i = 0; i < fPlaybackChannels; i++) {
         // Add one buffer more latency if "async" mode is used...
-        range.min = range.max = (frames * (fRequest.periods - 1)) +
-                         ((fEngineControl->fSyncMode) ? 0 : fEngineControl->fBufferSize) + fPlaybackFrameLatency;
+        range.min = range.max = (frames * (fRequest.periods - 1)) + ((fEngineControl->fSyncMode) ? 0 : fEngineControl->fBufferSize) + fPlaybackFrameLatency;
         fGraphManager->GetPort(fPlaybackPortList[i])->SetLatencyRange(JackPlaybackLatency, &range);
         // Monitor port
         if (fWithMonitorPorts) {
@@ -364,8 +361,8 @@ int JackAlsaDriver::Attach()
     JackPort* port;
     jack_port_id_t port_index;
     unsigned long port_flags = (unsigned long)CaptureDriverFlags;
-    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> name{};
-    std::array<char, REAL_JACK_PORT_NAME_SIZE+1> alias{};
+    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> name { };
+    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias { };
 
     assert(fCaptureChannels < DRIVER_PORT_NUM);
     assert(fPlaybackChannels < DRIVER_PORT_NUM);
@@ -449,10 +446,10 @@ int JackAlsaDriver::Detach()
     return JackAudioDriver::Detach();
 }
 
-char* get_control_device_name(const char * device_name)
+char* get_control_device_name(const char* device_name)
 {
-    char * ctl_name;
-    const char * comma;
+    char* ctl_name;
+    const char* comma;
 
     /* the user wants a hw or plughw device, the ctl name
      * should be hw:x where x is the card identification.
@@ -483,11 +480,11 @@ static int card_to_num(const char* device)
 {
     int err;
     char* ctl_name;
-    snd_ctl_card_info_t *card_info;
+    snd_ctl_card_info_t* card_info;
     snd_ctl_t* ctl_handle;
     int i = -1;
 
-    snd_ctl_card_info_alloca (&card_info);
+    snd_ctl_card_info_alloca(&card_info);
 
     ctl_name = get_control_device_name(device);
     if (ctl_name == NULL) {
@@ -495,15 +492,15 @@ static int card_to_num(const char* device)
         goto fail;
     }
 
-    if ((err = snd_ctl_open (&ctl_handle, ctl_name, 0)) < 0) {
-        jack_error ("control open \"%s\" (%s)", ctl_name,
-                    snd_strerror(err));
+    if ((err = snd_ctl_open(&ctl_handle, ctl_name, 0)) < 0) {
+        jack_error("control open \"%s\" (%s)", ctl_name,
+            snd_strerror(err));
         goto free;
     }
 
     if ((err = snd_ctl_card_info(ctl_handle, card_info)) < 0) {
-        jack_error ("control hardware info \"%s\" (%s)",
-                    device, snd_strerror (err));
+        jack_error("control hardware info \"%s\" (%s)",
+            device, snd_strerror(err));
         goto close;
     }
 
@@ -530,7 +527,7 @@ static std::string PortBaseOf(const JackAlsaSecondaryConfig& cfg)
 // Finds the card and device of a PCM name among the enumerated devices.  Accepts
 // "hw:<index>[,n]", "hw:<id>[,n]" and "hw:CARD=<id>,DEV=<n>".
 static bool ResolvePcm(const std::string& pcm, const std::vector<JackAlsaPcmInfo>& pcms,
-                       int* card, int* device)
+    int* card, int* device)
 {
     std::string rest = pcm.find(':') == std::string::npos ? pcm : pcm.substr(pcm.find(':') + 1);
     std::string key;
@@ -554,11 +551,11 @@ static bool ResolvePcm(const std::string& pcm, const std::vector<JackAlsaPcmInfo
 // that has a stream.  The primary's device and the devices configured explicitly
 // are not added again.  Automatic cards stop at the slot limit.
 static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
-        const std::vector<JackAlsaSecondaryConfig>& configured,
-        const char* primary_capture, const char* primary_playback,
-        const std::vector<JackAlsaPcmInfo>& known, bool report,
-        const std::vector<std::string>& excluded,
-        std::vector<JackAlsaPcmInfo>* listing)
+    const std::vector<JackAlsaSecondaryConfig>& configured,
+    const char* primary_capture, const char* primary_playback,
+    const std::vector<JackAlsaPcmInfo>& known, bool report,
+    const std::vector<std::string>& excluded,
+    std::vector<JackAlsaPcmInfo>* listing)
 {
     std::vector<JackAlsaSecondaryConfig> plan = configured;
     std::vector<JackAlsaPcmInfo> pcms = JackAlsaEnumeratePcms(known, report);
@@ -566,7 +563,7 @@ static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
         *listing = pcms;
     }
 
-    std::vector<std::pair<int, int> > claimed;
+    std::vector<std::pair<int, int>> claimed;
     const char* names[] = { primary_capture, primary_playback };
     std::vector<std::string> used;
     for (size_t i = 0; i < 2; i++) {
@@ -599,7 +596,7 @@ static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
         }
         if (plan.size() >= JackAlsaCardSlots::Capacity()) {
             jack_info("ALSA device %s is not added: all %zu secondary card slots are in use",
-                      pcm.pcm.c_str(), JackAlsaCardSlots::Capacity());
+                pcm.pcm.c_str(), JackAlsaCardSlots::Capacity());
             continue;
         }
 
@@ -615,19 +612,19 @@ static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
             cfg.capture_channels = pcm.capture_channels < 12 ? pcm.capture_channels : 12;
         }
         cfg.mode = (pcm.playback && pcm.capture) ? SecondaryModeDuplex
-                 : (pcm.capture ? SecondaryModeCapture : SecondaryModePlayback);
+                                                 : (pcm.capture ? SecondaryModeCapture : SecondaryModePlayback);
         cfg.automatic = true;
 
         // Two devices of one card share a card name: their port bases still differ.
         if (std::find(used.begin(), used.end(), PortBaseOf(cfg)) != used.end()) {
             jack_error("ALSA device %s is not added: its name %s is already used",
-                       pcm.pcm.c_str(), PortBaseOf(cfg).c_str());
+                pcm.pcm.c_str(), PortBaseOf(cfg).c_str());
             continue;
         }
         used.push_back(PortBaseOf(cfg));
         if (report) {
             jack_info("automatic secondary card for %s: %s, %d/%d channels",
-                      pcm.pcm.c_str(), PortBaseOf(cfg).c_str(), cfg.capture_channels, cfg.playback_channels);
+                pcm.pcm.c_str(), PortBaseOf(cfg).c_str(), cfg.capture_channels, cfg.playback_channels);
         }
         plan.push_back(cfg);
     }
@@ -635,36 +632,37 @@ static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
 }
 
 int JackAlsaDriver::Open(jack_nframes_t nframes,
-                         jack_nframes_t user_nperiods,
-                         jack_nframes_t samplerate,
-                         bool hw_monitoring,
-                         bool hw_metering,
-                         bool capturing,
-                         bool playing,
-                         DitherAlgorithm dither,
-                         bool soft_mode,
-                         bool monitor,
-                         int inchannels,
-                         int outchannels,
-                         bool shorts_first,
-                         const char* capture_driver_name,
-                         const char* playback_driver_name,
-                         jack_nframes_t capture_latency,
-                         jack_nframes_t playback_latency,
-                         const std::vector<JackAlsaSecondaryConfig>& secondaries,
-                         const std::vector<std::string>& excluded_cards)
+    jack_nframes_t user_nperiods,
+    jack_nframes_t samplerate,
+    bool hw_monitoring,
+    bool hw_metering,
+    bool capturing,
+    bool playing,
+    DitherAlgorithm dither,
+    bool soft_mode,
+    bool monitor,
+    int inchannels,
+    int outchannels,
+    bool shorts_first,
+    const char* capture_driver_name,
+    const char* playback_driver_name,
+    jack_nframes_t capture_latency,
+    jack_nframes_t playback_latency,
+    const std::vector<JackAlsaSecondaryConfig>& secondaries,
+    const std::vector<std::string>& excluded_cards)
 {
     // Generic JackAudioDriver Open
     if (JackAudioDriver::Open(nframes, samplerate, capturing, playing,
-                              inchannels, outchannels, monitor, capture_driver_name, playback_driver_name,
-                              capture_latency, playback_latency) != 0) {
+            inchannels, outchannels, monitor, capture_driver_name, playback_driver_name,
+            capture_latency, playback_latency)
+        != 0) {
         return -1;
     }
 
     if (JackServerGlobals::on_device_acquire != NULL) {
         int capture_card = card_to_num(capture_driver_name);
         int playback_card = card_to_num(playback_driver_name);
-        std::array<char, 32> audio_name{};
+        std::array<char, 32> audio_name { };
 
         if (capture_card >= 0) {
             jackmini::FormatCString(audio_name, "Audio{}", capture_card);
@@ -723,7 +721,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
     fReportedFailures.clear();
     std::vector<JackAlsaPcmInfo> listing;
     std::vector<JackAlsaSecondaryConfig> plan = BuildSecondaryPlan(secondaries, capture_driver_name, playback_driver_name,
-                                                                   fKnownPcms, true, fExcludedCards, &listing);
+        fKnownPcms, true, fExcludedCards, &listing);
     fKnownPcms = listing;
 
     // Always created: a card can appear after startup, and the watchers must
@@ -743,8 +741,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
             }
         }
 
-        if (!cfg.automatic && (cfg.capture_device == capture_driver_name || cfg.capture_device == playback_driver_name ||
-            cfg.playback_device == capture_driver_name || cfg.playback_device == playback_driver_name)) {
+        if (!cfg.automatic && (cfg.capture_device == capture_driver_name || cfg.capture_device == playback_driver_name || cfg.playback_device == capture_driver_name || cfg.playback_device == playback_driver_name)) {
             jack_error("secondary ALSA card '%s' uses a device already used by the primary card", cfg.name.c_str());
             Close();
             return -1;
@@ -755,7 +752,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         if (!LockCard(cfg.capture_device.empty() ? cfg.playback_device.c_str() : cfg.capture_device.c_str(), true)) {
             if (cfg.automatic) {
                 jack_error("automatic secondary card '%s' is skipped: its card is held by another server",
-                           PortBaseOf(cfg).c_str());
+                    PortBaseOf(cfg).c_str());
                 continue;
             }
             Close();
@@ -765,7 +762,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         JackResamplerFactory* factory = JackResamplerFactory::Find(cfg.resampler.c_str());
         if (factory == NULL) {
             jack_error("secondary card '%s': resampler '%s' is not available",
-                       cfg.name.c_str(), cfg.resampler.c_str());
+                cfg.name.c_str(), cfg.resampler.c_str());
             Close();
             return -1;
         }
@@ -786,10 +783,9 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
         JackAlsaSecondaryCard* card = fSecondaryCards[i];
         for (int d = 0; d < 2; d++) {
             JackAlsaRateDirection dir = (JackAlsaRateDirection)d;
-            if (card->RateElementValid(dir) &&
-                fControlMonitor->AddWatch(card->Id(), card->ControlName(), card->RateElement(dir), dir) < 0) {
+            if (card->RateElementValid(dir) && fControlMonitor->AddWatch(card->Id(), card->ControlName(), card->RateElement(dir), dir) < 0) {
                 jack_error("secondary card '%s': rate control changes will not be seen",
-                           card->Name().c_str());
+                    card->Name().c_str());
             }
         }
     }
@@ -869,9 +865,8 @@ int JackAlsaDriver::Close()
         JackPosixThread::StopImp(fReservationLoopThread);
     }
 
-    if (JackServerGlobals::on_device_release != NULL)
-    {
-        std::array<char, 32> audio_name{};
+    if (JackServerGlobals::on_device_release != NULL) {
+        std::array<char, 32> audio_name { };
         int capture_card = card_to_num(fCaptureDriverName.data());
         if (capture_card >= 0) {
             jackmini::FormatCString(audio_name, "Audio{}", capture_card);
@@ -973,8 +968,8 @@ void JackAlsaDriver::HandleSoundChanged()
 
     std::vector<JackAlsaPcmInfo> listing;
     std::vector<JackAlsaSecondaryConfig> plan = BuildSecondaryPlan(fConfiguredSecondaries, fCaptureDriverName.data(),
-                                                                   fPlaybackDriverName.data(), fKnownPcms, false,
-                                                                   fExcludedCards, &listing);
+        fPlaybackDriverName.data(), fKnownPcms, false,
+        fExcludedCards, &listing);
     fKnownPcms = listing;
 
     std::vector<JackAlsaSecondaryCard*> cards;
@@ -1000,7 +995,7 @@ void JackAlsaDriver::HandleSoundChanged()
     for (size_t k = 0; k < changes.retire.size(); k++) {
         JackAlsaSecondaryCard* card = cards[changes.retire[k]];
         jack_info("secondary card '%s' removed: its device is no longer present or no longer wanted",
-                  PortBaseOf(card->Config()).c_str());
+            PortBaseOf(card->Config()).c_str());
         RetireCard(card);
     }
     for (size_t k = 0; k < changes.add.size(); k++) {
@@ -1018,7 +1013,8 @@ JackAlsaSecondaryCard* JackAlsaDriver::CreateCard(const JackAlsaSecondaryConfig&
     card->SetId(fNextCardId++);
     card->SetFailureSink(fReconfigWorker);
     if (card->Open(fSession.frames_per_cycle(), fSession.rate(), fRequest.periods,
-                   fEngineControl->fRealTime, fEngineControl->fServerPriority) < 0) {
+            fEngineControl->fRealTime, fEngineControl->fServerPriority)
+        < 0) {
         delete card;
         return NULL;
     }
@@ -1089,7 +1085,7 @@ void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long
 {
     JackAlsaSecondaryCard* secondary = FindCard(card);
     if (secondary == NULL) {
-        return;   // the card was removed; its watch may still have delivered this
+        return; // the card was removed; its watch may still have delivered this
     }
     long current = (long)secondary->Rate();
     if (value == current) {
@@ -1100,23 +1096,23 @@ void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long
     const char* what = (dir == RateCapture) ? "capture" : "playback";
     if (value < 8000 || value > 768000) {
         jack_error("secondary card '%s': %s rate %ld Hz is out of range; keeping %ld Hz",
-                   secondary->Name().c_str(), what, value, current);
+            secondary->Name().c_str(), what, value, current);
     } else if (dir == RateCapture && !secondary->Config().follow_hw_rate) {
         // The default: a card keeps its rate unless it is asked to follow the hardware.
         jack_error("secondary card '%s': capture rate changed to %ld Hz; keeping %ld Hz "
-                   "(follow_hw_rate=0)", secondary->Name().c_str(), value, current);
+                   "(follow_hw_rate=0)",
+            secondary->Name().c_str(), value, current);
     } else {
         jack_info("secondary card '%s': %s rate change %ld Hz -> %ld Hz, reopening",
-                  secondary->Name().c_str(), what, current, value);
+            secondary->Name().c_str(), what, current, value);
         if (secondary->Reconfigure((jack_nframes_t)value) < 0) {
             jack_error("secondary card '%s': %s rate change to %ld Hz failed",
-                       secondary->Name().c_str(), what, value);
+                secondary->Name().c_str(), what, value);
         } else if ((long)secondary->Rate() != current) {
             UpdateSecondaryLatencies();
             // Only a change that took effect is reported.  A card whose capture and
             // playback share one stream reports both directions in one call.
-            int directions = (secondary->CaptureEnabled() ? JackSecondaryRateCapture : 0) |
-                             (secondary->PlaybackEnabled() ? JackSecondaryRatePlayback : 0);
+            int directions = (secondary->CaptureEnabled() ? JackSecondaryRateCapture : 0) | (secondary->PlaybackEnabled() ? JackSecondaryRatePlayback : 0);
             NotifySecondarySampleRate(secondary->Name().c_str(), secondary->Rate(), directions);
         }
     }
@@ -1169,7 +1165,7 @@ retry:
 
     if (wait_status < 0) {
         PrimaryFailed(wait_status);
-        return -1;		/* driver failed */
+        return -1; /* driver failed */
     }
 
     if (nframes == 0) {
@@ -1232,7 +1228,7 @@ int JackAlsaDriver::Write()
 }
 
 void JackAlsaDriver::ReadInputAux(jack_nframes_t orig_nframes, const jackmini::alsa::MappedFrames& mapped,
-                                  std::ptrdiff_t nread)
+    std::ptrdiff_t nread)
 {
     for (int chn = 0; chn < fCaptureChannels; chn++) {
         if (fGraphManager->GetConnectionsNum(fCapturePortList[chn]) > 0) {
@@ -1245,9 +1241,8 @@ void JackAlsaDriver::ReadInputAux(jack_nframes_t orig_nframes, const jackmini::a
 void JackAlsaDriver::ClearOutputAux()
 {
     for (int chn = 0; chn < fPlaybackChannels; chn++) {
-        jack_default_audio_sample_t* buf =
-            (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fPlaybackPortList[chn], fEngineControl->fBufferSize);
-        memset(buf, 0, sizeof (jack_default_audio_sample_t) * fEngineControl->fBufferSize);
+        jack_default_audio_sample_t* buf = (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fPlaybackPortList[chn], fEngineControl->fBufferSize);
+        memset(buf, 0, sizeof(jack_default_audio_sample_t) * fEngineControl->fBufferSize);
     }
 }
 
@@ -1257,7 +1252,7 @@ void JackAlsaDriver::SetTimetAux(jack_time_t time)
 }
 
 void JackAlsaDriver::WriteOutputAux(jack_nframes_t orig_nframes, const jackmini::alsa::MappedFrames& mapped,
-                                    std::ptrdiff_t nwritten)
+    std::ptrdiff_t nwritten)
 {
     for (int chn = 0; chn < fPlaybackChannels; chn++) {
         // Output ports
@@ -1273,26 +1268,24 @@ void JackAlsaDriver::WriteOutputAux(jack_nframes_t orig_nframes, const jackmini:
     }
 }
 
-} // end of namespace
+} // namespace jackmini
 
 
-
-static
-jack_driver_param_constraint_desc_t *
+static jack_driver_param_constraint_desc_t*
 enum_alsa_devices()
 {
-    snd_ctl_t * handle;
-    snd_ctl_card_info_t * info;
-    snd_pcm_info_t * pcminfo_capture;
-    snd_pcm_info_t * pcminfo_playback;
+    snd_ctl_t* handle;
+    snd_ctl_card_info_t* info;
+    snd_pcm_info_t* pcminfo_capture;
+    snd_pcm_info_t* pcminfo_playback;
     int card_no = -1;
     jack_driver_param_value_t card_id;
     jack_driver_param_value_t device_id;
-    std::array<char, 64> description{};
+    std::array<char, 64> description { };
     int device_no;
     bool has_capture;
     bool has_playback;
-    jack_driver_param_constraint_desc_t * constraint_ptr;
+    jack_driver_param_constraint_desc_t* constraint_ptr;
     uint32_t array_size = 0;
 
     snd_ctl_card_info_alloca(&info);
@@ -1301,13 +1294,10 @@ enum_alsa_devices()
 
     constraint_ptr = NULL;
 
-    while(snd_card_next(&card_no) >= 0 && card_no >= 0)
-    {
+    while (snd_card_next(&card_no) >= 0 && card_no >= 0) {
         jackmini::FormatCString(std::span<char>(card_id.str, sizeof(card_id.str)), "hw:{}", card_no);
 
-        if (snd_ctl_open(&handle, card_id.str, 0) >= 0 &&
-            snd_ctl_card_info(handle, info) >= 0)
-        {
+        if (snd_ctl_open(&handle, card_id.str, 0) >= 0 && snd_ctl_card_info(handle, info) >= 0) {
             jackmini::FormatCString(std::span<char>(card_id.str, sizeof(card_id.str)), "hw:{}", snd_ctl_card_info_get_id(info));
             if (!jack_constraint_add_enum(
                     &constraint_ptr,
@@ -1318,8 +1308,7 @@ enum_alsa_devices()
 
             device_no = -1;
 
-            while (snd_ctl_pcm_next_device(handle, &device_no) >= 0 && device_no != -1)
-            {
+            while (snd_ctl_pcm_next_device(handle, &device_no) >= 0 && device_no != -1) {
                 jackmini::FormatCString(std::span<char>(device_id.str, sizeof(device_id.str)), "{},{}", card_id.str, device_no);
 
                 snd_pcm_info_set_device(pcminfo_capture, device_no);
@@ -1332,20 +1321,13 @@ enum_alsa_devices()
                 snd_pcm_info_set_stream(pcminfo_playback, SND_PCM_STREAM_PLAYBACK);
                 has_playback = snd_ctl_pcm_info(handle, pcminfo_playback) >= 0;
 
-                if (has_capture && has_playback)
-                {
+                if (has_capture && has_playback) {
                     jackmini::FormatCString(description, "{} (duplex)", snd_pcm_info_get_name(pcminfo_capture));
-                }
-                else if (has_capture)
-                {
+                } else if (has_capture) {
                     jackmini::FormatCString(description, "{} (capture)", snd_pcm_info_get_name(pcminfo_capture));
-                }
-                else if (has_playback)
-                {
+                } else if (has_playback) {
                     jackmini::FormatCString(description, "{} (playback)", snd_pcm_info_get_name(pcminfo_playback));
-                }
-                else
-                {
+                } else {
                     continue;
                 }
 
@@ -1368,36 +1350,36 @@ fail:
 }
 
 static int
-dither_opt (char c, DitherAlgorithm* dither)
+dither_opt(char c, DitherAlgorithm* dither)
 {
     switch (c) {
-        case '-':
-        case 'n':
-            *dither = None;
-            break;
+    case '-':
+    case 'n':
+        *dither = None;
+        break;
 
-        case 'r':
-            *dither = Rectangular;
-            break;
+    case 'r':
+        *dither = Rectangular;
+        break;
 
-        case 's':
-            *dither = Shaped;
-            break;
+    case 's':
+        *dither = Shaped;
+        break;
 
-        case 't':
-            *dither = Triangular;
-            break;
+    case 't':
+        *dither = Triangular;
+        break;
 
-        default:
-            fprintf (stderr, "ALSA driver: illegal dithering mode %c\n", c);
-            return -1;
+    default:
+        fprintf(stderr, "ALSA driver: illegal dithering mode %c\n", c);
+        return -1;
     }
     return 0;
 }
 
 static jack_driver_desc_t* describe_driver()
 {
-    jack_driver_desc_t * desc;
+    jack_driver_desc_t* desc;
     jack_driver_desc_filler_t filler;
     jack_driver_param_value_t value;
 
@@ -1479,8 +1461,8 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
     jack_nframes_t srate = 48000;
     jack_nframes_t frames_per_interrupt = 1024;
     unsigned long user_nperiods = 2;
-    const char *playback_pcm_name = "";
-    const char *capture_pcm_name = "";
+    const char* playback_pcm_name = "";
+    const char* capture_pcm_name = "";
     int hw_monitoring = false;
     int hw_metering = false;
     int capture = false;
@@ -1493,144 +1475,144 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
     int shorts_first = false;
     jack_nframes_t systemic_input_latency = 0;
     jack_nframes_t systemic_output_latency = 0;
-    const JSList * node;
-    const jack_driver_param_t * param;
+    const JSList* node;
+    const jack_driver_param_t* param;
     std::vector<jackmini::JackAlsaSecondaryConfig> secondaries;
     std::vector<std::string> excluded_cards;
 
-    for (node = params; node; node = jack_slist_next (node)) {
-        param = (const jack_driver_param_t *) node->data;
+    for (node = params; node; node = jack_slist_next(node)) {
+        param = (const jack_driver_param_t*)node->data;
 
         switch (param->character) {
 
-            case 'C':
-                capture = true;
-                if (strcmp (param->value.str, "none") != 0) {
-                    capture_pcm_name = strdup (param->value.str);
-                    jack_log("capture device %s", capture_pcm_name);
-                }
-                break;
+        case 'C':
+            capture = true;
+            if (strcmp(param->value.str, "none") != 0) {
+                capture_pcm_name = strdup(param->value.str);
+                jack_log("capture device %s", capture_pcm_name);
+            }
+            break;
 
-            case 'P':
-                playback = true;
-                if (strcmp (param->value.str, "none") != 0) {
-                    playback_pcm_name = strdup (param->value.str);
-                    jack_log("playback device %s", playback_pcm_name);
-                }
-                break;
+        case 'P':
+            playback = true;
+            if (strcmp(param->value.str, "none") != 0) {
+                playback_pcm_name = strdup(param->value.str);
+                jack_log("playback device %s", playback_pcm_name);
+            }
+            break;
 
-            case 'D':
-                playback = true;
-                capture = true;
-                break;
+        case 'D':
+            playback = true;
+            capture = true;
+            break;
 
-            case 'd':
-                if (strcmp (param->value.str, "none") != 0) {
-                    playback_pcm_name = strdup (param->value.str);
-                    capture_pcm_name = strdup (param->value.str);
-                    jack_log("playback device %s", playback_pcm_name);
-                    jack_log("capture device %s", capture_pcm_name);
-                }
-                break;
+        case 'd':
+            if (strcmp(param->value.str, "none") != 0) {
+                playback_pcm_name = strdup(param->value.str);
+                capture_pcm_name = strdup(param->value.str);
+                jack_log("playback device %s", playback_pcm_name);
+                jack_log("capture device %s", capture_pcm_name);
+            }
+            break;
 
-            case 'H':
-                hw_monitoring = param->value.i;
-                break;
+        case 'H':
+            hw_monitoring = param->value.i;
+            break;
 
-            case 'm':
-                monitor = param->value.i;
-                break;
+        case 'm':
+            monitor = param->value.i;
+            break;
 
-            case 'M':
-                hw_metering = param->value.i;
-                break;
+        case 'M':
+            hw_metering = param->value.i;
+            break;
 
-            case 'r':
-                srate = param->value.ui;
-                jack_log("apparent rate = %d", srate);
-                break;
+        case 'r':
+            srate = param->value.ui;
+            jack_log("apparent rate = %d", srate);
+            break;
 
-            case 'p':
-                frames_per_interrupt = param->value.ui;
-                jack_log("frames per period = %d", frames_per_interrupt);
-                break;
+        case 'p':
+            frames_per_interrupt = param->value.ui;
+            jack_log("frames per period = %d", frames_per_interrupt);
+            break;
 
-            case 'n':
-                user_nperiods = param->value.ui;
-                if (user_nperiods < 2) {    /* enforce minimum value */
-                    user_nperiods = 2;
-                }
-                break;
+        case 'n':
+            user_nperiods = param->value.ui;
+            if (user_nperiods < 2) { /* enforce minimum value */
+                user_nperiods = 2;
+            }
+            break;
 
-            case 's':
-                soft_mode = param->value.i;
-                break;
+        case 's':
+            soft_mode = param->value.i;
+            break;
 
-            case 'z':
-                if (dither_opt (param->value.c, &dither)) {
+        case 'z':
+            if (dither_opt(param->value.c, &dither)) {
+                return NULL;
+            }
+            break;
+
+        case 'i':
+            user_capture_nchnls = param->value.ui;
+            break;
+
+        case 'o':
+            user_playback_nchnls = param->value.ui;
+            break;
+
+        case 'S':
+            shorts_first = param->value.i;
+            break;
+
+        case 'I':
+            systemic_input_latency = param->value.ui;
+            break;
+
+        case 'O':
+            systemic_output_latency = param->value.ui;
+            break;
+
+        case 'Y':
+            if (strcmp(param->value.str, "none") != 0) {
+                jackmini::JackAlsaSecondaryConfig config;
+                std::string error;
+                if (!jackmini::JackAlsaSecondaryConfigParse(param->value.str, &config, &error)) {
+                    jack_error("invalid --secondary \"%s\": %s", param->value.str, error.c_str());
                     return NULL;
                 }
-                break;
+                secondaries.push_back(config);
+            }
+            break;
 
-            case 'i':
-                user_capture_nchnls = param->value.ui;
-                break;
-
-            case 'o':
-                user_playback_nchnls = param->value.ui;
-                break;
-
-            case 'S':
-                shorts_first = param->value.i;
-                break;
-
-            case 'I':
-                systemic_input_latency = param->value.ui;
-                break;
-
-            case 'O':
-                systemic_output_latency = param->value.ui;
-                break;
-
-            case 'Y':
-                if (strcmp (param->value.str, "none") != 0) {
-                    jackmini::JackAlsaSecondaryConfig config;
-                    std::string error;
-                    if (!jackmini::JackAlsaSecondaryConfigParse(param->value.str, &config, &error)) {
-                        jack_error("invalid --secondary \"%s\": %s", param->value.str, error.c_str());
-                        return NULL;
+        case 'Z':
+            // The parameter holds one value, so a list is comma separated: "-Z PCH,NVidia".
+            if (strcmp(param->value.str, "none") != 0) {
+                std::string_view list(param->value.str);
+                while (!list.empty()) {
+                    const auto comma = list.find(',');
+                    const std::string_view id = list.substr(0, comma);
+                    if (!id.empty()) {
+                        excluded_cards.emplace_back(id);
                     }
-                    secondaries.push_back(config);
-                }
-                break;
-
-            case 'Z':
-                // The parameter holds one value, so a list is comma separated: "-Z PCH,NVidia".
-                if (strcmp (param->value.str, "none") != 0) {
-                    std::string_view list(param->value.str);
-                    while (!list.empty()) {
-                        const auto comma = list.find(',');
-                        const std::string_view id = list.substr(0, comma);
-                        if (!id.empty()) {
-                            excluded_cards.emplace_back(id);
-                        }
-                        if (comma == std::string_view::npos) {
-                            break;
-                        }
-                        list.remove_prefix(comma + 1);
+                    if (comma == std::string_view::npos) {
+                        break;
                     }
+                    list.remove_prefix(comma + 1);
                 }
-                break;
+            }
+            break;
 
-            case 'K':
-                if (strcmp (param->value.str, "none") != 0) {
-                    std::string error;
-                    if (!jackmini::JackAlsaSecondaryConfigLoadFile(param->value.str, &secondaries, &error)) {
-                        jack_error("%s", error.c_str());
-                        return NULL;
-                    }
+        case 'K':
+            if (strcmp(param->value.str, "none") != 0) {
+                std::string error;
+                if (!jackmini::JackAlsaSecondaryConfigLoadFile(param->value.str, &secondaries, &error)) {
+                    jack_error("%s", error.c_str());
+                    return NULL;
                 }
-                break;
+            }
+            break;
         }
     }
 
@@ -1643,8 +1625,7 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
     // The primary card is named by its ALSA id, so that it stays the same card
     // when devices are added or removed.  "hw:0" would name whatever card has
     // that number at the time.
-    if ((capture && !jackmini::JackAlsaPcmNameIsById(capture_pcm_name)) ||
-        (playback && !jackmini::JackAlsaPcmNameIsById(playback_pcm_name))) {
+    if ((capture && !jackmini::JackAlsaPcmNameIsById(capture_pcm_name)) || (playback && !jackmini::JackAlsaPcmNameIsById(playback_pcm_name))) {
         jack_error("the primary ALSA device must be given by card id, for example -d hw:CARD=PCH; "
                    "numeric forms such as hw:0 are not accepted");
         return NULL;
@@ -1654,9 +1635,10 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
     jackmini::JackDriverClientInterface* threaded_driver = new jackmini::JackThreadedDriver(alsa_driver);
     // Special open for ALSA driver...
     if (alsa_driver->Open(frames_per_interrupt, user_nperiods, srate, hw_monitoring, hw_metering, capture, playback, dither, soft_mode, monitor,
-                          user_capture_nchnls, user_playback_nchnls, shorts_first, capture_pcm_name, playback_pcm_name,
-                          systemic_input_latency, systemic_output_latency,
-                          secondaries, excluded_cards) == 0) {
+            user_capture_nchnls, user_playback_nchnls, shorts_first, capture_pcm_name, playback_pcm_name,
+            systemic_input_latency, systemic_output_latency,
+            secondaries, excluded_cards)
+        == 0) {
         return threaded_driver;
     } else {
         delete threaded_driver; // Delete the decorated driver
@@ -1667,6 +1649,6 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
 
 extern "C" SERVER_EXPORT const jackmini::driver::Module* jackmini_driver_module()
 {
-    static const jackmini::driver::Module kDriverModule{jackmini::driver::kModuleVersion, describe_driver, initialize_driver};
+    static const jackmini::driver::Module kDriverModule { jackmini::driver::kModuleVersion, describe_driver, initialize_driver };
     return &kDriverModule;
 }

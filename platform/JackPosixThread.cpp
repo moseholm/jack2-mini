@@ -20,20 +20,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackPosixThread.h"
 #include "JackError.h"
-#include "JackTime.h"
 #include "JackGlobals.h"
+#include "JackTime.h"
 #include <string.h> // for memset
 #include <unistd.h> // for _POSIX_PRIORITY_SCHEDULING check
 
-//#define JACK_SCHED_POLICY SCHED_RR
+// #define JACK_SCHED_POLICY SCHED_RR
 #define JACK_SCHED_POLICY SCHED_FIFO
 
 #ifndef SCHED_RESET_ON_FORK
-# define SCHED_RESET_ON_FORK 0x40000000
+#define SCHED_RESET_ON_FORK 0x40000000
 #endif
 
-namespace jackmini
-{
+namespace jackmini {
 
 void* JackPosixThread::ThreadHandler(void* arg)
 {
@@ -97,7 +96,7 @@ int JackPosixThread::StartSync()
     }
 }
 
-int JackPosixThread::StartImp(jack_native_thread_t* thread, int priority, int realtime, void*(*start_routine)(void*), void* arg)
+int JackPosixThread::StartImp(jack_native_thread_t* thread, int priority, int realtime, void* (*start_routine)(void*), void* arg)
 {
     pthread_attr_t attributes;
     struct sched_param rt_param;
@@ -128,7 +127,7 @@ int JackPosixThread::StartImp(jack_native_thread_t* thread, int priority, int re
             return -1;
         }
 
-        rt_param = {};
+        rt_param = { };
         rt_param.sched_priority = priority;
 
         if ((res = pthread_attr_setschedparam(&attributes, &rt_param))) {
@@ -236,7 +235,7 @@ int JackPosixThread::AcquireRealTimeImp(jack_native_thread_t thread, int priorit
 {
     struct sched_param rtparam;
     int res;
-    rtparam = {};
+    rtparam = { };
     rtparam.sched_priority = priority;
 
     jack_log("JackPosixThread::AcquireRealTimeImp priority = %d", priority);
@@ -246,13 +245,14 @@ int JackPosixThread::AcquireRealTimeImp(jack_native_thread_t thread, int priorit
 
 #ifdef SCHED_RESET_ON_FORK
     jack_log("pthread_setschedparam() failed (%d), trying with SCHED_RESET_ON_FORK.", res);
-    if ((res = pthread_setschedparam(thread, JACK_SCHED_POLICY|SCHED_RESET_ON_FORK, &rtparam)) == 0)
+    if ((res = pthread_setschedparam(thread, JACK_SCHED_POLICY | SCHED_RESET_ON_FORK, &rtparam)) == 0)
         return 0;
 #endif
 
     jack_error("Cannot use real-time scheduling (RR/%d)"
-               " (%d: %s)", rtparam.sched_priority, res,
-               strerror(res));
+               " (%d: %s)",
+        rtparam.sched_priority, res,
+        strerror(res));
     return -1;
 }
 
@@ -270,7 +270,7 @@ int JackPosixThread::DropRealTimeImp(jack_native_thread_t thread)
 {
     struct sched_param rtparam;
     int res;
-    rtparam = {};
+    rtparam = { };
     rtparam.sched_priority = 0;
 
     if ((res = pthread_setschedparam(thread, SCHED_OTHER, &rtparam)) != 0) {
@@ -302,23 +302,21 @@ SERVER_EXPORT void ThreadExit()
     pthread_exit(0);
 }
 
-} // end of namespace
+} // namespace jackmini
 
-bool jack_get_thread_realtime_priority_range(int * min_ptr, int * max_ptr)
+bool jack_get_thread_realtime_priority_range(int* min_ptr, int* max_ptr)
 {
 #if defined(_POSIX_PRIORITY_SCHEDULING)
     int min, max;
 
     min = sched_get_priority_min(JACK_SCHED_POLICY);
-    if (min == -1)
-    {
+    if (min == -1) {
         jack_error("sched_get_priority_min() failed.");
         return false;
     }
 
     max = sched_get_priority_max(JACK_SCHED_POLICY);
-    if (max == -1)
-    {
+    if (max == -1) {
         jack_error("sched_get_priority_max() failed.");
         return false;
     }
@@ -332,13 +330,12 @@ bool jack_get_thread_realtime_priority_range(int * min_ptr, int * max_ptr)
 #endif
 }
 
-bool jack_tls_allocate_key(jack_tls_key *key_ptr)
+bool jack_tls_allocate_key(jack_tls_key* key_ptr)
 {
     int ret;
 
     ret = pthread_key_create(key_ptr, NULL);
-    if (ret != 0)
-    {
+    if (ret != 0) {
         jack_error("pthread_key_create() failed with error %d", ret);
         return false;
     }
@@ -351,8 +348,7 @@ bool jack_tls_free_key(jack_tls_key key)
     int ret;
 
     ret = pthread_key_delete(key);
-    if (ret != 0)
-    {
+    if (ret != 0) {
         jack_error("pthread_key_delete() failed with error %d", ret);
         return false;
     }
@@ -360,13 +356,12 @@ bool jack_tls_free_key(jack_tls_key key)
     return true;
 }
 
-bool jack_tls_set(jack_tls_key key, void *data_ptr)
+bool jack_tls_set(jack_tls_key key, void* data_ptr)
 {
     int ret;
 
-    ret = pthread_setspecific(key, (const void *)data_ptr);
-    if (ret != 0)
-    {
+    ret = pthread_setspecific(key, (const void*)data_ptr);
+    if (ret != 0) {
         jack_error("pthread_setspecific() failed with error %d", ret);
         return false;
     }
@@ -374,7 +369,7 @@ bool jack_tls_set(jack_tls_key key, void *data_ptr)
     return true;
 }
 
-void *jack_tls_get(jack_tls_key key)
+void* jack_tls_get(jack_tls_key key)
 {
     return pthread_getspecific(key);
 }

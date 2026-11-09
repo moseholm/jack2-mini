@@ -19,18 +19,18 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include "JackDummyDriver.h"
+#include "JackCompilerDeps.h"
 #include "JackDriverLoader.h"
 #include "JackThreadedDriver.h"
-#include "JackCompilerDeps.h"
-#include "driver_module.h"
-#include <iostream>
-#include <unistd.h>
 #include <math.h>
+#include <unistd.h>
+#include <iostream>
+#include "driver_module.h"
 
 
-
-static jack_driver_desc_t* describe_driver() {
-    jack_driver_desc_t * desc;
+static jack_driver_desc_t* describe_driver()
+{
+    jack_driver_desc_t* desc;
     jack_driver_desc_filler_t filler;
     jack_driver_param_value_t value;
 
@@ -55,51 +55,52 @@ static jack_driver_desc_t* describe_driver() {
     return desc;
 }
 
-static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLockedEngine* engine, jackmini::JackSynchro* table, const JSList* params) {
+static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLockedEngine* engine, jackmini::JackSynchro* table, const JSList* params)
+{
     jack_nframes_t sample_rate = 48000;
     jack_nframes_t buffer_size = 1024;
     unsigned int capture_ports = 2;
     unsigned int playback_ports = 2;
     int wait_time = 0;
-    const JSList * node;
-    const jack_driver_param_t * param;
+    const JSList* node;
+    const jack_driver_param_t* param;
     bool monitor = false;
 
-    for (node = params; node; node = jack_slist_next (node)) {
-        param = (const jack_driver_param_t *) node->data;
+    for (node = params; node; node = jack_slist_next(node)) {
+        param = (const jack_driver_param_t*)node->data;
 
         switch (param->character) {
 
-            case 'C':
-                capture_ports = param->value.ui;
-                break;
+        case 'C':
+            capture_ports = param->value.ui;
+            break;
 
-            case 'P':
-                playback_ports = param->value.ui;
-                break;
+        case 'P':
+            playback_ports = param->value.ui;
+            break;
 
-            case 'r':
-                sample_rate = param->value.ui;
-                break;
+        case 'r':
+            sample_rate = param->value.ui;
+            break;
 
-            case 'p':
-                buffer_size = param->value.ui;
-                break;
+        case 'p':
+            buffer_size = param->value.ui;
+            break;
 
-            case 'w':
-                wait_time = param->value.ui;
-                break;
+        case 'w':
+            wait_time = param->value.ui;
+            break;
 
-            case 'm':
-                monitor = param->value.i;
-                break;
+        case 'm':
+            monitor = param->value.i;
+            break;
         }
     }
 
     if (wait_time > 0) {
         buffer_size = lroundf((float(wait_time) * float(sample_rate)) / 1000000.0f);
     }
-    
+
     if (buffer_size > BUFFER_SIZE_MAX) {
         buffer_size = BUFFER_SIZE_MAX;
         jack_error("Buffer size set to %d", BUFFER_SIZE_MAX);
@@ -117,6 +118,6 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
 
 extern "C" SERVER_EXPORT const jackmini::driver::Module* jackmini_driver_module()
 {
-    static const jackmini::driver::Module kDriverModule{jackmini::driver::kModuleVersion, describe_driver, initialize_driver};
+    static const jackmini::driver::Module kDriverModule { jackmini::driver::kModuleVersion, describe_driver, initialize_driver };
     return &kDriverModule;
 }

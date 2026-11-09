@@ -26,35 +26,35 @@
 #ifndef __JackLog__
 #define __JackLog__
 
-#include <stdarg.h>
 #include "JackCompilerDeps.h"
+#include <stdarg.h>
 
 
-    #define LOG_LEVEL_INFO   1
-    #define LOG_LEVEL_ERROR  2
+#define LOG_LEVEL_INFO 1
+#define LOG_LEVEL_ERROR 2
 
-    typedef void (* jack_log_function_t)(int level, const char *message);
+typedef void (*jack_log_function_t)(int level, const char* message);
 
-    LIB_EXPORT void jack_error(const char *fmt, ...);
-    LIB_EXPORT void jack_info(const char *fmt, ...);
+LIB_EXPORT void jack_error(const char* fmt, ...);
+LIB_EXPORT void jack_info(const char* fmt, ...);
 
-    /* Formats a message and passes it to jack_log_router. */
-    LIB_EXPORT void jack_log_message(int level, const char *prefix, const char *fmt, va_list ap);
+/* Formats a message and passes it to jack_log_router. */
+LIB_EXPORT void jack_log_message(int level, const char* prefix, const char* fmt, va_list ap);
 
-    /* Passes a message to the callbacks: the default delivery. */
-    LIB_EXPORT void jack_log_direct(int level, const char *message);
+/* Passes a message to the callbacks: the default delivery. */
+LIB_EXPORT void jack_log_direct(int level, const char* message);
 
-    /* Where messages go.  Defaults to jack_log_direct. */
-    LIB_EXPORT extern jack_log_function_t jack_log_router;
+/* Where messages go.  Defaults to jack_log_direct. */
+LIB_EXPORT extern jack_log_function_t jack_log_router;
 
-    LIB_EXPORT extern void (*jack_error_callback)(const char *desc);
-    LIB_EXPORT extern void (*jack_info_callback)(const char *desc);
+LIB_EXPORT extern void (*jack_error_callback)(const char* desc);
+LIB_EXPORT extern void (*jack_info_callback)(const char* desc);
 
-    LIB_EXPORT extern void default_jack_error_callback(const char *desc);
-    LIB_EXPORT extern void default_jack_info_callback(const char *desc);
+LIB_EXPORT extern void default_jack_error_callback(const char* desc);
+LIB_EXPORT extern void default_jack_info_callback(const char* desc);
 
-    LIB_EXPORT void silent_jack_error_callback(const char *desc);
-    LIB_EXPORT void silent_jack_info_callback(const char *desc);
+LIB_EXPORT void silent_jack_error_callback(const char* desc);
+LIB_EXPORT void silent_jack_info_callback(const char* desc);
 
 
 #endif

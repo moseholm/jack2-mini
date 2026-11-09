@@ -22,20 +22,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <expected>
 #include <string_view>
 
-namespace jackmini
-{
+namespace jackmini {
 
 // Failure reasons for every operation that can fail.  Operations on the
 // realtime path do not return errors.
 enum class Error {
-    InvalidArgument,  // a name, port, or value is not acceptable
-    InvalidState,     // the operation is not allowed in the client's current state
-    NameTaken,        // a client or port with this name exists
-    NotFound,         // no such client, port, or parameter
-    NoServer,         // the server is not running and could not be started
-    ServerFailure,    // the server refused or failed the request
-    Protocol,         // the server's reply did not match the protocol
-    Io,               // the connection to the server failed
+    InvalidArgument, // a name, port, or value is not acceptable
+    InvalidState, // the operation is not allowed in the client's current state
+    NameTaken, // a client or port with this name exists
+    NotFound, // no such client, port, or parameter
+    NoServer, // the server is not running and could not be started
+    ServerFailure, // the server refused or failed the request
+    Protocol, // the server's reply did not match the protocol
+    Io, // the connection to the server failed
 };
 
 template <class T>

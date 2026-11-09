@@ -22,8 +22,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <expected>
 #include <system_error>
 
-namespace jackmini
-{
+namespace jackmini {
 
 // The single-instance rule of a server: one server per user.  It is an flock() on a file in dir, named after the user,
 // whatever the server's name.  The kernel releases the lock when its holder exits, so a server that was killed does not

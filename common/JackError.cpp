@@ -19,18 +19,18 @@
 
  */
 
-#include <stdarg.h>
-#include <stdio.h>
 #include "JackError.h"
 #include "JackGlobals.h"
 #include "JackMessageBuffer.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 using namespace jackmini;
 
 static bool change_thread_log_function(jack_log_function_t log_function)
 {
     return (jack_tls_get(JackGlobals::fKeyLogFunction) == NULL
-            && jack_tls_set(JackGlobals::fKeyLogFunction, (void*)log_function));
+        && jack_tls_set(JackGlobals::fKeyLogFunction, (void*)log_function));
 }
 
 SERVER_EXPORT int set_threaded_log_function()
@@ -38,7 +38,7 @@ SERVER_EXPORT int set_threaded_log_function()
     return change_thread_log_function(JackMessageBufferAdd);
 }
 
-void jack_log_thread_route(int level, const char *message)
+void jack_log_thread_route(int level, const char* message)
 {
     jack_log_function_t log_function = (jack_log_function_t)jack_tls_get(JackGlobals::fKeyLogFunction);
 
@@ -49,7 +49,7 @@ void jack_log_thread_route(int level, const char *message)
 /* The messages of this library go through the thread routing. */
 static const bool log_router_installed = (jack_log_router = jack_log_thread_route, true);
 
-SERVER_EXPORT void jack_log(const char *fmt,...)
+SERVER_EXPORT void jack_log(const char* fmt, ...)
 {
     if (JackGlobals::fVerbose) {
         va_list ap;

@@ -16,14 +16,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 // The UUIDs of clients and ports, used by the server and the clients (not exported).
 
-#include "jack/uuid.h"
 #include "JackCString.h"
 #include "JackError.h"
+#include "jack/uuid.h"
+#include <stdio.h>
+#include <string.h>
 #include <cctype>
 #include <charconv>
 #include <span>
-#include <stdio.h>
-#include <string.h>
 #include <string_view>
 
 using namespace jackmini;
@@ -31,7 +31,8 @@ using namespace jackmini;
 jack_uuid_t jack_client_uuid_generate()
 {
     static uint32_t uuid_cnt = 0;
-    jack_uuid_t uuid = 0x2; /* JackUUIDClient */;
+    jack_uuid_t uuid = 0x2; /* JackUUIDClient */
+    ;
     uuid = (uuid << 32) | ++uuid_cnt;
     return uuid;
 }

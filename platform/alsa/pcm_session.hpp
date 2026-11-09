@@ -26,20 +26,18 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <memory>
 #include <vector>
 
-namespace jackmini::alsa
-{
+namespace jackmini::alsa {
 
 using PcmCycle = Cycle<Device>;
 
 using ReadCopyFunction = void (*)(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples,
-                                  unsigned long src_skip);
+    unsigned long src_skip);
 using WriteCopyFunction = void (*)(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples,
-                                   unsigned long dst_skip, dither_state_t* state);
+    unsigned long dst_skip, dither_state_t* state);
 
 // One ALSA card as the JACK drivers use it: the device, the cycle core on the device, and the sample conversion
 // between the device buffers and JACK's float buffers.  The conversion functions are chosen once, in open().
-class Session
-{
+class Session {
 public:
     Session() = default;
     ~Session();
@@ -73,7 +71,7 @@ public:
     // so the cycle does not silence it.
     void read_channel(const ChannelArea& area, jack_default_audio_sample_t* buf, std::size_t frames);
     void write_channel(std::size_t channel, const ChannelArea& area, jack_default_audio_sample_t* buf,
-                       std::size_t frames);
+        std::size_t frames);
 
 private:
     Device device_;

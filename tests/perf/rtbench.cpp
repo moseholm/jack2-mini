@@ -19,7 +19,7 @@ using namespace jackmini;
 
 #define MAXS 400000
 static long long starts[MAXS], ends[MAXS];
-static std::atomic<unsigned long> nsamples{ 0 }, nxruns{ 0 };
+static std::atomic<unsigned long> nsamples { 0 }, nxruns { 0 };
 static Port in, out;
 static Client* jack_handle;
 
@@ -56,7 +56,7 @@ static void pct(const char* label, long long* v, long n)
 {
     std::qsort(v, n, sizeof(long long), cmp);
     std::printf("%-22s p50 %8.1f us  p99 %8.1f us  p99.9 %8.1f us  max %8.1f us\n", label,
-                v[n / 2] / 1e3, v[(long)(n * 0.99)] / 1e3, v[(long)(n * 0.999)] / 1e3, v[n - 1] / 1e3);
+        v[n / 2] / 1e3, v[(long)(n * 0.99)] / 1e3, v[(long)(n * 0.999)] / 1e3, v[n - 1] / 1e3);
 }
 
 int main(int argc, char** argv)
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
         du[i] = ends[i] - starts[i];
     }
     std::printf("cycles %lu  xruns %lu  period %u  rate %u\n", nsamples.load(), nxruns.load(),
-                client->buffer_size(), client->sample_rate());
+        client->buffer_size(), client->sample_rate());
     if (n > 1) {
         pct("interval (start-start)", iv.data(), (long)iv.size());
     }

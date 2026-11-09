@@ -20,13 +20,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackGlobals__
 #define __JackGlobals__
 
-#include <atomic>
+#include "JackConstants.h"
 #include "JackPlatformPlug.h"
 #include "JackSystemDeps.h"
-#include "JackConstants.h"
+#include <atomic>
 
-namespace jackmini
-{
+namespace jackmini {
 
 // Globals used by the server and the client library.
 struct JackGlobals {
@@ -41,6 +40,6 @@ extern SERVER_EXPORT JackGraphManager* GetGraphManager();
 extern SERVER_EXPORT JackEngineControl* GetEngineControl();
 extern SERVER_EXPORT JackSynchro* GetSynchroTable();
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

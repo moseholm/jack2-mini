@@ -23,42 +23,40 @@
 
 #include "JackDriver.h"
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief The FreeWheel driver : run Jack engine at full speed.
 */
 
-class JackFreewheelDriver : public JackDriver
-{
-    protected:
+class JackFreewheelDriver : public JackDriver {
+protected:
+    Result<void> SuspendRefNum();
 
-        Result<void> SuspendRefNum();
+public:
+    JackFreewheelDriver(JackLockedEngine* engine, JackSynchro* table)
+        : JackDriver("freewheel", "", engine, table)
+    {
+    }
+    virtual ~JackFreewheelDriver()
+    {
+    }
 
-    public:
+    bool IsRealTime() const
+    {
+        return false;
+    }
 
-        JackFreewheelDriver(JackLockedEngine* engine, JackSynchro* table): JackDriver("freewheel", "", engine, table)
-        {}
-        virtual ~JackFreewheelDriver()
-        {}
+    int Process();
 
-        bool IsRealTime() const
-        {
-            return false;
-        }
+    int ProcessReadSync();
+    int ProcessWriteSync();
 
-        int Process();
-
-        int ProcessReadSync();
-        int ProcessWriteSync();
-
-        int ProcessReadAsync();
-        int ProcessWriteAsync();
-
+    int ProcessReadAsync();
+    int ProcessWriteAsync();
 };
 
-} // end of namespace
+} // namespace jackmini
 
 
 #endif

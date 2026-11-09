@@ -35,8 +35,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 // The server library hides its symbols; these are the ones an application uses.
 #define JACKMINI_CONTROL_API __attribute__((visibility("default")))
 
-namespace jackmini::control
-{
+namespace jackmini::control {
 
 // A parameter value.  The alternative is the parameter's type, and it does
 // not change: a value of another alternative is refused.
@@ -50,12 +49,12 @@ struct Choice {
 
 struct Parameter {
     std::string name;
-    char short_name = 0;          // the driver option letter; 0 for server parameters
+    char short_name = 0; // the driver option letter; 0 for server parameters
     std::string description;
     Value value;
     Value default_value;
-    bool is_set = false;          // whether the value was given, rather than left at the default
-    std::vector<Choice> choices;  // empty unless the parameter takes one of a set of values
+    bool is_set = false; // whether the value was given, rather than left at the default
+    std::vector<Choice> choices; // empty unless the parameter takes one of a set of values
 };
 
 struct Driver {
@@ -77,7 +76,7 @@ class JACKMINI_CONTROL_API Server {
 public:
     // Creates a server object with the given name, which may be empty for the
     // default name.  Nothing is started until start().
-    static Result<Server> create(std::string_view name, DeviceHooks hooks = {});
+    static Result<Server> create(std::string_view name, DeviceHooks hooks = { });
 
     Server(Server&& other) noexcept;
     Server& operator=(Server&& other) noexcept;

@@ -30,24 +30,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <string>
 #include <thread>
 
-namespace
-{
+namespace {
 
 int failures = 0;
 
-#define CHECK(cond)                                                    \
-    do {                                                               \
-        if (!(cond)) {                                                 \
-            std::fprintf(stderr, "FAILED %s:%d: %s\n", __FILE__,       \
-                         __LINE__, #cond);                             \
-            ++failures;                                                \
-        }                                                              \
+#define CHECK(cond)                                              \
+    do {                                                         \
+        if (!(cond)) {                                           \
+            std::fprintf(stderr, "FAILED %s:%d: %s\n", __FILE__, \
+                __LINE__, #cond);                                \
+            ++failures;                                          \
+        }                                                        \
     } while (0)
 
 } // end of anonymous namespace
 
-namespace
-{
+namespace {
 
 // Waits until the condition holds, or for about ten seconds. The cycles are counted by the realtime thread, so the
 // test polls the count; it does not depend on how long a cycle takes.
@@ -74,8 +72,8 @@ void check_activation(const jackmini::OpenOptions& exact)
         return;
     }
 
-    std::atomic<int> cycles{0};
-    std::atomic<bool> bad_frames{false};
+    std::atomic<int> cycles { 0 };
+    std::atomic<bool> bad_frames { false };
     (*client)->set_process([&](const jackmini::Cycle& cycle) {
         if (cycle.frames == 0) {
             bad_frames = true;
@@ -109,7 +107,7 @@ void check_activation(const jackmini::OpenOptions& exact)
     auto failing = ClientSession::open("session_fail", exact);
     CHECK(failing.has_value());
     if (failing) {
-        std::atomic<int> calls{0};
+        std::atomic<int> calls { 0 };
         (*failing)->set_process([&](const jackmini::Cycle&) {
             return calls.fetch_add(1) < 3;
         });
@@ -126,8 +124,8 @@ void check_ports(const jackmini::OpenOptions& exact)
 {
     using jackmini::client::ClientSession;
     constexpr const char* kAudio = "32 bit float mono audio";
-    constexpr unsigned long kOutput = 0x2;   // JackPortIsOutput
-    constexpr unsigned long kInput = 0x1;    // JackPortIsInput
+    constexpr unsigned long kOutput = 0x2; // JackPortIsOutput
+    constexpr unsigned long kInput = 0x1; // JackPortIsInput
     constexpr jack_port_id_t kNone = 0;
 
     auto source = ClientSession::open("ports_src", exact);
@@ -152,7 +150,7 @@ void check_ports(const jackmini::OpenOptions& exact)
     CHECK(src.port_flags(*out) == kOutput);
     CHECK(src.find_port("ports_src:out") == std::optional<jack_port_id_t>(*out));
     CHECK(src.owns(*out));
-    CHECK(!dst.owns(*out));   // another client's port is not ours
+    CHECK(!dst.owns(*out)); // another client's port is not ours
 
     const auto outputs = src.port_names(kAudio, kOutput);
     CHECK(std::find(outputs.begin(), outputs.end(), "ports_src:out") != outputs.end());
@@ -160,7 +158,7 @@ void check_ports(const jackmini::OpenOptions& exact)
     // A name with no client part and an empty name are refused; a port of another client cannot be unregistered.
     CHECK(!src.register_port("", kAudio, kOutput, 0).has_value());
     CHECK(!dst.unregister_port(*out).has_value());
-    CHECK(!src.register_port("out", kAudio, kOutput, 0).has_value());   // the name is taken
+    CHECK(!src.register_port("out", kAudio, kOutput, 0).has_value()); // the name is taken
 
     // The server connects only the ports of active clients. Without a process callback no thread runs.
     CHECK(src.activate().has_value() && dst.activate().has_value());
@@ -205,10 +203,10 @@ void check_buffers(const jackmini::OpenOptions& exact)
     const jack_port_id_t out_port = *out;
     const jack_port_id_t in_port = *in;
 
-    std::atomic<int> sent_frames{0};
-    std::atomic<int> received_frames{0};
-    std::atomic<float> received{0.0f};
-    std::atomic<int> cycles{0};
+    std::atomic<int> sent_frames { 0 };
+    std::atomic<int> received_frames { 0 };
+    std::atomic<float> received { 0.0f };
+    std::atomic<int> cycles { 0 };
     out_session.set_process([&](const jackmini::Cycle& cycle) {
         auto* buffer = static_cast<float*>(out_session.port_buffer(out_port, cycle.frames));
         for (jackmini::FrameCount i = 0; buffer && i < cycle.frames; ++i) {
@@ -271,13 +269,13 @@ void check_latency(const jackmini::OpenOptions& exact)
     CHECK(session.connect_ports("system:capture_1", "lat_test:in").has_value());
 
     constexpr auto kPlayback = JackPlaybackLatency;
-    session.set_port_latency_range(*out_a, kPlayback, jack_latency_range_t{ 5, 15 });
+    session.set_port_latency_range(*out_a, kPlayback, jack_latency_range_t { 5, 15 });
     CHECK(session.port_latency_range(*out_a, kPlayback).min == 5);
     CHECK(session.port_latency_range(*out_a, kPlayback).max == 15);
 
     // The default recalculates the output ports from their connections (none here, so {0, 0}), then sets the input
     // ports to the widest of the outputs. A value set by hand on the input is replaced.
-    session.set_port_latency_range(*in, kPlayback, jack_latency_range_t{ 9, 9 });
+    session.set_port_latency_range(*in, kPlayback, jack_latency_range_t { 9, 9 });
     CHECK(session.recompute_latencies().has_value());
     CHECK(wait_for([&] {
         const auto range = session.port_latency_range(*in, kPlayback);
@@ -286,7 +284,7 @@ void check_latency(const jackmini::OpenOptions& exact)
     CHECK(session.port_latency_range(*out_a, kPlayback).max == 0);
 
     // A handler replaces the default: it is called for the mode the server asks about.
-    std::atomic<int> handler_calls{0};
+    std::atomic<int> handler_calls { 0 };
     session.set_latency_handler([&](jackmini::LatencyMode) { handler_calls.fetch_add(1); });
     CHECK(session.recompute_latencies().has_value());
     CHECK(wait_for([&] { return handler_calls.load() >= 1; }));
@@ -312,12 +310,12 @@ void check_transport(const jackmini::OpenOptions& exact)
     ClientSession& session = **client;
     CHECK(session.activate().has_value());
 
-    jack_position_t position{};
+    jack_position_t position { };
     CHECK(session.transport_query(&position) == JackTransportStopped);
 
     session.transport_locate(4800);
     CHECK(wait_for([&] {
-        jack_position_t now{};
+        jack_position_t now { };
         session.transport_query(&now);
         return now.frame >= 4800;
     }));
@@ -342,8 +340,8 @@ void check_callbacks(const jackmini::OpenOptions& exact)
         return;
     }
     ClientSession& session = **client;
-    std::atomic<int> size_calls{0};
-    std::atomic<int> reported_size{0};
+    std::atomic<int> size_calls { 0 };
+    std::atomic<int> reported_size { 0 };
     session.set_buffer_size_handler([&](jackmini::FrameCount frames) {
         reported_size = static_cast<int>(frames);
         size_calls.fetch_add(1);
@@ -383,13 +381,13 @@ int main()
     CHECK(!taken.has_value() && taken.error() == jackmini::Error::NameTaken);
 
     // Without exact_name the server gives the client another name.
-    auto renamed = ClientSession::open("session_e2e", OpenOptions{});
+    auto renamed = ClientSession::open("session_e2e", OpenOptions { });
     CHECK(renamed.has_value());
     if (renamed) {
         CHECK((*renamed)->name() != "session_e2e");
         CHECK((*renamed)->ref() != (*first)->ref());
         CHECK((*renamed)->close().has_value());
-        CHECK((*renamed)->close().has_value());   // closing twice does nothing
+        CHECK((*renamed)->close().has_value()); // closing twice does nothing
     }
 
     check_activation(exact);

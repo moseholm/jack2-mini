@@ -20,8 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackNotification__
 #define __JackNotification__
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Notifications sent by the server for clients.
@@ -47,10 +46,10 @@ enum NotificationType {
     kQUIT = 16,
     kLatencyCallback = 18,
     kSecondarySampleRateCallback = 20,
-    kDropped = 21,          // the server dropped notifications for this client; value1 is how many
-    kMaxNotification = 64  // To keep some room in JackClientControl fCallback table
+    kDropped = 21, // the server dropped notifications for this client; value1 is how many
+    kMaxNotification = 64 // To keep some room in JackClientControl fCallback table
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

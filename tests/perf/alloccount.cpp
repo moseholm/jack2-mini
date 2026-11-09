@@ -1,18 +1,17 @@
 // Counts malloc and free calls in a process. Load it with LD_PRELOAD and send SIGURG to print the counts to stderr.
+#include <unistd.h>
 #include <atomic>
 #include <csignal>
 #include <cstddef>
 #include <cstdio>
-#include <unistd.h>
 
 extern "C" void* __libc_malloc(std::size_t);
 extern "C" void __libc_free(void*);
 
-namespace
-{
+namespace {
 
-std::atomic<long> n_malloc{0};
-std::atomic<long> n_free{0};
+std::atomic<long> n_malloc { 0 };
+std::atomic<long> n_free { 0 };
 
 } // end of anonymous namespace
 

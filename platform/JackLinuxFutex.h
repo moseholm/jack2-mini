@@ -21,12 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackLinuxFutex__
 #define __JackLinuxFutex__
 
-#include "JackSynchro.h"
 #include "JackCompilerDeps.h"
+#include "JackSynchro.h"
 #include <stddef.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Inter process synchronization using Linux futex.
@@ -38,49 +37,45 @@ namespace jackmini
  making it even faster for internal clients.
 */
 
-class SERVER_EXPORT JackLinuxFutex : public detail::JackSynchro
-{
+class SERVER_EXPORT JackLinuxFutex : public detail::JackSynchro {
 
-    private:
-        struct FutexData {
-            int futex;         // futex, needs to be 1st member
-            bool internal;     // current internal state
-            bool wasInternal;  // initial internal state, only changes in allocate
-            bool needsChange;  // change state on next wait call
-            int externalCount; // how many external clients have connected
-        };
+private:
+    struct FutexData {
+        int futex; // futex, needs to be 1st member
+        bool internal; // current internal state
+        bool wasInternal; // initial internal state, only changes in allocate
+        bool needsChange; // change state on next wait call
+        int externalCount; // how many external clients have connected
+    };
 
-        int fSharedMem;
-        FutexData* fFutex;
-        bool fPrivate;
-        bool fPromiscuous;
-        int fPromiscuousGid;
+    int fSharedMem;
+    FutexData* fFutex;
+    bool fPrivate;
+    bool fPromiscuous;
+    int fPromiscuousGid;
 
-    protected:
+protected:
+    void BuildName(const char* name, const char* server_name, char* res, int size);
 
-        void BuildName(const char* name, const char* server_name, char* res, int size);
+public:
+    JackLinuxFutex();
 
-    public:
+    bool Signal();
+    bool SignalAll();
+    bool Wait();
+    bool TimedWait(long usec);
 
-        JackLinuxFutex();
+    bool Allocate(const char* name, const char* server_name, int value, bool internal = false);
+    bool Connect(const char* name, const char* server_name);
+    bool ConnectInput(const char* name, const char* server_name);
+    bool ConnectOutput(const char* name, const char* server_name);
+    bool Disconnect();
+    void Destroy();
 
-        bool Signal();
-        bool SignalAll();
-        bool Wait();
-        bool TimedWait(long usec);
-
-        bool Allocate(const char* name, const char* server_name, int value, bool internal = false);
-        bool Connect(const char* name, const char* server_name);
-        bool ConnectInput(const char* name, const char* server_name);
-        bool ConnectOutput(const char* name, const char* server_name);
-        bool Disconnect();
-        void Destroy();
-
-        void MakePrivate(bool priv);
+    void MakePrivate(bool priv);
 };
 
-} // end of namespace
+} // namespace jackmini
 
 
 #endif
-

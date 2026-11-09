@@ -21,8 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <charconv>
 #include <format>
 
-namespace jackmini
-{
+namespace jackmini {
 
 std::string Uuid::to_string() const
 {
@@ -40,7 +39,7 @@ std::optional<Uuid> Uuid::parse(std::string_view text)
     if (ec != std::errc() || ptr != end) {
         return std::nullopt;
     }
-    return Uuid{value};
+    return Uuid { value };
 }
 
 } // namespace jackmini

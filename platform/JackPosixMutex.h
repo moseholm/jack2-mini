@@ -22,54 +22,46 @@
 #ifndef __JackPosixMutex__
 #define __JackPosixMutex__
 
-#include "JackException.h"
 #include "JackCompilerDeps.h"
+#include "JackException.h"
 
+#include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
-#include <assert.h>
 
-namespace jackmini
-{
+namespace jackmini {
 /*!
 \brief Mutex abstraction.
 */
 
-class SERVER_EXPORT JackBasePosixMutex
-{
+class SERVER_EXPORT JackBasePosixMutex {
 
-    protected:
+protected:
+    pthread_mutex_t fMutex;
+    pthread_t fOwner;
 
-        pthread_mutex_t fMutex;
-        pthread_t fOwner;
+public:
+    JackBasePosixMutex(const char* name = NULL);
+    virtual ~JackBasePosixMutex();
 
-    public:
-
-        JackBasePosixMutex(const char* name = NULL);
-        virtual ~JackBasePosixMutex();
-
-        bool Lock();
-        bool Trylock();
-        bool Unlock();
-
+    bool Lock();
+    bool Trylock();
+    bool Unlock();
 };
 
-class SERVER_EXPORT JackPosixMutex
-{
-    protected:
+class SERVER_EXPORT JackPosixMutex {
+protected:
+    pthread_mutex_t fMutex;
 
-        pthread_mutex_t fMutex;
+public:
+    JackPosixMutex(const char* name = NULL);
+    virtual ~JackPosixMutex();
 
-    public:
-
-        JackPosixMutex(const char* name = NULL);
-        virtual ~JackPosixMutex();
-
-        bool Lock();
-        bool Trylock();
-        bool Unlock();
+    bool Lock();
+    bool Trylock();
+    bool Unlock();
 };
 
-} // namespace
+} // namespace jackmini
 
 #endif

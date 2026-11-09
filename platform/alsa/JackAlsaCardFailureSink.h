@@ -19,21 +19,20 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #ifndef __JackAlsaCardFailureSink__
 #define __JackAlsaCardFailureSink__
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Told when a card's I/O fails.  Called from the card's thread.
 */
 
-class JackAlsaCardFailureSink
-{
-    public:
-        virtual ~JackAlsaCardFailureSink()
-        {}
-        virtual void OnCardFailed(int card_id) = 0;
+class JackAlsaCardFailureSink {
+public:
+    virtual ~JackAlsaCardFailureSink()
+    {
+    }
+    virtual void OnCardFailed(int card_id) = 0;
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

@@ -18,14 +18,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 #include "JackPortType.h"
-#include <string.h>
 #include <assert.h>
+#include <string.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
-static const JackPortType* gPortTypes[] =
-{
+static const JackPortType* gPortTypes[] = {
     &gAudioPortType,
     &gMidiPortType,
 };

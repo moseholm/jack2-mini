@@ -23,8 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <atomic>
 #include <cstddef>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Single producer / single consumer planar float ring.
@@ -39,55 +38,52 @@ of an integer division.  The two positions live on separate cache lines to
 avoid false sharing between the card thread and the primary RT thread.
 */
 
-class JackAlsaRingBuffer
-{
+class JackAlsaRingBuffer {
 
-    private:
+private:
+    // Fixed rather than std::hardware_destructive_interference_size: that
+    // value depends on the compiler's tuning (it is 256 on generic AArch64
+    // builds), and every target we ship has 64-byte cache lines.
+    static constexpr std::size_t kCacheLine = 64;
 
-        // Fixed rather than std::hardware_destructive_interference_size: that
-        // value depends on the compiler's tuning (it is 256 on generic AArch64
-        // builds), and every target we ship has 64-byte cache lines.
-        static constexpr std::size_t kCacheLine = 64;
+    int fChannels;
+    jack_nframes_t fCapacity;
+    uint64_t fMask;
+    float** fData;
 
-        int fChannels;
-        jack_nframes_t fCapacity;
-        uint64_t fMask;
-        float** fData;
+    alignas(kCacheLine) std::atomic<uint64_t> fReadPos;
+    alignas(kCacheLine) std::atomic<uint64_t> fWritePos;
 
-        alignas(kCacheLine) std::atomic<uint64_t> fReadPos;
-        alignas(kCacheLine) std::atomic<uint64_t> fWritePos;
+    JackAlsaRingBuffer(const JackAlsaRingBuffer&);
+    JackAlsaRingBuffer& operator=(const JackAlsaRingBuffer&);
 
-        JackAlsaRingBuffer(const JackAlsaRingBuffer&);
-        JackAlsaRingBuffer& operator=(const JackAlsaRingBuffer&);
+    void Free();
 
-        void Free();
+public:
+    JackAlsaRingBuffer(int channels, jack_nframes_t capacity);
+    ~JackAlsaRingBuffer();
 
-    public:
+    bool Init(int channels, jack_nframes_t capacity);
+    void Reset() noexcept;
 
-        JackAlsaRingBuffer(int channels, jack_nframes_t capacity);
-        ~JackAlsaRingBuffer();
+    // Best-effort mlock() of the sample storage.  Returns false when any
+    // page could not be locked; the ring remains usable either way.
+    bool LockMemory() const noexcept;
 
-        bool Init(int channels, jack_nframes_t capacity);
-        void Reset() noexcept;
+    int Channels() const noexcept { return fChannels; }
+    jack_nframes_t Capacity() const noexcept { return fCapacity; }
+    jack_nframes_t AvailableRead() const noexcept;
+    jack_nframes_t AvailableWrite() const noexcept;
 
-        // Best-effort mlock() of the sample storage.  Returns false when any
-        // page could not be locked; the ring remains usable either way.
-        bool LockMemory() const noexcept;
+    // Push nframes from planar source.  Returns the number of frames
+    // actually stored; overflow is dropped.
+    jack_nframes_t Write(const float* const* src, jack_nframes_t nframes) noexcept;
 
-        int Channels() const noexcept { return fChannels; }
-        jack_nframes_t Capacity() const noexcept { return fCapacity; }
-        jack_nframes_t AvailableRead() const noexcept;
-        jack_nframes_t AvailableWrite() const noexcept;
-
-        // Push nframes from planar source.  Returns the number of frames
-        // actually stored; overflow is dropped.
-        jack_nframes_t Write(const float* const* src, jack_nframes_t nframes) noexcept;
-
-        // Pop up to nframes into planar destination.  Missing frames are
-        // zero-filled.  Returns the number of frames actually available.
-        jack_nframes_t Read(float* const* dst, jack_nframes_t nframes) noexcept;
+    // Pop up to nframes into planar destination.  Missing frames are
+    // zero-filled.  Returns the number of frames actually available.
+    jack_nframes_t Read(float* const* dst, jack_nframes_t nframes) noexcept;
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif

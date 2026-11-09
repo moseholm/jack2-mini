@@ -27,14 +27,17 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
 // Quiet time after the last sound event before listeners are told.
 static const int kSettleMs = 250;
 
 JackAlsaHotplug::JackAlsaHotplug(JackAlsaHotplugListener* listener)
-    : fListener(listener), fThread(this), fUdev(NULL), fMonitor(NULL), fWakeFd(-1)
+    : fListener(listener)
+    , fThread(this)
+    , fUdev(NULL)
+    , fMonitor(NULL)
+    , fWakeFd(-1)
 {
     fUdev = udev_new();
     if (fUdev == NULL) {
@@ -42,9 +45,7 @@ JackAlsaHotplug::JackAlsaHotplug(JackAlsaHotplugListener* listener)
         return;
     }
     fMonitor = udev_monitor_new_from_netlink(fUdev, "udev");
-    if (fMonitor == NULL ||
-        udev_monitor_filter_add_match_subsystem_devtype(fMonitor, "sound", NULL) < 0 ||
-        udev_monitor_enable_receiving(fMonitor) < 0) {
+    if (fMonitor == NULL || udev_monitor_filter_add_match_subsystem_devtype(fMonitor, "sound", NULL) < 0 || udev_monitor_enable_receiving(fMonitor) < 0) {
         jack_error("hot-plug is disabled: cannot listen to udev");
         if (fMonitor != NULL) {
             udev_monitor_unref(fMonitor);
@@ -103,9 +104,7 @@ bool JackAlsaHotplug::Execute()
             struct udev_device* device;
             while ((device = udev_monitor_receive_device(fMonitor)) != NULL) {
                 const char* action = udev_device_get_action(device);
-                if (action != NULL && (strcmp(action, "add") == 0 ||
-                                       strcmp(action, "remove") == 0 ||
-                                       strcmp(action, "change") == 0)) {
+                if (action != NULL && (strcmp(action, "add") == 0 || strcmp(action, "remove") == 0 || strcmp(action, "change") == 0)) {
                     pending = true;
                 }
                 udev_device_unref(device);
@@ -152,4 +151,4 @@ int JackAlsaHotplug::Stop()
     return fThread.Stop();
 }
 
-} // end of namespace
+} // namespace jackmini

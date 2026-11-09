@@ -20,53 +20,48 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackPosixProcessSync__
 #define __JackPosixProcessSync__
 
-#include "JackPosixMutex.h"
 #include "JackException.h"
+#include "JackPosixMutex.h"
 #include <sys/time.h>
 #include <unistd.h>
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief A synchronization primitive built using a condition variable.
 */
 
-class JackPosixProcessSync : public JackBasePosixMutex
-{
+class JackPosixProcessSync : public JackBasePosixMutex {
 
-    private:
+private:
+    pthread_cond_t fCond; // Condition variable
 
-        pthread_cond_t fCond;   // Condition variable
+public:
+    JackPosixProcessSync(const char* name = NULL)
+        : JackBasePosixMutex()
+    {
+        int res = pthread_cond_init(&fCond, NULL);
+        ThrowIf(res != 0, JackException("JackBasePosixMutex: could not init the cond variable"));
+    }
 
-    public:
+    virtual ~JackPosixProcessSync()
+    {
+        pthread_cond_destroy(&fCond);
+    }
 
-        JackPosixProcessSync(const char* name = NULL):JackBasePosixMutex()
-        {
-            int res = pthread_cond_init(&fCond, NULL);
-            ThrowIf(res != 0, JackException("JackBasePosixMutex: could not init the cond variable"));
-        }
+    bool TimedWait(long usec);
+    bool LockedTimedWait(long usec);
 
-        virtual ~JackPosixProcessSync()
-        {
-            pthread_cond_destroy(&fCond);
-        }
+    void Wait();
+    void LockedWait();
 
-        bool TimedWait(long usec);
-        bool LockedTimedWait(long usec);
+    void Signal();
+    void LockedSignal();
 
-        void Wait();
-        void LockedWait();
-
-        void Signal();
-        void LockedSignal();
-
-        void SignalAll();
-        void LockedSignalAll();
-
+    void SignalAll();
+    void LockedSignalAll();
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif
-

@@ -25,8 +25,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 struct udev;
 struct udev_monitor;
 
-namespace jackmini
-{
+namespace jackmini {
 
 /*!
 \brief Told when the sound devices on the system have changed.
@@ -35,12 +34,12 @@ Called once a burst of udev events has settled, so one device change that
 produces several events is reported once.
 */
 
-class JackAlsaHotplugListener
-{
-    public:
-        virtual ~JackAlsaHotplugListener()
-        {}
-        virtual void OnSoundChanged() = 0;
+class JackAlsaHotplugListener {
+public:
+    virtual ~JackAlsaHotplugListener()
+    {
+    }
+    virtual void OnSoundChanged() = 0;
 };
 
 /*!
@@ -51,34 +50,31 @@ the "sound" subsystem.  If udev is not available the watcher stays silent and
 the server runs with the cards it found at startup.
 */
 
-class JackAlsaHotplug : public JackRunnableInterface
-{
+class JackAlsaHotplug : public JackRunnableInterface {
 
-    private:
+private:
+    JackAlsaHotplugListener* fListener;
+    JackThread fThread;
+    struct udev* fUdev;
+    struct udev_monitor* fMonitor;
+    int fWakeFd;
 
-        JackAlsaHotplugListener* fListener;
-        JackThread fThread;
-        struct udev* fUdev;
-        struct udev_monitor* fMonitor;
-        int fWakeFd;
+    JackAlsaHotplug(const JackAlsaHotplug&);
+    JackAlsaHotplug& operator=(const JackAlsaHotplug&);
 
-        JackAlsaHotplug(const JackAlsaHotplug&);
-        JackAlsaHotplug& operator=(const JackAlsaHotplug&);
+public:
+    explicit JackAlsaHotplug(JackAlsaHotplugListener* listener);
+    virtual ~JackAlsaHotplug();
 
-    public:
+    bool Available() const { return fMonitor != NULL; }
 
-        explicit JackAlsaHotplug(JackAlsaHotplugListener* listener);
-        virtual ~JackAlsaHotplug();
+    int Start();
+    int Stop();
 
-        bool Available() const { return fMonitor != NULL; }
-
-        int Start();
-        int Stop();
-
-        virtual bool Init();
-        virtual bool Execute();
+    virtual bool Init();
+    virtual bool Execute();
 };
 
-} // end of namespace
+} // namespace jackmini
 
 #endif
