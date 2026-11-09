@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef __JackClientControl__
 #define __JackClientControl__
 
+#include <atomic>
 #include "JackShmMem.h"
 #include "JackPort.h"
 #include "JackSynchro.h"
@@ -39,8 +40,8 @@ struct JackClientControl : public JackShmMemAble
     char fName[JACK_CLIENT_NAME_SIZE + 1];
     bool fCallback[kMaxNotification];
     volatile jack_transport_state_t fTransportState;
-    volatile bool fTransportSync;      /* Will be true when slow-sync cb has to be called */
-    volatile bool fTransportTimebase;  /* Will be true when timebase cb is called with new_pos on */
+    std::atomic<bool> fTransportSync;      /* Will be true when slow-sync cb has to be called */
+    std::atomic<bool> fTransportTimebase;  /* Will be true when timebase cb is called with new_pos on */
     int fRefNum;
     int fPID;
     bool fActive;

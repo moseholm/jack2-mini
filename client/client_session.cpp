@@ -683,7 +683,7 @@ float ClientSession::cpu_load() const noexcept
 
 bool ClientSession::is_active() const noexcept
 {
-    return ref_ >= 0 && client_->fActive;
+    return ref_ >= 0 && std::atomic_ref<bool>(client_->fActive).load();
 }
 
 Result<void> ClientSession::activate()
@@ -702,7 +702,7 @@ Result<void> ClientSession::activate()
 
     // Insertion of the client in the graph causes a graph order notification, which the client wants. The transport
     // flags are set as they were before: the server asks the client about transport through them.
-    client_->fActive = true;
+    std::atomic_ref<bool>(client_->fActive).store(true);
     client_->fTransportSync = true;
     client_->fTransportTimebase = true;
     client_->fCallback[kRealTimeCallback] = real_time;
@@ -710,7 +710,7 @@ Result<void> ClientSession::activate()
     JackActivateRequest request(ref_, real_time);
     JackResult reply;
     if (transact(request, reply) < 0 || reply.fResult < 0) {
-        client_->fActive = false;
+        std::atomic_ref<bool>(client_->fActive).store(false);
         client_->fTransportSync = false;
         client_->fTransportTimebase = false;
         stop_realtime();
@@ -727,7 +727,7 @@ Result<void> ClientSession::deactivate()
         return {};
     }
 
-    client_->fActive = false;
+    std::atomic_ref<bool>(client_->fActive).store(false);
     client_->fTransportSync = false;
     client_->fTransportTimebase = false;
 
@@ -859,7 +859,7 @@ void ClientSession::end_cycles_on_failure()
     // The process callback failed: the client leaves the graph, as the old client did. The realtime class is given up
     // first, so that the server's answer does not wait for this thread.
     drop_realtime(pthread_self());
-    client_->fActive = false;
+    std::atomic_ref<bool>(client_->fActive).store(false);
     client_->fTransportSync = false;
     client_->fTransportTimebase = false;
     JackDeactivateRequest request(ref_);

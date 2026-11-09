@@ -32,7 +32,7 @@ namespace jackmini
 struct JackGlobals {
 
     static jack_tls_key fKeyLogFunction;
-    static bool fVerbose;
+    static std::atomic<bool> fVerbose;
     static jack_thread_creator_t fJackThreadCreator;
 };
 
