@@ -23,8 +23,8 @@ Written so a new session can pick up without the conversation. Read this file fi
 | S8: ALSA redesign | done (measured) | `96fdde5e` to `89b9b564`, below |
 | MIDI: client-to-client only | done (hardware MIDI removed) | `94606177`, `5dd484db`, `a644bf85`, `abb856ad` |
 | Cleanup (unused headers, metadata) | done | `0f2e9a67`, `86daa0be` |
-| S6: engine and graph | in progress (stages 1 to 3 done, `a9a1be6c`, `8653ede5`) | see "Next" |
-| S7: server and protocol | open | |
+| S6: engine and graph | done (`a9a1be6c` to `e2124e88`) | see "Next" |
+| S7: server and protocol | **next** | see "Next" |
 | S9: remove the C (resampler kernels stay) | open | |
 | S10: validation | open | |
 
@@ -119,7 +119,7 @@ Hardware and measurement:
 
 ## Next
 
-S6, engine and graph, in stages. Each stage: build, `check.sh`, commit, push.
+S6 is done. Its stages (each: build, `check.sh`, commit, push) are listed for the record.
 
 1. **Done (`a9a1be6c`): `JackLockedEngine` returns `Result`.** The macros are gone. `ReplyCode` (in
    `JackRequestDecoder.h`) is the one wire mapping. The engine internals still return `int`, which stage 3 converts.
@@ -127,15 +127,17 @@ S6, engine and graph, in stages. Each stage: build, `check.sh`, commit, push.
 2. **Done (`a9a1be6c`): the call sites** in the server, the drivers and the socket channel.
 3. **Done (`8653ede5`): `JackEngine` internals return `Result`.** The error kind says what failed. The graph
    manager and the client's `int` returns are unchanged (stage 4 and the client side).
-4. **`JackGraphManager`, `JackConnectionManager`.** Gate: a thread-sanitizer run with no new report
-   (procedure below).
+4. **Done (`e2124e88`): `JackGraphManager`, `JackConnectionManager`.** Gate: a thread-sanitizer run with no new
+   report, checked against the tree before the change (procedure below). A duplicate connect is now an error
+   (`InvalidState`); it was a silent success.
 
-Then S7 (`JackServer`, `JackServerGlobals`, the request decoder, the socket channels; gate: protocol conformance
+Next is S7 (`JackServer`, `JackServerGlobals`, the request decoder, the socket channels; gate: protocol conformance
 and notification overflow tests), S9 (remove the rest of the C; the resampler kernels stay), and S10 (ASan, UBSan,
 TSAN in the tests; a malloc hook in the cycle; syscalls per cycle; the latency comparison with the baseline).
 
-Known cleanup candidates for S6 and S7: `JackExternalClient` and the server's socket channels (protocol code,
-review in S7); the `int` return codes in `JackEngine` and `JackLockedEngine`.
+Known cleanup candidates for S7: `JackExternalClient` and the server's socket channels (protocol code, review in S7).
+Still `int` on purpose: the graph's sentinel lookups (`GetInputRefNum`, `GetOutputRefNum`), the driver's
+`Open`, `Close` and `Process` (module ABI and RT), `JackEngine::Process` (RT, `bool`), and `JackPort::RequestMonitor`.
 
 ## Measurements
 
@@ -183,8 +185,9 @@ The baseline (before S8) is in `docs/design/perf-baseline/README.md`. The dummy-
 Build a separate tree (`/tmp/opencode/build-tsan`) with `-fsanitize=thread` in the C, C++ and linker flags. Build all
 targets (a partial build leaves stale drivers). Clear `/dev/shm/jack_*`, start `jackd`, and wait a few seconds before
 the client. Known reports from earlier (in the graph and platform code): `ResumeRefNum` timing fields, a port's latency
-range written from two threads, shared audio buffers, `JackLinuxFutex::Disconnect`, `set_clock_source`, and the MIDI
-test buffers.
+range written from two threads, shared audio buffers, `set_clock_source`, and the MIDI test buffers. The futex race
+(`JackLinuxFutex::Connect` and `Disconnect` written from the notification thread, read unlocked in `Signal` on the RT
+thread) is in 4 of 5 client runs on both the tree before and after `e2124e88`; it predates S6.
 
 ## Open issues (recorded, not fixed)
 
@@ -204,7 +207,7 @@ test buffers.
 1. `cd /home/hjj/Develop/jack2 && git status && git log --oneline -5`.
 2. Read this file and `docs/design/client-api.md`, `docs/design/style.md`.
 3. Rebuild the build dir (see "Build and checks"), then `bash /tmp/opencode/check.sh`.
-4. Start S6 stage 1 (see "Next").
+4. Start S7 (see "Next").
 
 ## Working agreements with the user
 
