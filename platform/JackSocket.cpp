@@ -108,7 +108,8 @@ int JackClientSocket::Connect(const char* dir, const char* name, int which) // A
     jack_log("JackClientSocket::Connect : addr.sun_path %s", addr.sun_path);
 
     if (connect(fSocket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        jack_error("Cannot connect to server socket err = %s", strerror(errno));
+        // The caller reports the failure; a server that is not running is an ordinary answer.
+        jack_log("JackClientSocket::Connect failed err = %s", strerror(errno));
         close(fSocket);
         fSocket = -1;
         return -1;

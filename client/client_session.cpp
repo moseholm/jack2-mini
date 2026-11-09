@@ -167,12 +167,10 @@ Result<void> ClientSession::connect_and_register(std::string_view name_view, con
 
     jack_status_t status = static_cast<jack_status_t>(0);
     if (try_start_server(server_name_.c_str(), static_cast<jack_options_t>(bits), &status) < 0) {
-        jack_error("jack server is not running or cannot be started");
         return std::unexpected(Error::NoServer);
     }
 
     if (request_.Connect(jack_server_dir, server_name_.c_str(), 0) < 0) {
-        jack_error("Cannot connect to server socket");
         return std::unexpected(Error::Io);
     }
 
