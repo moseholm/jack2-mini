@@ -19,14 +19,13 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "pcm_alsa.hpp"
 
 #include "JackError.h"
+#include "JackTime.h"
 
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <poll.h>
 #include <sys/time.h>
-
-extern "C" std::uint64_t jack_get_microseconds();
 
 namespace jackmini::alsa
 {
@@ -380,7 +379,7 @@ int Device::poll(struct pollfd* fds, nfds_t nfds, int timeout_ms)
 
 std::uint64_t Device::now_us() const
 {
-    return jack_get_microseconds();
+    return jackmini::get_microseconds();
 }
 
 std::ptrdiff_t Device::avail(Stream stream)

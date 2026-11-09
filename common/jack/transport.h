@@ -24,9 +24,6 @@
 #include <jack/types.h>
 #include <jack/weakmacros.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * @defgroup TransportControl Transport and Timebase control
@@ -239,9 +236,5 @@ void jack_set_transport_info (jack_client_t *client,
 			      jack_transport_info_t *tinfo) JACK_OPTIONAL_WEAK_EXPORT;
 
 /**@}*/
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __jack_transport_h__ */

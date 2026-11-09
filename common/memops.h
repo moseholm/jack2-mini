@@ -24,10 +24,6 @@
 
 #include "types.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 typedef	enum  {
 	None,
@@ -106,8 +102,5 @@ void memcpy_interleave_d32_s32       (char *dst, char *src, unsigned long src_by
 
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __jack_memops_h__ */

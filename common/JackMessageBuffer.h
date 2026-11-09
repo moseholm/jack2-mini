@@ -106,16 +106,9 @@ class JackMessageBuffer : public JackRunnableInterface
 	    static JackMessageBuffer* fInstance;
 };
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 void JackMessageBufferAdd(int level, const char *message);
 
-#ifdef __cplusplus
-}
-#endif
 
 };
 

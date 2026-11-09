@@ -30,10 +30,6 @@
 #include "JackCompilerDeps.h"
 #include "JackLog.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
     SERVER_EXPORT void jack_log(const char *fmt, ...);
 
@@ -42,8 +38,5 @@ extern "C"
     /* The routing used by the host: the messages of a thread with its own log function go there. */
     void jack_log_thread_route(int level, const char *message);
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

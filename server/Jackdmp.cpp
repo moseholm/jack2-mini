@@ -40,7 +40,7 @@ using jackmini::control::Server;
 using jackmini::control::Value;
 
 // Prototype to be found in libjackserver
-extern "C" void silent_jack_error_callback(const char *desc);
+void silent_jack_error_callback(const char *desc);
 
 static void copyright(FILE* file)
 {

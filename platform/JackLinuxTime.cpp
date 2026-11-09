@@ -228,9 +228,3 @@ jack_time_t get_microseconds()
 }
 
 } // end of namespace jackmini
-
-// The name is kept for the ALSA PCM code, which calls it through its C linkage.
-extern "C" SERVER_EXPORT jack_time_t jack_get_microseconds()
-{
-    return jackmini::get_microseconds();
-}

@@ -29,10 +29,6 @@
 #include <stdarg.h>
 #include "JackCompilerDeps.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
     #define LOG_LEVEL_INFO   1
     #define LOG_LEVEL_ERROR  2
@@ -60,8 +56,5 @@ extern "C"
     LIB_EXPORT void silent_jack_error_callback(const char *desc);
     LIB_EXPORT void silent_jack_info_callback(const char *desc);
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

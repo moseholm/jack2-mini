@@ -22,9 +22,6 @@
 
 #include <jack/types.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #define JACK_UUID_SIZE 36
 #define JACK_UUID_STRING_SIZE (JACK_UUID_SIZE+1) /* includes trailing null */
@@ -42,9 +39,6 @@ extern int  jack_uuid_parse (const char *buf, jack_uuid_t*);
 extern void jack_uuid_unparse (jack_uuid_t, char buf[JACK_UUID_STRING_SIZE]);
 extern int  jack_uuid_empty (jack_uuid_t);
 
-#ifdef __cplusplus
-} /* namespace */
-#endif
 
 #endif /* __jack_uuid_h__ */
 

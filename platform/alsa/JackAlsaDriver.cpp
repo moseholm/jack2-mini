@@ -449,7 +449,7 @@ int JackAlsaDriver::Detach()
     return JackAudioDriver::Detach();
 }
 
-extern "C" char* get_control_device_name(const char * device_name)
+char* get_control_device_name(const char * device_name)
 {
     char * ctl_name;
     const char * comma;
@@ -1276,10 +1276,6 @@ void JackAlsaDriver::WriteOutputAux(jack_nframes_t orig_nframes, const jackmini:
 } // end of namespace
 
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 static
 jack_driver_param_constraint_desc_t *
@@ -1668,9 +1664,6 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
     }
 }
 
-#ifdef __cplusplus
-}
-#endif
 
 extern "C" SERVER_EXPORT const jackmini::driver::Module* jackmini_driver_module()
 {
