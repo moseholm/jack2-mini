@@ -165,8 +165,8 @@ class JackShmReadWritePtr
 
         ~JackShmReadWritePtr()
         {
+            // Not mapped when the open that owns it failed early: nothing to undo.
             if (fAddress == nullptr) {
-               jack_error("JackShmReadWritePtr::~JackShmReadWritePtr - not mapped, skipping unlock");
                return;
             }
             jack_log("JackShmReadWritePtr::~JackShmReadWritePtr");

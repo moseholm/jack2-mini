@@ -23,9 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <string_view>
 #include <vector>
 #include "JackConstants.h"
-#include "JackChannel.h"
-#include "JackLibGlobals.h"
 #include "JackServerLaunch.h"
+#include "JackSocket.h"
+#include "JackTime.h"
 #include "JackPlatformPlug.h"
 
 #include <sys/wait.h>
@@ -167,21 +167,21 @@ static int start_server(const char* server_name, jack_options_t options)
     return start_server_classic(server_name);
 }
 
-static int server_connect(char* server_name)
+static int server_connect(const char* server_name)
 {
-    JackClientChannel channel;
-    int res = channel.ServerCheck(server_name);
-    channel.Close();
+    JackClientSocket socket;
+    int res = socket.Connect(jack_server_dir, server_name, 0);
+    socket.Close();
     sleep_microseconds(2000); // Added by JE - 02-01-2009 (gives
                      // the channel some time to close)
     return res;
 }
 
-int try_start_server(jack_varargs_t* va, jack_options_t options, jack_status_t* status)
+int try_start_server(const char* server_name, jack_options_t options, jack_status_t* status)
 {
-    if (server_connect(va->server_name) < 0) {
+    if (server_connect(server_name) < 0) {
         int trys;
-        if (start_server(va->server_name, options)) {
+        if (start_server(server_name, options)) {
             int my_status1 = *status | JackFailure | JackServerFailed;
             *status = (jack_status_t)my_status1;
             return -1;
@@ -194,7 +194,7 @@ int try_start_server(jack_varargs_t* va, jack_options_t options, jack_status_t* 
                 *status = (jack_status_t)my_status1;
                 return -1;
             }
-        } while (server_connect(va->server_name) < 0);
+        } while (server_connect(server_name) < 0);
         int my_status1 = *status | JackServerStarted;
         *status = (jack_status_t)my_status1;
     }

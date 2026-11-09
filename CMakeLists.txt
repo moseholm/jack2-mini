@@ -105,6 +105,8 @@ set(JACK_CLIENT_SOURCES
     ${JACK_COMMON_SOURCES}
     client/JackLibClient.cpp
     client/jackmini/client.cpp
+    client/process_context.cpp
+    client/client_session.cpp
     client/jackmini/lib.cpp
     server/JackMetadata.cpp
     platform/JackSocketClientChannel.cpp
@@ -463,6 +465,11 @@ if(JACK_BUILD_TESTS)
     # The graph of the jackmini API (chains, ports at scale, connection rules, naming, several clients), with a server.
     add_executable(jack_jackmini_graph_e2e tests/jackmini_graph_e2e.cpp)
     target_link_libraries(jack_jackmini_graph_e2e PRIVATE jack jackmini_base Threads::Threads)
+
+    # The client session of the new client code (open, names, close), with a server.
+    add_executable(jack_client_session_e2e tests/client_session_e2e.cpp)
+    target_include_directories(jack_client_session_e2e PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/client")
+    target_link_libraries(jack_client_session_e2e PRIVATE jack jackmini_base Threads::Threads)
 
     # A test-only resampler plugin, loaded by name from JACK_RESAMPLER_PATH.
     add_library(passthrough_test MODULE tests/alsa_test_resampler_plugin.c)

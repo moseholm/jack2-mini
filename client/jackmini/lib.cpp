@@ -94,7 +94,7 @@ static jack_client_t* jack_client_open_aux(const char* client_name, jack_options
 
     JackLibGlobals::Init(); // jack library initialisation
 
-    if (try_start_server(&va, options, status)) {
+    if (try_start_server(va.server_name, options, status)) {
         jack_error("jack server is not running or cannot be started");
         JackLibGlobals::Destroy(); // jack library destruction
         return 0;
