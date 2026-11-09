@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "jackmini/client.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdio>
@@ -120,6 +121,65 @@ void check_activation(const jackmini::OpenOptions& exact)
     }
 }
 
+// Ports and connections between two sessions, and the reasons they are refused.
+void check_ports(const jackmini::OpenOptions& exact)
+{
+    using jackmini::client::ClientSession;
+    constexpr const char* kAudio = "32 bit float mono audio";
+    constexpr unsigned long kOutput = 0x2;   // JackPortIsOutput
+    constexpr unsigned long kInput = 0x1;    // JackPortIsInput
+    constexpr jack_port_id_t kNone = 0;
+
+    auto source = ClientSession::open("ports_src", exact);
+    auto target = ClientSession::open("ports_dst", exact);
+    CHECK(source.has_value() && target.has_value());
+    if (!source || !target) {
+        return;
+    }
+    ClientSession& src = **source;
+    ClientSession& dst = **target;
+
+    auto out = src.register_port("out", kAudio, kOutput, 0);
+    CHECK(out.has_value());
+    auto in = dst.register_port("in", kAudio, kInput, 0);
+    CHECK(in.has_value());
+    if (!out || !in) {
+        return;
+    }
+    CHECK(*out != kNone && *in != kNone);
+    CHECK(src.port_name(*out) == "ports_src:out");
+    CHECK(std::string(src.port_type(*out)) == kAudio);
+    CHECK(src.port_flags(*out) == kOutput);
+    CHECK(src.find_port("ports_src:out") == std::optional<jack_port_id_t>(*out));
+    CHECK(src.owns(*out));
+    CHECK(!dst.owns(*out));   // another client's port is not ours
+
+    const auto outputs = src.port_names(kAudio, kOutput);
+    CHECK(std::find(outputs.begin(), outputs.end(), "ports_src:out") != outputs.end());
+
+    // A name with no client part and an empty name are refused; a port of another client cannot be unregistered.
+    CHECK(!src.register_port("", kAudio, kOutput, 0).has_value());
+    CHECK(!dst.unregister_port(*out).has_value());
+    CHECK(!src.register_port("out", kAudio, kOutput, 0).has_value());   // the name is taken
+
+    // The server connects only the ports of active clients. Without a process callback no thread runs.
+    CHECK(src.activate().has_value() && dst.activate().has_value());
+    CHECK(src.connect_ports("ports_src:out", "ports_dst:in").has_value());
+    CHECK(src.is_connected(*out, *in));
+    const auto links = src.connections(*out);
+    CHECK(std::find(links.begin(), links.end(), "ports_dst:in") != links.end());
+    CHECK(src.disconnect_ports("ports_src:out", "ports_dst:in").has_value());
+    CHECK(!src.is_connected(*out, *in));
+
+    CHECK(src.unregister_port(*out).has_value());
+    CHECK(!src.find_port("ports_src:out").has_value());
+    CHECK(dst.unregister_port(*in).has_value());
+    CHECK(src.deactivate().has_value() && dst.deactivate().has_value());
+
+    CHECK((*target)->close().has_value());
+    CHECK((*source)->close().has_value());
+}
+
 } // end of anonymous namespace
 
 int main()
@@ -156,6 +216,7 @@ int main()
     }
 
     check_activation(exact);
+    check_ports(exact);
 
     CHECK((*first)->close().has_value());
     auto again = ClientSession::open("session_e2e", exact);

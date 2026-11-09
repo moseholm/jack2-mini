@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -35,12 +36,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "jackmini/error.hpp"
 #include "jackmini/options.hpp"
 #include "jackmini/port.hpp"
+#include "jackmini/uuid.hpp"
 #include "process_context.hpp"
 #include "JackClientControl.h"
 #include "JackNotification.h"
 #include "JackRequest.h"
 #include "JackShmMem.h"
 #include "JackSocket.h"
+#include "JackTypes.h"
 
 namespace jackmini::client
 {
@@ -71,6 +74,26 @@ class JACKMINI_API ClientSession
 
         bool is_active() const noexcept;
 
+        // Ports, by the graph's port numbers. The public Client keeps the handles that it gives out.
+        Result<jack_port_id_t> register_port(std::string_view short_name, const char* type, unsigned long flags, unsigned long buffer_size);
+        Result<void> unregister_port(jack_port_id_t port);
+        Result<void> connect_ports(std::string_view source, std::string_view destination);
+        Result<void> disconnect_ports(std::string_view source, std::string_view destination);
+        bool owns(jack_port_id_t port) const;
+        std::string_view port_name(jack_port_id_t port) const;
+        const char* port_type(jack_port_id_t port) const;
+        unsigned long port_flags(jack_port_id_t port) const;
+        std::optional<jack_port_id_t> find_port(std::string_view full_name) const;
+        std::vector<std::string> port_names(const char* type, unsigned long flags) const;
+        std::vector<std::string> connections(jack_port_id_t port) const;
+        bool is_connected(jack_port_id_t source, jack_port_id_t destination) const;
+
+        // Identity and timing.
+        Result<Uuid> lookup_uuid();
+        FrameCount sample_rate() const noexcept;
+        FrameCount buffer_size() const noexcept;
+        float cpu_load() const noexcept;
+
         // Unregisters the client and stops the notifications. Calling it again does nothing. An active client is
         // deactivated first.
         Result<void> close();
@@ -91,6 +114,7 @@ class JACKMINI_API ClientSession
         void shut_down_sockets();
 
         static void* realtime_entry(void* arg);
+        void wait_graph_change() const;
         bool start_realtime();
         void stop_realtime();
         void realtime_run();

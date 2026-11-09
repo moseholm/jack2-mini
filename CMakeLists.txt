@@ -106,6 +106,7 @@ set(JACK_CLIENT_SOURCES
     client/JackLibClient.cpp
     client/jackmini/client.cpp
     client/process_context.cpp
+    client/jackmini/uuid.cpp
     client/client_session.cpp
     client/jackmini/lib.cpp
     server/JackMetadata.cpp

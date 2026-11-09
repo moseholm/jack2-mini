@@ -357,6 +357,180 @@ int ClientSession::transact(JackRequest& request, JackResult& reply)
     return 0;
 }
 
+Result<jack_port_id_t> ClientSession::register_port(std::string_view short_name, const char* type, unsigned long flags, unsigned long buffer_size)
+{
+    if (short_name.empty()) {
+        jack_error("port_name is empty");
+        return std::unexpected(Error::InvalidArgument);
+    }
+    const std::string full_name = name_ + ":" + std::string(short_name);
+    if (full_name.size() >= REAL_JACK_PORT_NAME_SIZE) {
+        jack_error("\"%s\" is too long to be used as a JACK port name.", full_name.c_str());
+        return std::unexpected(Error::InvalidArgument);
+    }
+
+    JackPortRegisterRequest request(ref_, full_name.c_str(), type, static_cast<unsigned int>(flags), static_cast<unsigned int>(buffer_size));
+    JackPortRegisterResult reply;
+    if (transact(request, reply) < 0 || reply.fResult < 0) {
+        return std::unexpected(Error::ServerFailure);
+    }
+    return reply.fPortIndex;
+}
+
+Result<void> ClientSession::unregister_port(jack_port_id_t port)
+{
+    if (!owns(port)) {
+        jack_error("unregistering a port %ld that is not own by the client", port);
+        return std::unexpected(Error::NotFound);
+    }
+    JackPortUnRegisterRequest request(ref_, port);
+    JackResult reply;
+    if (transact(request, reply) < 0 || reply.fResult < 0) {
+        return std::unexpected(Error::ServerFailure);
+    }
+    return {};
+}
+
+Result<void> ClientSession::connect_ports(std::string_view source, std::string_view destination)
+{
+    if (source.size() >= REAL_JACK_PORT_NAME_SIZE || destination.size() >= REAL_JACK_PORT_NAME_SIZE) {
+        return std::unexpected(Error::InvalidArgument);
+    }
+    const std::string src(source);
+    const std::string dst(destination);
+    JackPortConnectNameRequest request(ref_, src.c_str(), dst.c_str());
+    JackResult reply;
+    if (transact(request, reply) < 0 || reply.fResult < 0) {
+        return std::unexpected(Error::ServerFailure);
+    }
+    return {};
+}
+
+Result<void> ClientSession::disconnect_ports(std::string_view source, std::string_view destination)
+{
+    if (source.size() >= REAL_JACK_PORT_NAME_SIZE || destination.size() >= REAL_JACK_PORT_NAME_SIZE) {
+        return std::unexpected(Error::InvalidArgument);
+    }
+    const std::string src(source);
+    const std::string dst(destination);
+    JackPortDisconnectNameRequest request(ref_, src.c_str(), dst.c_str());
+    JackResult reply;
+    if (transact(request, reply) < 0 || reply.fResult < 0) {
+        return std::unexpected(Error::ServerFailure);
+    }
+    return {};
+}
+
+bool ClientSession::owns(jack_port_id_t port) const
+{
+    return port > 0 && port < PORT_NUM_MAX && context_->graph->GetPort(port)->GetRefNum() == ref_;
+}
+
+std::string_view ClientSession::port_name(jack_port_id_t port) const
+{
+    if (port == 0 || port >= PORT_NUM_MAX) {
+        return {};
+    }
+    return context_->graph->GetPort(port)->GetName();
+}
+
+const char* ClientSession::port_type(jack_port_id_t port) const
+{
+    return context_->graph->GetPort(port)->GetType();
+}
+
+unsigned long ClientSession::port_flags(jack_port_id_t port) const
+{
+    return context_->graph->GetPort(port)->GetFlags();
+}
+
+std::optional<jack_port_id_t> ClientSession::find_port(std::string_view full_name) const
+{
+    const std::string text(full_name);
+    const jack_port_id_t port = context_->graph->GetPort(text.c_str());
+    if (port == NO_PORT) {
+        return std::nullopt;
+    }
+    return port;
+}
+
+namespace
+{
+
+// The graph gives a list of names that point into its own table, and a list that it allocated. The names are copied
+// and the list is freed.
+std::vector<std::string> take_names(const char** list)
+{
+    std::vector<std::string> names;
+    if (list == nullptr) {
+        return names;
+    }
+    for (const char** entry = list; *entry != nullptr; entry++) {
+        names.emplace_back(*entry);
+    }
+    free(list);
+    return names;
+}
+
+} // end of anonymous namespace
+
+std::vector<std::string> ClientSession::port_names(const char* type, unsigned long flags) const
+{
+    return take_names(context_->graph->GetPorts(nullptr, type, flags));
+}
+
+std::vector<std::string> ClientSession::connections(jack_port_id_t port) const
+{
+    wait_graph_change();
+    return take_names(context_->graph->GetConnections(port));
+}
+
+bool ClientSession::is_connected(jack_port_id_t source, jack_port_id_t destination) const
+{
+    wait_graph_change();
+    return context_->graph->IsConnected(source, destination) != 0;
+}
+
+void ClientSession::wait_graph_change() const
+{
+    // A pending graph change is waited for on a client's own thread only. The realtime thread reads the current state.
+    if (on_realtime_thread) {
+        return;
+    }
+    if (context_->graph->IsPendingChange()) {
+        sleep_microseconds(int(context_->engine->fPeriodUsecs * 1.1f));
+    }
+}
+
+Result<Uuid> ClientSession::lookup_uuid()
+{
+    JackGetUUIDRequest request(name_.c_str());
+    JackUUIDResult reply;
+    if (transact(request, reply) < 0 || reply.fResult < 0) {
+        return std::unexpected(Error::ServerFailure);
+    }
+    const auto parsed = Uuid::parse(reply.fUUID);
+    if (!parsed) {
+        return std::unexpected(Error::Protocol);
+    }
+    return *parsed;
+}
+
+FrameCount ClientSession::sample_rate() const noexcept
+{
+    return context_->engine->fSampleRate;
+}
+
+FrameCount ClientSession::buffer_size() const noexcept
+{
+    return context_->engine->fBufferSize;
+}
+
+float ClientSession::cpu_load() const noexcept
+{
+    return context_->engine->fCPULoad;
+}
+
 bool ClientSession::is_active() const noexcept
 {
     return ref_ >= 0 && client_->fActive;
