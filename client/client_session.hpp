@@ -22,12 +22,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <atomic>
 #include <condition_variable>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <string_view>
 #include <thread>
 
+#include <pthread.h>
+
+#include "jackmini/client.hpp"
 #include "jackmini/error.hpp"
 #include "jackmini/options.hpp"
 #include "jackmini/port.hpp"
@@ -55,7 +59,20 @@ class JACKMINI_API ClientSession
         ClientSession& operator=(const ClientSession&) = delete;
         ~ClientSession();
 
-        // Unregisters the client and stops the notifications. Calling it again does nothing.
+        // The process callback. It is set while the client is inactive, and used by the next activate().
+        void set_process(std::move_only_function<bool(const Cycle&)> fn) { process_ = std::move(fn); }
+
+        // Activates the client: with a process callback, the realtime thread runs each cycle. A client without one
+        // takes part in the graph only through its connections.
+        Result<void> activate();
+
+        // Stops the realtime thread, after the server has taken the client out of the graph.
+        Result<void> deactivate();
+
+        bool is_active() const noexcept;
+
+        // Unregisters the client and stops the notifications. Calling it again does nothing. An active client is
+        // deactivated first.
         Result<void> close();
 
         int ref() const noexcept { return ref_; }
@@ -72,6 +89,15 @@ class JACKMINI_API ClientSession
         int handle_notification(const JackClientNotification& event);
         int transact(JackRequest& request, JackResult& reply);
         void shut_down_sockets();
+
+        static void* realtime_entry(void* arg);
+        bool start_realtime();
+        void stop_realtime();
+        void realtime_run();
+        bool wait_cycle();
+        void signal_cycle();
+        Cycle build_cycle() const;
+        void end_cycles_on_failure();
 
         ProcessContext* context_;
         JackClientSocket request_;
@@ -91,6 +117,12 @@ class JACKMINI_API ClientSession
         int ref_ = -1;
         std::atomic<bool> closing_{false};
         std::atomic<bool> server_down_{false};
+
+        std::move_only_function<bool(const Cycle&)> process_;
+        pthread_t realtime_thread_{};
+        std::mutex realtime_mutex_;         // guards the thread: start, stop, and the freewheel scheduling changes
+        std::atomic<bool> realtime_running_{false};
+        std::atomic<bool> realtime_stop_{false};
 };
 
 } // end of namespace

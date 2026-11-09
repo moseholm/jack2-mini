@@ -30,7 +30,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackTime.h"
 #include "JackTools.h"
 
+#include "JackFrameTimer.h"
+
 #include <array>
+#include <cerrno>
+#include <climits>
 #include <cstdlib>
 #include <cstring>
 #include <sys/socket.h>
@@ -45,6 +49,38 @@ namespace
 
 // Set on the notification thread, so a call to the server from there is refused instead of deadlocking.
 thread_local bool on_notification_thread = false;
+
+// Set on the realtime thread of a client.
+thread_local bool on_realtime_thread = false;
+
+#ifndef SCHED_RESET_ON_FORK
+#define SCHED_RESET_ON_FORK 0x40000000
+#endif
+
+// The realtime class (SCHED_FIFO) for a thread: the same request as the thread of the server, with the reset on fork
+// when the system knows it.
+int acquire_realtime(pthread_t thread, int priority)
+{
+    sched_param param{};
+    param.sched_priority = priority;
+    const int res = pthread_setschedparam(thread, SCHED_FIFO, &param);
+    if (res == 0) {
+        return 0;
+    }
+    if (pthread_setschedparam(thread, SCHED_FIFO | SCHED_RESET_ON_FORK, &param) == 0) {
+        return 0;
+    }
+    jack_error("Cannot use real-time scheduling (RR/%d) (%d: %s)", priority, res, strerror(res));
+    return -1;
+}
+
+void drop_realtime(pthread_t thread)
+{
+    sched_param param{};
+    if (pthread_setschedparam(thread, SCHED_OTHER, &param) != 0) {
+        jack_error("Cannot switch to normal scheduling priority(%s)", strerror(errno));
+    }
+}
 
 std::string default_server_name()
 {
@@ -275,6 +311,25 @@ int ClientSession::handle_notification(const JackClientNotification& event)
         case kShutDownCallback:
             server_down_ = true;
             break;
+        case kStartFreewheelCallback: {
+            setup_driver_sync(context, true);
+            // Freewheel runs the cycles without the sound card, so the realtime class is given up while it lasts.
+            std::lock_guard lock(realtime_mutex_);
+            if (realtime_running_ && is_active()) {
+                drop_realtime(realtime_thread_);
+            }
+            break;
+        }
+        case kStopFreewheelCallback: {
+            setup_driver_sync(context, false);
+            std::lock_guard lock(realtime_mutex_);
+            if (context.engine->fRealTime && realtime_running_ && is_active()) {
+                if (acquire_realtime(realtime_thread_, context.engine->fClientPriority) < 0) {
+                    jack_error("JackClient::AcquireRealTime error");
+                }
+            }
+            break;
+        }
     }
     return res;
 }
@@ -302,6 +357,178 @@ int ClientSession::transact(JackRequest& request, JackResult& reply)
     return 0;
 }
 
+bool ClientSession::is_active() const noexcept
+{
+    return ref_ >= 0 && client_->fActive;
+}
+
+Result<void> ClientSession::activate()
+{
+    if (ref_ < 0) {
+        return std::unexpected(Error::InvalidState);
+    }
+    if (is_active()) {
+        return {};
+    }
+
+    const bool real_time = static_cast<bool>(process_);
+    if (real_time && !start_realtime()) {
+        return std::unexpected(Error::ServerFailure);
+    }
+
+    // Insertion of the client in the graph causes a graph order notification, which the client wants. The transport
+    // flags are set as they were before: the server asks the client about transport through them.
+    client_->fActive = true;
+    client_->fTransportSync = true;
+    client_->fTransportTimebase = true;
+    client_->fCallback[kRealTimeCallback] = real_time;
+
+    JackActivateRequest request(ref_, real_time);
+    JackResult reply;
+    if (transact(request, reply) < 0 || reply.fResult < 0) {
+        client_->fActive = false;
+        client_->fTransportSync = false;
+        client_->fTransportTimebase = false;
+        stop_realtime();
+        return std::unexpected(Error::ServerFailure);
+    }
+    return {};
+}
+
+Result<void> ClientSession::deactivate()
+{
+    if (!is_active()) {
+        // A thread that ended by itself after a failed cycle still has to be joined.
+        stop_realtime();
+        return {};
+    }
+
+    client_->fActive = false;
+    client_->fTransportSync = false;
+    client_->fTransportTimebase = false;
+
+    // The server takes the client out of the graph and waits for the cycle to finish before it answers. Only then is the
+    // realtime thread stopped.
+    JackDeactivateRequest request(ref_);
+    JackResult reply;
+    const bool ok = transact(request, reply) == 0 && reply.fResult == 0;
+    stop_realtime();
+    return ok ? Result<void>{} : std::unexpected(Error::ServerFailure);
+}
+
+bool ClientSession::start_realtime()
+{
+    std::lock_guard lock(realtime_mutex_);
+    realtime_stop_ = false;
+    if (pthread_create(&realtime_thread_, nullptr, &ClientSession::realtime_entry, this) != 0) {
+        jack_error("Start thread error");
+        return false;
+    }
+    realtime_running_ = true;
+    return true;
+}
+
+void ClientSession::stop_realtime()
+{
+    std::lock_guard lock(realtime_mutex_);
+    if (!realtime_running_) {
+        return;
+    }
+    // A running thread belongs to an open client, so ref_ is valid here.
+    realtime_stop_ = true;
+    // The thread may be waiting for a cycle. The signal wakes it, and it checks the stop flag before it runs a cycle.
+    context_->synchro[ref_].Signal();
+    pthread_join(realtime_thread_, nullptr);
+    realtime_running_ = false;
+    // A wake-up that the thread did not take must not reach the next activation.
+    context_->synchro[ref_].TimedWait(0);
+}
+
+void* ClientSession::realtime_entry(void* arg)
+{
+    static_cast<ClientSession*>(arg)->realtime_run();
+    return nullptr;
+}
+
+void ClientSession::realtime_run()
+{
+    on_realtime_thread = true;
+    if (context_->engine->fRealTime) {
+        set_threaded_log_function();
+        if (acquire_realtime(pthread_self(), context_->engine->fClientPriority) < 0) {
+            jack_error("JackClient::AcquireSelfRealTime error");
+        }
+    }
+
+    // The first wait is the dummy cycle that the old client ran too: the thread is in step with the graph before the
+    // first process call. It signals its outputs without calling the process callback.
+    if (!wait_cycle()) {
+        return;
+    }
+    signal_cycle();
+
+    while (wait_cycle()) {
+        const Cycle cycle = build_cycle();
+        if (!process_(cycle)) {
+            signal_cycle();
+            end_cycles_on_failure();
+            return;
+        }
+        signal_cycle();
+    }
+}
+
+bool ClientSession::wait_cycle()
+{
+    if (context_->graph->SuspendRefNum(client_.GetShmAddress(), context_->synchro, LONG_MAX) < 0) {
+        jack_error("SuspendRefNum error");
+        return false;
+    }
+    return !realtime_stop_;
+}
+
+void ClientSession::signal_cycle()
+{
+    if (context_->graph->ResumeRefNum(client_.GetShmAddress(), context_->synchro) < 0) {
+        jack_error("ResumeRefNum error");
+    }
+}
+
+Cycle ClientSession::build_cycle() const
+{
+    Cycle cycle;
+    cycle.frames = context_->engine->fBufferSize;
+    JackTimer timer;
+    context_->engine->ReadFrameTime(&timer);
+    jack_nframes_t current_frames = 0;
+    jack_time_t current_usecs = 0;
+    jack_time_t next_usecs = 0;
+    float period_usecs = 0.0f;
+    if (timer.GetCycleTimes(&current_frames, &current_usecs, &next_usecs, &period_usecs) == 0) {
+        cycle.current_frames = current_frames;
+        cycle.current_usecs = current_usecs;
+        cycle.next_usecs = next_usecs;
+        cycle.period_usecs = period_usecs;
+    }
+    cycle.freewheel = context_->engine->fFreewheel.load();
+    return cycle;
+}
+
+void ClientSession::end_cycles_on_failure()
+{
+    // The process callback failed: the client leaves the graph, as the old client did. The realtime class is given up
+    // first, so that the server's answer does not wait for this thread.
+    drop_realtime(pthread_self());
+    client_->fActive = false;
+    client_->fTransportSync = false;
+    client_->fTransportTimebase = false;
+    JackDeactivateRequest request(ref_);
+    JackResult reply;
+    if (transact(request, reply) < 0 || reply.fResult < 0) {
+        jack_error("Deactivation after a failed cycle did not complete");
+    }
+}
+
 void ClientSession::shut_down_sockets()
 {
     shut_down_fd(notify_listen_.GetFd());
@@ -314,7 +541,10 @@ Result<void> ClientSession::close()
         return {};
     }
 
-    // The notifications stop first, so no notification arrives while the client is closed.
+    // An active client is deactivated first, which also stops its realtime thread.
+    (void)deactivate();
+
+    // The notifications stop, so no notification arrives while the client is closed.
     shut_down_sockets();
     if (notifier_.joinable()) {
         notifier_.join();
