@@ -27,6 +27,7 @@ Written so a new session can pick up without the conversation. Read this file fi
 | S7: server and protocol | done (`a0f275e1` to `ab182c4e`) | see "Next" |
 | S9: remove the C (resampler kernels stay) | done (`9ab39c81`, `38bcbfe5`) | see "Next" |
 | S10: validation | done (`f38b6e2c`; `docs/design/validation.md`) | see "Next" |
+| Tools: the command-line tools, rebuilt on the jackmini API | not started; 4 decisions open | see "Tools" |
 
 ## Decisions (do not revisit without the user)
 
@@ -118,6 +119,50 @@ Hardware and measurement:
 - Plan A (`c7e8dfd3` to `0df63f3a`): the client on `ClientSession`; the old client library (`JackLibClient`,
   `JackClient`, `lib.cpp`, `JackGenericClientChannel`) is deleted.
 
+## Tools
+
+The command-line tools (`jack_lsp`, `jack_connect`, and the rest) were removed with the old C client. They are
+being rebuilt in `tools/` on the jackmini client API. This is not part of the master plan; the full plan is outside
+the repo, at `/home/hjj/.opencode/plan/tools-port.md`, and this section is the summary.
+
+In this plan:
+
+| Tool | What it does | Needs from the API |
+|---|---|---|
+| `jack_lsp` | lists ports; `-p` flags, `-t` types, `-c` connections, `-u` UUID, `-l` and `-L` latency | `port_names`, `port_type`, `port_flags`, `connections`, `uuid`, `port_latency` |
+| `jack_connect`, `jack_disconnect` | connect or disconnect two ports | `find_port`, `connect`, `disconnect` |
+| `jack_samplerate` | prints the server's sample rate | `sample_rate` |
+| `jack_wait` | waits for the server to start or stop | open and close only |
+| `jack_midi_dump` | prints the MIDI events of an input port | MIDI ports, `midi_buffer`, process callback |
+| `jack_monitor_client` | copies a client's inputs to a monitor output | ports, `audio_buffer`, process callback |
+
+Not in this plan (they need API that does not exist, or were dropped on purpose): `jack_bufsize`, `jack_freewheel`,
+`jack_transport`, `jack_evmon`, `jack_alias`, `jack_session_notify`, `jack_property`, `jack_ipload`, `jack_ipunload`,
+the net and ALSA bridge tools, and the example clients. Each needs its own decision later.
+
+Layout: `tools/` at the repo root, behind the CMake option `JACK_TOOLS` (default on). One source file per tool
+(`tools/lsp.cpp` builds `jack_lsp`). A small shared helper, `tools/tool_common.hpp`, only where two tools share code.
+Tools use only `client/jackmini/` headers and link `jack` and `jackmini_base`.
+
+Steps, one commit each, each passing the unit suite and its tool test:
+
+- T0: the skeleton, the CMake option, and `tests/tools_e2e.sh` (starts `jackd -d dummy` under a private name, runs
+  each tool, checks exit status and one output line, stops the server). Run from `check.sh`, not from ctest.
+- T1: `jack_lsp`. Output format identical to the old tool, checked against golden lines from
+  `git show 564c710e~1:tools/lsp.c`.
+- T2: `jack_connect`, `jack_disconnect`.
+- T3: `jack_samplerate`, `jack_wait`.
+- T4: `jack_monitor_client`.
+- T5: `jack_midi_dump`, with a test client under `tests/`, not a tool.
+
+Decisions still open (none answered yet; ask the user before T1):
+
+1. Total latency for `jack_lsp -l`: add a total-latency query to the public API, or print the port's own range only.
+   The plan assumes the range only.
+2. Aliases (`-A`): dropped from `jack_lsp`, which says so if the option is given.
+3. `jack_disconnect`: one source with two executables (the plan's choice), or two source files.
+4. Install: install the tools with the library, or only build them. The plan installs them.
+
 ## Next
 
 S6 is done. Its stages (each: build, `check.sh`, commit, push) are listed for the record.
@@ -140,7 +185,8 @@ S10 is done (`docs/design/validation.md`): ASan, UBSan and TSAN over the unit su
 allocations in the steady window; syscalls per cycle below the S0 baseline with no new kind; the latency matches the
 baseline. The RT hardware runs are the user's.
 
-The plan's steps are all done. Remaining work is the user's: the RT hardware runs, and the ARM boards.
+The plan's steps are all done. Remaining work is the user's: the RT hardware runs, and the ARM boards. The next
+work for the agent is the tools (see "Tools").
 
 S7 is done (gate: the protocol conformance and notify overflow suites pass). Left on purpose: `JackRequestDecoder::HandleRequest`
 and the framing returns (the protocol loop's `int`); `JackExternalClient::ClientNotify` and `Close` (the client interface's `int`);
