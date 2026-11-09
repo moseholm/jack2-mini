@@ -7,12 +7,14 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/bin/jackd",
             "args": [
+                "-v",
+                "-n", "minijack",
                 "-d", "alsa",
-                "-d", "hw:0",
+                "-d", "hw:CARD=PCH",
                 "-C",
                 "-r", "48000",
                 "-p", "1024",
-                "--secondary-file", ".vscode/secondary-loopback.conf"
+                "--exclude-card=Loopback"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -23,6 +25,7 @@
             ],
             "externalConsole": false,
             "MIMode": "gdb",
+            "preLaunchTask": "jack: build",
             "setupCommands": [
                 { "description": "Enable pretty-printing for gdb", "text": "-enable-pretty-printing", "ignoreFailures": true }
             ]
@@ -40,6 +43,7 @@
                 { "name": "HOME", "value": "/tmp/opencode/jackhome" }
             ],
             "MIMode": "gdb",
+            "preLaunchTask": "jack: build",
             "setupCommands": [
                 { "description": "Enable pretty-printing for gdb", "text": "-enable-pretty-printing", "ignoreFailures": true }
             ]

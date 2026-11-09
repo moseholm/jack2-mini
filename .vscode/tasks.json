@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "jack: configure",
+            "type": "shell",
+            "command": "bash",
+            "args": ["${workspaceFolder}/configure.sh"],
+            "problemMatcher": []
+        },
+        {
+            "label": "jack: build",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["--build", "${workspaceFolder}/build", "--parallel", "8"],
+            "dependsOn": "jack: configure",
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
