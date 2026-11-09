@@ -7,5 +7,8 @@ function(add_jackmini_tool name)
     add_executable(${name} ${ARGN})
     target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(${name} PRIVATE jack jackmini_base Threads::Threads)
+    target_compile_definitions(${name} PRIVATE JACK_VERSION="${JACK_VERSION}")
     install(TARGETS ${name} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endfunction()
+
+add_jackmini_tool(jackmini_lsp lsp.cpp)

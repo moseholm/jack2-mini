@@ -23,6 +23,7 @@ export JACK_DRIVER_DIR=$BUILD/lib/jack
 CHECKS=0
 FAILED=0
 SERVER_PID=
+T=$'\t'
 
 say() {
     printf '%-64s %s\n' "$1" "$2"
@@ -80,13 +81,47 @@ check() {
     fi
 }
 
+# check_absent <description> <command...>: the command exits 0 and its output has no line that the pattern matches.
+check_absent() {
+    local what=$1 pattern=$2
+    shift 2
+    local out status
+    out=$("$@" 2>&1)
+    status=$?
+    CHECKS=$((CHECKS + 1))
+    if [ "$status" -eq 0 ] && ! grep -Eq -- "$pattern" <<< "$out"; then
+        say "$what" "ok"
+    else
+        say "$what" "FAIL (status $status)"
+        sed 's/^/    /' <<< "$out"
+        FAILED=$((FAILED + 1))
+    fi
+}
+
 trap stop_server EXIT
 
 start_server
 
-# The checks of each tool are added with its step (T1 to T5).  Each one runs the tool with -s "$NAME".
+# jackmini_lsp (T1).  The dummy driver has two capture ports (outputs) and two playback ports (inputs).
+LSP=$BIN/jackmini_lsp
+check "lsp: lists the capture ports" 0 '^system:capture_1$' "$LSP" -s "$NAME"
+check "lsp: lists the playback ports" 0 '^system:playback_2$' "$LSP" -s "$NAME"
+check "lsp: a filter keeps the ports that match all the strings" 0 '^system:capture_2$' "$LSP" -s "$NAME" capture _2
+check_absent "lsp: a filter drops the ports that do not match" '^system:playback' "$LSP" -s "$NAME" capture _2
+check "lsp: -t prints the stored type string" 0 "^${T}32 bit float mono audio\$" "$LSP" -s "$NAME" -t capture_1
+check "lsp: -p prints the properties with a trailing comma" 0 "^${T}properties: output,physical,terminal,\$" "$LSP" -s "$NAME" -p capture_1
+check "lsp: -l prints the playback latency, then the capture latency" 0 "^${T}port capture latency = \[ [0-9]+ [0-9]+ \] frames\$" "$LSP" -s "$NAME" -l capture_1
+check "lsp: -L prints the total latency" 0 "^${T}total latency = [0-9]+ frames\$" "$LSP" -s "$NAME" -L capture_1
+check "lsp: -U prints the port UUID" 0 "^${T}uuid: [0-9]+\$" "$LSP" -s "$NAME" -U capture_1
+check "lsp: -u prints the owner's UUID for the client part of the name" 0 '^[0-9]+:capture_1$' "$LSP" -s "$NAME" -u capture_1
+check "lsp: -h prints the usage and exits with status 1" 1 'Usage: jackmini_lsp' "$LSP" -h
+check "lsp: --version prints the version" 0 '^jackmini_lsp [0-9.]+$' "$LSP" --version
+check "lsp: an unknown option is an error with status 1" 1 'invalid option' "$LSP" -Z
 
 stop_server
+
+# With no server running the tool fails with a message and status 1.
+check "lsp: no server is an error with status 1" 1 'server is not running' "$LSP" -s "$NAME"
 
 echo "tools: $CHECKS checks, $FAILED failed"
 [ $FAILED -eq 0 ]
