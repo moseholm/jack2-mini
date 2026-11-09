@@ -112,7 +112,6 @@ set(JACK_SERVER_SOURCES
     ${JACK_COMMON_SOURCES}
     server/JackAudioDriver.cpp
     server/JackTimedDriver.cpp
-    server/JackMidiDriver.cpp
     server/JackDriver.cpp
     server/JackEngine.cpp
     server/JackExternalClient.cpp
@@ -123,17 +122,6 @@ set(JACK_SERVER_SOURCES
     server/JackServerGlobals.cpp
     server/JackControlAPI.cpp
     server/JackRequestDecoder.cpp
-    server/JackMidiAsyncQueue.cpp
-    server/JackMidiAsyncWaitQueue.cpp
-    server/JackMidiBufferReadQueue.cpp
-    server/JackMidiBufferWriteQueue.cpp
-    server/JackMidiRawInputWriteQueue.cpp
-    server/JackMidiRawOutputWriteQueue.cpp
-    server/JackMidiReadQueue.cpp
-    server/JackMidiReceiveQueue.cpp
-    server/JackMidiSendQueue.cpp
-    server/JackMidiUtil.cpp
-    server/JackMidiWriteQueue.cpp
     server/JackMetadata.cpp
     platform/JackSocketServerChannel.cpp
     platform/JackSocketNotifyChannel.cpp
