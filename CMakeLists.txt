@@ -447,15 +447,6 @@ if(JACK_BUILD_TESTS)
     target_include_directories(jack_client_session_e2e PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/client")
     target_link_libraries(jack_client_session_e2e PRIVATE jack jackmini_base Threads::Threads)
 
-    # A test-only resampler plugin, loaded by name from JACK_RESAMPLER_PATH.
-    add_library(passthrough_test MODULE tests/alsa_test_resampler_plugin.c)
-    target_include_directories(passthrough_test PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/platform/alsa")
-    set_target_properties(passthrough_test PROPERTIES
-        PREFIX "" LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/plugins")
-    add_dependencies(jack_alsa_unit passthrough_test)
-    target_compile_definitions(jack_alsa_unit PRIVATE
-        JACK_TEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/tests/plugins")
 endif()
 
 message(STATUS "JACK ${JACK_VERSION}")

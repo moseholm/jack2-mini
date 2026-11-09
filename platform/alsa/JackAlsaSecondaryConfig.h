@@ -80,7 +80,7 @@ struct JackAlsaSecondaryConfig {
     JackAlsaSecondaryClock clock;
     JackAlsaSampleFormat sample_format;
 
-    // Resampler by name: "pipewire" (built in) or a plugin in JACK_RESAMPLER_PATH.
+    // Resampler by name. "pipewire" is the only one.
     std::string resampler;
 
     // Added by discovery rather than configured.  A failure to open such a card is

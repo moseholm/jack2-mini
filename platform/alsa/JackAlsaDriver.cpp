@@ -764,7 +764,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
 
         JackResamplerFactory* factory = JackResamplerFactory::Find(cfg.resampler.c_str());
         if (factory == NULL) {
-            jack_error("secondary card '%s': resampler '%s' is not available (set JACK_RESAMPLER_PATH for plugins)",
+            jack_error("secondary card '%s': resampler '%s' is not available",
                        cfg.name.c_str(), cfg.resampler.c_str());
             Close();
             return -1;

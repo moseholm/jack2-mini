@@ -93,7 +93,7 @@ class JackResamplerFactory
         // The factory used when no other is requested.
         static JackResamplerFactory* Default();
 
-        // Returns NULL for unknown names.  Only "pipewire" is built in.
+        // Returns NULL for unknown names.  Only "pipewire" exists.
         static JackResamplerFactory* Find(const char* name);
 };
 

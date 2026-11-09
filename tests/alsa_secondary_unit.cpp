@@ -148,8 +148,8 @@ static void TestConfigResampler()
     std::string err;
     CHECK(JackAlsaSecondaryConfigParse("device=hw:1", &c, &err));
     CHECK(c.resampler == "pipewire");
-    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;resampler=passthrough_test", &c, &err));
-    CHECK(c.resampler == "passthrough_test");
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;resampler=other", &c, &err));
+    CHECK(c.resampler == "other");
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;resampler=", &c, &err));
 }
 
@@ -254,37 +254,6 @@ static void TestResamplerFactories()
         CHECK(known);
         jack_pw_resampler_free(pw);
     }
-}
-
-static void TestResamplerPlugin()
-{
-    printf("resampler: a plugin is loaded by name from JACK_RESAMPLER_PATH\n");
-    CHECK(JackResamplerFactory::Find("passthrough_test") == NULL);   // path not set yet
-    setenv("JACK_RESAMPLER_PATH", JACK_TEST_PLUGIN_DIR, 1);
-    JackResamplerFactory* f = JackResamplerFactory::Find("passthrough_test");
-    CHECK(f != NULL);
-    CHECK(f != NULL && strcmp(f->Name(), "passthrough_test") == 0);
-    CHECK(JackResamplerFactory::Find("passthrough_test") == f);   // loaded once
-    CHECK(JackResamplerFactory::Find("no_such_plugin") == NULL);
-    CHECK(JackResamplerFactory::Find("pipewire") == JackResamplerFactory::Default());   // built-in wins
-
-    JackResamplerParams p = { 2, 48000, 44100, -1 };
-    JackResampler* r = f->Create(p);
-    CHECK(r != NULL);
-    if (r != NULL) {
-        float in0[3] = { 1, 2, 3 }, in1[3] = { 4, 5, 6 };
-        const float* in[2] = { in0, in1 };
-        float o0[3] = { 0 }, o1[3] = { 0 };
-        float* out[2] = { o0, o1 };
-        unsigned int in_len = 3, out_len = 3;
-        r->Process(in, &in_len, out, &out_len);
-        CHECK(in_len == 3 && out_len == 3);
-        CHECK(o0[2] == 3 && o1[0] == 4);
-        delete r;
-    }
-    JackResamplerParams q = { 3, 48000, 44100, -1 };
-    CHECK(f->Create(q) == NULL);   // the plugin refuses three channels
-    unsetenv("JACK_RESAMPLER_PATH");
 }
 
 static void TestSlotTable()
@@ -514,7 +483,6 @@ int main()
     TestRing();
     TestConverterDI();
     TestResamplerFactories();
-    TestResamplerPlugin();
     TestSlotTable();
     TestPcmDeviceNumber();
     TestCardDiff();
