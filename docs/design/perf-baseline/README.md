@@ -48,8 +48,9 @@ Syscalls: the total includes start-up. `clock_nanosleep` is about two per cycle.
 ## Not measured
 
 - ALSA syscalls and allocations per cycle: the card was busy, so the server had no driver. A run with the card
-  held by PipeWire showed the server creating a thread about 43,000 times in 10 s. That is a problem to look at
-  in the ALSA work: the server should not churn threads when a device is busy.
+  held by PipeWire showed the server creating a thread about 43,000 times in 10 s. That was the xrun recovery
+  path re-creating the control threads (fixed before the redesign, see `alsa-redesign.md`); the ALSA syscall and
+  allocation counts still need a clean run with one server and the card free.
 - Xruns with the card under load: none in these runs, with no client connected to the card's ports.
 
 ## Files

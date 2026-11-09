@@ -41,14 +41,9 @@ int JackExternalClient::ClientNotify(int refnum, const char* name, int notify, i
     return result;
 }
 
-int JackExternalClient::Open(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client)
+int JackExternalClient::OpenClient(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client)
 {
     try {
-
-        if (fChannel.Open(name) < 0) {
-            jack_error("Cannot connect to client name = %s\n", name);
-            return -1;
-        }
 
         // Use "placement new" to allocate object in shared memory
         JackShmMemAble* shared_mem = static_cast<JackShmMemAble*>(JackShmMem::operator new(sizeof(JackClientControl)));
@@ -68,6 +63,15 @@ int JackExternalClient::Open(const char* name, int pid, int refnum, jack_uuid_t 
     } catch (std::exception&) {
         return -1;
     }
+}
+
+int JackExternalClient::OpenChannel(const char* name)
+{
+    if (fChannel.Open(name) < 0) {
+        jack_error("Cannot connect to client name = %s\n", name);
+        return -1;
+    }
+    return 0;
 }
 
 int JackExternalClient::Close()

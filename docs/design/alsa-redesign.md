@@ -40,16 +40,26 @@ redesign must meet is in `perf-baseline/README.md`.
 
 ## Found in this session, to look at first
 
-- **Thread churn when the device is busy.** With the USB card held by PipeWire, the server created a thread
-  about 43,000 times in 10 s (`clone3` and `madvise` in the strace), and the log said "not available now
-  (Device or resource busy)" and then "driver is not running". The loop has to be found and fixed before the
-  redesign is measured. It is not in the baseline, which is a free card.
+- **Thread churn when the device cannot run.** A server whose ALSA device kept returning no frames looped in
+  `JackAlsaDriver::Read()`: each xrun recovery called `Stop()` and `Start()`, and those stopped and re-created the
+  control monitor, the hot-plug listener, and the reconfig worker. The RT thread never completed a cycle, so
+  `WaitForSwitches` refused every client, and the server churned about 4,400 threads per second (44,182 `clone3`
+  in 10 s under `strace`). An idle but healthy server under `strace` showed 7,604 `clone3` in 10 s, all from the
+  same restart path.
+  Fixed in this step:
+  - The control threads now live for the whole driver: an xrun recovery restarts the streams only.
+  - `Read()` bounds the consecutive recoveries (5) and calls `PrimaryFailed` instead of retrying forever. The
+    server stops when the primary device cannot deliver frames.
+  - The server opens the client's notification channel only after `WaitForSwitches` succeeds, so a refused open
+    does not create a writer thread.
+  After the fix an idle server under `strace` showed 6 `clone3` in 10 s (only the start-up threads).
 - **The card's clock.** At 64 and 128 frames the start-to-start interval is about 11 % to 12 % longer than the
   nominal period. The drift controller and the wait must keep working with that, not against the nominal rate.
 
 ## Steps (each one a commit with its tests)
 
-1. Find and fix the thread churn when the device is busy (a test with the fake backend that reports busy).
+1. ~~Find and fix the thread churn when the device cannot run.~~ Done: the control threads are not restarted by an
+   xrun recovery, the recovery loop is bounded, and the notification channel opens after the driver runs.
 2. The backend concept, the fake backend, and the cycle core for the playback and the capture, with unit tests
    on the fake backend: the avail, the xrun recovery, the sync, and the cycle counts.
 3. The libasound backend, and the adapter: `JackAlsaDriver` runs on the core. Check with the baseline script

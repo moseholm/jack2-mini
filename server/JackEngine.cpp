@@ -602,7 +602,7 @@ int JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, 
         goto error;
     }
 
-    if (client->Open(real_name.data(), pid, refnum, uuid, shared_client) < 0) {
+    if (client->OpenClient(real_name.data(), pid, refnum, uuid, shared_client) < 0) {
         jack_error("Cannot open client");
         goto error;
     }
@@ -610,6 +610,12 @@ int JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, 
     if (!WaitForSwitches(fSwitchCount.load() + 1)) {
         // Failure if RT thread is not running (problem with the driver...)
         jack_error("Driver is not running");
+        goto error;
+    }
+
+    // Only now that the driver runs: the channel starts a writer thread, and a refused open must not create one.
+    if (client->OpenChannel(real_name.data()) < 0) {
+        jack_error("Cannot open client channel");
         goto error;
     }
 

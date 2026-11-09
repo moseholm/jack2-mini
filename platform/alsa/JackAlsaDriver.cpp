@@ -951,8 +951,10 @@ int JackAlsaDriver::Start()
                 alsa_driver_stop((alsa_driver_t *)fDriver);
                 JackAudioDriver::Stop();
             } else {
-                StartControlMonitoring();
+                // An xrun recovery restarts the streams only.  The monitor, the hot-plug listener and the reconfig
+                // worker live for the whole driver, so a restarting driver must not create them again.
                 if (!fRestarting.load()) {
+                    StartControlMonitoring();
                     fRTRunning.store(true);
                 }
             }
@@ -1181,8 +1183,8 @@ int JackAlsaDriver::Stop()
 {
     if (!fRestarting.load()) {
         fRTRunning.store(false);
+        StopControlMonitoring();
     }
-    StopControlMonitoring();
     StopSecondaryCards();
     int res = alsa_driver_stop((alsa_driver_t *)fDriver);
     if (JackAudioDriver::Stop() < 0) {
@@ -1197,6 +1199,11 @@ int JackAlsaDriver::Read()
     int wait_status;
     jack_nframes_t nframes;
     fDelayedUsecs = 0.f;
+
+    // A real xrun recovers in one or two tries.  A device that keeps returning no frames must fail the driver
+    // instead of looping here forever and holding the server without a running cycle.
+    constexpr int kMaxRecoveries = 5;
+    int recoveries = 0;
 
 retry:
 
@@ -1218,6 +1225,10 @@ retry:
             if (card) {
                 card->ResetResampling();
             }
+        }
+        if (++recoveries > kMaxRecoveries) {
+            PrimaryFailed(-5);
+            return -1;
         }
         goto retry; /* recoverable error*/
     }

@@ -46,7 +46,10 @@ class JackExternalClient : public JackClientInterface
         JackExternalClient();
         virtual ~JackExternalClient();
 
-        int Open(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client);
+        // The shared client control is allocated first; the notification channel is opened only once the driver is
+        // known to be running, so a refused open does not create a writer thread.
+        int OpenClient(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client);
+        int OpenChannel(const char* name);
         int Close();
 
         int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
