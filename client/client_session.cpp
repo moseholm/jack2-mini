@@ -311,6 +311,11 @@ int ClientSession::handle_notification(const JackClientNotification& event)
         case kShutDownCallback:
             server_down_ = true;
             break;
+        case kLatencyCallback:
+            if (is_active()) {
+                res = handle_latency(event.fValue1);
+            }
+            break;
         case kStartFreewheelCallback: {
             setup_driver_sync(context, true);
             // Freewheel runs the cycles without the sound card, so the realtime class is given up while it lasts.
@@ -500,6 +505,81 @@ void ClientSession::wait_graph_change() const
     if (context_->graph->IsPendingChange()) {
         sleep_microseconds(int(context_->engine->fPeriodUsecs * 1.1f));
     }
+}
+
+// The server asks for the latency of the ports, in one direction (status 0 is capture, the others playback). The ports
+// measured in that direction get their range from their connections first; then the handler decides, or the default does.
+int ClientSession::handle_latency(int status)
+{
+    const jack_latency_callback_mode_t mode = (status == 0) ? JackCaptureLatency : JackPlaybackLatency;
+    ProcessContext& context = *context_;
+    std::vector<jack_port_id_t> ports;
+    context.graph->GetOwnedPorts(ref_, ports);
+
+    for (jack_port_id_t port : ports) {
+        const unsigned long flags = context.graph->GetPort(port)->GetFlags();
+        if ((flags & JackPortIsOutput) && mode == JackPlaybackLatency) {
+            context.graph->RecalculateLatency(port, mode);
+        }
+        if ((flags & JackPortIsInput) && mode == JackCaptureLatency) {
+            context.graph->RecalculateLatency(port, mode);
+        }
+    }
+
+    if (latency_) {
+        latency_(mode == JackCaptureLatency ? LatencyMode::Capture : LatencyMode::Playback);
+        return 0;
+    }
+
+    // Playback: the input ports take the widest range of the output ports. Capture: the output ports take the widest
+    // range of the input ports. This is the default that every port without a handler gets.
+    const bool playback = mode == JackPlaybackLatency;
+    const unsigned long measured = playback ? JackPortIsOutput : JackPortIsInput;
+    const unsigned long set_on = playback ? JackPortIsInput : JackPortIsOutput;
+    jack_latency_range_t latency = { UINT32_MAX, 0 };
+    for (jack_port_id_t port : ports) {
+        JackPort* p = context.graph->GetPort(port);
+        if (p->GetFlags() & measured) {
+            jack_latency_range_t other{};
+            p->GetLatencyRange(mode, &other);
+            latency.max = std::max(latency.max, other.max);
+            latency.min = std::min(latency.min, other.min);
+        }
+    }
+    if (latency.min == UINT32_MAX) {
+        latency.min = 0;
+    }
+    for (jack_port_id_t port : ports) {
+        JackPort* p = context.graph->GetPort(port);
+        if (p->GetFlags() & set_on) {
+            p->SetLatencyRange(mode, &latency);
+        }
+    }
+    return 0;
+}
+
+jack_latency_range_t ClientSession::port_latency_range(jack_port_id_t port, jack_latency_callback_mode_t mode) const
+{
+    wait_graph_change();
+    jack_latency_range_t range{};
+    context_->graph->GetPort(port)->GetLatencyRange(mode, &range);
+    return range;
+}
+
+void ClientSession::set_port_latency_range(jack_port_id_t port, jack_latency_callback_mode_t mode, jack_latency_range_t range)
+{
+    wait_graph_change();
+    context_->graph->GetPort(port)->SetLatencyRange(mode, &range);
+}
+
+Result<void> ClientSession::recompute_latencies()
+{
+    JackComputeTotalLatenciesRequest request;
+    JackResult reply;
+    if (transact(request, reply) < 0 || reply.fResult < 0) {
+        return std::unexpected(Error::ServerFailure);
+    }
+    return {};
 }
 
 void* ClientSession::port_buffer(jack_port_id_t port, jack_nframes_t frames) noexcept

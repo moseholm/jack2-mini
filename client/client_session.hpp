@@ -88,6 +88,13 @@ class JACKMINI_API ClientSession
         std::vector<std::string> connections(jack_port_id_t port) const;
         bool is_connected(jack_port_id_t source, jack_port_id_t destination) const;
 
+        // Latency. The latency handler runs on the notification thread when the server asks for the latency of this
+        // client's ports. Without a handler, the ports take the widest range of the ports that are measured.
+        void set_latency_handler(std::move_only_function<void(LatencyMode)> fn) { latency_ = std::move(fn); }
+        jack_latency_range_t port_latency_range(jack_port_id_t port, jack_latency_callback_mode_t mode) const;
+        void set_port_latency_range(jack_port_id_t port, jack_latency_callback_mode_t mode, jack_latency_range_t range);
+        Result<void> recompute_latencies();
+
         // The buffer of a port for the cycle being processed. It is valid inside the process callback. The realtime
         // path does not lock or allocate.
         void* port_buffer(jack_port_id_t port, jack_nframes_t frames) noexcept;
@@ -114,6 +121,7 @@ class JACKMINI_API ClientSession
         bool start_notifications();
         void notification_loop();
         int handle_notification(const JackClientNotification& event);
+        int handle_latency(int status);
         int transact(JackRequest& request, JackResult& reply);
         void shut_down_sockets();
 
@@ -147,6 +155,7 @@ class JACKMINI_API ClientSession
         std::atomic<bool> server_down_{false};
 
         std::move_only_function<bool(const Cycle&)> process_;
+        std::move_only_function<void(LatencyMode)> latency_;
         pthread_t realtime_thread_{};
         std::mutex realtime_mutex_;         // guards the thread: start, stop, and the freewheel scheduling changes
         std::atomic<bool> realtime_running_{false};

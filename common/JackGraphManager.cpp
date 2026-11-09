@@ -79,6 +79,17 @@ JackPort* JackGraphManager::GetPort(jack_port_id_t port_index)
     return &fPortArray[port_index];
 }
 
+void JackGraphManager::GetOwnedPorts(int refnum, std::vector<jack_port_id_t>& ports)
+{
+    ports.clear();
+    for (unsigned int i = FIRST_AVAILABLE_PORT; i < fPortMax; i++) {
+        const JackPort& port = fPortArray[i];
+        if (port.IsUsed() && port.GetRefNum() == refnum) {
+            ports.push_back(i);
+        }
+    }
+}
+
 jack_default_audio_sample_t* JackGraphManager::GetBuffer(jack_port_id_t port_index)
 {
     return fPortArray[port_index].GetBuffer();

@@ -242,6 +242,63 @@ void check_buffers(const jackmini::OpenOptions& exact)
     CHECK((*reader)->close().has_value());
 }
 
+// Latency: a range set by hand, the default that the server's latency request applies, and the handler that replaces
+// the default.
+void check_latency(const jackmini::OpenOptions& exact)
+{
+    using jackmini::client::ClientSession;
+    constexpr const char* kAudio = "32 bit float mono audio";
+    constexpr unsigned long kOutput = 0x2;
+    constexpr unsigned long kInput = 0x1;
+
+    auto client = ClientSession::open("lat_test", exact);
+    CHECK(client.has_value());
+    if (!client) {
+        return;
+    }
+    ClientSession& session = **client;
+    auto out_a = session.register_port("out_a", kAudio, kOutput, 0);
+    auto out_b = session.register_port("out_b", kAudio, kOutput, 0);
+    auto in = session.register_port("in", kAudio, kInput, 0);
+    CHECK(out_a.has_value() && out_b.has_value() && in.has_value());
+    if (!out_a || !out_b || !in) {
+        return;
+    }
+    CHECK(session.activate().has_value());
+
+    // The server asks only the clients that the driver reaches through the graph, so the input is connected to the
+    // driver's capture port.
+    CHECK(session.connect_ports("system:capture_1", "lat_test:in").has_value());
+
+    constexpr auto kPlayback = JackPlaybackLatency;
+    session.set_port_latency_range(*out_a, kPlayback, jack_latency_range_t{ 5, 15 });
+    CHECK(session.port_latency_range(*out_a, kPlayback).min == 5);
+    CHECK(session.port_latency_range(*out_a, kPlayback).max == 15);
+
+    // The default recalculates the output ports from their connections (none here, so {0, 0}), then sets the input
+    // ports to the widest of the outputs. A value set by hand on the input is replaced.
+    session.set_port_latency_range(*in, kPlayback, jack_latency_range_t{ 9, 9 });
+    CHECK(session.recompute_latencies().has_value());
+    CHECK(wait_for([&] {
+        const auto range = session.port_latency_range(*in, kPlayback);
+        return range.min == 0 && range.max == 0;
+    }));
+    CHECK(session.port_latency_range(*out_a, kPlayback).max == 0);
+
+    // A handler replaces the default: it is called for the mode the server asks about.
+    std::atomic<int> handler_calls{0};
+    session.set_latency_handler([&](jackmini::LatencyMode) { handler_calls.fetch_add(1); });
+    CHECK(session.recompute_latencies().has_value());
+    CHECK(wait_for([&] { return handler_calls.load() >= 1; }));
+
+    CHECK(session.disconnect_ports("system:capture_1", "lat_test:in").has_value());
+    CHECK(session.deactivate().has_value());
+    CHECK(session.unregister_port(*out_a).has_value());
+    CHECK(session.unregister_port(*out_b).has_value());
+    CHECK(session.unregister_port(*in).has_value());
+    CHECK((*client)->close().has_value());
+}
+
 } // end of anonymous namespace
 
 int main()
@@ -280,6 +337,7 @@ int main()
     check_activation(exact);
     check_ports(exact);
     check_buffers(exact);
+    check_latency(exact);
 
     CHECK((*first)->close().has_value());
     auto again = ClientSession::open("session_e2e", exact);

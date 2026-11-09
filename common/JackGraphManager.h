@@ -74,6 +74,8 @@ class SERVER_EXPORT JackGraphManager : public JackShmMem, public JackAtomicState
         void DisconnectAllPorts(int refnum);
 
         JackPort* GetPort(jack_port_id_t index);
+        // Read-only: the ports in use that belong to refnum, found in the port table.
+        void GetOwnedPorts(int refnum, std::vector<jack_port_id_t>& ports);
         jack_port_id_t GetPort(const char* name);
 
         int ComputeTotalLatency(jack_port_id_t port_index);
