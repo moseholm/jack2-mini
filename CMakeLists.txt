@@ -360,6 +360,14 @@ if(JACK_BUILD_TESTS)
     target_link_libraries(jack_alsa_unit PRIVATE jackserver m)
     add_test(NAME alsa_secondary_unit COMMAND jack_alsa_unit)
 
+    # The ALSA cycle core on a scripted fake backend: avail, xrun recovery,
+    # poll timeout, start/stop sync, and the channel copies.  Header-only.
+    add_executable(jack_pcm_cycle_unit tests/pcm_cycle_unit.cpp)
+    target_include_directories(jack_pcm_cycle_unit PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/platform/alsa"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+    add_test(NAME pcm_cycle_unit COMMAND jack_pcm_cycle_unit)
+
     # The realtime message buffer, run against the real singleton and flush thread.
     # The server's internals are hidden in libjackserver, so the test links
     # the server objects directly.
