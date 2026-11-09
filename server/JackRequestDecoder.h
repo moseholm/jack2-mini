@@ -22,11 +22,21 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackChannel.h"
 #include "JackMessage.h"
+#include "jackmini/error.hpp"
+
+#include <expected>
 
 namespace jackmini
 {
 
 class JackServer;
+
+// The protocol replies 0 on success and -1 on failure. The reason is logged where it was detected.
+inline int ReplyCode(const Result<void>& result)
+{
+    return result ? 0 : -1;
+}
+
 struct JackClientOpenRequest;
 struct JackClientOpenResult;
 

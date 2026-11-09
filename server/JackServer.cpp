@@ -101,7 +101,7 @@ int JackServer::Open(jack_driver_desc_t* driver_desc, JSList* driver_params)
         goto fail_close2;
     }
 
-    if (fEngine->Open() < 0) {
+    if (!fEngine->Open()) {
         jack_error("Cannot open engine");
         goto fail_close3;
     }

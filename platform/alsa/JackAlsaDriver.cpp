@@ -196,7 +196,7 @@ bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
 
     for (int i = 0; i < card->CaptureChannels(); i++) {
         jackmini::FormatCString(name, "{}:capture_{}_{}", fClientControl.fName, card->PortBase().c_str(), i + 1);
-        if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)CaptureDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
+        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)CaptureDriverFlags, fEngineControl->fBufferSize, &port_index)) {
             jack_error("driver: cannot register port for %s", name);
             UnregisterCardPorts(card);
             return false;
@@ -206,7 +206,7 @@ bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
 
     for (int i = 0; i < card->PlaybackChannels(); i++) {
         jackmini::FormatCString(name, "{}:playback_{}_{}", fClientControl.fName, card->PortBase().c_str(), i + 1);
-        if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
+        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index)) {
             jack_error("driver: cannot register port for %s", name);
             UnregisterCardPorts(card);
             return false;
@@ -379,7 +379,7 @@ int JackAlsaDriver::Attach()
     for (int i = 0; i < fCaptureChannels; i++) {
         jackmini::FormatCString(alias, "{}:{}:out{}", fAliasName.data(), fCaptureDriverName.data(), i + 1);
         jackmini::FormatCString(name, "{}:capture_{}", fClientControl.fName, i + 1);
-        if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)port_flags, fEngineControl->fBufferSize, &port_index) < 0) {
+        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)port_flags, fEngineControl->fBufferSize, &port_index)) {
             jack_error("driver: cannot register port for %s", name);
             return -1;
         }
@@ -394,7 +394,7 @@ int JackAlsaDriver::Attach()
     for (int i = 0; i < fPlaybackChannels; i++) {
         jackmini::FormatCString(alias, "{}:{}:in{}", fAliasName.data(), fPlaybackDriverName.data(), i + 1);
         jackmini::FormatCString(name, "{}:playback_{}", fClientControl.fName, i + 1);
-        if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)port_flags, fEngineControl->fBufferSize, &port_index) < 0) {
+        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)port_flags, fEngineControl->fBufferSize, &port_index)) {
             jack_error("driver: cannot register port for %s", name);
             return -1;
         }
@@ -407,7 +407,7 @@ int JackAlsaDriver::Attach()
         if (fWithMonitorPorts) {
             jack_log("Create monitor port");
             jackmini::FormatCString(name, "{}:monitor_{}", fClientControl.fName, i + 1);
-            if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, MonitorDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
+            if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, MonitorDriverFlags, fEngineControl->fBufferSize, &port_index)) {
                 jack_error("ALSA: cannot register monitor port for %s", name);
             } else {
                 fMonitorPortList[i] = port_index;

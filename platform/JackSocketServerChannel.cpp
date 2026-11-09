@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackRequest.h"
 #include "JackServer.h"
 #include "JackLockedEngine.h"
+#include "JackRequestDecoder.h"
 #include "JackGlobals.h"
 #include "JackTools.h"
 #include "JackNotification.h"
@@ -127,7 +128,7 @@ int JackSocketServerChannel::GetFd(JackClientSocket* socket_aux)
 void JackSocketServerChannel::ClientAdd(detail::JackChannelTransactionInterface* socket_aux, JackClientOpenRequest* req, JackClientOpenResult *res)
 {
     int refnum = -1;
-    res->fResult = fServer->GetEngine()->ClientExternalOpen(req->fName, req->fPID, req->fUUID, &refnum, &res->fSharedEngine, &res->fSharedClient, &res->fSharedGraph);
+    res->fResult = ReplyCode(fServer->GetEngine()->ClientExternalOpen(req->fName, req->fPID, req->fUUID, &refnum, &res->fSharedEngine, &res->fSharedClient, &res->fSharedGraph));
     if (res->fResult == 0) {
         JackClientSocket* socket = dynamic_cast<JackClientSocket*>(socket_aux);
         assert(socket);

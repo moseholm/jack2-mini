@@ -24,55 +24,19 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackMutex.h"
 #include "JackTools.h"
 #include "JackException.h"
+#include "jackmini/error.hpp"
+
+#include <expected>
+#include <new>
+#include <type_traits>
 
 namespace jackmini
 {
 
-#define TRY_CALL    \
-    try {           \
-
-/*
-See : http://groups.google.com/group/comp.programming.threads/browse_thread/thread/652bcf186fbbf697/f63757846514e5e5
-
-catch (...) {
-    // Assuming thread cancellation, must rethrow
-    throw;
-}
-*/
-
-#define CATCH_EXCEPTION_RETURN                      \
-    } catch (std::bad_alloc& e) {                    \
-        jack_error("Memory allocation error...");   \
-        return -1;                                  \
-    } catch (...) {                                 \
-        jack_error("Unknown error...");             \
-        throw;                                      \
-    }                                               \
-
-#define CATCH_CLOSE_EXCEPTION_RETURN                      \
-    } catch (std::bad_alloc& e) {                    \
-        jack_error("Memory allocation error...");   \
-        return -1;                                  \
-    } catch (JackTemporaryException& e) {                       \
-        jack_error("JackTemporaryException : now quits...");   \
-        JackTools::KillServer();                     \
-        return 0;                                   \
-    } catch (...) {                                 \
-        jack_error("Unknown error...");             \
-        throw;                                      \
-    }
-
-#define CATCH_EXCEPTION                      \
-    } catch (std::bad_alloc& e) {                    \
-        jack_error("Memory allocation error...");   \
-    } catch (...) {                                 \
-        jack_error("Unknown error...");             \
-        throw;                                      \
-    }                                               \
-
-
 /*!
 \brief Locked Engine, access to methods is serialized using a mutex.
+
+The methods return Result. The engine's int codes (0 on success) are converted here.
 */
 
 class SERVER_EXPORT JackLockedEngine
@@ -80,6 +44,65 @@ class SERVER_EXPORT JackLockedEngine
     private:
 
         JackEngine fEngine;
+
+        static Result<void> FromCode(int code)
+        {
+            return (code == 0) ? Result<void>{} : std::unexpected(Error::ServerFailure);
+        }
+
+        static Result<int> FromValue(int value)
+        {
+            return (value < 0) ? Result<int>(std::unexpected(Error::NotFound)) : Result<int>(value);
+        }
+
+        // An allocation failure in the engine becomes ServerFailure. Other exceptions are not handled here.
+        template <class F>
+        static auto Guard(F&& f) -> std::invoke_result_t<F>
+        {
+            using R = std::invoke_result_t<F>;
+            try {
+                return f();
+            } catch (const std::bad_alloc&) {
+                jack_error("Memory allocation error...");
+                if constexpr (std::is_void_v<R>) {
+                    return;
+                } else {
+                    return std::unexpected(Error::ServerFailure);
+                }
+            }
+        }
+
+        // Runs f with the engine locked.
+        template <class F>
+        auto Locked(F&& f) -> std::invoke_result_t<F>
+        {
+            JackLock lock(&fEngine);
+            return Guard(f);
+        }
+
+        // Runs f with the engine locked, if the client is registered.
+        template <class F>
+        auto Client(int refnum, F&& f) -> std::invoke_result_t<F>
+        {
+            JackLock lock(&fEngine);
+            if (!fEngine.CheckClient(refnum)) {
+                return std::unexpected(Error::NotFound);
+            }
+            return Guard(f);
+        }
+
+        // Closing the last client of a temporary server throws JackTemporaryException: the server quits.
+        template <class F>
+        Result<void> Closing(int refnum, F&& f)
+        {
+            try {
+                return Client(refnum, f);
+            } catch (const JackTemporaryException&) {
+                jack_error("JackTemporaryException : now quits...");
+                JackTools::KillServer();
+                return {};
+            }
+        }
 
     public:
 
@@ -93,141 +116,89 @@ class SERVER_EXPORT JackLockedEngine
         bool Unlock() { return fEngine.Unlock(); }
         bool Trylock() { return fEngine.Trylock(); }
 
-        int Open()
+        Result<void> Open()
         {
             // No lock needed
-            TRY_CALL
-            return fEngine.Open();
-            CATCH_EXCEPTION_RETURN
+            return Guard([&] { return FromCode(fEngine.Open()); });
         }
-        int Close()
+        Result<void> Close()
         {
             // No lock needed
-            TRY_CALL
-            return fEngine.Close();
-            CATCH_EXCEPTION_RETURN
+            return Guard([&] { return FromCode(fEngine.Close()); });
         }
 
         // Client management
-        int ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, int protocol, int options, int* status)
+        Result<void> ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, int protocol, int options, int* status)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.ClientCheck(name, uuid, name_res, protocol, options, status);
-            CATCH_EXCEPTION_RETURN
+            return Locked([&] { return FromCode(fEngine.ClientCheck(name, uuid, name_res, protocol, options, status)); });
         }
-        int ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager)
+        Result<void> ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.ClientExternalOpen(name, pid, uuid, ref, shared_engine, shared_client, shared_graph_manager);
-            CATCH_EXCEPTION_RETURN
+            return Locked([&] { return FromCode(fEngine.ClientExternalOpen(name, pid, uuid, ref, shared_engine, shared_client, shared_graph_manager)); });
         }
-        int RegisterDriver(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait)
+        Result<void> RegisterDriver(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.RegisterDriver(name, ref, shared_engine, shared_manager, client, wait);
-            CATCH_EXCEPTION_RETURN
+            return Locked([&] { return FromCode(fEngine.RegisterDriver(name, ref, shared_engine, shared_manager, client, wait)); });
         }
 
-        int ClientExternalClose(int refnum)
+        Result<void> ClientExternalClose(int refnum)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.ClientExternalClose(refnum) : -1;
-            CATCH_CLOSE_EXCEPTION_RETURN
+            return Closing(refnum, [&] { return FromCode(fEngine.ClientExternalClose(refnum)); });
         }
-        int UnregisterDriver(int refnum, bool wait)
+        Result<void> UnregisterDriver(int refnum, bool wait)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.UnregisterDriver(refnum, wait) : -1;
-            CATCH_CLOSE_EXCEPTION_RETURN
+            return Closing(refnum, [&] { return FromCode(fEngine.UnregisterDriver(refnum, wait)); });
         }
 
-        int ClientActivate(int refnum, bool is_real_time, bool wait)
+        Result<void> ClientActivate(int refnum, bool is_real_time, bool wait)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.ClientActivate(refnum, is_real_time, wait) : -1;
-            CATCH_EXCEPTION_RETURN
+            return Client(refnum, [&] { return FromCode(fEngine.ClientActivate(refnum, is_real_time, wait)); });
         }
-        int ClientDeactivate(int refnum, bool wait)
+        Result<void> ClientDeactivate(int refnum, bool wait)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.ClientDeactivate(refnum, wait) : -1;
-            CATCH_EXCEPTION_RETURN
+            return Client(refnum, [&] { return FromCode(fEngine.ClientDeactivate(refnum, wait)); });
         }
         void ClientKill(int refnum)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            fEngine.ClientKill(refnum);
-            CATCH_EXCEPTION
+            Locked([&] { fEngine.ClientKill(refnum); });
         }
 
         // Port management
-        int PortRegister(int refnum, const char* name, const char *type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port)
+        Result<void> PortRegister(int refnum, const char* name, const char *type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.PortRegister(refnum, name, type, flags, buffer_size, port) : -1;
-            CATCH_EXCEPTION_RETURN
+            return Client(refnum, [&] { return FromCode(fEngine.PortRegister(refnum, name, type, flags, buffer_size, port)); });
         }
-        int PortUnRegister(int refnum, jack_port_id_t port)
+        Result<void> PortUnRegister(int refnum, jack_port_id_t port)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.PortUnRegister(refnum, port) : -1;
-            CATCH_EXCEPTION_RETURN
+            return Client(refnum, [&] { return FromCode(fEngine.PortUnRegister(refnum, port)); });
         }
 
-        int PortConnect(int refnum, const char* src, const char* dst)
+        Result<void> PortConnect(int refnum, const char* src, const char* dst)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.PortConnect(refnum, src, dst) : -1;
-            CATCH_EXCEPTION_RETURN
+            return Client(refnum, [&] { return FromCode(fEngine.PortConnect(refnum, src, dst)); });
         }
-        int PortDisconnect(int refnum, const char* src, const char* dst)
+        Result<void> PortDisconnect(int refnum, const char* src, const char* dst)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.PortDisconnect(refnum, src, dst) : -1;
-            CATCH_EXCEPTION_RETURN
+            return Client(refnum, [&] { return FromCode(fEngine.PortDisconnect(refnum, src, dst)); });
         }
 
-        int PortConnect(int refnum, jack_port_id_t src, jack_port_id_t dst)
+        Result<void> PortConnect(int refnum, jack_port_id_t src, jack_port_id_t dst)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.PortConnect(refnum, src, dst) : -1;
-            CATCH_EXCEPTION_RETURN
+            return Client(refnum, [&] { return FromCode(fEngine.PortConnect(refnum, src, dst)); });
         }
-        int PortDisconnect(int refnum, jack_port_id_t src, jack_port_id_t dst)
+        Result<void> PortDisconnect(int refnum, jack_port_id_t src, jack_port_id_t dst)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.PortDisconnect(refnum, src, dst) : -1;
-            CATCH_EXCEPTION_RETURN
+            return Client(refnum, [&] { return FromCode(fEngine.PortDisconnect(refnum, src, dst)); });
         }
 
-        int PortRename(int refnum, jack_port_id_t port, const char* name)
+        Result<void> PortRename(int refnum, jack_port_id_t port, const char* name)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return (fEngine.CheckClient(refnum)) ? fEngine.PortRename(refnum, port, name) : -1;
-            CATCH_EXCEPTION_RETURN
+            return Client(refnum, [&] { return FromCode(fEngine.PortRename(refnum, port, name)); });
         }
 
-        int ComputeTotalLatencies()
+        Result<void> ComputeTotalLatencies()
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.ComputeTotalLatencies();
-            CATCH_EXCEPTION_RETURN
+            return Locked([&] { return FromCode(fEngine.ComputeTotalLatencies()); });
         }
 
         // Graph
@@ -246,102 +217,64 @@ class SERVER_EXPORT JackLockedEngine
 
         void NotifyClientXRun(int refnum)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            fEngine.NotifyClientXRun(refnum);
-            CATCH_EXCEPTION
+            Locked([&] { fEngine.NotifyClientXRun(refnum); });
         }
 
         void NotifyGraphReorder()
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            fEngine.NotifyGraphReorder();
-            CATCH_EXCEPTION
+            Locked([&] { fEngine.NotifyGraphReorder(); });
         }
 
         void NotifyBufferSize(jack_nframes_t buffer_size)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            fEngine.NotifyBufferSize(buffer_size);
-            CATCH_EXCEPTION
+            Locked([&] { fEngine.NotifyBufferSize(buffer_size); });
         }
         void NotifySampleRate(jack_nframes_t sample_rate)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            fEngine.NotifySampleRate(sample_rate);
-            CATCH_EXCEPTION
+            Locked([&] { fEngine.NotifySampleRate(sample_rate); });
         }
         void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, int direction)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            fEngine.NotifySecondarySampleRate(card, sample_rate, direction);
-            CATCH_EXCEPTION
+            Locked([&] { fEngine.NotifySecondarySampleRate(card, sample_rate, direction); });
         }
         void NotifyFreewheel(bool onoff)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            fEngine.NotifyFreewheel(onoff);
-            CATCH_EXCEPTION
+            Locked([&] { fEngine.NotifyFreewheel(onoff); });
         }
 
         void NotifyFailure(int code, const char* reason)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            fEngine.NotifyFailure(code, reason);
-            CATCH_EXCEPTION
+            Locked([&] { fEngine.NotifyFailure(code, reason); });
         }
 
-        int GetClientPID(const char* name)
+        Result<int> GetClientPID(const char* name)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.GetClientPID(name);
-            CATCH_EXCEPTION_RETURN
+            return Locked([&] { return FromValue(fEngine.GetClientPID(name)); });
         }
 
-        int GetClientRefNum(const char* name)
+        Result<int> GetClientRefNum(const char* name)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.GetClientRefNum(name);
-            CATCH_EXCEPTION_RETURN
+            return Locked([&] { return FromValue(fEngine.GetClientRefNum(name)); });
         }
 
         void NotifyQuit()
         {
             // No lock needed
-            TRY_CALL
-            return fEngine.NotifyQuit();
-            CATCH_EXCEPTION
+            Guard([&] { fEngine.NotifyQuit(); });
         }
 
-        int GetUUIDForClientName(const char *client_name, char *uuid_res)
+        Result<void> GetUUIDForClientName(const char *client_name, char *uuid_res)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.GetUUIDForClientName(client_name, uuid_res);
-            CATCH_EXCEPTION_RETURN
+            return Locked([&] { return FromCode(fEngine.GetUUIDForClientName(client_name, uuid_res)); });
         }
 
-        int GetClientNameForUUID(const char *uuid, char *name_res)
+        Result<void> GetClientNameForUUID(const char *uuid, char *name_res)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.GetClientNameForUUID(uuid, name_res);
-            CATCH_EXCEPTION_RETURN
+            return Locked([&] { return FromCode(fEngine.GetClientNameForUUID(uuid, name_res)); });
         }
-        int ReserveClientName(const char *name, const char *uuid)
+        Result<void> ReserveClientName(const char *name, const char *uuid)
         {
-            TRY_CALL
-            JackLock lock(&fEngine);
-            return fEngine.ReserveClientName(name, uuid);
-            CATCH_EXCEPTION_RETURN
+            return Locked([&] { return FromCode(fEngine.ReserveClientName(name, uuid)); });
         }
 
 };
@@ -349,4 +282,3 @@ class SERVER_EXPORT JackLockedEngine
 } // end of namespace
 
 #endif
-

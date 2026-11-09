@@ -126,7 +126,7 @@ int JackAudioDriver::Attach()
     for (i = 0; i < fCaptureChannels; i++) {
         jackmini::FormatCString(alias, "{}:{}:out{}", fAliasName.data(), fCaptureDriverName.data(), i + 1);
         jackmini::FormatCString(name, "{}:capture_{}", fClientControl.fName, i + 1);
-        if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, CaptureDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
+        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, CaptureDriverFlags, fEngineControl->fBufferSize, &port_index)) {
             jack_error("driver: cannot register port for %s", name.data());
             return -1;
         }
@@ -139,7 +139,7 @@ int JackAudioDriver::Attach()
     for (i = 0; i < fPlaybackChannels; i++) {
         jackmini::FormatCString(alias, "{}:{}:in{}", fAliasName.data(), fPlaybackDriverName.data(), i + 1);
         jackmini::FormatCString(name, "{}:playback_{}", fClientControl.fName, i + 1);
-        if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index) < 0) {
+        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index)) {
             jack_error("driver: cannot register port for %s", name.data());
             return -1;
         }
@@ -152,7 +152,7 @@ int JackAudioDriver::Attach()
         if (fWithMonitorPorts) {
             jack_log("Create monitor port");
             jackmini::FormatCString(name, "{}:monitor_{}", fClientControl.fName, i + 1);
-            if (fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, fEngineControl->fBufferSize, &port_index) < 0) {
+            if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, fEngineControl->fBufferSize, &port_index)) {
                 jack_error("Cannot register monitor port for %s", name.data());
                 return -1;
             } else {
