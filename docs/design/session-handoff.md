@@ -26,7 +26,7 @@ Written so a new session can pick up without the conversation. Read this file fi
 | S6: engine and graph | done (`a9a1be6c` to `e2124e88`) | see "Next" |
 | S7: server and protocol | done (`a0f275e1` to `ab182c4e`) | see "Next" |
 | S9: remove the C (resampler kernels stay) | done (`9ab39c81`, `38bcbfe5`) | see "Next" |
-| S10: validation | **next** | see "Next" |
+| S10: validation | done (`f38b6e2c`; `docs/design/validation.md`) | see "Next" |
 
 ## Decisions (do not revisit without the user)
 
@@ -136,8 +136,11 @@ S9 is done. The only C left is the resampler kernels and their bridge (`platform
 is kept for the driver module entry points and descriptor, the `jack_midi_*` and `jack_ringbuffer_*` names, the bridge, and the
 allocation interposer in `tests/perf/`.
 
-Next is S10 (validation: ASan, UBSan, TSAN in the tests; a malloc hook in the cycle; syscalls per cycle; the latency
-comparison with the baseline).
+S10 is done (`docs/design/validation.md`): ASan, UBSan and TSAN over the unit suites and the server e2e tests; zero
+allocations in the steady window; syscalls per cycle below the S0 baseline with no new kind; the latency matches the
+baseline. The RT hardware runs are the user's.
+
+The plan's steps are all done. Remaining work is the user's: the RT hardware runs, and the ARM boards.
 
 S7 is done (gate: the protocol conformance and notify overflow suites pass). Left on purpose: `JackRequestDecoder::HandleRequest`
 and the framing returns (the protocol loop's `int`); `JackExternalClient::ClientNotify` and `Close` (the client interface's `int`);
@@ -213,7 +216,8 @@ thread) is in 4 of 5 client runs on both the tree before and after `e2124e88`; i
 1. `cd /home/hjj/Develop/jack2 && git status && git log --oneline -5`.
 2. Read this file and `docs/design/client-api.md`, `docs/design/style.md`.
 3. Rebuild the build dir (see "Build and checks"), then `bash /tmp/opencode/check.sh`.
-4. Start S10 (see "Next").
+4. Read `docs/design/validation.md` for the current state of the checks. Build for timing with `RelWithDebInfo`, not the
+   `check.sh` build directory (no build type, asserts on).
 
 ## Working agreements with the user
 

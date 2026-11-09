@@ -97,3 +97,9 @@ The interval matches the baseline at every size; the callback is within noise. T
 between two signals 6 s apart, inside a steady window (the baseline file lists the cumulative total instead).
 The syscall drop at 64 frames is the removed MIDI threads; the rest is the same.
 The dummy rows were not re-measured. The ALSA driver is the path this redesign changed.
+
+## After S10 (validation)
+
+The same method on the code at `f38b6e2c`, with the `RelWithDebInfo` build: the raw output is in `s10/`
+(`latency-*`, `allocs-*`, `syscalls-*`). The summary, the sanitizer results and the one outlier are in
+`docs/design/validation.md`.
