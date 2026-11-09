@@ -87,13 +87,13 @@ namespace jackmini {
 SERVER_EXPORT JackGraphManager* GetGraphManager()
 {
     auto* context = jackmini::client::ProcessContext::current();
-    return context ? context->graph : nullptr;
+    return context ? context->graph.GetShmAddress() : nullptr;
 }
 
 SERVER_EXPORT JackEngineControl* GetEngineControl()
 {
     auto* context = jackmini::client::ProcessContext::current();
-    return context ? context->engine : nullptr;
+    return context ? context->engine.GetShmAddress() : nullptr;
 }
 
 SERVER_EXPORT JackSynchro* GetSynchroTable()

@@ -232,7 +232,20 @@ static inline float32x4_t clip(float32x4_t s, float32x4_t min, float32x4_t max)
     return vminq_f32(max, vmaxq_f32(s, min));
 }
 
-static inline int32x4_t float_24_neon(float32x4_t s)
+// Rounds to the nearest integer, ties to even, as lrintf does in the scalar code and as the SSE conversion does.
+// AArch64 has that conversion; the truncating one would differ at every value that is not exact.  32-bit NEON has no
+// rounding conversion, so there it truncates.
+static inline int32x4_t round_to_int_neon(float32x4_t scaled)
+{
+#if defined(__aarch64__)
+    return vcvtnq_s32_f32(scaled);
+#else
+    return vcvtq_s32_f32(scaled);
+#endif
+}
+
+// The 32-bit kernels' SSE path truncates (_mm_cvttps_epi32), so the NEON path of d32u24 does too.
+static inline int32x4_t float_24_trunc_neon(float32x4_t s)
 {
     const float32x4_t upper_bound = vdupq_n_f32(NORMALIZED_FLOAT_MAX);
     const float32x4_t lower_bound = vdupq_n_f32(NORMALIZED_FLOAT_MIN);
@@ -242,6 +255,16 @@ static inline int32x4_t float_24_neon(float32x4_t s)
     return vcvtq_s32_f32(scaled);
 }
 
+static inline int32x4_t float_24_neon(float32x4_t s)
+{
+    const float32x4_t upper_bound = vdupq_n_f32(NORMALIZED_FLOAT_MAX);
+    const float32x4_t lower_bound = vdupq_n_f32(NORMALIZED_FLOAT_MIN);
+
+    float32x4_t clipped = clip(s, lower_bound, upper_bound);
+    float32x4_t scaled = vmulq_f32(clipped, vdupq_n_f32(SAMPLE_24BIT_SCALING));
+    return round_to_int_neon(scaled);
+}
+
 static inline int16x4_t float_16_neon(float32x4_t s)
 {
     const float32x4_t upper_bound = vdupq_n_f32(NORMALIZED_FLOAT_MAX);
@@ -249,7 +272,7 @@ static inline int16x4_t float_16_neon(float32x4_t s)
 
     float32x4_t clipped = clip(s, lower_bound, upper_bound);
     float32x4_t scaled = vmulq_f32(clipped, vdupq_n_f32(SAMPLE_16BIT_SCALING));
-    return vmovn_s32(vcvtq_s32_f32(scaled));
+    return vmovn_s32(round_to_int_neon(scaled));
 }
 #endif
 
@@ -449,7 +472,7 @@ void sample_move_d32u24_sS(char* dst, jack_default_audio_sample_t* src, unsigned
 
     while (unrolled--) {
         float32x4_t samples = vld1q_f32(src);
-        int32x4_t converted = float_24_neon(samples);
+        int32x4_t converted = float_24_trunc_neon(samples);
         int32x4_t shifted = vshlq_n_s32(converted, 8);
 
         switch (dst_skip) {
@@ -469,7 +492,15 @@ void sample_move_d32u24_sS(char* dst, jack_default_audio_sample_t* src, unsigned
     }
 #endif
 
-#if !defined(__SSE2__)
+#if defined(__ARM_NEON__) || defined(__ARM_NEON)
+    // The same clip and truncation as the SSE tail above, so the tail agrees with the vector part.
+    while (nsamples--) {
+        const float scaled = fminf(SAMPLE_24BIT_MAX_F, fmaxf(*src * SAMPLE_24BIT_MAX_F, -SAMPLE_24BIT_MAX_F));
+        *((int32_t*)dst) = ((int32_t)scaled) << 8;
+        dst += dst_skip;
+        src++;
+    }
+#elif !defined(__SSE2__)
     while (nsamples--) {
         float_24u32(*src, *((int32_t*)dst));
         dst += dst_skip;
