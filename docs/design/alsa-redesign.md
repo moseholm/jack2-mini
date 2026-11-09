@@ -1,7 +1,8 @@
 # ALSA redesign (Plan B, S8)
 
-Status: started. Steps 1 to 3 are done (the session and the adapters). The MIDI backends are removed (steps 4 and 5). Step 6, the final measurement, is next. Plan A (the client on `ClientSession`) is done. The
-baseline the redesign must meet is in `perf-baseline/README.md`.
+Status: done. The cycle core, the libasound backend, the session and the adapters are in place,
+`alsa_driver.c` is gone, the MIDI backends are removed, and the final measurement is in
+`perf-baseline/README.md` ("After the ALSA redesign"). Plan A is done.
 
 ## What is there now
 
