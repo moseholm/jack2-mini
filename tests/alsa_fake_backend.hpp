@@ -101,9 +101,10 @@ public:
     }
 
     // A poll that timed out reports no events, as the kernel does.
-    int poll_revents(Stream stream, struct pollfd*, nfds_t, unsigned short* revents)
+    int poll_revents(Stream stream, struct pollfd*, nfds_t nfds, unsigned short* revents)
     {
         StreamState& state = stream_state(stream);
+        revents_nfds_[stream == Stream::Capture ? 1 : 0] = nfds;
         *revents = last_poll_ == 0 ? 0 : state.revents;
         return 0;
     }
@@ -192,6 +193,7 @@ public:
     StreamState& capture() { return capture_; }
     StreamState& playback() { return playback_; }
     const std::vector<std::string>& log() const { return log_; }
+    nfds_t revents_nfds(Stream stream) const { return revents_nfds_[stream == Stream::Capture ? 1 : 0]; }
     void clear_log() { log_.clear(); }
     void script_poll(int result) { poll_script_.push_back(result); }
     void set_poll_result(int result) { poll_result_ = result; }
@@ -227,6 +229,7 @@ private:
     std::deque<int> poll_script_;
     int poll_result_ = 1;
     int last_poll_ = 1;
+    nfds_t revents_nfds_[2] = {0, 0};
     XrunStatus status_;
     int status_result_ = 0;
     std::uint64_t now_ = 0;

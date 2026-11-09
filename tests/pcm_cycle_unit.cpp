@@ -273,6 +273,19 @@ void TestPollTimeout()
     CHECK(restarts.count == 5);
 }
 
+void TestReventsSlices()
+{
+    std::printf("cycle: each stream checks only its own descriptors\n");
+    FakePcmBackend backend(true, 1, true, 1, 128);
+    FakeCycle cycle(backend, MakeConfig(64, 2));
+
+    backend.capture().avail = 64;
+    backend.playback().avail = 64;
+    CHECK(cycle.wait().status == 0);
+    CHECK(backend.revents_nfds(Stream::Playback) == 1);
+    CHECK(backend.revents_nfds(Stream::Capture) == 1);
+}
+
 void TestPollErrors()
 {
     std::printf("cycle: poll errors and EINTR\n");
@@ -454,6 +467,7 @@ int main()
     TestSuspended();
     TestPollTimeout();
     TestPollErrors();
+    TestReventsSlices();
     TestStartStopSynced();
     TestStartStopLinked();
     TestStartNeedsFullBuffer();

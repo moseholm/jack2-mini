@@ -298,6 +298,7 @@ WaitResult Cycle<Backend>::wait()
 
     while ((need_playback || need_capture) && !xrun_detected) {
         std::size_t nfds = 0;
+        std::size_t playback_nfds = 0;
         std::size_t capture_index = 0;
 
         if (need_playback) {
@@ -309,6 +310,7 @@ WaitResult Cycle<Backend>::wait()
                 return result;
             }
             nfds += static_cast<std::size_t>(count);
+            playback_nfds = static_cast<std::size_t>(count);
         }
 
         if (need_capture) {
@@ -368,7 +370,8 @@ WaitResult Cycle<Backend>::wait()
 
         if (need_playback) {
             unsigned short revents = 0;
-            if (backend_.poll_revents(Stream::Playback, poll_fds_.data(), static_cast<nfds_t>(nfds), &revents) < 0) {
+            if (backend_.poll_revents(Stream::Playback, poll_fds_.data(), static_cast<nfds_t>(playback_nfds),
+                                      &revents) < 0) {
                 result.status = -6;
                 return result;
             }
