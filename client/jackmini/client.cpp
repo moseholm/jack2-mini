@@ -290,6 +290,36 @@ std::vector<std::string> Client::port_names(PortType type, PortFlags required) c
     return fImpl->session->port_names(to_c_type(type), to_c_flags(required));
 }
 
+std::vector<PortInfo> Client::ports() const
+{
+    if (!fImpl || !fImpl->session) {
+        return { };
+    }
+    std::vector<PortInfo> infos;
+    for (auto& record : fImpl->session->port_records()) {
+        PortInfo info;
+        info.owner = record.name.substr(0, record.name.find(':'));
+        info.name = std::move(record.name);
+        info.type = std::move(record.type);
+        info.flags = from_c_flags(record.flags);
+        info.playback_latency = LatencyRange { record.playback_latency.min, record.playback_latency.max };
+        info.capture_latency = LatencyRange { record.capture_latency.min, record.capture_latency.max };
+        info.total_latency = record.total_latency;
+        info.aliases = std::move(record.aliases);
+        info.port_uuid = Uuid(record.port_uuid);
+        info.owner_uuid = Uuid(record.owner_uuid);
+        info.connections = std::move(record.connections);
+        infos.push_back(std::move(info));
+    }
+    return infos;
+}
+
+std::uint32_t Client::total_latency(Port port) const
+{
+    const jack_port_id_t index = fImpl && fImpl->session ? fImpl->port_of(port) : 0;
+    return index ? fImpl->session->port_total_latency(index) : 0;
+}
+
 Result<void> Client::connect(Port source, Port destination)
 {
     if (!fImpl || !fImpl->session) {

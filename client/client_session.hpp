@@ -82,6 +82,24 @@ public:
     std::optional<jack_port_id_t> find_port(std::string_view full_name) const;
     std::vector<std::string> port_names(const char* type, unsigned long flags) const;
     std::vector<std::string> connections(jack_port_id_t port) const;
+
+    // Everything about each port in use, in port-number order.  The owner is the UUID of the client that registered
+    // the port.  The read is not locked: a port registered or released while the list is built may be missing or
+    // stale, as with the other reads of the graph.
+    struct PortRecord {
+        std::string name;
+        std::string type;
+        unsigned long flags = 0;
+        jack_latency_range_t playback_latency { };
+        jack_latency_range_t capture_latency { };
+        jack_nframes_t total_latency = 0;
+        std::vector<std::string> aliases;
+        std::uint64_t port_uuid = 0;
+        std::uint64_t owner_uuid = 0;
+        std::vector<std::string> connections;
+    };
+    std::vector<PortRecord> port_records() const;
+    jack_nframes_t port_total_latency(jack_port_id_t port) const;
     bool is_connected(jack_port_id_t source, jack_port_id_t destination) const;
 
     // Callbacks. They are set while the client is inactive. The notification callbacks run on the notification

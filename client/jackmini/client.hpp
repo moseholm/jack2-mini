@@ -129,6 +129,10 @@ public:
     Result<void> disconnect(Port source, Port destination);
     bool is_connected(Port source, Port destination) const;
     std::vector<std::string> connections(Port port) const;
+    // Every port of the graph, in port-number order, from one read of the graph.
+    std::vector<PortInfo> ports() const;
+    // The total latency of a port: the latency of the longest path through it, as the server last computed it.
+    std::uint32_t total_latency(Port port) const;
 
     // Realtime access: valid only inside the process callback, for the cycle
     // being processed.  These do not allocate and do not return errors.

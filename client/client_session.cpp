@@ -530,6 +530,45 @@ std::vector<std::string> ClientSession::connections(jack_port_id_t port) const
     return take_names(context_->graph->GetConnections(port));
 }
 
+std::vector<ClientSession::PortRecord> ClientSession::port_records() const
+{
+    wait_graph_change();
+    std::vector<PortRecord> records;
+    const jack_port_id_t max = context_->graph->PortMax();
+    for (jack_port_id_t index = FIRST_AVAILABLE_PORT; index < max; index++) {
+        JackPort* port = context_->graph->GetPort(index);
+        if (!port->InUse()) {
+            continue;
+        }
+        PortRecord record;
+        record.name = port->GetName();
+        record.type = port->GetType();
+        record.flags = port->GetFlags();
+        port->GetLatencyRange(JackPlaybackLatency, &record.playback_latency);
+        port->GetLatencyRange(JackCaptureLatency, &record.capture_latency);
+        record.total_latency = port->GetTotalLatency();
+
+        std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias1 { }, alias2 { };
+        char* const aliases[2] = { alias1.data(), alias2.data() };
+        const int count = port->GetAliases(aliases);
+        for (int i = 0; i < count; i++) {
+            record.aliases.emplace_back(aliases[i]);
+        }
+
+        record.port_uuid = port->GetUUID();
+        record.owner_uuid = context_->graph->GetClientUUID(port->GetRefNum());
+        record.connections = take_names(context_->graph->GetConnections(index));
+        records.push_back(std::move(record));
+    }
+    return records;
+}
+
+jack_nframes_t ClientSession::port_total_latency(jack_port_id_t port) const
+{
+    wait_graph_change();
+    return context_->graph->GetPort(port)->GetTotalLatency();
+}
+
 bool ClientSession::is_connected(jack_port_id_t source, jack_port_id_t destination) const
 {
     wait_graph_change();

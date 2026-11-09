@@ -21,7 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "uuid.hpp"
 
 #include <cstdint>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace jackmini {
 
@@ -67,6 +69,22 @@ constexpr bool has_flag(PortFlags set, PortFlags flag) noexcept
 {
     return (static_cast<std::uint32_t>(set) & static_cast<std::uint32_t>(flag)) != 0;
 }
+
+// One port, as the graph has it now.  Everything but the handle: the tools list ports with this.  The type is the
+// type string the graph stores (for example "32 bit float mono audio"), and the owner is the client part of the name.
+struct PortInfo {
+    std::string name;
+    std::string type;
+    PortFlags flags = PortFlags::None;
+    LatencyRange playback_latency;
+    LatencyRange capture_latency;
+    std::uint32_t total_latency = 0;
+    std::vector<std::string> aliases;
+    Uuid port_uuid;
+    std::string owner;
+    Uuid owner_uuid;
+    std::vector<std::string> connections;
+};
 
 // A handle to a registered port.  It is a value: copies refer to the same
 // port.  It is valid until the port is unregistered or its client closes.

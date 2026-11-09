@@ -447,6 +447,11 @@ if(JACK_BUILD_TESTS)
     target_include_directories(jack_client_session_e2e PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/client")
     target_link_libraries(jack_client_session_e2e PRIVATE jack jackmini_base Threads::Threads)
 
+    # The port listing (Client::ports, total latency, UUIDs, connections), with a server.
+    add_executable(jack_jackmini_ports_e2e tests/jackmini_ports_e2e.cpp)
+    target_include_directories(jack_jackmini_ports_e2e PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+    target_link_libraries(jack_jackmini_ports_e2e PRIVATE jack jackmini_base Threads::Threads)
+
 endif()
 
 message(STATUS "JACK ${JACK_VERSION}")
