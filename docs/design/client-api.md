@@ -102,24 +102,42 @@ Rules that follow from this:
   code. An inactive client's ports must be skipped in every cycle, and the
   change must be tested against the existing graph tests before P2 can close.
 
+## Implementation
+
+The client is `client/client_session.*` (one connection to the server) and
+`client/process_context.*` (the state that the clients of a process share), under the public
+headers in `client/jackmini/`. The C client library and its copied wrappers are gone (Plan A).
+
+- **Lifecycle.** `ClientSession::open` checks the name, starts the server if the options allow
+  it, binds the notification socket, registers the client, maps the shared memory, and connects
+  the client's synchro. `close` stops the notifications first, then unregisters the client.
+- **Realtime thread.** A pthread that runs one dummy cycle, then one cycle per graph wake-up.
+  Deactivate asks the server to take the client out of the graph and then stops the thread
+  cooperatively (a stop flag, a wake-up of the client's own synchro, and a join). A process
+  callback that fails deactivates the client, as before.
+- **Ports, connections, buffers, latency, transport, callbacks.** The session works on the graph's
+  port numbers; the public `Client` gives out the `Port` handles and keeps the owner token.
+  Latency requests from the server are answered on the notification thread. The transport calls
+  write the engine's transport state directly.
+- **Shutdown.** The shutdown callback runs once: on the server's shutdown notification, when the
+  notification connection is lost, or when the graph wait fails on the realtime thread.
+
+Checked by `tests/client_session_e2e.cpp` (the session), `tests/jackmini_client_e2e.cpp`, and
+`tests/jackmini_graph_e2e.cpp` (the public client), all run against a server in realtime and in
+freewheel. Thread sanitizer: the deactivate path no longer aborts; the remaining reports are
+recorded in the handoff.
+
+Not in the API, and so not ported: the C client calls outside the list above (metadata, the
+session API, internal clients, the client registration and port registration notifications, the
+graph order and the freewheel callbacks of the public C API, the total latency query, rename).
+
 ## Next steps
 
 1. Done: the headers are in `client/jackmini/`, and `tests/jackmini_api_unit.cpp`
    checks the types and overloads at compile time.
 2. Partly done: `RingBuffer`, `Uuid`, and the error text are implemented and
    tested without a server (`tests/jackmini_unit.cpp`, TSAN clean). The
-   server-facing tests need the P2 protocol specification first, so they are
-   not written yet.
-3. Port the client library behind the new headers, one area at a time, with
-   the existing `tests/*.cpp` programs ported as they go. Areas, in order:
-   - Done: the lifecycle (open, activate, deactivate, close), the callbacks, and the
-     identity (name, uuid, sample rate, buffer size, cpu load). `client/jackmini/client.cpp`,
-     checked by `tests/jackmini_client_e2e.cpp` (run with a server).
-   - Done: ports (register, unregister, names, find, flags, type) and connections. The
-     port table is safe for the realtime thread.
-   - Done: the buffers (audio, MIDI) and transport.
-   - Open, needs a decision: the `tests/*.cpp` programs ported to the new API (`test.cpp`,
-     `cpu.c`, `rtbench.c`, `external_metro.cpp`, `iodelay.cpp`), and the C client library
-     removed from the client side, which also makes item 4b of the protocol possible.
-   The implementation sits on the C library for now; each area moves off it as it is
-   ported.
+   server-facing tests run against a server.
+3. Done (Plan A): the client library is the session and the public client. The
+   `tests/*.cpp` programs that still use the C names (`cpu`, `rtbench`, `iodelay`,
+   `external_metro`) are on the public API.

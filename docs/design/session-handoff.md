@@ -81,6 +81,22 @@ Protocol and shared memory (`docs/design/protocol.md`):
 
 ## Done (commits in order, newest first)
 
+- **Plan A done (the client on `ClientSession`).** Commits, in order: `c7e8dfd3` A1 open, close, and the
+  notification thread (`client/process_context.*`, `client/client_session.*`); `fe390c76` A2 activation and the
+  realtime thread (cooperative stop, joined; the failure path); `c1156622` A3 ports and identity; `fabc1791` A4
+  buffers; `028c5fe2` A5 latency; `d1f671ef` A6 transport and callbacks; `a37f4061` A8 the public client switches
+  and the old client is deleted (`lib.cpp`, `JackClient.*`, `JackLibClient.*`, `JackGenericClientChannel.*`,
+  `JackLibGlobals.h`, `varargs.h`, `JackSocketClientChannel.*`; `JackServerLaunch` moved to `client/`); `0df63f3a`
+  the sanitizer fixes (the active and transport flags, the verbose flag).
+- **Thread sanitizer, how to run it.** Build a separate tree (`/tmp/opencode/build-tsan`, with `-fsanitize=thread`
+  in the C and C++ flags and the linker flags), build all targets (a partial build leaves stale drivers with old
+  symbols), clear `/dev/shm/jack_*` after a killed server, then start `jackd` and wait a few seconds before the
+  client. Remaining reports (known, in the graph and platform code): `ResumeRefNum` timing fields, a port's latency
+  range written from two threads, shared audio buffers, `JackLinuxFutex::Disconnect`, `set_clock_source`, and the
+  MIDI test buffers.
+- **Next (decided by the user):** Plan B S8 as a full redesign. The RT path must perform at least as well as before.
+  Baseline numbers come first (plan S0).
+
 - `8dbe02fa` Plan B S4: the driver module interface. Each driver exports `jackmini_driver_module` (a `Module`:
   version, describe, initialize). The server refuses a module whose version is not 1 (`server/driver_module.h`).
   Checked with a fake module that reports version 99: refused, dummy still runs. Also removed `jack_internals_load`,
