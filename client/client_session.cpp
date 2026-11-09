@@ -286,9 +286,19 @@ void ClientSession::notification_loop()
             break;
         }
     }
-    // Ending the loop by close() is not a server failure.
+    // Ending the loop by close() is not a server failure. A lost connection is reported to the client once.
     if (!closing_) {
         server_down_ = true;
+        deliver_shutdown();
+    }
+}
+
+void ClientSession::deliver_shutdown()
+{
+    if (shutdown_) {
+        auto fn = std::move(shutdown_);
+        shutdown_ = nullptr;
+        fn();
     }
 }
 
@@ -310,10 +320,28 @@ int ClientSession::handle_notification(const JackClientNotification& event)
             break;
         case kShutDownCallback:
             server_down_ = true;
+            if (is_active()) {
+                deliver_shutdown();
+            }
             break;
         case kLatencyCallback:
             if (is_active()) {
                 res = handle_latency(event.fValue1);
+            }
+            break;
+        case kXRunCallback:
+            if (is_active() && xrun_) {
+                xrun_();
+            }
+            break;
+        case kBufferSizeCallback:
+            if (is_active() && buffer_size_) {
+                res = buffer_size_(event.fValue1) ? 0 : -1;
+            }
+            break;
+        case kSampleRateCallback:
+            if (is_active() && sample_rate_) {
+                res = sample_rate_(event.fValue1) ? 0 : -1;
             }
             break;
         case kStartFreewheelCallback: {
@@ -582,6 +610,29 @@ Result<void> ClientSession::recompute_latencies()
     return {};
 }
 
+void ClientSession::transport_start() noexcept
+{
+    context_->engine->fTransport.SetCommand(TransportCommandStart);
+}
+
+void ClientSession::transport_stop() noexcept
+{
+    context_->engine->fTransport.SetCommand(TransportCommandStop);
+}
+
+void ClientSession::transport_locate(jack_nframes_t frame) noexcept
+{
+    jack_position_t position{};
+    position.frame = frame;
+    position.valid = static_cast<jack_position_bits_t>(0);
+    context_->engine->fTransport.RequestNewPos(&position);
+}
+
+jack_transport_state_t ClientSession::transport_query(jack_position_t* position) const noexcept
+{
+    return context_->engine->fTransport.Query(position);
+}
+
 void* ClientSession::port_buffer(jack_port_id_t port, jack_nframes_t frames) noexcept
 {
     return context_->graph->GetBuffer(port, frames);
@@ -718,15 +769,31 @@ void ClientSession::realtime_run()
             jack_error("JackClient::AcquireSelfRealTime error");
         }
     }
+    // The buffer size is reported before the first cycle, so no buffer size callback runs during a cycle.
+    if (buffer_size_) {
+        (void)buffer_size_(context_->engine->fBufferSize);
+    }
 
     // The first wait is the dummy cycle that the old client ran too: the thread is in step with the graph before the
     // first process call. It signals its outputs without calling the process callback.
     if (!wait_cycle()) {
+        if (!realtime_stop_) {
+            // The graph wait failed: the server is gone. The client is deactivated and told so.
+            end_cycles_on_failure();
+            deliver_shutdown();
+        }
         return;
     }
     signal_cycle();
 
-    while (wait_cycle()) {
+    while (true) {
+        if (!wait_cycle()) {
+            if (!realtime_stop_) {
+                end_cycles_on_failure();
+                deliver_shutdown();
+            }
+            return;
+        }
         const Cycle cycle = build_cycle();
         if (!process_(cycle)) {
             signal_cycle();

@@ -88,6 +88,14 @@ class JACKMINI_API ClientSession
         std::vector<std::string> connections(jack_port_id_t port) const;
         bool is_connected(jack_port_id_t source, jack_port_id_t destination) const;
 
+        // Callbacks. They are set while the client is inactive. The notification callbacks run on the notification
+        // thread, the buffer size callback also at the start of the realtime thread; they are called only while the
+        // client is active, as before. The shutdown callback runs once.
+        void set_xrun_handler(Client::XrunFn fn) { xrun_ = std::move(fn); }
+        void set_shutdown_handler(Client::ShutdownFn fn) { shutdown_ = std::move(fn); }
+        void set_buffer_size_handler(Client::BufferSizeFn fn) { buffer_size_ = std::move(fn); }
+        void set_sample_rate_handler(Client::SampleRateFn fn) { sample_rate_ = std::move(fn); }
+
         // Latency. The latency handler runs on the notification thread when the server asks for the latency of this
         // client's ports. Without a handler, the ports take the widest range of the ports that are measured.
         void set_latency_handler(std::move_only_function<void(LatencyMode)> fn) { latency_ = std::move(fn); }
@@ -98,6 +106,12 @@ class JACKMINI_API ClientSession
         // The buffer of a port for the cycle being processed. It is valid inside the process callback. The realtime
         // path does not lock or allocate.
         void* port_buffer(jack_port_id_t port, jack_nframes_t frames) noexcept;
+
+        // Transport. These write the engine's transport state directly, so they are safe on the realtime path.
+        void transport_start() noexcept;
+        void transport_stop() noexcept;
+        void transport_locate(jack_nframes_t frame) noexcept;
+        jack_transport_state_t transport_query(jack_position_t* position) const noexcept;
 
         // Identity and timing.
         Result<Uuid> lookup_uuid();
@@ -122,6 +136,7 @@ class JACKMINI_API ClientSession
         void notification_loop();
         int handle_notification(const JackClientNotification& event);
         int handle_latency(int status);
+        void deliver_shutdown();
         int transact(JackRequest& request, JackResult& reply);
         void shut_down_sockets();
 
@@ -156,6 +171,10 @@ class JACKMINI_API ClientSession
 
         std::move_only_function<bool(const Cycle&)> process_;
         std::move_only_function<void(LatencyMode)> latency_;
+        Client::XrunFn xrun_;
+        Client::ShutdownFn shutdown_;
+        Client::BufferSizeFn buffer_size_;
+        Client::SampleRateFn sample_rate_;
         pthread_t realtime_thread_{};
         std::mutex realtime_mutex_;         // guards the thread: start, stop, and the freewheel scheduling changes
         std::atomic<bool> realtime_running_{false};

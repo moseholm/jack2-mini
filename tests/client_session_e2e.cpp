@@ -299,6 +299,64 @@ void check_latency(const jackmini::OpenOptions& exact)
     CHECK((*client)->close().has_value());
 }
 
+// Transport: start and stop reach the server, which moves the state; a locate sets the position.
+void check_transport(const jackmini::OpenOptions& exact)
+{
+    using jackmini::client::ClientSession;
+
+    auto client = ClientSession::open("transport_t", exact);
+    CHECK(client.has_value());
+    if (!client) {
+        return;
+    }
+    ClientSession& session = **client;
+    CHECK(session.activate().has_value());
+
+    jack_position_t position{};
+    CHECK(session.transport_query(&position) == JackTransportStopped);
+
+    session.transport_locate(4800);
+    CHECK(wait_for([&] {
+        jack_position_t now{};
+        session.transport_query(&now);
+        return now.frame >= 4800;
+    }));
+
+    session.transport_start();
+    CHECK(wait_for([&] { return session.transport_query(&position) != JackTransportStopped; }));
+    session.transport_stop();
+    CHECK(wait_for([&] { return session.transport_query(&position) == JackTransportStopped; }));
+
+    CHECK(session.deactivate().has_value());
+    CHECK((*client)->close().has_value());
+}
+
+// The callbacks of a running client: the buffer size is reported when the realtime thread starts.
+void check_callbacks(const jackmini::OpenOptions& exact)
+{
+    using jackmini::client::ClientSession;
+
+    auto client = ClientSession::open("cb_test", exact);
+    CHECK(client.has_value());
+    if (!client) {
+        return;
+    }
+    ClientSession& session = **client;
+    std::atomic<int> size_calls{0};
+    std::atomic<int> reported_size{0};
+    session.set_buffer_size_handler([&](jackmini::FrameCount frames) {
+        reported_size = static_cast<int>(frames);
+        size_calls.fetch_add(1);
+        return true;
+    });
+    session.set_process([](const jackmini::Cycle&) { return true; });
+    CHECK(session.activate().has_value());
+    CHECK(wait_for([&] { return size_calls.load() >= 1; }));
+    CHECK(reported_size.load() > 0);
+    CHECK(session.deactivate().has_value());
+    CHECK((*client)->close().has_value());
+}
+
 } // end of anonymous namespace
 
 int main()
@@ -338,6 +396,8 @@ int main()
     check_ports(exact);
     check_buffers(exact);
     check_latency(exact);
+    check_transport(exact);
+    check_callbacks(exact);
 
     CHECK((*first)->close().has_value());
     auto again = ClientSession::open("session_e2e", exact);
