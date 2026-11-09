@@ -177,6 +177,7 @@ int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direc
         jack_error("ALSA: cannot set hardware parameters for %s", stream_name);
         return -1;
     }
+    info.sbits = snd_pcm_hw_params_get_sbits(hw);
 
     snd_pcm_sw_params_current(handle, sw);
     if (snd_pcm_sw_params_set_start_threshold(handle, sw, 0U) < 0) {

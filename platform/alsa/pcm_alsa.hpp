@@ -53,6 +53,7 @@ struct StreamInfo {
     std::uint32_t channels = 0;
     std::uint32_t periods = 0;
     std::uint32_t sample_bytes = 0;
+    std::uint32_t sbits = 0;         // significant bits of a sample: 24 for a 32-bit format on a 24-bit device
     snd_pcm_format_t format = SND_PCM_FORMAT_UNKNOWN;
     bool interleaved = false;
     bool byte_swapped = false;
