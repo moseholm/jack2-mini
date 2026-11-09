@@ -23,6 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackClientInterface.h"
 #include "JackPlatformPlug.h"
+#include "jackmini/error.hpp"
 
 namespace jackmini
 {
@@ -48,8 +49,8 @@ class JackExternalClient : public JackClientInterface
 
         // The shared client control is allocated first; the notification channel is opened only once the driver is
         // known to be running, so a refused open does not create a writer thread.
-        int OpenClient(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client);
-        int OpenChannel(const char* name);
+        Result<void> OpenClient(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client);
+        Result<void> OpenChannel(const char* name);
         int Close();
 
         int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);

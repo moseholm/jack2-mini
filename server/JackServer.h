@@ -31,6 +31,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "jslist.h"
 #include "jackmini/error.hpp"
 
+#include <memory>
+
 namespace jackmini
 {
 
@@ -48,12 +50,12 @@ class SERVER_EXPORT JackServer
 
     private:
 
-        JackDriverInfo* fDriverInfo;
+        std::unique_ptr<JackDriverInfo> fDriverInfo;
         JackDriverClientInterface* fAudioDriver;
-        JackDriverClientInterface* fFreewheelDriver;
-        JackDriverClientInterface* fThreadedFreewheelDriver;
-        JackLockedEngine* fEngine;
-        JackEngineControl* fEngineControl;
+        JackDriverClientInterface* fFreewheelDriver;   // Owned by fThreadedFreewheelDriver
+        std::unique_ptr<JackDriverClientInterface> fThreadedFreewheelDriver;
+        std::unique_ptr<JackLockedEngine> fEngine;
+        std::unique_ptr<JackEngineControl> fEngineControl;
         JackGraphManager* fGraphManager;
         JackServerChannel fRequestChannel;
         JackConnectionManager fConnectionState;

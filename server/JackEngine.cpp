@@ -596,7 +596,7 @@ Result<void> JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid
         goto error;
     }
 
-    if (client->OpenClient(real_name.data(), pid, refnum, uuid, shared_client) < 0) {
+    if (!client->OpenClient(real_name.data(), pid, refnum, uuid, shared_client)) {
         jack_error("Cannot open client");
         goto error;
     }
@@ -608,7 +608,7 @@ Result<void> JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid
     }
 
     // Only now that the driver runs: the channel starts a writer thread, and a refused open must not create one.
-    if (client->OpenChannel(real_name.data()) < 0) {
+    if (!client->OpenChannel(real_name.data())) {
         jack_error("Cannot open client channel");
         goto error;
     }

@@ -62,18 +62,18 @@ JackServer::JackServer(bool sync, bool temporary, int timeout, bool rt, int prio
     jack_info("self-connect-mode is \"%s\"", jack_get_self_connect_mode_description(self_connect_mode));
 
     fGraphManager = JackGraphManager::Allocate(port_max);
-    fEngineControl = new JackEngineControl(sync, temporary, timeout, rt, priority, verbose, clock, server_name);
-    fEngine = new JackLockedEngine(fGraphManager, GetSynchroTable(), fEngineControl, self_connect_mode);
+    fEngineControl = std::make_unique<JackEngineControl>(sync, temporary, timeout, rt, priority, verbose, clock, server_name);
+    fEngine = std::make_unique<JackLockedEngine>(fGraphManager, GetSynchroTable(), fEngineControl.get(), self_connect_mode);
 
     // A distinction is made between the threaded freewheel driver and the
     // regular freewheel driver because the freewheel driver needs to run in
     // threaded mode when freewheel mode is active and needs to run as a slave
     // when freewheel mode isn't active.
-    JackFreewheelDriver* freewheelDriver = new JackFreewheelDriver(fEngine, GetSynchroTable());
-    fThreadedFreewheelDriver = new JackThreadedDriver(freewheelDriver);
+    JackFreewheelDriver* freewheelDriver = new JackFreewheelDriver(fEngine.get(), GetSynchroTable());
+    fThreadedFreewheelDriver = std::make_unique<JackThreadedDriver>(freewheelDriver);
 
     fFreewheelDriver = freewheelDriver;
-    fDriverInfo = new JackDriverInfo();
+    fDriverInfo = std::make_unique<JackDriverInfo>();
     fAudioDriver = NULL;
     fFreewheel = false;
     JackServerGlobals::fInstance = this;   // Unique instance
@@ -82,11 +82,12 @@ JackServer::JackServer(bool sync, bool temporary, int timeout, bool rt, int prio
 
 JackServer::~JackServer()
 {
+    // The engine uses the engine control, so it goes first.
     JackGraphManager::Destroy(fGraphManager);
-    delete fDriverInfo;
-    delete fThreadedFreewheelDriver;
-    delete fEngine;
-    delete fEngineControl;
+    fDriverInfo.reset();
+    fThreadedFreewheelDriver.reset();
+    fEngine.reset();
+    fEngineControl.reset();
 }
 
 Result<void> JackServer::Open(jack_driver_desc_t* driver_desc, JSList* driver_params)
@@ -96,7 +97,7 @@ Result<void> JackServer::Open(jack_driver_desc_t* driver_desc, JSList* driver_pa
         jack_error("Cannot create message buffer");
     }
 
-    if ((fAudioDriver = fDriverInfo->Open(driver_desc, fEngine, GetSynchroTable(), driver_params)) == NULL) {
+    if ((fAudioDriver = fDriverInfo->Open(driver_desc, fEngine.get(), GetSynchroTable(), driver_params)) == NULL) {
         jack_error("Cannot initialize driver");
         JackMessageBuffer::Destroy();
         return std::unexpected(Error::ServerFailure);
@@ -331,7 +332,7 @@ Result<void> JackServer::SetTimebaseCallback(int refnum, int conditional)
 
 JackLockedEngine* JackServer::GetEngine()
 {
-    return fEngine;
+    return fEngine.get();
 }
 
 JackSynchro* JackServer::GetSynchroTable()
@@ -341,7 +342,7 @@ JackSynchro* JackServer::GetSynchroTable()
 
 JackEngineControl* JackServer::GetEngineControl()
 {
-    return fEngineControl;
+    return fEngineControl.get();
 }
 
 JackGraphManager* JackServer::GetGraphManager()

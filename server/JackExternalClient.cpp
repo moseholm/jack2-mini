@@ -41,7 +41,7 @@ int JackExternalClient::ClientNotify(int refnum, const char* name, int notify, i
     return result;
 }
 
-int JackExternalClient::OpenClient(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client)
+Result<void> JackExternalClient::OpenClient(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client)
 {
     try {
 
@@ -53,25 +53,25 @@ int JackExternalClient::OpenClient(const char* name, int pid, int refnum, jack_u
 
         if (!fClientControl) {
             jack_error("Cannot allocate client shared memory segment");
-            return -1;
+            return std::unexpected(Error::ServerFailure);
         }
 
         *shared_client = segment;
         jack_log("JackExternalClient::Open name = %s fd = %d size = %u base = %p", name, segment.fFd, segment.fSize, shared_mem->GetShmAddress());
-        return 0;
+        return {};
 
     } catch (std::exception&) {
-        return -1;
+        return std::unexpected(Error::ServerFailure);
     }
 }
 
-int JackExternalClient::OpenChannel(const char* name)
+Result<void> JackExternalClient::OpenChannel(const char* name)
 {
     if (fChannel.Open(name) < 0) {
         jack_error("Cannot connect to client name = %s\n", name);
-        return -1;
+        return std::unexpected(Error::ServerFailure);
     }
-    return 0;
+    return {};
 }
 
 int JackExternalClient::Close()
