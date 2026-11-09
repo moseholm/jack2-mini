@@ -69,6 +69,9 @@ baseline the redesign must meet is in `perf-baseline/README.md`.
    `PcmBackend` for the core, in `jack_alsa`). It configures the streams with the old negotiation, links them, and
    reports `capture_and_playback_not_synced()`. Checked on the UMC404HD (U192k) at 48 kHz: 64, 128 and 256 frames,
    0 xruns, cycle time equal to the period (`c03e30a2`).
+   The session is `platform/alsa/pcm_session.{hpp,cpp}` (`jackmini::alsa::Session`, `3cf04a5a`): the device, the cycle
+   on it, the copy functions chosen once at open (ported from `alsa_driver_setup_io_function_pointers`), and
+   `read_channel`/`write_channel` for the callbacks. Checked on the card at 64, 128, 256 frames.
    Not done: the adapter. `JackAlsaDriver` and `JackAlsaSecondaryCard` still call the `alsa_driver_*` C API (about
    40 call sites and fields: `alsa_driver_new`, `reset_parameters`, `start`, `stop`, `wait`, `read`, `write`, the
    channel helpers, `set_callbacks`, the MIDI attach and start, and the clock-sync listeners). The adapter switch
