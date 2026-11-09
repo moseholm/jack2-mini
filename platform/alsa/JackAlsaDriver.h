@@ -32,7 +32,6 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaHotplug.h"
 #include "JackAlsaSlotTable.h"
 #include "JackAlsaSecondaryConfig.h"
-#include "alsa_midi.h"
 #include "pcm_session.hpp"
 
 #include <atomic>
@@ -60,10 +59,8 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         DitherAlgorithm fDither;
         std::string fCaptureDevice;         // empty when the direction is not used
         std::string fPlaybackDevice;
-        alsa_midi_t* fMidi;
         jack_nframes_t fCaptureFrameLatency;
         jack_nframes_t fPlaybackFrameLatency;
-        bool fXrunRecovery;                 // set while an xrun recovery restarts the streams
         jack_native_thread_t fReservationLoopThread;
         std::vector<JackAlsaSecondaryCard*> fSecondaryCards;   // owned cards, guarded by fCardsMutex
         JackAlsaCardSlots fSlots;                              // the RT thread's view of promoted cards
@@ -105,8 +102,6 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
     private:
         void StopSecondaryCards();
         int OpenPrimary(jack_nframes_t frames_per_cycle);
-        int StartPrimary();
-        int StopPrimary();
         void StartControlMonitoring();
         void StopControlMonitoring();
 
@@ -118,8 +113,8 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
     public:
 
         JackAlsaDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
-		: JackAudioDriver(name, alias, engine, table),fDither(None),fMidi(NULL),fCaptureFrameLatency(0),
-          fPlaybackFrameLatency(0),fXrunRecovery(false),fControlMonitor(NULL),fReconfigWorker(NULL),fHotplug(NULL)
+		: JackAudioDriver(name, alias, engine, table),fDither(None),fCaptureFrameLatency(0),
+          fPlaybackFrameLatency(0),fControlMonitor(NULL),fReconfigWorker(NULL),fHotplug(NULL)
         {
             fRTRunning.store(false);
             fRestarting.store(false);
@@ -146,7 +141,6 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
                  const char* playback_driver_name,
                  jack_nframes_t capture_latency,
                  jack_nframes_t playback_latency,
-                 const char* midi_driver_name,
                  const std::vector<JackAlsaSecondaryConfig>& secondaries,
                  const std::vector<std::string>& excluded_cards);
 
@@ -174,20 +168,6 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
                             std::ptrdiff_t nwritten);
         void SetTimetAux(jack_time_t time);
 
-        int PortSetDefaultMetadata(jack_port_id_t port_id, const char* pretty_name);
-
-        // JACK API emulation for the midi driver
-        int is_realtime() const;
-        int create_thread(pthread_t *thread, int prio, int rt, void *(*start_func)(void*), void *arg);
-
-        jack_port_id_t port_register(const char *port_name, const char *port_type, unsigned long flags, unsigned long buffer_size);
-        int port_unregister(jack_port_id_t port_index);
-        void* port_get_buffer(int port, jack_nframes_t nframes);
-        int port_set_alias(int port, const char* name);
-
-        jack_nframes_t get_sample_rate() const;
-        jack_nframes_t frame_time() const;
-        jack_nframes_t last_frame_time() const;
 };
 
 } // end of namespace

@@ -245,8 +245,6 @@ message(STATUS "Resampler SIMD kernels                    : ${JACK_RESAMPLER_SIM
 set(JACK_ALSA_SOURCES
     common/memops.cpp
     platform/alsa/JackAlsaDriver.cpp
-    platform/alsa/alsa_rawmidi.c
-    platform/alsa/alsa_midi_jackmp.cpp
     platform/alsa/pcm_alsa.cpp
     platform/alsa/pcm_session.cpp
     platform/alsa/JackAlsaRingBuffer.cpp
@@ -265,15 +263,6 @@ set(JACK_ALSA_SOURCES
     platform/alsa/resample/resample-native-c.c
     ${JACK_RESAMPLER_SIMD_SOURCES})
 
-set(JACK_ALSARAWMIDI_SOURCES
-    platform/alsarawmidi/JackALSARawMidiDriver.cpp
-    platform/alsarawmidi/JackALSARawMidiInputPort.cpp
-    platform/alsarawmidi/JackALSARawMidiOutputPort.cpp
-    platform/alsarawmidi/JackALSARawMidiPort.cpp
-    platform/alsarawmidi/JackALSARawMidiReceiveQueue.cpp
-    platform/alsarawmidi/JackALSARawMidiSendQueue.cpp
-    platform/alsarawmidi/JackALSARawMidiUtil.cpp)
-
 jack_add_driver(alsa ${JACK_ALSA_SOURCES})
 target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA PkgConfig::UDEV m ${CMAKE_DL_LIBS} jackring jacklog jackmidi)
 # The vendored PipeWire resampler is built with its precomputed filter tables
@@ -283,8 +272,6 @@ target_include_directories(jack_alsa PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/alsa/resample/spa-shim")
 target_compile_definitions(jack_alsa PRIVATE RESAMPLE_DISABLE_PRECOMP ${JACK_RESAMPLER_SIMD_DEFINITIONS})
 
-jack_add_driver(alsarawmidi ${JACK_ALSARAWMIDI_SOURCES})
-target_link_libraries(jack_alsarawmidi PRIVATE PkgConfig::ALSA jackring jacklog jackmidi)
 
 install(TARGETS jack jackserver jackring jacklog jackmidi
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

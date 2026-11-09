@@ -54,13 +54,6 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackServerGlobals.h"
 #include "driver_module.h"
 
-static struct jack_constraint_enum_str_descriptor midi_constraint_descr_array[] =
-{
-    { "none", "no MIDI driver" },
-    { "raw", "ALSA RawMIDI driver" },
-    { 0 }
-};
-
 static struct jack_constraint_enum_char_descriptor dither_constraint_descr_array[] =
 {
     { 'n', "none" },
@@ -124,12 +117,10 @@ int JackAlsaDriver::RestartFromRT()
     // running throughout, so a reconfiguration waits for the cycle to finish
     // rather than freeing buffers mid-restart.
     fRestarting.store(true);
-    fXrunRecovery = true;
     int res = Stop();
     if (res == 0) {
         res = Start();
     }
-    fXrunRecovery = false;
     fRestarting.store(false);
     return res;
 }
@@ -440,12 +431,6 @@ int JackAlsaDriver::Attach()
     UpdateLatencies();
     UpdateSecondaryLatencies();
 
-    if (fMidi) {
-        int err = (fMidi->attach)(fMidi);
-        if (err)
-            jack_error ("ALSA: cannot attach MIDI: %d", err);
-    }
-
     return 0;
 }
 
@@ -460,8 +445,6 @@ int JackAlsaDriver::Detach()
             UnregisterCardPorts(fSecondaryCards[c]);
         }
     }
-    if (fMidi)
-        (fMidi->detach)(fMidi);
 
     return JackAudioDriver::Detach();
 }
@@ -668,7 +651,6 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
                          const char* playback_driver_name,
                          jack_nframes_t capture_latency,
                          jack_nframes_t playback_latency,
-                         const char* midi_driver_name,
                          const std::vector<JackAlsaSecondaryConfig>& secondaries,
                          const std::vector<std::string>& excluded_cards)
 {
@@ -678,10 +660,6 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
                               capture_latency, playback_latency) != 0) {
         return -1;
     }
-
-    fMidi = NULL;
-    if (strcmp(midi_driver_name, "raw") == 0)
-        fMidi = alsa_rawmidi_new((jack_client_t*)this);
 
     if (JackServerGlobals::on_device_acquire != NULL) {
         int capture_card = card_to_num(capture_driver_name);
@@ -884,10 +862,6 @@ int JackAlsaDriver::Close()
     }
     fSecondaryCards.clear();
 
-    if (fMidi) {
-        fMidi->destroy(fMidi);
-        fMidi = NULL;
-    }
     fSession.close();
 
     if (device_reservation_loop_running) {
@@ -918,7 +892,7 @@ int JackAlsaDriver::Start()
 {
     int res = JackAudioDriver::Start();
     if (res >= 0) {
-        res = StartPrimary();
+        res = fSession.start();
         if (res < 0) {
             JackAudioDriver::Stop();
         } else {
@@ -931,7 +905,7 @@ int JackAlsaDriver::Start()
             }
             if (res < 0) {
                 StopSecondaryCards();
-                StopPrimary();
+                fSession.stop();
                 JackAudioDriver::Stop();
             } else {
                 // An xrun recovery restarts the streams only.  The monitor, the hot-plug listener and the reconfig
@@ -1160,27 +1134,6 @@ void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long
     }
 }
 
-// The MIDI backend follows the streams, except during an xrun recovery: that restart keeps the MIDI running.
-int JackAlsaDriver::StartPrimary()
-{
-    if (fMidi && !fXrunRecovery) {
-        fMidi->start(fMidi);
-    }
-    return fSession.start();
-}
-
-int JackAlsaDriver::StopPrimary()
-{
-    int res = fSession.stop();
-    if (res < 0) {
-        return res;
-    }
-    if (fMidi && !fXrunRecovery) {
-        fMidi->stop(fMidi);
-    }
-    return res;
-}
-
 int JackAlsaDriver::Stop()
 {
     if (!fRestarting.load()) {
@@ -1188,7 +1141,7 @@ int JackAlsaDriver::Stop()
         StopControlMonitoring();
     }
     StopSecondaryCards();
-    int res = StopPrimary();
+    int res = fSession.stop();
     if (JackAudioDriver::Stop() < 0) {
         res = -1;
     }
@@ -1244,9 +1197,6 @@ retry:
     // Has to be done before read
     JackDriver::CycleIncTime();
 
-    if (fMidi) {
-        fMidi->read(fMidi, fEngineControl->fBufferSize);
-    }
     int res = fSession.read(fEngineControl->fBufferSize);
     if (res < 0) {
         return res;
@@ -1263,9 +1213,6 @@ retry:
 
 int JackAlsaDriver::Write()
 {
-    if (fSession.has_playback() && fMidi) {
-        fMidi->write(fMidi, fEngineControl->fBufferSize);
-    }
     int res = fSession.write(fEngineControl->fBufferSize);
     if (res < 0) {
         PrimaryFailed(res);
@@ -1309,11 +1256,6 @@ void JackAlsaDriver::SetTimetAux(jack_time_t time)
     fBeginDateUst = time;
 }
 
-int JackAlsaDriver::PortSetDefaultMetadata(jack_port_id_t port_id, const char* pretty_name)
-{
-    return fEngine->PortSetDefaultMetadata(fClientControl.fRefNum, port_id, pretty_name);
-}
-
 void JackAlsaDriver::WriteOutputAux(jack_nframes_t orig_nframes, const jackmini::alsa::MappedFrames& mapped,
                                     std::ptrdiff_t nwritten)
 {
@@ -1329,57 +1271,6 @@ void JackAlsaDriver::WriteOutputAux(jack_nframes_t orig_nframes, const jackmini:
             }
         }
     }
-}
-
-int JackAlsaDriver::is_realtime() const
-{
-    return fEngineControl->fRealTime;
-}
-
-int JackAlsaDriver::create_thread(pthread_t *thread, int priority, int realtime, void *(*start_routine)(void*), void *arg)
-{
-    return JackPosixThread::StartImp(thread, priority, realtime, start_routine, arg);
-}
-
-jack_port_id_t JackAlsaDriver::port_register(const char *port_name, const char *port_type, unsigned long flags, unsigned long buffer_size)
-{
-    jack_port_id_t port_index;
-    int res = fEngine->PortRegister(fClientControl.fRefNum, port_name, port_type, flags, buffer_size, &port_index);
-    return (res == 0) ? port_index : 0;
-}
-
-int JackAlsaDriver::port_unregister(jack_port_id_t port_index)
-{
-    return fEngine->PortUnRegister(fClientControl.fRefNum, port_index);
-}
-
-void* JackAlsaDriver::port_get_buffer(int port, jack_nframes_t nframes)
-{
-    return fGraphManager->GetBuffer(port, nframes);
-}
-
-int  JackAlsaDriver::port_set_alias(int port, const char* name)
-{
-    return fGraphManager->GetPort(port)->SetAlias(name);
-}
-
-jack_nframes_t JackAlsaDriver::get_sample_rate() const
-{
-    return fEngineControl->fSampleRate;
-}
-
-jack_nframes_t JackAlsaDriver::frame_time() const
-{
-    JackTimer timer;
-    fEngineControl->ReadFrameTime(&timer);
-    return timer.Time2Frames(get_microseconds(), fEngineControl->fBufferSize);
-}
-
-jack_nframes_t JackAlsaDriver::last_frame_time() const
-{
-    JackTimer timer;
-    fEngineControl->ReadFrameTime(&timer);
-    return timer.CurFrame();
 }
 
 } // end of namespace
@@ -1573,20 +1464,6 @@ static jack_driver_desc_t* describe_driver()
     jack_driver_descriptor_add_parameter(desc, &filler, "output-latency", 'O', JackDriverParamUInt, &value, NULL, "Extra output latency (frames)", NULL);
 
     strcpy(value.str, "none");
-    jack_driver_descriptor_add_parameter(
-        desc,
-        &filler,
-        "midi-driver",
-        'X',
-        JackDriverParamString,
-        &value,
-        jack_constraint_compose_enum_str(
-            JACK_CONSTRAINT_FLAG_STRICT | JACK_CONSTRAINT_FLAG_FAKE_VALUE,
-            midi_constraint_descr_array),
-        "ALSA MIDI driver",
-        NULL);
-
-    strcpy(value.str, "none");
     jack_driver_descriptor_add_parameter(desc, &filler, "secondary", 'Y', JackDriverParamString, &value, NULL,
         "Secondary ALSA card (repeatable)",
         "Secondary ALSA card, repeatable. Keys: name, device, mode (duplex|capture|playback), channels, rate, nperiods, clock (async|sync), format (auto|float|s32|s16), resampler, optional, follow_hw_rate. Example: name=usb1;device=hw:1;mode=capture;clock=async");
@@ -1622,7 +1499,6 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
     jack_nframes_t systemic_output_latency = 0;
     const JSList * node;
     const jack_driver_param_t * param;
-    const char *midi_driver = "none";
     std::vector<jackmini::JackAlsaSecondaryConfig> secondaries;
     std::vector<std::string> excluded_cards;
 
@@ -1720,10 +1596,6 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
                 systemic_output_latency = param->value.ui;
                 break;
 
-            case 'X':
-                midi_driver = strdup(param->value.str);
-                break;
-
             case 'Y':
                 if (strcmp (param->value.str, "none") != 0) {
                     jackmini::JackAlsaSecondaryConfig config;
@@ -1787,7 +1659,7 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
     // Special open for ALSA driver...
     if (alsa_driver->Open(frames_per_interrupt, user_nperiods, srate, hw_monitoring, hw_metering, capture, playback, dither, soft_mode, monitor,
                           user_capture_nchnls, user_playback_nchnls, shorts_first, capture_pcm_name, playback_pcm_name,
-                          systemic_input_latency, systemic_output_latency, midi_driver,
+                          systemic_input_latency, systemic_output_latency,
                           secondaries, excluded_cards) == 0) {
         return threaded_driver;
     } else {

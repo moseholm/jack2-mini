@@ -166,7 +166,6 @@ int main(int argc, char** argv)
                                        { "clock-source", 1, 0, 'c' },
                                        { "loopback-driver", 1, 0, 'L' },
                                        { "audio-driver", 1, 0, 'd' },
-                                       { "midi-driver", 1, 0, 'X' },
                                        { "verbose", 0, 0, 'v' },
                                        { "help", 0, 0, 'h' },
                                        { "port-max", 1, 0, 'p' },
