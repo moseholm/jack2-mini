@@ -535,7 +535,7 @@ std::vector<std::string> ClientSession::connections(jack_port_id_t port) const
 bool ClientSession::is_connected(jack_port_id_t source, jack_port_id_t destination) const
 {
     wait_graph_change();
-    return context_->graph->IsConnected(source, destination) != 0;
+    return context_->graph->IsConnected(source, destination);
 }
 
 void ClientSession::wait_graph_change() const
@@ -820,7 +820,7 @@ void ClientSession::realtime_run()
 
 bool ClientSession::wait_cycle()
 {
-    if (context_->graph->SuspendRefNum(client_.GetShmAddress(), context_->synchro, LONG_MAX) < 0) {
+    if (!context_->graph->SuspendRefNum(client_.GetShmAddress(), context_->synchro, LONG_MAX)) {
         jack_error("SuspendRefNum error");
         return false;
     }
@@ -829,7 +829,7 @@ bool ClientSession::wait_cycle()
 
 void ClientSession::signal_cycle()
 {
-    if (context_->graph->ResumeRefNum(client_.GetShmAddress(), context_->synchro) < 0) {
+    if (!context_->graph->ResumeRefNum(client_.GetShmAddress(), context_->synchro)) {
         jack_error("ResumeRefNum error");
     }
 }

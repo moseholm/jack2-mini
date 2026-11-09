@@ -857,7 +857,7 @@ Result<void> JackEngine::PortUnRegister(int refnum, jack_port_id_t port_index)
     // Disconnect port ==> notification is sent
     PortDisconnect(-1, port_index, ALL_PORTS);
 
-    if (fGraphManager->ReleasePort(refnum, port_index) == 0) {
+    if (fGraphManager->ReleasePort(refnum, port_index)) {
         if (client->GetClientControl()->fActive) {
             NotifyPortRegistation(port_index, false);
         }
@@ -917,7 +917,7 @@ Result<void> JackEngine::PortConnect(int refnum, const char* src, const char* ds
     jack_log("JackEngine::PortConnect ref = %d src = %s dst = %s", refnum, src, dst);
     jack_port_id_t port_src, port_dst;
 
-    if (fGraphManager->GetTwoPorts(src, dst, &port_src, &port_dst) < 0) {
+    if (!fGraphManager->GetTwoPorts(src, dst, &port_src, &port_dst)) {
         return std::unexpected(Error::NotFound);
     }
     return PortConnect(refnum, port_src, port_dst);
@@ -929,7 +929,7 @@ Result<void> JackEngine::PortConnect(int refnum, jack_port_id_t src, jack_port_i
     JackClientInterface* client;
     int ref;
 
-    if (fGraphManager->CheckPorts(src, dst) < 0) {
+    if (!fGraphManager->CheckPorts(src, dst)) {
         return std::unexpected(Error::InvalidArgument);
     }
 
@@ -961,8 +961,9 @@ Result<void> JackEngine::PortConnect(int refnum, jack_port_id_t src, jack_port_i
         return {};
     }
 
-    if (fGraphManager->Connect(src, dst) != 0) {
-        return std::unexpected(Error::ServerFailure);
+    auto connected = fGraphManager->Connect(src, dst);
+    if (!connected) {
+        return connected;
     }
     NotifyPortConnect(src, dst, true);
     return {};
@@ -973,7 +974,7 @@ Result<void> JackEngine::PortDisconnect(int refnum, const char* src, const char*
     jack_log("JackEngine::PortDisconnect ref = %d src = %s dst = %s", refnum, src, dst);
     jack_port_id_t port_src, port_dst;
 
-    if (fGraphManager->GetTwoPorts(src, dst, &port_src, &port_dst) < 0) {
+    if (!fGraphManager->GetTwoPorts(src, dst, &port_src, &port_dst)) {
         return std::unexpected(Error::NotFound);
     }
     return PortDisconnect(refnum, port_src, port_dst);
@@ -1010,7 +1011,7 @@ Result<void> JackEngine::PortDisconnect(int refnum, jack_port_id_t src, jack_por
         return {};
     }
 
-    if (fGraphManager->CheckPorts(src, dst) < 0) {
+    if (!fGraphManager->CheckPorts(src, dst)) {
         return std::unexpected(Error::InvalidArgument);
     }
 
@@ -1022,8 +1023,9 @@ Result<void> JackEngine::PortDisconnect(int refnum, jack_port_id_t src, jack_por
         return {};
     }
 
-    if (fGraphManager->Disconnect(src, dst) != 0) {
-        return std::unexpected(Error::ServerFailure);
+    auto disconnected = fGraphManager->Disconnect(src, dst);
+    if (!disconnected) {
+        return disconnected;
     }
     NotifyPortConnect(src, dst, false);
     return {};

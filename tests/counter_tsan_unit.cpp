@@ -69,7 +69,7 @@ int main()
     std::thread rt([&] {
         for (int i = 0; i < kRounds; i++) {
             graph->RunNextGraph();
-            if (graph->ResumeRefNum(&output, table) < 0) {
+            if (!graph->ResumeRefNum(&output, table)) {
                 failures++;
             }
         }

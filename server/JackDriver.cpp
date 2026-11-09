@@ -583,12 +583,12 @@ void JackDriver::LoadConnections(int alias, bool full_name)
     }
 }
 
-int JackDriver::ResumeRefNum()
+Result<void> JackDriver::ResumeRefNum()
 {
     return fGraphManager->ResumeRefNum(&fClientControl, fSynchroTable);
 }
 
-int JackDriver::SuspendRefNum()
+Result<void> JackDriver::SuspendRefNum()
 {
     return fGraphManager->SuspendRefNum(&fClientControl, fSynchroTable, DRIVER_TIMEOUT_FACTOR * fEngineControl->fTimeOutUsecs);
 }

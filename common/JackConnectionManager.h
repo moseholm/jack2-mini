@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackConstants.h"
 #include "JackActivationCount.h"
 #include "JackError.h"
+#include "jackmini/error.hpp"
 #include "JackCompilerDeps.h"
 #include <vector>
 #include <assert.h>
@@ -429,8 +430,8 @@ class SERVER_EXPORT JackConnectionManager
         ~JackConnectionManager();
 
         // Connections management
-        int Connect(jack_port_id_t port_src, jack_port_id_t port_dst);
-        int Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst);
+        Result<void> Connect(jack_port_id_t port_src, jack_port_id_t port_dst);
+        Result<void> Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst);
         bool IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst) const;
 
         /*!
@@ -458,11 +459,11 @@ class SERVER_EXPORT JackConnectionManager
         void DecDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
 
         // Ports management
-        int AddInputPort(int refnum, jack_port_id_t port_index);
-        int AddOutputPort(int refnum, jack_port_id_t port_index);
+        Result<void> AddInputPort(int refnum, jack_port_id_t port_index);
+        Result<void> AddOutputPort(int refnum, jack_port_id_t port_index);
 
-        int RemoveInputPort(int refnum, jack_port_id_t port_index);
-        int RemoveOutputPort(int refnum, jack_port_id_t port_index);
+        Result<void> RemoveInputPort(int refnum, jack_port_id_t port_index);
+        Result<void> RemoveOutputPort(int refnum, jack_port_id_t port_index);
 
         const jack_int_t* GetInputPorts(int refnum);
         const jack_int_t* GetOutputPorts(int refnum);
@@ -489,8 +490,8 @@ class SERVER_EXPORT JackConnectionManager
         // Graph
         // The live activation counters are passed in: they are not part of this (copied) state.
         void ResetGraph(JackClientTiming* timing, std::atomic<SInt32>* live);
-        int ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live);
-        int SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, long time_out_usec);
+        Result<void> ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live);
+        Result<void> SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, long time_out_usec);
         void TopologicalSort(std::vector<jack_int_t>& sorted);
 
 };

@@ -126,14 +126,14 @@ bool JackGraphManager::IsFinishedGraph()
 }
 
 // RT
-int JackGraphManager::ResumeRefNum(JackClientControl* control, JackSynchro* table)
+Result<void> JackGraphManager::ResumeRefNum(JackClientControl* control, JackSynchro* table)
 {
     JackConnectionManager* manager = ReadCurrentState();
     return manager->ResumeRefNum(control, table, fClientTiming, fActivation);
 }
 
 // RT
-int JackGraphManager::SuspendRefNum(JackClientControl* control, JackSynchro* table, long usec)
+Result<void> JackGraphManager::SuspendRefNum(JackClientControl* control, JackSynchro* table, long usec)
 {
     JackConnectionManager* manager = ReadCurrentState();
     return manager->SuspendRefNum(control, table, fClientTiming, usec);
@@ -242,7 +242,7 @@ void* JackGraphManager::GetBuffer(jack_port_id_t port_index, jack_nframes_t buff
 }
 
 // Server
-int JackGraphManager::RequestMonitor(jack_port_id_t port_index, bool onoff) // Client
+void JackGraphManager::RequestMonitor(jack_port_id_t port_index, bool onoff) // Client
 {
     AssertPort(port_index);
     JackPort* port = GetPort(port_index);
@@ -266,8 +266,6 @@ int JackGraphManager::RequestMonitor(jack_port_id_t port_index, bool onoff) // C
             RequestMonitor(src_index, onoff);
         }
     }
-
-    return 0;
 }
 
 // Client
@@ -295,7 +293,7 @@ jack_nframes_t JackGraphManager::ComputeTotalLatencyAux(jack_port_id_t port_inde
 }
 
 // Client
-int JackGraphManager::ComputeTotalLatency(jack_port_id_t port_index)
+void JackGraphManager::ComputeTotalLatency(jack_port_id_t port_index)
 {
     UInt16 cur_index;
     UInt16 next_index;
@@ -309,11 +307,10 @@ int JackGraphManager::ComputeTotalLatency(jack_port_id_t port_index)
     } while (cur_index != next_index); // Until a coherent state has been read
 
     jack_log("JackGraphManager::GetTotalLatency port_index = %ld total latency = %ld", port_index, port->fTotalLatency);
-    return 0;
 }
 
 // Client
-int JackGraphManager::ComputeTotalLatencies()
+void JackGraphManager::ComputeTotalLatencies()
 {
     jack_port_id_t port_index;
     for (port_index = FIRST_AVAILABLE_PORT; port_index < fPortMax; port_index++) {
@@ -322,7 +319,6 @@ int JackGraphManager::ComputeTotalLatencies()
             ComputeTotalLatency(port_index);
         }
     }
-    return 0;
 }
 
 void JackGraphManager::RecalculateLatencyAux(jack_port_id_t port_index, jack_latency_callback_mode_t mode)
@@ -413,14 +409,14 @@ jack_port_id_t JackGraphManager::AllocatePort(int refnum, const char* port_name,
         assert(port);
         port->ClearBuffer(buffer_size);
 
-        int res;
+        Result<void> res;
         if (flags & JackPortIsOutput) {
             res = manager->AddOutputPort(refnum, port_index);
         } else {
             res = manager->AddInputPort(refnum, port_index);
         }
         // Insertion failure
-        if (res < 0) {
+        if (!res) {
             port->Release();
             port_index = NO_PORT;
         }
@@ -431,11 +427,11 @@ jack_port_id_t JackGraphManager::AllocatePort(int refnum, const char* port_name,
 }
 
 // Server
-int JackGraphManager::ReleasePort(int refnum, jack_port_id_t port_index)
+Result<void> JackGraphManager::ReleasePort(int refnum, jack_port_id_t port_index)
 {
     JackConnectionManager* manager = WriteNextStateStart();
     JackPort* port = GetPort(port_index);
-    int res;
+    Result<void> res;
 
     if (port->fFlags & JackPortIsOutput) {
         DisconnectAllOutput(port_index);
@@ -476,8 +472,7 @@ void JackGraphManager::RemoveAllPorts(int refnum)
     // Warning : ReleasePort shift port to left, thus we always remove the first port until the "input" table is empty
     const jack_int_t* input = manager->GetInputPorts(refnum);
     while ((port_index = input[0]) != EMPTY) {
-        int res = ReleasePort(refnum, port_index);
-        if (res < 0) {
+        if (!ReleasePort(refnum, port_index)) {
             jack_error("JackGraphManager::RemoveAllPorts failure ref = %ld port_index = %ld", refnum, port_index);
             assert(true);
             break;
@@ -487,8 +482,7 @@ void JackGraphManager::RemoveAllPorts(int refnum)
     // Warning : ReleasePort shift port to left, thus we always remove the first port until the "output" table is empty
     const jack_int_t* output = manager->GetOutputPorts(refnum);
     while ((port_index = output[0]) != EMPTY) {
-        int res = ReleasePort(refnum, port_index);
-        if (res < 0) {
+        if (!ReleasePort(refnum, port_index)) {
             jack_error("JackGraphManager::RemoveAllPorts failure ref = %ld port_index = %ld", refnum, port_index);
             assert(true);
             break;
@@ -547,7 +541,7 @@ void JackGraphManager::DisconnectAllOutput(jack_port_id_t port_index)
 }
 
 // Server
-int JackGraphManager::DisconnectAll(jack_port_id_t port_index)
+void JackGraphManager::DisconnectAll(jack_port_id_t port_index)
 {
     AssertPort(port_index);
 
@@ -557,7 +551,6 @@ int JackGraphManager::DisconnectAll(jack_port_id_t port_index)
     } else {
         DisconnectAllInput(port_index);
     }
-    return 0;
 }
 
 // Server
@@ -624,40 +617,40 @@ int JackGraphManager::GetOutputRefNum(jack_port_id_t port_index)
     return res;
 }
 
-int JackGraphManager::Connect(jack_port_id_t port_src, jack_port_id_t port_dst)
+Result<void> JackGraphManager::Connect(jack_port_id_t port_src, jack_port_id_t port_dst)
 {
     JackConnectionManager* manager = WriteNextStateStart();
     jack_log("JackGraphManager::Connect port_src = %ld port_dst = %ld", port_src, port_dst);
     JackPort* src = GetPort(port_src);
     JackPort* dst = GetPort(port_dst);
-    int res = 0;
+    Result<void> res;
 
     if (!src->fInUse || !dst->fInUse) {
         if (!src->fInUse)
             jack_error("JackGraphManager::Connect port_src = %ld not used name = %s", port_src, GetPort(port_src)->fName);
         if (!dst->fInUse)
             jack_error("JackGraphManager::Connect port_dst = %ld not used name = %s", port_dst, GetPort(port_dst)->fName);
-        res = -1;
+        res = std::unexpected(Error::NotFound);
         goto end;
     }
     if (src->fTypeId != dst->fTypeId) {
         jack_error("JackGraphManager::Connect different port types port_src = %ld port_dst = %ld", port_src, port_dst);
-        res = -1;
+        res = std::unexpected(Error::InvalidArgument);
         goto end;
     }
     if (manager->IsConnected(port_src, port_dst)) {
         jack_error("JackGraphManager::Connect already connected port_src = %ld port_dst = %ld", port_src, port_dst);
-        res = EEXIST;
+        res = std::unexpected(Error::InvalidState);
         goto end;
     }
 
     res = manager->Connect(port_src, port_dst);
-    if (res < 0) {
+    if (!res) {
         jack_error("JackGraphManager::Connect failed port_src = %ld port_dst = %ld", port_src, port_dst);
         goto end;
     }
     res = manager->Connect(port_dst, port_src);
-    if (res < 0) {
+    if (!res) {
         jack_error("JackGraphManager::Connect failed port_dst = %ld port_src = %ld", port_dst, port_src);
         goto end;
     }
@@ -675,35 +668,35 @@ end:
 }
 
 // Server
-int JackGraphManager::Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst)
+Result<void> JackGraphManager::Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst)
 {
     JackConnectionManager* manager = WriteNextStateStart();
     jack_log("JackGraphManager::Disconnect port_src = %ld port_dst = %ld", port_src, port_dst);
     bool in_use_src = GetPort(port_src)->fInUse;
     bool in_use_dst = GetPort(port_dst)->fInUse;
-    int res = 0;
+    Result<void> res;
 
     if (!in_use_src || !in_use_dst) {
         if (!in_use_src)
             jack_error("JackGraphManager::Disconnect: port_src = %ld not used name = %s", port_src, GetPort(port_src)->fName);
         if (!in_use_dst)
             jack_error("JackGraphManager::Disconnect: port_src = %ld not used name = %s", port_dst, GetPort(port_dst)->fName);
-        res = -1;
+        res = std::unexpected(Error::NotFound);
         goto end;
     }
     if (!manager->IsConnected(port_src, port_dst)) {
         jack_error("JackGraphManager::Disconnect not connected port_src = %ld port_dst = %ld", port_src, port_dst);
-        res = -1;
+        res = std::unexpected(Error::NotFound);
         goto end;
     }
 
     res = manager->Disconnect(port_src, port_dst);
-    if (res < 0) {
+    if (!res) {
         jack_error("JackGraphManager::Disconnect failed port_src = %ld port_dst = %ld", port_src, port_dst);
         goto end;
     }
     res = manager->Disconnect(port_dst, port_src);
-    if (res < 0) {
+    if (!res) {
         jack_error("JackGraphManager::Disconnect failed port_dst = %ld port_src = %ld", port_dst, port_src);
         goto end;
     }
@@ -721,46 +714,46 @@ end:
 }
 
 // Client
-int JackGraphManager::IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst)
+bool JackGraphManager::IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst)
 {
     JackConnectionManager* manager = ReadCurrentState();
     return manager->IsConnected(port_src, port_dst);
 }
 
 // Server
-int JackGraphManager::CheckPorts(jack_port_id_t port_src, jack_port_id_t port_dst)
+Result<void> JackGraphManager::CheckPorts(jack_port_id_t port_src, jack_port_id_t port_dst)
 {
     JackPort* src = GetPort(port_src);
     JackPort* dst = GetPort(port_dst);
 
     if ((dst->fFlags & JackPortIsInput) == 0) {
         jack_error("Destination port in attempted (dis)connection of %s and %s is not an input port", src->fName, dst->fName);
-        return -1;
+        return std::unexpected(Error::InvalidArgument);
     }
 
     if ((src->fFlags & JackPortIsOutput) == 0) {
         jack_error("Source port in attempted (dis)connection of %s and %s is not an output port", src->fName, dst->fName);
-        return -1;
+        return std::unexpected(Error::InvalidArgument);
     }
 
-    return 0;
+    return {};
 }
 
-int JackGraphManager::GetTwoPorts(const char* src_name, const char* dst_name, jack_port_id_t* port_src, jack_port_id_t* port_dst)
+Result<void> JackGraphManager::GetTwoPorts(const char* src_name, const char* dst_name, jack_port_id_t* port_src, jack_port_id_t* port_dst)
 {
     jack_log("JackGraphManager::CheckConnect src_name = %s dst_name = %s", src_name, dst_name);
 
     if ((*port_src = GetPort(src_name)) == NO_PORT) {
         jack_error("Unknown source port in attempted (dis)connection src_name [%s] dst_name [%s]", src_name, dst_name);
-        return -1;
+        return std::unexpected(Error::NotFound);
     }
 
     if ((*port_dst = GetPort(dst_name)) == NO_PORT) {
         jack_error("Unknown destination port in attempted (dis)connection src_name [%s] dst_name [%s]", src_name, dst_name);
-        return -1;
+        return std::unexpected(Error::NotFound);
     }
 
-    return 0;
+    return {};
 }
 
 // Client : port array

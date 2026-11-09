@@ -34,7 +34,7 @@ class JackFreewheelDriver : public JackDriver
 {
     protected:
 
-        int SuspendRefNum();
+        Result<void> SuspendRefNum();
 
     public:
 

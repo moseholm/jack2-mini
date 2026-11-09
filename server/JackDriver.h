@@ -25,6 +25,7 @@
 #include "types.h"
 #include "JackClientInterface.h"
 #include "JackConstants.h"
+#include "jackmini/error.hpp"
 #include "JackPlatformPlug.h"
 #include "JackClientControl.h"
 #include <list>
@@ -184,8 +185,8 @@ class SERVER_EXPORT JackDriver : public JackDriverClientInterface
         virtual int StartSlaves();
         virtual int StopSlaves();
 
-        virtual int ResumeRefNum();
-        virtual int SuspendRefNum();
+        virtual Result<void> ResumeRefNum();
+        virtual Result<void> SuspendRefNum();
 
     public:
 

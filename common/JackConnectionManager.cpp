@@ -88,30 +88,30 @@ bool JackConnectionManager::IsLoopPathAux(int ref1, int ref2) const
 /*!
 \brief Connect port_src to port_dst.
 */
-int JackConnectionManager::Connect(jack_port_id_t port_src, jack_port_id_t port_dst)
+Result<void> JackConnectionManager::Connect(jack_port_id_t port_src, jack_port_id_t port_dst)
 {
     jack_log("JackConnectionManager::Connect port_src = %ld port_dst = %ld", port_src, port_dst);
 
     if (fConnection[port_src].AddItem(port_dst)) {
-        return 0;
+        return {};
     } else {
         jack_error("Connection table is full !!");
-        return -1;
+        return std::unexpected(Error::ServerFailure);
     }
 }
 
 /*!
 \brief Disconnect port_src from port_dst.
 */
-int JackConnectionManager::Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst)
+Result<void> JackConnectionManager::Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst)
 {
     jack_log("JackConnectionManager::Disconnect port_src = %ld port_dst = %ld", port_src, port_dst);
 
     if (fConnection[port_src].RemoveItem(port_dst)) {
-        return 0;
+        return {};
     } else {
         jack_error("Connection not found !!");
-        return -1;
+        return std::unexpected(Error::NotFound);
     }
 }
 
@@ -138,58 +138,58 @@ const jack_int_t* JackConnectionManager::GetConnections(jack_port_id_t port_inde
 /*!
 \brief Add an input port to a client.
 */
-int JackConnectionManager::AddInputPort(int refnum, jack_port_id_t port_index)
+Result<void> JackConnectionManager::AddInputPort(int refnum, jack_port_id_t port_index)
 {
     if (fInputPort[refnum].AddItem(port_index)) {
         jack_log("JackConnectionManager::AddInputPort ref = %ld port = %ld", refnum, port_index);
-        return 0;
+        return {};
     } else {
         jack_error("Maximum number of input ports is reached for application ref = %ld", refnum);
-        return -1;
+        return std::unexpected(Error::ServerFailure);
     }
 }
 
 /*!
 \brief Add an output port to a client.
 */
-int JackConnectionManager::AddOutputPort(int refnum, jack_port_id_t port_index)
+Result<void> JackConnectionManager::AddOutputPort(int refnum, jack_port_id_t port_index)
 {
     if (fOutputPort[refnum].AddItem(port_index)) {
         jack_log("JackConnectionManager::AddOutputPort ref = %ld port = %ld", refnum, port_index);
-        return 0;
+        return {};
     } else {
         jack_error("Maximum number of output ports is reached for application ref = %ld", refnum);
-        return -1;
+        return std::unexpected(Error::ServerFailure);
     }
 }
 
 /*!
 \brief Remove an input port from a client.
 */
-int JackConnectionManager::RemoveInputPort(int refnum, jack_port_id_t port_index)
+Result<void> JackConnectionManager::RemoveInputPort(int refnum, jack_port_id_t port_index)
 {
     jack_log("JackConnectionManager::RemoveInputPort ref = %ld port_index = %ld ", refnum, port_index);
 
     if (fInputPort[refnum].RemoveItem(port_index)) {
-        return 0;
+        return {};
     } else {
         jack_error("Input port index = %ld not found for application ref = %ld", port_index, refnum);
-        return -1;
+        return std::unexpected(Error::NotFound);
     }
 }
 
 /*!
 \brief Remove an output port from a client.
 */
-int JackConnectionManager::RemoveOutputPort(int refnum, jack_port_id_t port_index)
+Result<void> JackConnectionManager::RemoveOutputPort(int refnum, jack_port_id_t port_index)
 {
     jack_log("JackConnectionManager::RemoveOutputPort ref = %ld port_index = %ld ", refnum, port_index);
 
     if (fOutputPort[refnum].RemoveItem(port_index)) {
-        return 0;
+        return {};
     } else {
         jack_error("Output port index = %ld not found for application ref = %ld", port_index, refnum);
-        return -1;
+        return std::unexpected(Error::NotFound);
     }
 }
 
@@ -236,24 +236,27 @@ void JackConnectionManager::ResetGraph(JackClientTiming* timing, std::atomic<SIn
 /*!
 \brief Wait on the input synchro.
 */
-int JackConnectionManager::SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, long time_out_usec)
+Result<void> JackConnectionManager::SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, long time_out_usec)
 {
     bool res;
     if ((res = table[control->fRefNum].TimedWait(time_out_usec))) {
         timing[control->fRefNum].fStatus = Running;
         timing[control->fRefNum].fAwakeAt = get_microseconds();
     }
-    return (res) ? 0 : -1;
+    if (!res) {
+        return std::unexpected(Error::ServerFailure);
+    }
+    return {};
 }
 
 /*!
 \brief Signal clients connected to the given client.
 */
-int JackConnectionManager::ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live)
+Result<void> JackConnectionManager::ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live)
 {
     jack_time_t current_date = get_microseconds();
     const jack_int_t* output_ref = fConnectionRef.GetItems(control->fRefNum);
-    int res = 0;
+    Result<void> res;
 
     // Update state and timestamp of current client
     timing[control->fRefNum].fStatus = Finished;
@@ -270,7 +273,7 @@ int JackConnectionManager::ResumeRefNum(JackClientControl* control, JackSynchro*
 
             if (!JackActivationCount::Signal(live[i], table + i, control)) {
                 jack_log("JackConnectionManager::ResumeRefNum error: ref = %ld output = %ld ", control->fRefNum, i);
-                res = -1;
+                res = std::unexpected(Error::ServerFailure);
             }
         }
     }

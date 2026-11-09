@@ -94,7 +94,7 @@ int main()
     Check("ports allocated", out != NO_PORT && in != NO_PORT);
     static_cast<GraphTestAccess*>(graph)->ConnectDirect(out, in);
     static_cast<GraphTestAccess*>(graph)->Switch();
-    Check("connected", graph->IsConnected(out, in) == 1);
+    Check("connected", graph->IsConnected(out, in));
 
     float* source = static_cast<float*>(graph->GetBuffer(out, kFrames));
     for (jack_nframes_t i = 0; i < kFrames; i++) {
@@ -104,12 +104,12 @@ int main()
 
     graph->Deactivate(kSourceRef);
     static_cast<GraphTestAccess*>(graph)->Switch();
-    Check("deactivated: the connection is kept", graph->IsConnected(out, in) == 1);
+    Check("deactivated: the connection is kept", graph->IsConnected(out, in));
     Check("deactivated: the input is silent", AllEqual(static_cast<float*>(graph->GetBuffer(in, kFrames)), 0.0f));
 
     graph->Activate(kSourceRef);
     static_cast<GraphTestAccess*>(graph)->Switch();
-    Check("reactivated: the connection is still there", graph->IsConnected(out, in) == 1);
+    Check("reactivated: the connection is still there", graph->IsConnected(out, in));
     Check("reactivated: the input receives the output again", AllEqual(static_cast<float*>(graph->GetBuffer(in, kFrames)), 0.5f));
 
     std::printf("%s\n", gFailures == 0 ? "deactivate graph checks passed" : "deactivate graph checks FAILED");

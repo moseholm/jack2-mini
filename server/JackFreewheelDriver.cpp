@@ -36,12 +36,12 @@ int JackFreewheelDriver::Process()
    if (fEngine->Process(fBeginDateUst, fEndDateUst)) {
 
         // Resume connected clients in the graph
-        if (ResumeRefNum() < 0) {
+        if (!ResumeRefNum()) {
             jack_error("JackFreewheelDriver::Process: ResumeRefNum error");
         }
 
         // Special "SuspendRefNum" with longer timeout
-        if (SuspendRefNum() < 0) { // Wait for all clients to finish for FREEWHEEL_DRIVER_TIMEOUT sec
+        if (!SuspendRefNum()) { // Wait for all clients to finish for FREEWHEEL_DRIVER_TIMEOUT sec
             jack_error("JackFreewheelDriver::Process: SuspendRefNum error");
         }
 
@@ -57,7 +57,7 @@ int JackFreewheelDriver::Process()
 int JackFreewheelDriver::ProcessReadSync()
 {
     // Resume connected clients in the graph
-    if (ResumeRefNum() < 0) {      // Signal all clients
+    if (!ResumeRefNum()) {      // Signal all clients
         jack_error("JackFreewheelDriver::ProcessReadSync: ResumeRefNum error");
         return -1;
     }
@@ -67,7 +67,7 @@ int JackFreewheelDriver::ProcessReadSync()
 int JackFreewheelDriver::ProcessWriteSync()
 {
     // Generic "SuspendRefNum" here
-    if (JackDriver::SuspendRefNum() < 0) {
+    if (!JackDriver::SuspendRefNum()) {
         jack_error("JackFreewheelDriver::ProcessSync: SuspendRefNum error");
         return -1;
     }
@@ -77,7 +77,7 @@ int JackFreewheelDriver::ProcessWriteSync()
 int JackFreewheelDriver::ProcessReadAsync()
 {
     // Resume connected clients in the graph
-    if (ResumeRefNum() < 0) {      // Signal all clients
+    if (!ResumeRefNum()) {      // Signal all clients
         jack_error("JackFreewheelDriver::ProcessReadAsync: ResumeRefNum error");
         return -1;
     }
@@ -89,7 +89,7 @@ int JackFreewheelDriver::ProcessWriteAsync()
     return 0;
 }
 
-int JackFreewheelDriver::SuspendRefNum()
+Result<void> JackFreewheelDriver::SuspendRefNum()
 {
     return fGraphManager->SuspendRefNum(&fClientControl, fSynchroTable, FREEWHEEL_DRIVER_TIMEOUT * 1000000);
 }

@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackAtomicState.h"
 #include "JackPlatformPlug.h"
 #include "JackSystemDeps.h"
+#include "jackmini/error.hpp"
 
 namespace jackmini
 {
@@ -67,7 +68,7 @@ class SERVER_EXPORT JackGraphManager : public JackShmMem, public JackAtomicState
 
         // Ports management
         jack_port_id_t AllocatePort(int refnum, const char* port_name, const char* port_type, JackPortFlags flags, jack_nframes_t buffer_size);
-        int ReleasePort(int refnum, jack_port_id_t port_index);
+        Result<void> ReleasePort(int refnum, jack_port_id_t port_index);
         void GetInputPorts(int refnum, jack_int_t* res);
         void GetOutputPorts(int refnum, jack_int_t* res);
         void RemoveAllPorts(int refnum);
@@ -78,16 +79,16 @@ class SERVER_EXPORT JackGraphManager : public JackShmMem, public JackAtomicState
         void GetOwnedPorts(int refnum, std::vector<jack_port_id_t>& ports);
         jack_port_id_t GetPort(const char* name);
 
-        int ComputeTotalLatency(jack_port_id_t port_index);
-        int ComputeTotalLatencies();
+        void ComputeTotalLatency(jack_port_id_t port_index);
+        void ComputeTotalLatencies();
         void RecalculateLatency(jack_port_id_t port_index, jack_latency_callback_mode_t mode);
 
-        int RequestMonitor(jack_port_id_t port_index, bool onoff);
+        void RequestMonitor(jack_port_id_t port_index, bool onoff);
 
         // Connections management
-        int Connect(jack_port_id_t src_index, jack_port_id_t dst_index);
-        int Disconnect(jack_port_id_t src_index, jack_port_id_t dst_index);
-        int IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst);
+        Result<void> Connect(jack_port_id_t src_index, jack_port_id_t dst_index);
+        Result<void> Disconnect(jack_port_id_t src_index, jack_port_id_t dst_index);
+        bool IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst);
 
         // RT, client
         int GetConnectionsNum(jack_port_id_t port_index)
@@ -100,12 +101,12 @@ class SERVER_EXPORT JackGraphManager : public JackShmMem, public JackAtomicState
         void GetConnections(jack_port_id_t port_index, jack_int_t* connections);  // TODO
         const char** GetPorts(const char* port_name_pattern, const char* type_name_pattern, unsigned long flags);
 
-        int GetTwoPorts(const char* src, const char* dst, jack_port_id_t* src_index, jack_port_id_t* dst_index);
-        int CheckPorts(jack_port_id_t port_src, jack_port_id_t port_dst);
+        Result<void> GetTwoPorts(const char* src, const char* dst, jack_port_id_t* src_index, jack_port_id_t* dst_index);
+        Result<void> CheckPorts(jack_port_id_t port_src, jack_port_id_t port_dst);
 
         void DisconnectAllInput(jack_port_id_t port_index);
         void DisconnectAllOutput(jack_port_id_t port_index);
-        int DisconnectAll(jack_port_id_t port_index);
+        void DisconnectAll(jack_port_id_t port_index);
 
         bool IsDirectConnection(int ref1, int ref2);
         void DirectConnect(int ref1, int ref2);
@@ -126,8 +127,8 @@ class SERVER_EXPORT JackGraphManager : public JackShmMem, public JackAtomicState
         bool IsFinishedGraph();
 
         void InitRefNum(int refnum);
-        int ResumeRefNum(JackClientControl* control, JackSynchro* table);
-        int SuspendRefNum(JackClientControl* control, JackSynchro* table, long usecs);
+        Result<void> ResumeRefNum(JackClientControl* control, JackSynchro* table);
+        Result<void> SuspendRefNum(JackClientControl* control, JackSynchro* table, long usecs);
         void TopologicalSort(std::vector<jack_int_t>& sorted);
 
         JackClientTiming* GetClientTiming(int refnum)

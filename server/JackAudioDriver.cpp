@@ -252,7 +252,7 @@ void JackAudioDriver::ProcessGraphAsyncMaster()
         jack_error("JackAudioDriver::ProcessGraphAsyncMaster: Process error");
     }
 
-    if (ResumeRefNum() < 0) {
+    if (!ResumeRefNum()) {
         jack_error("JackAudioDriver::ProcessGraphAsyncMaster: ResumeRefNum error");
     }
 
@@ -273,7 +273,7 @@ Used when the driver works in slave mode.
 
 void JackAudioDriver::ProcessGraphAsyncSlave()
 {
-    if (ResumeRefNum() < 0) {
+    if (!ResumeRefNum()) {
         jack_error("JackAudioDriver::ProcessGraphAsyncSlave: ResumeRefNum error");
     }
 }
@@ -324,7 +324,7 @@ void JackAudioDriver::ProcessGraphSyncMaster()
     // fBeginDateUst is set in the "low level" layer, fEndDateUst is from previous cycle
     if (fEngine->Process(fBeginDateUst, fEndDateUst)) {
 
-        if (ResumeRefNum() < 0) {
+        if (!ResumeRefNum()) {
             jack_error("JackAudioDriver::ProcessGraphSyncMaster: ResumeRefNum error");
         }
 
@@ -337,7 +337,7 @@ void JackAudioDriver::ProcessGraphSyncMaster()
         }
 
         // Waits for graph execution end
-        if (SuspendRefNum() < 0) {
+        if (!SuspendRefNum()) {
             jack_error("JackAudioDriver::ProcessGraphSync: SuspendRefNum error, engine may now behave abnormally!!");
         }
 
@@ -352,7 +352,7 @@ Used when the driver works in slave mode.
 
 void JackAudioDriver::ProcessGraphSyncSlave()
 {
-    if (ResumeRefNum() < 0) {
+    if (!ResumeRefNum()) {
         jack_error("JackAudioDriver::ProcessGraphSyncSlave: ResumeRefNum error");
     }
 }
