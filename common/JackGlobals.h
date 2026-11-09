@@ -40,7 +40,6 @@ struct JackGlobals {
 extern SERVER_EXPORT JackGraphManager* GetGraphManager();
 extern SERVER_EXPORT JackEngineControl* GetEngineControl();
 extern SERVER_EXPORT JackSynchro* GetSynchroTable();
-extern SERVER_EXPORT JackMetadata* GetMetadata();
 
 } // end of namespace
 

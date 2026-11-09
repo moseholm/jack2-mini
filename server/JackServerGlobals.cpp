@@ -47,9 +47,4 @@ SERVER_EXPORT JackSynchro* GetSynchroTable()
     return JackServerGlobals::fInstance->GetSynchroTable();
 }
 
-SERVER_EXPORT JackMetadata* GetMetadata()
-{
-    return JackServerGlobals::fInstance->GetMetadata();
-}
-
 } // end of namespace

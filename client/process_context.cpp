@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "JackError.h"
 #include "JackGlobals.h"
 #include "JackMessageBuffer.h"
-#include "JackMetadata.h"
 #include "JackTime.h"
 
 namespace jackmini::client
@@ -103,11 +102,6 @@ SERVER_EXPORT JackSynchro* GetSynchroTable()
 {
     auto* context = jackmini::client::ProcessContext::current();
     return context ? context->synchro : nullptr;
-}
-
-SERVER_EXPORT JackMetadata* GetMetadata()
-{
-    return nullptr;
 }
 
 } // end of namespace jackmini

@@ -61,7 +61,6 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         std::atomic<unsigned long> fSwitchCount;
         // Written by the RT thread at each switch, and by the server thread when a client is deactivated.
         std::atomic<jack_time_t> fLastSwitchUsecs;
-        JackMetadata fMetadata;
 
         std::map<int,std::string> fReservationMap;
 
@@ -141,7 +140,6 @@ class SERVER_EXPORT JackEngine : public JackLockAble
 
         int PortRename(int refnum, jack_port_id_t port, const char* name);
 
-        int PortSetDefaultMetadata(jack_port_id_t port, const char* pretty_name);
 
         int ComputeTotalLatencies();
 

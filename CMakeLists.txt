@@ -105,7 +105,6 @@ set(JACK_CLIENT_SOURCES
     client/process_context.cpp
     client/jackmini/uuid.cpp
     client/client_session.cpp
-    server/JackMetadata.cpp
     client/JackServerLaunch.cpp)
 
 set(JACK_SERVER_SOURCES
@@ -122,7 +121,6 @@ set(JACK_SERVER_SOURCES
     server/JackServerGlobals.cpp
     server/control.cpp
     server/JackRequestDecoder.cpp
-    server/JackMetadata.cpp
     platform/JackSocketServerChannel.cpp
     platform/JackSocketNotifyChannel.cpp
     platform/JackSocketServerNotifyChannel.cpp

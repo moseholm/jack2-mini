@@ -35,9 +35,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackGlobals.h"
 #include "JackChannel.h"
 #include "JackError.h"
-
-extern const char* JACK_METADATA_HARDWARE;
-extern const char* JACK_METADATA_PRETTY_NAME;
+#include "jack/uuid.h"
 
 namespace jackmini
 {
@@ -47,8 +45,7 @@ JackEngine::JackEngine(JackGraphManager* manager,
                        JackEngineControl* control,
                        char self_connect_mode)
                     : JackLockAble(control->fServerName),
-                    fSignal(control->fServerName),
-                    fMetadata()
+                    fSignal(control->fServerName)
 {
     fGraphManager = manager;
     fSynchroTable = table;
@@ -741,12 +738,6 @@ int JackEngine::ClientCloseAux(int refnum, bool wait)
         }
     }
 
-    if (fMetadata.RemoveProperties(uuid) > 0) {
-        /* have to do the notification ourselves, since the client argument
-          to fMetadata->RemoveProperties() was NULL
-        */
-    }
-
     // Notify running clients
     NotifyRemoveClient(client->GetClientControl()->fName, refnum);
 
@@ -864,16 +855,6 @@ int JackEngine::PortUnRegister(int refnum, jack_port_id_t port_index)
     PortDisconnect(-1, port_index, ALL_PORTS);
 
     if (fGraphManager->ReleasePort(refnum, port_index) == 0) {
-        const jack_uuid_t uuid = jack_port_uuid_generate(port_index);
-        if (!jack_uuid_empty(uuid))
-        {
-            if (fMetadata.RemoveProperties(uuid) > 0) {
-                /* have to do the notification ourselves, since the client argument
-                   to fMetadata->RemoveProperties() was NULL
-                */
-            }
-        }
-
         if (client->GetClientControl()->fActive) {
             NotifyPortRegistation(port_index, false);
         }
@@ -1037,25 +1018,6 @@ int JackEngine::PortRename(int refnum, jack_port_id_t port, const char* name)
     fGraphManager->GetPort(port)->SetName(name);
     NotifyPortRename(port, old_name.data());
     return 0;
-}
-
-int JackEngine::PortSetDefaultMetadata(jack_port_id_t port, const char* pretty_name)
-{
-    static const char* type = "text/plain";
-    jack_uuid_t uuid = jack_port_uuid_generate(port);
-
-    int res = fMetadata.SetProperty(uuid, JACK_METADATA_HARDWARE, pretty_name, type);
-    if (res == -1) {
-        return -1;
-    }
-
-    char *v, *t;
-    res = fMetadata.GetProperty(uuid, JACK_METADATA_PRETTY_NAME, &v, &t);
-    if (res == -1) {
-        res = fMetadata.SetProperty(uuid, JACK_METADATA_PRETTY_NAME, pretty_name, type);
-    }
-
-    return res;
 }
 
 //--------------------
