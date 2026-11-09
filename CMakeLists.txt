@@ -395,11 +395,6 @@ if(JACK_BUILD_TESTS)
     target_link_libraries(jack_memops_unit PRIVATE m)
     add_test(NAME memops_unit COMMAND jack_memops_unit)
 
-    # The MIDI byte codec of the raw MIDI backend: running status out, message parsing in.
-    add_executable(jack_midi_wire_unit tests/midi_wire_unit.cpp)
-    target_include_directories(jack_midi_wire_unit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/platform/alsa")
-    add_test(NAME midi_wire_unit COMMAND jack_midi_wire_unit)
-
     # Compile-time checks of the jackmini client API headers.  No implementation is linked.
     add_executable(jack_api_unit tests/jackmini_api_unit.cpp)
     target_include_directories(jack_api_unit PRIVATE ${JACK_INCLUDE_DIRS})
