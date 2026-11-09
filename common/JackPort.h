@@ -46,6 +46,7 @@ private:
     char fAlias1[REAL_JACK_PORT_NAME_SIZE + 1];
     char fAlias2[REAL_JACK_PORT_NAME_SIZE + 1];
     int fRefNum;
+    jack_uuid_t fUUID; // set when the port is allocated; the UUID is reported by the client tools
 
     jack_nframes_t fLatency;
     jack_nframes_t fTotalLatency;
@@ -108,6 +109,14 @@ public:
     }
 
     int GetRefNum() const;
+    jack_uuid_t GetUUID() const
+    {
+        return fUUID;
+    }
+    bool InUse() const
+    {
+        return fInUse;
+    }
 };
 
 } // namespace jackmini

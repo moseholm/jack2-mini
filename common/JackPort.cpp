@@ -69,6 +69,7 @@ void JackPort::Release()
     fTypeId = 0;
     fFlags = JackPortIsInput;
     fRefNum = -1;
+    fUUID = 0;
     fInUse = false;
     fLatency = 0;
     fTotalLatency = 0;

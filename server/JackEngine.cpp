@@ -621,6 +621,7 @@ Result<void> JackEngine::ClientExternalOpen(const char* name, int pid, jack_uuid
     }
 
     fGraphManager->InitRefNum(refnum);
+    fGraphManager->SetClientUUID(refnum, client->GetClientControl()->fSessionID);
     fRollingResetPending = true;
     *shared_engine = JackShmSegment { fEngineControl->GetShmFd(), fEngineControl->GetShmSize() };
     *shared_graph_manager = JackShmSegment { fGraphManager->GetShmFd(), fGraphManager->GetShmSize() };
@@ -667,6 +668,7 @@ Result<void> JackEngine::RegisterDriver(const char* name, int* ref, JackEngineCo
     }
 
     fGraphManager->InitRefNum(refnum);
+    fGraphManager->SetClientUUID(refnum, client->GetClientControl()->fSessionID);
     fRollingResetPending = true;
     *shared_engine = fEngineControl;
     *shared_manager = fGraphManager;

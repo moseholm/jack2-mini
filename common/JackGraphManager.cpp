@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackGraphManager.h"
 #include "JackConstants.h"
+#include "jack/uuid.h"
 #include "JackError.h"
 #include <assert.h>
 #include <regex.h>
@@ -69,7 +70,13 @@ JackGraphManager::JackGraphManager(int port_max)
     fPortMax = port_max;
     for (int i = 0; i < CLIENT_NUM; i++) {
         fActivation[i].store(0);
+        fClientUUID[i] = 0;
     }
+}
+
+void JackGraphManager::SetClientUUID(int refnum, jack_uuid_t uuid)
+{
+    fClientUUID[refnum] = uuid;
 }
 
 JackPort* JackGraphManager::GetPort(jack_port_id_t port_index)
@@ -390,6 +397,7 @@ jack_port_id_t JackGraphManager::AllocatePortAux(int refnum, const char* port_na
             if (!port->Allocate(refnum, port_name, port_type, flags)) {
                 return NO_PORT;
             }
+            port->fUUID = jack_port_uuid_generate(port_index);
             break;
         }
     }

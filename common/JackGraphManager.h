@@ -43,6 +43,7 @@ private:
     unsigned int fPortMax;
     JackClientTiming fClientTiming[CLIENT_NUM];
     std::atomic<SInt32> fActivation[CLIENT_NUM]; // live activation counters, outside the copied connection state
+    jack_uuid_t fClientUUID[CLIENT_NUM]; // the UUID of each client, for the ports it owns
     JackPort fPortArray[0]; // The actual size depends of port_max, it will be dynamically computed and allocated using "placement" new
 
     void AssertPort(jack_port_id_t port_index);
@@ -126,6 +127,17 @@ public:
     Result<void> ResumeRefNum(JackClientControl* control, JackSynchro* table);
     Result<void> SuspendRefNum(JackClientControl* control, JackSynchro* table, long usecs);
     void TopologicalSort(std::vector<jack_int_t>& sorted);
+
+    // Read-only, for the client tools: the port table size, and the UUID of the client that owns a port.
+    unsigned int PortMax() const
+    {
+        return fPortMax;
+    }
+    void SetClientUUID(int refnum, jack_uuid_t uuid);
+    jack_uuid_t GetClientUUID(int refnum) const
+    {
+        return fClientUUID[refnum];
+    }
 
     JackClientTiming* GetClientTiming(int refnum)
     {

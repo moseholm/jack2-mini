@@ -58,6 +58,9 @@ LAYOUT(JackFrameTimer);
 // them.  JackClientTiming holds 64-bit times and a state; it is an array in the
 // graph segment, so its alignment is what matters.
 static_assert(alignof(JackClientTiming) >= alignof(jack_time_t));
+
+// The UUIDs of the ports and of the clients are stored in the graph segment: 64 bits, and aligned as such.
+static_assert(sizeof(jack_uuid_t) == 8 && alignof(jack_uuid_t) == 8);
 static_assert(sizeof(JackClientTiming) % alignof(JackClientTiming) == 0);
 
 // The activation counter and the state counters are 32-bit, read and written
