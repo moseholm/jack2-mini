@@ -19,22 +19,28 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#include <iostream>
-#include <assert.h>
-#include <cassert>
-#include <csignal>
-#include <sys/types.h>
-#include <getopt.h>
-#include <cstring>
+#include <cctype>
 #include <cstdio>
-#include <list>
+#include <cstring>
+#include <getopt.h>
+#include <vector>
 
-#include "types.h"
-#include "jack.h"
-#include "control.h"
+#include "jackmini/control.hpp"
 #include "JackConstants.h"
-#include "JackPlatformPlug.h"
 #include "JackCString.h"
+#include "JackPlatformPlug.h"
+#include "driver_interface.h"
+#include "jack.h"
+
+using jackmini::control::Choice;
+using jackmini::control::Driver;
+using jackmini::control::Parameter;
+using jackmini::control::Server;
+using jackmini::control::Value;
+
+// Prototype to be found in libjackserver
+extern "C" void silent_jack_error_callback(const char *desc);
+
 static void copyright(FILE* file)
 {
     fprintf(file, "jackdmp " JACK_VERSION "\n"
@@ -46,53 +52,17 @@ static void copyright(FILE* file)
             "under certain conditions; see the file COPYING for details\n");
 }
 
-static jackctl_driver_t * jackctl_server_get_driver(jackctl_server_t *server, const char *driver_name)
+static void print_server_drivers(const Server& server, FILE* file)
 {
-    const JSList * node_ptr = jackctl_server_get_drivers_list(server);
-
-    while (node_ptr) {
-        if (strcmp(jackctl_driver_get_name((jackctl_driver_t *)node_ptr->data), driver_name) == 0) {
-            return (jackctl_driver_t *)node_ptr->data;
-        }
-        node_ptr = jack_slist_next(node_ptr);
-    }
-
-    return NULL;
-}
-
-static jackctl_parameter_t * jackctl_get_parameter(const JSList * parameters_list, const char * parameter_name)
-{
-    while (parameters_list) {
-        if (strcmp(jackctl_parameter_get_name((jackctl_parameter_t *)parameters_list->data), parameter_name) == 0) {
-            return (jackctl_parameter_t *)parameters_list->data;
-        }
-        parameters_list = jack_slist_next(parameters_list);
-    }
-
-    return NULL;
-}
-
-static void print_server_drivers(jackctl_server_t *server, FILE* file)
-{
-    const JSList * node_ptr = jackctl_server_get_drivers_list(server);
-
     fprintf(file, "Available backends:\n");
-
-    while (node_ptr) {
-        jackctl_driver_t* driver = (jackctl_driver_t *)node_ptr->data;
-        fprintf(file, "      %s (%s)\n", jackctl_driver_get_name(driver), (jackctl_driver_get_type(driver) == JackMaster) ? "master" : "slave");
-        node_ptr = jack_slist_next(node_ptr);
+    for (const Driver& driver : server.drivers()) {
+        fprintf(file, "      %s (%s)\n", driver.name.c_str(), driver.master ? "master" : "slave");
     }
     fprintf(file, "\n");
 }
 
-static void usage(FILE* file, jackctl_server_t *server, bool full = true)
+static void usage(FILE* file, const Server& server, bool full = true)
 {
-    jackctl_parameter_t * param;
-    const JSList * server_parameters;
-    uint32_t i;
-    union jackctl_parameter_value value;
-
     fprintf(file, "\n"
             "Usage: jackdmp [ --no-realtime OR -r ]\n"
             "               [ --realtime OR -R [ --realtime-priority OR -P priority ] ]\n"
@@ -104,19 +74,19 @@ static void usage(FILE* file, jackctl_server_t *server, bool full = true)
             "               [ --clocksource OR -c [ h(pet) | s(ystem) ]\n"
             "               [ --autoconnect OR -a <modechar>]\n");
 
-    server_parameters = jackctl_server_get_parameters(server);
-    param = jackctl_get_parameter(server_parameters, "self-connect-mode");
-    fprintf(file,
-            "                 where <modechar> is one of:\n");
-    for (i = 0; i < jackctl_parameter_get_enum_constraints_count(param); i++)
-    {
-        value = jackctl_parameter_get_enum_constraint_value(param, i);
-        fprintf(file, "                   '%c' - %s", value.c, jackctl_parameter_get_enum_constraint_description(param, i));
-        if (value.c == JACK_DEFAULT_SELF_CONNECT_MODE)
-        {
-            fprintf(file, " (default)");
+    for (const Parameter& parameter : server.parameters()) {
+        if (parameter.name != "self-connect-mode") {
+            continue;
         }
-        fprintf(file, "\n");
+        fprintf(file, "                 where <modechar> is one of:\n");
+        for (const Choice& choice : parameter.choices) {
+            const char mode = std::get<char>(choice.value);
+            fprintf(file, "                   '%c' - %s", mode, choice.description.c_str());
+            if (mode == std::get<char>(parameter.default_value)) {
+                fprintf(file, " (default)");
+            }
+            fprintf(file, "\n");
+        }
     }
 
     fprintf(file,
@@ -134,118 +104,94 @@ static void usage(FILE* file, jackctl_server_t *server, bool full = true)
     }
 }
 
-// Prototype to be found in libjackserver
-extern "C" void silent_jack_error_callback(const char *desc);
-
-void print_version()
+static void print_version()
 {
     printf( "jackdmp version " JACK_VERSION " tmpdir "
             jack_server_dir " protocol %d" "\n",
             JACK_PROTOCOL_VERSION);
 }
 
+// The self connect mode is one of the characters the server offers.
+static bool self_connect_mode_is_valid(const Server& server, char mode)
+{
+    for (const Parameter& parameter : server.parameters()) {
+        if (parameter.name != "self-connect-mode") {
+            continue;
+        }
+        for (const Choice& choice : parameter.choices) {
+            if (std::get<char>(choice.value) == mode) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 int main(int argc, char** argv)
 {
-    jackctl_server_t * server_ctl;
-    const JSList * server_parameters;
-    jackctl_driver_t * master_driver_ctl;
-
-    for(int a = 1; a < argc; ++a) {
-        if( !strcmp(argv[a], "--version") || !strcmp(argv[a], "-V") ) {
+    for (int a = 1; a < argc; ++a) {
+        if (!strcmp(argv[a], "--version") || !strcmp(argv[a], "-V")) {
             print_version();
             return 0;
         }
     }
-    const char *options = "-d:P:vshrRSTFt:n:p:a:c:";
+
+    const char* options = "-d:P:vshrRSTFt:n:p:a:c:";
 
     struct option long_options[] = {
-                                       { "clock-source", 1, 0, 'c' },
-                                       { "audio-driver", 1, 0, 'd' },
-                                       { "verbose", 0, 0, 'v' },
-                                       { "help", 0, 0, 'h' },
-                                       { "port-max", 1, 0, 'p' },
-                                       { "name", 1, 0, 'n' },
-                                       { "realtime", 0, 0, 'R' },
-                                       { "no-realtime", 0, 0, 'r' },
-                                       { "realtime-priority", 1, 0, 'P' },
-                                       { "timeout", 1, 0, 't' },
-                                       { "temporary", 0, 0, 'T' },
-                                       { "freewheel", 0, 0, 'F' },
-                                       { "silent", 0, 0, 's' },
-                                       { "sync", 0, 0, 'S' },
-                                       { "autoconnect", 1, 0, 'a' },
-                                       { 0, 0, 0, 0 }
-                                   };
+        { "clock-source", 1, 0, 'c' },
+        { "audio-driver", 1, 0, 'd' },
+        { "verbose", 0, 0, 'v' },
+        { "help", 0, 0, 'h' },
+        { "port-max", 1, 0, 'p' },
+        { "name", 1, 0, 'n' },
+        { "realtime", 0, 0, 'R' },
+        { "no-realtime", 0, 0, 'r' },
+        { "realtime-priority", 1, 0, 'P' },
+        { "timeout", 1, 0, 't' },
+        { "temporary", 0, 0, 'T' },
+        { "freewheel", 0, 0, 'F' },
+        { "silent", 0, 0, 's' },
+        { "sync", 0, 0, 'S' },
+        { "autoconnect", 1, 0, 'a' },
+        { 0, 0, 0, 0 }
+    };
 
-    int i,opt = 0;
-    int option_index = 0;
     char* master_driver_name = NULL;
-    char** master_driver_args = NULL;
-    int master_driver_nargs = 1;
-    jackctl_sigmask_t * sigmask;
-    jackctl_parameter_t* param;
-    union jackctl_parameter_value value;
-
-
-    // Assume that we fail.
-    int return_value = -1;
 
     copyright(stdout);
-    server_ctl = jackctl_server_create2(NULL, NULL, NULL);
-    if (server_ctl == NULL) {
+    auto created = Server::create("");
+    if (!created) {
         fprintf(stderr, "Failed to create server object\n");
         return -1;
     }
-
-    server_parameters = jackctl_server_get_parameters(server_ctl);
+    Server server = std::move(*created);
 
     opterr = 0;
+    int opt = 0;
+    int option_index = 0;
     while (!master_driver_name &&
-            (opt = getopt_long(argc, argv, options,
-                               long_options, &option_index)) != EOF) {
+           (opt = getopt_long(argc, argv, options, long_options, &option_index)) != EOF) {
         switch (opt) {
 
             case 'c':
-                param = jackctl_get_parameter(server_parameters, "clock-source");
-                if (param != NULL) {
-                    if (tolower (optarg[0]) == 'h') {
-                        value.ui = JACK_TIMER_HPET;
-                        jackctl_parameter_set_value(param, &value);
-                    } else if (tolower (optarg[0]) == 'c') {
-                        /* For backwards compatibility with scripts, allow
-                         * the user to request the cycle clock on the
-                         * command line, but use the system clock instead
-                         */
-                        value.ui = JACK_TIMER_SYSTEM_CLOCK;
-                        jackctl_parameter_set_value(param, &value);
-                    } else if (tolower (optarg[0]) == 's') {
-                        value.ui = JACK_TIMER_SYSTEM_CLOCK;
-                        jackctl_parameter_set_value(param, &value);
-                    } else {
-                        usage(stdout, server_ctl);
-                        goto destroy_server;
-                    }
+                if (tolower(optarg[0]) == 'h') {
+                    server.set_parameter("clock-source", static_cast<std::uint64_t>(JACK_TIMER_HPET));
+                } else if (tolower(optarg[0]) == 'c' || tolower(optarg[0]) == 's') {
+                    // The cycle clock is not offered: a request for it gets the system clock, as before.
+                    server.set_parameter("clock-source", static_cast<std::uint64_t>(JACK_TIMER_SYSTEM_CLOCK));
+                } else {
+                    usage(stdout, server);
+                    return -1;
                 }
                 break;
 
             case 'a':
-                param = jackctl_get_parameter(server_parameters, "self-connect-mode");
-                if (param != NULL) {
-                    bool value_valid = false;
-                    for (uint32_t k=0; k<jackctl_parameter_get_enum_constraints_count( param ); k++ ) {
-                        value = jackctl_parameter_get_enum_constraint_value( param, k );
-                        if( value.c == optarg[0] )
-                            value_valid = true;
-                    }
-
-                    if( value_valid ) {
-                        value.c = optarg[0];
-                        jackctl_parameter_set_value(param, &value);
-                    } else {
-                        usage(stdout, server_ctl);
-                        goto destroy_server;
-                    }
+                if (!self_connect_mode_is_valid(server, optarg[0])) {
+                    usage(stdout, server);
+                    return -1;
                 }
+                server.set_parameter("self-connect-mode", Value{optarg[0]});
                 break;
 
             case 'd':
@@ -253,19 +199,11 @@ int main(int argc, char** argv)
                 break;
 
             case 'p':
-                param = jackctl_get_parameter(server_parameters, "port-max");
-                if (param != NULL) {
-                    value.ui = static_cast<unsigned int>(jackmini::ParseLeadingInteger<int>(optarg));
-                    jackctl_parameter_set_value(param, &value);
-                }
+                server.set_parameter("port-max", static_cast<std::uint64_t>(jackmini::ParseLeadingInteger<unsigned int>(optarg)));
                 break;
 
             case 'v':
-                param = jackctl_get_parameter(server_parameters, "verbose");
-                if (param != NULL) {
-                    value.b = true;
-                    jackctl_parameter_set_value(param, &value);
-                }
+                server.set_parameter("verbose", true);
                 break;
 
             case 's':
@@ -273,149 +211,77 @@ int main(int argc, char** argv)
                 break;
 
             case 'S':
-                param = jackctl_get_parameter(server_parameters, "sync");
-                if (param != NULL) {
-                    value.b = true;
-                    jackctl_parameter_set_value(param, &value);
-                }
+                server.set_parameter("sync", true);
                 break;
 
             case 'n':
-                param = jackctl_get_parameter(server_parameters, "name");
-                if (param != NULL) {
-                    strncpy(value.str, optarg, JACK_PARAM_STRING_MAX);
-                    jackctl_parameter_set_value(param, &value);
-                }
+                server.set_parameter("name", std::string(optarg).substr(0, JACK_DRIVER_PARAM_STRING_MAX));
                 break;
 
             case 'P':
-                param = jackctl_get_parameter(server_parameters, "realtime-priority");
-                if (param != NULL) {
-                    value.i = jackmini::ParseLeadingInteger<int>(optarg);
-                    jackctl_parameter_set_value(param, &value);
-                }
+                server.set_parameter("realtime-priority", static_cast<std::int64_t>(jackmini::ParseLeadingInteger<int>(optarg)));
                 break;
 
             case 'r':
-                param = jackctl_get_parameter(server_parameters, "realtime");
-                if (param != NULL) {
-                    value.b = false;
-                    jackctl_parameter_set_value(param, &value);
-                }
+                server.set_parameter("realtime", false);
                 break;
 
             case 'R':
-                param = jackctl_get_parameter(server_parameters, "realtime");
-                if (param != NULL) {
-                    value.b = true;
-                    jackctl_parameter_set_value(param, &value);
-                }
+                server.set_parameter("realtime", true);
                 break;
 
             case 'T':
-                param = jackctl_get_parameter(server_parameters, "temporary");
-                if (param != NULL) {
-                    value.b = true;
-                    jackctl_parameter_set_value(param, &value);
-                }
+                server.set_parameter("temporary", true);
                 break;
 
             case 'F':
-                param = jackctl_get_parameter(server_parameters, "freewheel");
-                if (param != NULL) {
-                    value.b = true;
-                    jackctl_parameter_set_value(param, &value);
-                }
+                server.set_parameter("freewheel", true);
                 break;
 
             case 't':
-                param = jackctl_get_parameter(server_parameters, "client-timeout");
-                if (param != NULL) {
-                    value.i = jackmini::ParseLeadingInteger<int>(optarg);
-                    jackctl_parameter_set_value(param, &value);
-                }
+                server.set_parameter("client-timeout", static_cast<std::int64_t>(jackmini::ParseLeadingInteger<int>(optarg)));
                 break;
 
             case 'h':
-                usage(stdout, server_ctl);
-                return_value = 0;
-                goto destroy_server;
+                usage(stdout, server);
+                return 0;
 
             default:
                 fprintf(stderr, "unknown option character %c\n", optopt);
-                usage(stdout, server_ctl);
-                goto destroy_server;
+                usage(stdout, server);
+                return -1;
         }
     }
 
     if (!master_driver_name) {
-        usage(stderr, server_ctl, false);
-        goto destroy_server;
+        usage(stderr, server, false);
+        return -1;
     }
 
-    // Master driver
-    master_driver_ctl = jackctl_server_get_driver(server_ctl, master_driver_name);
-    if (master_driver_ctl == NULL) {
-        fprintf(stderr, "Unknown driver \"%s\"\n", master_driver_name);
-        goto destroy_server;
+    if (!server.select_driver(master_driver_name)) {
+        return -1;
     }
 
-    if (jackctl_driver_get_type(master_driver_ctl) != JackMaster) {
-        fprintf(stderr, "Driver \"%s\" is not a master \n", master_driver_name);
-        goto destroy_server;
+    // The driver's arguments are the rest of the command line, after its name.
+    std::vector<char*> driver_args{ master_driver_name };
+    for (int i = optind; i < argc; i++) {
+        driver_args.push_back(argv[i]);
+    }
+    if (!server.parse_driver_arguments(static_cast<int>(driver_args.size()), driver_args.data())) {
+        return -1;
     }
 
-    if (optind < argc) {
-        master_driver_nargs = 1 + argc - optind;
-    } else {
-        master_driver_nargs = 1;
-    }
+    const auto signals = jackmini::control::setup_signals();
 
-    if (master_driver_nargs == 0) {
-        fprintf(stderr, "No driver specified ... hmm. JACK won't do"
-                " anything when run like this.\n");
-        goto destroy_server;
-    }
-
-    master_driver_args = (char **) malloc(sizeof(char *) * master_driver_nargs);
-    master_driver_args[0] = master_driver_name;
-
-    for (i = 1; i < master_driver_nargs; i++) {
-        master_driver_args[i] = argv[optind++];
-    }
-
-    if (jackctl_driver_params_parse(master_driver_ctl, master_driver_nargs, master_driver_args)) {
-        goto destroy_server;
-    }
-
-    // Setup signals
-    sigmask = jackctl_setup_signals(0);
-
-    // Open server
-    if (! jackctl_server_open(server_ctl, master_driver_ctl)) {
-        fprintf(stderr, "Failed to open server\n");
-        goto destroy_server;
-    }
-
-    // Start the server
-    if (!jackctl_server_start(server_ctl)) {
+    if (!server.start()) {
         fprintf(stderr, "Failed to start server\n");
-        goto close_server;
+        return -1;
     }
 
-    return_value = 0;
+    jackmini::control::wait_for_signal(signals);
 
-    // Waits for signal
-    jackctl_wait_signals(sigmask);
-
-    if (!jackctl_server_stop(server_ctl)) {
+    if (!server.stop()) {
         fprintf(stderr, "Cannot stop server...\n");
     }
-
- close_server:
-    jackctl_server_close(server_ctl);
-
- destroy_server:
-    jackctl_server_destroy(server_ctl);
-    return return_value;
+    return 0;
 }

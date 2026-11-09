@@ -143,7 +143,6 @@ typedef struct {
 }
 jack_driver_desc_filler_t;
 
-int jack_parse_driver_params(jack_driver_desc_t * desc, int argc, char* argv[], JSList ** param_ptr);
 
 // To be used by drivers
 

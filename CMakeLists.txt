@@ -120,7 +120,7 @@ set(JACK_SERVER_SOURCES
     server/JackThreadedDriver.cpp
     server/JackDriverLoader.cpp
     server/JackServerGlobals.cpp
-    server/JackControlAPI.cpp
+    server/control.cpp
     server/JackRequestDecoder.cpp
     server/JackMetadata.cpp
     platform/JackSocketServerChannel.cpp
@@ -284,7 +284,6 @@ install(FILES
 # The public headers of the libraries that have an interface of their own: the server control, the MIDI buffer and the
 # ring buffer.  The other headers of common/jack are internal.
 install(FILES
-    common/jack/control.h
     common/jack/jslist.h
     common/jack/midiport.h
     common/jack/ringbuffer.h

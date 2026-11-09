@@ -117,7 +117,8 @@ Protocol and shared memory (`docs/design/protocol.md`):
 - `ea685c8e` Internal clients removed. The protocol has 26 requests and is at version 12.
 - `8fd1e5a2` Style guide (`docs/design/style.md`) and the namespace rename `Jack` to `jackmini`.
 
-Still open: S5 (control API and `jackd`, `JackControlAPI.cpp` and `Jackdmp.cpp`), S6 (engine and graph idioms),
+S5 (control API and `jackd`) is done: `jackmini::control` (`client/jackmini/control.hpp`, implemented in
+`server/control.cpp`) replaces the C control API, and `Jackdmp.cpp` runs on it. Still open: S6 (engine and graph idioms),
 S7 (server and protocol), S8 (the ALSA C files, now unblocked by S4; the fake-backend unit tests are not started), S9
 (remove the rest of the C), S10 (sanitizers and final docs), and Plan A (the jackmini client takes over from the old
 `JackLibClient`; `lib.cpp` is still the copied wrapper). Plan C (renames and dead code) runs with each area.
