@@ -27,7 +27,7 @@ Written so a new session can pick up without the conversation. Read this file fi
 | S7: server and protocol | done (`a0f275e1` to `ab182c4e`) | see "Next" |
 | S9: remove the C (resampler kernels stay) | done (`9ab39c81`, `38bcbfe5`) | see "Next" |
 | S10: validation | done (`f38b6e2c`; `docs/design/validation.md`) | see "Next" |
-| Tools: the command-line tools, rebuilt on the jackmini API | in progress (T0 next) | see "Tools" |
+| Tools: the command-line tools, rebuilt on the jackmini API | done (T0 to T5) | see "Tools" |
 
 ## Decisions (do not revisit without the user)
 
@@ -121,51 +121,46 @@ Hardware and measurement:
 
 ## Tools
 
-The command-line tools (`jack_lsp`, `jack_connect`, and the rest) were removed with the old C client. They are
-being rebuilt in `tools/` on the jackmini client API, as `jackmini_<tool>` programs. The full plan is outside the
-repo, at `/home/hjj/.opencode/plan/tools-port.md`; this section is the summary.
+The command-line tools are rebuilt in `tools/` on the jackmini client API, as `jackmini_<tool>` programs. Status:
+done, with each step committed and pushed. The plan outside the repo is `/home/hjj/.opencode/plan/tools-port.md`; its
+T4 description is superseded (see the monitor note below). The user-facing list is `tools/README.md`.
 
-Decisions (answered by the user):
+Steps (commit, what it did):
 
-- Names: all tools use the `jackmini_` prefix (`jackmini_lsp`, `jackmini_connect`, `jackmini_disconnect`,
-  `jackmini_samplerate`, `jackmini_wait`, `jackmini_monitor_client`, `jackmini_midi_dump`).
-- `jackmini_lsp` does everything `jack_lsp` did: `-s -A -c -l -L -p -t -u -U -h --version`, and a filter argument.
-  Aliases (`-A`) are kept; nothing sets them yet, so the output is empty until something does.
-- The API gets a total-latency query (`Client::total_latency`), `Client::ports()` (one consistent snapshot of the
-  graph), the owner client's UUID, and a port UUID (set at registration; this changes the shared port layout).
-- The protocol version goes from 12 to 13, so an old client is refused rather than reading the new port layout.
-- The tools are installed with the other binaries. `jackmini_disconnect` is built from the same source as
-  `jackmini_connect`, with a second entry point.
+- T0: `fc5a3a80` the port and client UUIDs in the shared graph, and the protocol version 13; `e03a492e` `Client::ports()`,
+  `Client::total_latency`, and `tests/jackmini_ports_e2e.cpp`; `65ccb54d` the skeleton (`JACK_TOOLS`, `tools/`,
+  `tool_common.hpp`, `tests/tools_e2e.sh`); `3972eca5` `jackd -n` sets the server name (it was ignored, see below).
+- T1 `jackmini_lsp`: `eb5d8f80`. The options and output of `jack_lsp`, minus nothing: `-A` prints nothing yet.
+- T2 `jackmini_connect`, `jackmini_disconnect`: `ea87ce84`. One source (`tools/connect.cpp`), two programs.
+- T3 `jackmini_samplerate`, `jackmini_wait`: `50db4334`, with `44080e43` (the client library returns a failed connection
+  to the server instead of logging it, so the probes of `jackmini_wait` are quiet).
+- T4 `jackmini_monitor_client`: `cc6da20a`. See the monitor note.
+- T5 `jackmini_midi_dump`, with the test source `tests/midi_writer.cpp`: `2a84c745`.
 
-| Tool | What it does | Needs from the API |
-|---|---|---|
-| `jackmini_lsp` | lists ports; `-p` flags, `-t` types, `-c` connections, `-u` owner UUID, `-U` port UUID, `-l` and `-L` latency | `ports()`, `total_latency`, `port_latency`, `connections` |
-| `jackmini_connect`, `jackmini_disconnect` | connect or disconnect two ports | `find_port`, `connect`, `disconnect` |
-| `jackmini_samplerate` | prints the server's sample rate | `sample_rate` |
-| `jackmini_wait` | waits for the server to start or stop | open and close only |
-| `jackmini_midi_dump` | prints the MIDI events of an input port | MIDI ports, `midi_buffer`, process callback |
-| `jackmini_monitor_client` | copies a client's inputs to a monitor output | ports, `audio_buffer`, process callback |
+`tests/tools_e2e.sh` has 51 checks against a `jackd -d dummy` server it starts and stops; `check.sh` runs it in both
+modes. `tests/jackmini_ports_e2e.cpp` covers the listing API.
 
-Not in this plan (they need API that does not exist, or were dropped on purpose): `jack_bufsize`, `jack_freewheel`,
-`jack_transport`, `jack_evmon`, `jack_alias`, `jack_session_notify`, `jack_property`, `jack_ipload`, `jack_ipunload`,
-the net and ALSA bridge tools, and the example clients. Each needs its own decision later.
+Decisions (answered by the user): all tools use the `jackmini_` names; `jackmini_lsp` keeps `-A` and adds `-U`;
+the listing and the total latency are API additions; the protocol goes to 13; the tools are installed with the other
+binaries; the disconnect tool is built from the connect source.
 
-Layout: `tools/` at the repo root, behind the CMake option `JACK_TOOLS` (default on). One source file per tool
-(`tools/lsp.cpp` builds `jackmini_lsp`). A small shared helper, `tools/tool_common.hpp`, only where two tools share code.
-Tools use only `client/jackmini/` headers and link `jack` and `jackmini_base`.
+Monitor note: `jackmini_monitor_client` follows the handoff's table (copies a client's audio inputs to monitor
+outputs). It does not do what `jack_monitor_client` did. The old tool asked the server to monitor a port for 30
+seconds, and the server has no audio path that reads that request, so the old tool had no audible effect. Whether
+the server should do monitoring is a separate decision. The copy itself is not checked by a test.
 
-Steps, one commit each, each passing the unit suite and its tool test:
+Open issues found while porting (not fixed):
 
-- T0: the API additions (`ports()`, `total_latency`, the owner UUID, the port UUID with the protocol bump), the
-  skeleton (`tools/`, the CMake option, `tool_common.hpp`), and `tests/tools_e2e.sh` (starts `jackd -d dummy` under a
-  private name, runs each tool, checks exit status and one output line, stops the server). Run from `check.sh`, not
-  from ctest.
-- T1: `jackmini_lsp`. Output format identical to the old tool, checked against golden lines from
-  `git show 564c710e~1:tools/lsp.c`.
-- T2: `jackmini_connect`, `jackmini_disconnect`.
-- T3: `jackmini_samplerate`, `jackmini_wait`.
-- T4: `jackmini_monitor_client`.
-- T5: `jackmini_midi_dump`, with a test client under `tests/`, not a tool.
+- `Uuid::to_string()` prints 16 hex digits, but the server and `jack_uuid_unparse` use decimal, and the client parses
+  decimal. The tools print decimal. The two should agree; the hex form is used only by `jackmini_unit`'s round trip.
+- `-A` (aliases) prints nothing: no code sets aliases.
+- `jackmini_lsp -u` prints a client's name, not its UUID, for a client that owns no ports (the listing is built from
+  the ports).
+- The intermittent failure of a freewheel end-to-end run: it failed in 2 of about 20 `check.sh` runs (once the client
+  lifecycle check, once `jack_cpu` ran past its 60-second limit) and has not been reproduced since. `check.sh` now keeps
+  each program's output in `/tmp/opencode/check_<mode>_e2e.log` and `check_<mode>_cpu.log`.
+- `jackd -n` was ignored (the socket was always named `default`) until `3972eca5`. A server started with `-n minijack`
+  (the launch configurations do) now has that name, so clients that connect by the default name no longer find it.
 
 ## Next
 
@@ -190,7 +185,7 @@ allocations in the steady window; syscalls per cycle below the S0 baseline with 
 baseline. The RT hardware runs are the user's.
 
 The plan's steps are all done. Remaining work is the user's: the RT hardware runs, and the ARM boards. The next
-work for the agent is the tools (see "Tools").
+the tools are done (see "Tools"). Open decisions: the server's monitor request, and the UUID text format.
 
 S7 is done (gate: the protocol conformance and notify overflow suites pass). Left on purpose: `JackRequestDecoder::HandleRequest`
 and the framing returns (the protocol loop's `int`); `JackExternalClient::ClientNotify` and `Close` (the client interface's `int`);

@@ -70,6 +70,19 @@ Rules that follow from this:
 | Statistics | `jack_cpu_load`, and so on | `Client::cpu_load()` and the like. |
 | Control API | `jackctl_*` (52) | `jackmini::control`. Same server-management operations, C++ types. |
 
+## Port listing
+
+`Client::ports()` returns every port in the graph, in port-number order, from one read of the graph: each entry
+(`PortInfo`) has the name, the type string the graph stores (`32 bit float mono audio`, `8 bit raw midi`), the flags,
+the playback and capture latency, the total latency (`Client::total_latency(Port)` for one port), the aliases, the
+port UUID, the owner's name and UUID, and the connections. The owner's UUID comes from the graph, which keeps the
+UUID of each client by its reference number. A port's UUID is set when the port is registered.
+
+The shared graph changed for this (the port and client UUIDs), so the protocol version is 13. A client of another
+version is refused at open.
+
+The command-line tools are built on this (`tools/README.md`).
+
 ## Error handling
 
 - Setup calls return `std::expected<T, jackmini::Error>`. `Error` is an
