@@ -99,9 +99,7 @@ static void usage(FILE* file, jackctl_server_t *server, bool full = true)
             "      (the two previous arguments are mutually exclusive. The default is --realtime)\n"
             "               [ --name OR -n server-name ]\n"
             "               [ --timeout OR -t client-timeout-in-msecs ]\n"
-            "               [ --loopback OR -L loopback-port-number ]\n"
             "               [ --port-max OR -p maximum-number-of-ports]\n"
-            "               [ --slave-backend OR -X slave-backend-name ]\n"
             "               [ --verbose OR -v ]\n"
             "               [ --clocksource OR -c [ h(pet) | s(ystem) ]\n"
             "               [ --autoconnect OR -a <modechar>]\n");
@@ -151,7 +149,6 @@ int main(int argc, char** argv)
     jackctl_server_t * server_ctl;
     const JSList * server_parameters;
     jackctl_driver_t * master_driver_ctl;
-    jackctl_driver_t * loopback_driver_ctl = NULL;
 
     for(int a = 1; a < argc; ++a) {
         if( !strcmp(argv[a], "--version") || !strcmp(argv[a], "-V") ) {
@@ -159,22 +156,17 @@ int main(int argc, char** argv)
             return 0;
         }
     }
-    const char *options = "-d:X:I:P:uvshrRL:STFl:t:mn:p:C:"
-        "a:c:";
+    const char *options = "-d:P:vshrRSTFt:n:p:a:c:";
 
     struct option long_options[] = {
                                        { "clock-source", 1, 0, 'c' },
-                                       { "loopback-driver", 1, 0, 'L' },
                                        { "audio-driver", 1, 0, 'd' },
                                        { "verbose", 0, 0, 'v' },
                                        { "help", 0, 0, 'h' },
                                        { "port-max", 1, 0, 'p' },
-                                       { "no-mlock", 0, 0, 'm' },
                                        { "name", 1, 0, 'n' },
-                                       { "unlock", 0, 0, 'u' },
                                        { "realtime", 0, 0, 'R' },
                                        { "no-realtime", 0, 0, 'r' },
-                                       { "loopback", 0, 0, 'L' },
                                        { "realtime-priority", 1, 0, 'P' },
                                        { "timeout", 1, 0, 't' },
                                        { "temporary", 0, 0, 'T' },
@@ -190,13 +182,10 @@ int main(int argc, char** argv)
     char* master_driver_name = NULL;
     char** master_driver_args = NULL;
     int master_driver_nargs = 1;
-    int loopback = 0;
     jackctl_sigmask_t * sigmask;
     jackctl_parameter_t* param;
     union jackctl_parameter_value value;
 
-    std::list<char*> slaves_list;
-    std::list<char*>::iterator it;
 
     // Assume that we fail.
     int return_value = -1;
@@ -263,26 +252,12 @@ int main(int argc, char** argv)
                 master_driver_name = optarg;
                 break;
 
-            case 'L':
-                loopback = jackmini::ParseLeadingInteger<int>(optarg);
-                break;
-
-            case 'X':
-                slaves_list.push_back(optarg);
-                break;
-
             case 'p':
                 param = jackctl_get_parameter(server_parameters, "port-max");
                 if (param != NULL) {
                     value.ui = static_cast<unsigned int>(jackmini::ParseLeadingInteger<int>(optarg));
                     jackctl_parameter_set_value(param, &value);
                 }
-                break;
-
-            case 'm':
-                break;
-
-            case 'u':
                 break;
 
             case 'v':
@@ -422,44 +397,6 @@ int main(int argc, char** argv)
         goto destroy_server;
     }
 
-    // Slave drivers
-    for (it = slaves_list.begin(); it != slaves_list.end(); it++) {
-        jackctl_driver_t * slave_driver_ctl = jackctl_server_get_driver(server_ctl, *it);
-        if (slave_driver_ctl == NULL) {
-            fprintf(stderr, "Unknown driver \"%s\"\n", *it);
-            goto close_server;
-        }
-        if (jackctl_driver_get_type(slave_driver_ctl) != JackSlave) {
-            fprintf(stderr, "Driver \"%s\" is not a slave \n", *it);
-            goto close_server;
-        }
-        if (!jackctl_server_add_slave(server_ctl, slave_driver_ctl)) {
-            fprintf(stderr, "Driver \"%s\" cannot be loaded\n", *it);
-            goto close_server;
-        }
-    }
-
-    // Loopback driver
-    if (loopback > 0) {
-        loopback_driver_ctl = jackctl_server_get_driver(server_ctl, "loopback");
-
-        if (loopback_driver_ctl != NULL) {
-            const JSList * loopback_parameters = jackctl_driver_get_parameters(loopback_driver_ctl);
-            param = jackctl_get_parameter(loopback_parameters, "channels");
-            if (param != NULL) {
-                value.ui = loopback;
-                jackctl_parameter_set_value(param, &value);
-            }
-            if (!jackctl_server_add_slave(server_ctl, loopback_driver_ctl)) {
-                fprintf(stderr, "Driver \"loopback\" cannot be loaded\n");
-                goto close_server;
-            }
-        } else {
-            fprintf(stderr, "Driver \"loopback\" not found\n");
-            goto close_server;
-        }
-    }
-
     // Start the server
     if (!jackctl_server_start(server_ctl)) {
         fprintf(stderr, "Failed to start server\n");
@@ -476,17 +413,6 @@ int main(int argc, char** argv)
     }
 
  close_server:
-    if (loopback > 0 && loopback_driver_ctl) {
-        jackctl_server_remove_slave(server_ctl, loopback_driver_ctl);
-    }
-    // Slave drivers
-    for (it = slaves_list.begin(); it != slaves_list.end(); it++) {
-        jackctl_driver_t * slave_driver_ctl = jackctl_server_get_driver(server_ctl, *it);
-        if (slave_driver_ctl) {
-            jackctl_server_remove_slave(server_ctl, slave_driver_ctl);
-        }
-    }
-
     jackctl_server_close(server_ctl);
 
  destroy_server:
