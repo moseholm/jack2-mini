@@ -88,6 +88,10 @@ class JACKMINI_API ClientSession
         std::vector<std::string> connections(jack_port_id_t port) const;
         bool is_connected(jack_port_id_t source, jack_port_id_t destination) const;
 
+        // The buffer of a port for the cycle being processed. It is valid inside the process callback. The realtime
+        // path does not lock or allocate.
+        void* port_buffer(jack_port_id_t port, jack_nframes_t frames) noexcept;
+
         // Identity and timing.
         Result<Uuid> lookup_uuid();
         FrameCount sample_rate() const noexcept;

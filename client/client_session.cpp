@@ -502,6 +502,11 @@ void ClientSession::wait_graph_change() const
     }
 }
 
+void* ClientSession::port_buffer(jack_port_id_t port, jack_nframes_t frames) noexcept
+{
+    return context_->graph->GetBuffer(port, frames);
+}
+
 Result<Uuid> ClientSession::lookup_uuid()
 {
     JackGetUUIDRequest request(name_.c_str());

@@ -180,6 +180,68 @@ void check_ports(const jackmini::OpenOptions& exact)
     CHECK((*source)->close().has_value());
 }
 
+// The buffers: a value written by one client's process callback reaches the input buffer of a connected client in the
+// same graph, through the realtime threads.
+void check_buffers(const jackmini::OpenOptions& exact)
+{
+    using jackmini::client::ClientSession;
+    constexpr const char* kAudio = "32 bit float mono audio";
+
+    auto writer = ClientSession::open("buf_out", exact);
+    auto reader = ClientSession::open("buf_in", exact);
+    CHECK(writer.has_value() && reader.has_value());
+    if (!writer || !reader) {
+        return;
+    }
+    ClientSession& out_session = **writer;
+    ClientSession& in_session = **reader;
+
+    auto out = out_session.register_port("out", kAudio, 0x2, 0);
+    auto in = in_session.register_port("in", kAudio, 0x1, 0);
+    CHECK(out.has_value() && in.has_value());
+    if (!out || !in) {
+        return;
+    }
+    const jack_port_id_t out_port = *out;
+    const jack_port_id_t in_port = *in;
+
+    std::atomic<int> sent_frames{0};
+    std::atomic<int> received_frames{0};
+    std::atomic<float> received{0.0f};
+    std::atomic<int> cycles{0};
+    out_session.set_process([&](const jackmini::Cycle& cycle) {
+        auto* buffer = static_cast<float*>(out_session.port_buffer(out_port, cycle.frames));
+        for (jackmini::FrameCount i = 0; buffer && i < cycle.frames; ++i) {
+            buffer[i] = 0.5f;
+        }
+        sent_frames = static_cast<int>(cycle.frames);
+        return true;
+    });
+    in_session.set_process([&](const jackmini::Cycle& cycle) {
+        auto* buffer = static_cast<float*>(in_session.port_buffer(in_port, cycle.frames));
+        if (buffer) {
+            received = buffer[cycle.frames - 1];
+            received_frames = static_cast<int>(cycle.frames);
+        }
+        cycles.fetch_add(1);
+        return true;
+    });
+
+    CHECK(out_session.activate().has_value() && in_session.activate().has_value());
+    CHECK(out_session.connect_ports("buf_out:out", "buf_in:in").has_value());
+    // In freewheel the cycles run faster than the connection takes effect, so the test waits for the value rather than
+    // for a number of cycles.
+    CHECK(wait_for([&] { return received.load() == 0.5f; }));
+    CHECK(cycles.load() > 0);
+    CHECK(sent_frames.load() > 0 && received_frames.load() == sent_frames.load());
+
+    CHECK(out_session.deactivate().has_value() && in_session.deactivate().has_value());
+    CHECK(out_session.unregister_port(out_port).has_value());
+    CHECK(in_session.unregister_port(in_port).has_value());
+    CHECK((*writer)->close().has_value());
+    CHECK((*reader)->close().has_value());
+}
+
 } // end of anonymous namespace
 
 int main()
@@ -217,6 +279,7 @@ int main()
 
     check_activation(exact);
     check_ports(exact);
+    check_buffers(exact);
 
     CHECK((*first)->close().has_value());
     auto again = ClientSession::open("session_e2e", exact);
