@@ -18,14 +18,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 #include "JackPortType.h"
-#include <string.h>
 #include <assert.h>
+#include <string.h>
 
-namespace Jack
-{
+namespace jackmini {
 
-static const JackPortType* gPortTypes[] =
-{
+static const JackPortType* gPortTypes[] = {
     &gAudioPortType,
     &gMidiPortType,
 };
@@ -53,4 +51,4 @@ const JackPortType* GetPortType(jack_port_type_id_t type_id)
     return type;
 }
 
-} // namespace Jack
+} // namespace jackmini

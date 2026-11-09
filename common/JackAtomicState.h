@@ -12,66 +12,73 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software 
+along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackAtomicState__
-#define __JackAtomicState__
+#pragma once
 
 #include "JackAtomic.h"
 #include "JackCompilerDeps.h"
 #include <string.h> // for memcpy
+#include <atomic>
+#include <cassert>
 #include <cstddef>
+#include <cstdint>
 
-namespace Jack
-{
+namespace jackmini {
 
 /*!
 \brief Counter for CAS
 */
 
-PRE_PACKED_STRUCTURE
-struct AtomicCounter
-{
+
+struct AtomicCounter {
     union {
         struct {
-            UInt16 fShortVal1;	// Cur
-            UInt16 fShortVal2;	// Next
-        }
-        scounter;
+            UInt16 fShortVal1; // Cur
+            UInt16 fShortVal2; // Next
+        } scounter;
         UInt32 fLongVal;
-    }info;
+    } info;
 
-	AtomicCounter()
-	{
+    AtomicCounter()
+    {
         info.fLongVal = 0;
     }
 
-	AtomicCounter(volatile const AtomicCounter& obj)
-	{
-		info.fLongVal = obj.info.fLongVal;
-	}
+    AtomicCounter(const AtomicCounter& obj)
+    {
+        info.fLongVal = obj.info.fLongVal;
+    }
+    AtomicCounter(volatile const AtomicCounter& obj)
+    {
+        info.fLongVal = obj.info.fLongVal;
+    }
 
-	AtomicCounter(volatile AtomicCounter& obj)
-	{
-		info.fLongVal = obj.info.fLongVal;
-	}
+    AtomicCounter(volatile AtomicCounter& obj)
+    {
+        info.fLongVal = obj.info.fLongVal;
+    }
 
- 	AtomicCounter& operator=(AtomicCounter& obj)
+    AtomicCounter& operator=(const AtomicCounter& obj)
+    {
+        info.fLongVal = obj.info.fLongVal;
+        return *this;
+    }
+    AtomicCounter& operator=(AtomicCounter& obj)
     {
         info.fLongVal = obj.info.fLongVal;
         return *this;
     }
 
-	AtomicCounter& operator=(volatile AtomicCounter& obj)
-	{
+    AtomicCounter& operator=(volatile AtomicCounter& obj)
+    {
         info.fLongVal = obj.info.fLongVal;
         return *this;
     }
-
-} POST_PACKED_STRUCTURE;
+};
 
 #define Counter(e) (e).info.fLongVal
 #define CurIndex(e) (e).info.scounter.fShortVal1
@@ -81,185 +88,191 @@ struct AtomicCounter
 #define NextArrayIndex(e) ((CurIndex(e) + 1) & 0x0001)
 
 /*!
+\brief Loads a shared counter atomically.  Every read of the counter goes through this, so the 16-bit fields are never read separately from the 32-bit update.
+*/
+static inline AtomicCounter LoadCounter(const AtomicCounter& counter)
+{
+    AtomicCounter result;
+    Counter(result) = std::atomic_ref<UInt32>(const_cast<UInt32&>(counter.info.fLongVal)).load();
+    return result;
+}
+
+/*!
 \brief A class to handle two states (switching from one to the other) in a lock-free manner
 */
 
 // CHECK livelock
 
-PRE_PACKED_STRUCTURE
+
 template <class T>
-class JackAtomicState
-{
+class JackAtomicState {
 
-    protected:
+protected:
+    T fState[2];
+    alignas(UInt32) alignas(AtomicCounter) AtomicCounter fCounter;
+    SInt32 fCallWriteCounter;
 
-        T fState[2];
-        alignas(UInt32) alignas(AtomicCounter) volatile AtomicCounter fCounter;
-        SInt32 fCallWriteCounter;
+    UInt32 WriteNextStateStartAux()
+    {
+        AtomicCounter old_val;
+        AtomicCounter new_val;
+        UInt32 cur_index;
+        UInt32 next_index;
+        bool need_copy;
+        do {
+            old_val = LoadCounter(fCounter);
+            new_val = old_val;
+            cur_index = CurArrayIndex(new_val);
+            next_index = NextArrayIndex(new_val);
+            need_copy = (CurIndex(new_val) == NextIndex(new_val));
+            NextIndex(new_val) = CurIndex(new_val); // Invalidate next index
+        } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
+        if (need_copy)
+            memcpy(&fState[next_index], &fState[cur_index], sizeof(T));
+        return next_index;
+    }
 
-        UInt32 WriteNextStateStartAux()
-        {
-            AtomicCounter old_val;
-            AtomicCounter new_val;
-            UInt32 cur_index;
-            UInt32 next_index;
-            bool need_copy;
+    void WriteNextStateStopAux()
+    {
+        AtomicCounter old_val;
+        AtomicCounter new_val;
+        do {
+            old_val = LoadCounter(fCounter);
+            new_val = old_val;
+            NextIndex(new_val)++; // Set next index
+        } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
+    }
+
+public:
+    JackAtomicState()
+    {
+        static_assert(offsetof(JackAtomicState, fCounter) % sizeof(fCounter) == 0,
+            "fCounter must be aligned within JackAtomicState");
+        assert(reinterpret_cast<std::uintptr_t>(&fCounter) % alignof(UInt32) == 0);
+        Counter(fCounter) = 0;
+        fCallWriteCounter = 0;
+    }
+
+    ~JackAtomicState() // Not virtual ??
+    {
+    }
+
+    /*!
+    \brief Returns the current state : only valid in the RT reader thread
+    */
+    T* ReadCurrentState()
+    {
+        return &fState[CurArrayIndex(LoadCounter(fCounter))];
+    }
+
+    /*!
+    \brief Returns the current state index
+    */
+    UInt16 GetCurrentIndex()
+    {
+        return CurIndex(LoadCounter(fCounter));
+    }
+
+    /*!
+    \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
+    */
+    T* TrySwitchState()
+    {
+        AtomicCounter old_val;
+        AtomicCounter new_val;
+        do {
+            old_val = LoadCounter(fCounter);
+            new_val = old_val;
+            CurIndex(new_val) = NextIndex(new_val); // Prepare switch
+        } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
+        return &fState[CurArrayIndex(LoadCounter(fCounter))]; // Read the counter again
+    }
+
+    /*!
+    \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
+    */
+    T* TrySwitchState(bool* result)
+    {
+        AtomicCounter old_val;
+        AtomicCounter new_val;
+        do {
+            old_val = LoadCounter(fCounter);
+            new_val = old_val;
+            *result = (CurIndex(new_val) != NextIndex(new_val));
+            CurIndex(new_val) = NextIndex(new_val); // Prepare switch
+        } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
+        return &fState[CurArrayIndex(LoadCounter(fCounter))]; // Read the counter again
+    }
+
+    /*!
+    \brief Start write operation : setup and returns the next state to update, check for recursive write calls.
+    */
+    T* WriteNextStateStart()
+    {
+        UInt32 next_index = (fCallWriteCounter++ == 0)
+            ? WriteNextStateStartAux()
+            : NextArrayIndex(LoadCounter(fCounter)); // We are inside a wrapping WriteNextStateStart call, NextArrayIndex can be read safely
+        return &fState[next_index];
+    }
+
+    /*!
+    \brief Stop write operation : make the next state ready to be used by the RT thread
+    */
+    void WriteNextStateStop()
+    {
+        if (--fCallWriteCounter == 0)
+            WriteNextStateStopAux();
+    }
+
+    bool IsPendingChange()
+    {
+        const AtomicCounter counter = LoadCounter(fCounter);
+        return CurIndex(counter) != NextIndex(counter);
+    }
+
+    /*
+          // Single writer : write methods get the *next* state to be updated
+    void TestWriteMethod()
+    {
+            T* state = WriteNextStateStart();
+            ......
+            ......
+            WriteNextStateStop();
+    }
+
+          // First RT call possibly switch state
+    void TestReadRTMethod1()
+    {
+            T* state = TrySwitchState();
+            ......
+            ......
+    }
+
+          // Other RT methods can safely use the current state during the *same* RT cycle
+    void TestReadRTMethod2()
+    {
+            T* state = ReadCurrentState();
+            ......
+            ......
+    }
+
+          // Non RT read methods : must check state coherency
+    void TestReadMethod()
+    {
+            T* state;
+            UInt16 cur_index;
+        UInt16 next_index = GetCurrentIndex();
             do {
-                old_val = fCounter;
-                new_val = old_val;
-                cur_index = CurArrayIndex(new_val);
-                next_index = NextArrayIndex(new_val);
-                need_copy = (CurIndex(new_val) == NextIndex(new_val));
-                NextIndex(new_val) = CurIndex(new_val); // Invalidate next index
-            } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
-            if (need_copy)
-                memcpy(&fState[next_index], &fState[cur_index], sizeof(T));
-            return next_index;
-        }
+            cur_index = next_index;
+                    state = ReadCurrentState();
 
-        void WriteNextStateStopAux()
-        {
-            AtomicCounter old_val;
-            AtomicCounter new_val;
-            do {
-                old_val = fCounter;
-                new_val = old_val;
-                NextIndex(new_val)++; // Set next index
-            } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
-        }
+                    ......
+                    ......
 
-    public:
+            next_index = GetCurrentIndex();
+            } while (cur_index != next_index);
+    }
+    */
+};
 
-        JackAtomicState()
-        {
-            static_assert(offsetof(JackAtomicState, fCounter) % sizeof(fCounter) == 0,
-                          "fCounter must be aligned within JackAtomicState");
-            Counter(fCounter) = 0;
-            fCallWriteCounter = 0;
-        }
-
-        ~JackAtomicState() // Not virtual ??
-        {}
-
-        /*!
-        \brief Returns the current state : only valid in the RT reader thread
-        */
-        T* ReadCurrentState()
-        {
-            return &fState[CurArrayIndex(fCounter)];
-        }
-
-        /*!
-        \brief Returns the current state index
-        */
-        UInt16 GetCurrentIndex()
-        {
-            return CurIndex(fCounter);
-        }
-
-        /*!
-        \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
-        */
-        T* TrySwitchState()
-        {
-            AtomicCounter old_val;
-            AtomicCounter new_val;
-            do {
-                old_val = fCounter;
-                new_val = old_val;
-                CurIndex(new_val) = NextIndex(new_val);	// Prepare switch
-            } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
-            return &fState[CurArrayIndex(fCounter)];	// Read the counter again
-        }
-
-        /*!
-        \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
-        */
-        T* TrySwitchState(bool* result)
-        {
-            AtomicCounter old_val;
-            AtomicCounter new_val;
-            do {
-                old_val = fCounter;
-                new_val = old_val;
-                *result = (CurIndex(new_val) != NextIndex(new_val));
-                CurIndex(new_val) = NextIndex(new_val);  // Prepare switch
-            } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
-            return &fState[CurArrayIndex(fCounter)];	// Read the counter again
-        }
-
-        /*!
-        \brief Start write operation : setup and returns the next state to update, check for recursive write calls.
-        */
-        T* WriteNextStateStart()
-        {
-            UInt32 next_index = (fCallWriteCounter++ == 0)
-                                ? WriteNextStateStartAux()
-                                : NextArrayIndex(fCounter); // We are inside a wrapping WriteNextStateStart call, NextArrayIndex can be read safely
-            return &fState[next_index];
-        }
-
-        /*!
-        \brief Stop write operation : make the next state ready to be used by the RT thread
-        */
-        void WriteNextStateStop()
-        {
-            if (--fCallWriteCounter == 0)
-                WriteNextStateStopAux();
-        }
-
-        bool IsPendingChange()
-        {
-            return CurIndex(fCounter) != NextIndex(fCounter);
-        }
-
-        /*
-              // Single writer : write methods get the *next* state to be updated
-        void TestWriteMethod()
-        {
-        	T* state = WriteNextStateStart();
-        	......
-        	......
-        	WriteNextStateStop(); 
-        }
-
-              // First RT call possibly switch state
-        void TestReadRTMethod1()
-        {
-        	T* state = TrySwitchState();
-        	......
-        	......
-        }
-
-              // Other RT methods can safely use the current state during the *same* RT cycle
-        void TestReadRTMethod2() 
-        {
-        	T* state = ReadCurrentState();
-        	......
-        	......
-        }
-
-              // Non RT read methods : must check state coherency
-        void TestReadMethod()
-        {
-        	T* state;
-        	UInt16 cur_index;
-            UInt16 next_index = GetCurrentIndex();
-        	do {
-                cur_index = next_index;
-        		state = ReadCurrentState();
-        		
-        		......
-        		......
-
-                next_index = GetCurrentIndex();
-        	} while (cur_index != next_index);
-        }
-        */
-
-} POST_PACKED_STRUCTURE;
-
-} // end of namespace
-
-#endif
-
+} // namespace jackmini

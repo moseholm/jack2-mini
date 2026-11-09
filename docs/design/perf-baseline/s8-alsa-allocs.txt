@@ -1,0 +1,10 @@
+allocations (process-wide, ALSA hw:CARD=U192k): two SIGURG signals 6 s apart, inside a 16 s rtbench run; the counts are the cumulative totals at each signal.
+frames 64:
+  ALLOCS malloc=2630 free=2139
+  ALLOCS malloc=2630 free=2139
+frames 128:
+  ALLOCS malloc=2622 free=2131
+  ALLOCS malloc=2622 free=2131
+frames 256:
+  ALLOCS malloc=2622 free=2131
+  ALLOCS malloc=2622 free=2131

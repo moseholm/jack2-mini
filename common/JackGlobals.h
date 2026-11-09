@@ -17,38 +17,26 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackGlobals__
-#define __JackGlobals__
+#pragma once
 
+#include "JackConstants.h"
 #include "JackPlatformPlug.h"
 #include "JackSystemDeps.h"
-#include "JackConstants.h"
+#include <atomic>
 
-namespace Jack
-{
+namespace jackmini {
 
-// Globals used for client management on server or library side.
+// Globals used by the server and the client library.
 struct JackGlobals {
 
-    static jack_tls_key fRealTimeThread;
-    static jack_tls_key fNotificationThread;
     static jack_tls_key fKeyLogFunction;
-    static JackMutex* fOpenMutex;
-    static JackMutex* fSynchroMutex;
-    static volatile bool fServerRunning;
-    static JackClient* fClientTable[CLIENT_NUM];
-    static bool fVerbose;
+    static std::atomic<bool> fVerbose;
     static jack_thread_creator_t fJackThreadCreator;
-
-    static void CheckContext(const char* name);
 };
 
 // Each "side" server and client will implement this to get the shared graph manager, engine control and inter-process synchro table.
 extern SERVER_EXPORT JackGraphManager* GetGraphManager();
 extern SERVER_EXPORT JackEngineControl* GetEngineControl();
 extern SERVER_EXPORT JackSynchro* GetSynchroTable();
-extern SERVER_EXPORT JackMetadata* GetMetadata();
 
-} // end of namespace
-
-#endif
+} // namespace jackmini

@@ -23,8 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <math.h>
 #include <stdio.h>
 
-namespace Jack
-{
+namespace jackmini {
 
 JackTimer::JackTimer()
 {
@@ -73,7 +72,7 @@ jack_time_t JackTimer::Frames2Time(jack_nframes_t frames, jack_nframes_t buffer_
         */
         int32_t df = frames - fFrames;
         int64_t dp = fNextWakeUp - fCurrentWakeup;
-        return fCurrentWakeup + (int64_t)rint((double) df * (double) dp / buffer_size);
+        return fCurrentWakeup + (int64_t)rint((double)df * (double)dp / buffer_size);
     } else {
         return 0;
     }
@@ -82,7 +81,7 @@ jack_time_t JackTimer::Frames2Time(jack_nframes_t frames, jack_nframes_t buffer_
 int JackTimer::GetCycleTimes(jack_nframes_t* current_frames, jack_time_t* current_usecs, jack_time_t* next_usecs, float* period_usecs)
 {
     if (fInitialized) {
-        *current_frames  = fFrames;
+        *current_frames = fFrames;
         *current_usecs = fCurrentWakeup;
         *next_usecs = fNextWakeUp;
         *period_usecs = fPeriodUsecs;
@@ -94,7 +93,7 @@ int JackTimer::GetCycleTimes(jack_nframes_t* current_frames, jack_time_t* curren
 
 jack_nframes_t JackTimer::FramesSinceCycleStart(jack_time_t cur_time, jack_nframes_t frames_rate)
 {
-    return (jack_nframes_t) floor((((float)frames_rate) / 1000000.0f) * (cur_time - fCurrentCallback));
+    return (jack_nframes_t)floor((((float)frames_rate) / 1000000.0f) * (cur_time - fCurrentCallback));
 }
 
 void JackFrameTimer::InitFrameTime()
@@ -108,7 +107,7 @@ void JackFrameTimer::IncFrameTime(jack_nframes_t buffer_size, jack_time_t callba
         InitFrameTimeAux(callback_usecs, period_usecs);
         fFirstWakeUp = false;
     }
-    
+
     IncFrameTimeAux(buffer_size, callback_usecs, period_usecs);
 }
 
@@ -124,9 +123,9 @@ void JackFrameTimer::ResetFrameTime(jack_time_t callback_usecs)
 }
 
 /*
-	Use the state returned by ReadCurrentState and check that the state was not changed during the read operation.
-	The operation is lock-free since there is no intermediate state in the write operation that could cause the
-	read to loop forever.
+        Use the state returned by ReadCurrentState and check that the state was not changed during the read operation.
+        The operation is lock-free since there is no intermediate state in the write operation that could cause the
+        read to loop forever.
 */
 void JackFrameTimer::ReadFrameTime(JackTimer* timer)
 {
@@ -147,35 +146,35 @@ void JackFrameTimer::InitFrameTimeAux(jack_time_t callback_usecs, jack_time_t pe
 
     /* There seems to be no significant difference between
        the two conditions OR-ed above. Incrementing the
-       frame_time after an xrun shouldn't harm, as there 
+       frame_time after an xrun shouldn't harm, as there
        will be a discontinuity anyway. So the two are
        combined in this version.
-       FA 16/03/2012 
+       FA 16/03/2012
     */
     /* Since the DLL *will* be run, next_wakeup should be the
        current wakeup time *without* adding the period time, as
        if it were computed in the previous period.
-       FA 16/03/2012 
+       FA 16/03/2012
     */
     /* Added initialisation of timer->period_usecs, required
-       due to the modified implementation of the DLL itself. 
+       due to the modified implementation of the DLL itself.
        OTOH, this should maybe not be repeated after e.g.
        freewheeling or an xrun, as the current value would be
        more accurate than the nominal one. But it doesn't really
        harm either. Implementing this would require a new flag
-       in the engine structure, to be used after freewheeling 
+       in the engine structure, to be used after freewheeling
        or an xrun instead of first_wakeup. I don't know if this
        can be done without breaking compatibility, so I did not
        add this
        FA 13/02/2012
     */
-    /* Added initialisation of timer->filter_omega. This makes 
+    /* Added initialisation of timer->filter_omega. This makes
        the DLL bandwidth independent of the actual period time.
        The bandwidth is now 1/8 Hz in all cases. The value of
        timer->filter_omega is 2 * pi * BW * Tperiod.
        FA 13/02/2012
     */
-    
+
     JackTimer* timer = WriteNextStateStart();
     timer->fPeriodUsecs = (float)period_usecs;
     timer->fCurrentCallback = callback_usecs;
@@ -188,11 +187,11 @@ void JackFrameTimer::InitFrameTimeAux(jack_time_t callback_usecs, jack_time_t pe
 void JackFrameTimer::IncFrameTimeAux(jack_nframes_t buffer_size, jack_time_t callback_usecs, jack_time_t period_usecs)
 {
     JackTimer* timer = WriteNextStateStart();
-    
+
     /* Modified implementation (the actual result is the same).
 
     'fSecondOrderIntegrator' is renamed to 'fPeriodUsecs'
-    and now represents the DLL's best estimate of the 
+    and now represents the DLL's best estimate of the
     period time in microseconds (before it was a scaled
     version of the difference w.r.t. the nominal value).
     This allows this value to be made available to clients
@@ -210,19 +209,18 @@ void JackFrameTimer::IncFrameTimeAux(jack_nframes_t buffer_size, jack_time_t cal
 
     FA 13/02/2012
     */
-    
+
     float delta = (float)((int64_t)callback_usecs - (int64_t)timer->fNextWakeUp);
     delta *= timer->fFilterOmega;
     timer->fCurrentWakeup = timer->fNextWakeUp;
     timer->fCurrentCallback = callback_usecs;
     timer->fFrames += buffer_size;
-    timer->fPeriodUsecs += timer->fFilterOmega * delta;	
+    timer->fPeriodUsecs += timer->fFilterOmega * delta;
     timer->fNextWakeUp += (int64_t)floorf(timer->fPeriodUsecs + 1.41f * delta + 0.5f);
     timer->fInitialized = true;
-    
+
     WriteNextStateStop();
     TrySwitchState(); // always succeed since there is only one writer
 }
 
-} // end of namespace
-
+} // namespace jackmini

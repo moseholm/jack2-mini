@@ -18,22 +18,21 @@
   $Id: JackTypes.h,v 1.2.2.1 2006/06/20 14:44:00 letz Exp $
 */
 
-#ifndef __JackTypes__
-#define __JackTypes__
+#pragma once
 
-#include "types.h"
 #include "JackCompilerDeps.h"
+#include "types.h"
 
-#include <stdint.h>
 #include <pthread.h>
+#include <stdint.h>
 
 typedef unsigned short UInt16;
 #if __LP64__
 typedef unsigned int UInt32;
-typedef signed int   SInt32;
+typedef signed int SInt32;
 #else
 typedef unsigned long UInt32;
-typedef signed long   SInt32;
+typedef signed long SInt32;
 #endif
 
 typedef unsigned long long UInt64;
@@ -41,11 +40,11 @@ typedef pthread_key_t jack_tls_key;
 
 typedef int (*jack_thread_creator_t)(pthread_t*, const pthread_attr_t*, void* (*function)(void*), void* arg);
 
-typedef uint16_t jack_int_t;  // Internal type for ports and refnum
+typedef uint16_t jack_int_t; // Internal type for ports and refnum
 
 typedef enum {
-	JACK_TIMER_SYSTEM_CLOCK,
-	JACK_TIMER_HPET,
+    JACK_TIMER_SYSTEM_CLOCK,
+    JACK_TIMER_HPET,
 } jack_timer_type_t;
 
 typedef enum {
@@ -54,5 +53,3 @@ typedef enum {
     Running,
     Finished,
 } jack_client_state_t;
-
-#endif

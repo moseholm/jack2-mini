@@ -18,15 +18,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackTransportEngine__
-#define __JackTransportEngine__
+#pragma once
 
 #include "JackAtomicArrayState.h"
 #include "JackCompilerDeps.h"
+#include "jackmini/error.hpp"
 #include "types.h"
+#include <atomic>
 
-namespace Jack
-{
+namespace jackmini {
 
 typedef enum {
     TransportCommandNone = 0,
@@ -39,15 +39,15 @@ typedef enum {
 
 We have:
 
-	- a "current" position
-	- a "pending" position prepared by the server at each cycle
-	- a "request" position wanted by a client
+        - a "current" position
+        - a "pending" position prepared by the server at each cycle
+        - a "request" position wanted by a client
 
-	At the beginning of a cycle the server needs to select a new current position. When a request and a pending position are available,
-	the request takes precedence on the pending one. The server atomically switches to the new position.
-	The current position can be read by clients.
+        At the beginning of a cycle the server needs to select a new current position. When a request and a pending position are available,
+        the request takes precedence on the pending one. The server atomically switches to the new position.
+        The current position can be read by clients.
 
-	We use a JackAtomicArrayState pattern that allows to manage several "next" states independently.
+        We use a JackAtomicArrayState pattern that allows to manage several "next" states independently.
 
     In jack1 implementation, transport code (jack_transport_cycle_end) was not called if the graph could not be locked (see jack_run_one_cycle).
     Here transport cycle (CycleBegin, CycleEnd) has to run in the RT thread concurrently with code executed from the "command" thread.
@@ -89,113 +89,108 @@ We have:
 
 class JackClientInterface;
 
-PRE_PACKED_STRUCTURE
-class SERVER_EXPORT JackTransportEngine : public JackAtomicArrayState<jack_position_t>
-{
 
-    private:
+class SERVER_EXPORT JackTransportEngine : public JackAtomicArrayState<jack_position_t> {
 
-        jack_transport_state_t fTransportState;
-        volatile transport_command_t fTransportCmd;
-        transport_command_t fPreviousCmd;		/* previous transport_cmd */
-        jack_time_t fSyncTimeout;
-        int fSyncTimeLeft;
-        int fTimeBaseMaster;
-        bool fPendingPos;
-        bool fNetworkSync;
-        bool fConditionnal;
-        alignas(SInt32) SInt32 fWriteCounter;
+private:
+    jack_transport_state_t fTransportState;
+    volatile transport_command_t fTransportCmd;
+    transport_command_t fPreviousCmd; /* previous transport_cmd */
+    jack_time_t fSyncTimeout;
+    int fSyncTimeLeft;
+    int fTimeBaseMaster;
+    bool fPendingPos;
+    bool fNetworkSync;
+    bool fConditionnal;
+    alignas(SInt32) SInt32 fWriteCounter;
 
-        bool CheckAllRolling(JackClientInterface** table);
-        void MakeAllStartingLocating(JackClientInterface** table);
-        void MakeAllStopping(JackClientInterface** table);
-        void MakeAllLocating(JackClientInterface** table);
+    bool CheckAllRolling(std::atomic<JackClientInterface*>* table);
+    void MakeAllStartingLocating(std::atomic<JackClientInterface*>* table);
+    void MakeAllStopping(std::atomic<JackClientInterface*>* table);
+    void MakeAllLocating(std::atomic<JackClientInterface*>* table);
 
-        void SyncTimeout(jack_nframes_t frame_rate, jack_nframes_t buffer_size);
+    void SyncTimeout(jack_nframes_t frame_rate, jack_nframes_t buffer_size);
 
-    public:
+public:
+    JackTransportEngine();
 
-        JackTransportEngine();
+    ~JackTransportEngine()
+    {
+    }
 
-        ~JackTransportEngine()
-        {}
+    void SetCommand(transport_command_t state)
+    {
+        fTransportCmd = state;
+    }
 
-        void SetCommand(transport_command_t state)
-        {
-            fTransportCmd = state;
-        }
+    jack_transport_state_t GetState() const
+    {
+        return fTransportState;
+    }
 
-        jack_transport_state_t GetState() const
-        {
-            return fTransportState;
-        }
+    void SetState(jack_transport_state_t state)
+    {
+        fTransportState = state;
+    }
 
-        void SetState(jack_transport_state_t state)
-        {
-            fTransportState = state;
-        }
+    /*
+            \brief
+    */
+    Result<void> ResetTimebase(int refnum);
 
-        /*
-        	\brief
-        */
-        int ResetTimebase(int refnum);
+    /*
+            \brief
+    */
+    Result<void> SetTimebaseMaster(int refnum, bool conditionnal);
 
-        /*
-        	\brief
-        */
-        int SetTimebaseMaster(int refnum, bool conditionnal);
+    void GetTimebaseMaster(int& refnum, bool& conditionnal)
+    {
+        refnum = fTimeBaseMaster;
+        conditionnal = fConditionnal;
+    }
 
-        void GetTimebaseMaster(int& refnum, bool& conditionnal)
-        {
-            refnum = fTimeBaseMaster;
-            conditionnal = fConditionnal;
-        }
+    /*
+            \brief
+    */
+    void CycleBegin(jack_nframes_t frame_rate, jack_time_t time);
 
-        /*
-        	\brief
-        */
-        void CycleBegin(jack_nframes_t frame_rate, jack_time_t time);
+    /*
+            \brief
+    */
+    void CycleEnd(std::atomic<JackClientInterface*>* table, jack_nframes_t frame_rate, jack_nframes_t buffer_size);
 
-        /*
-        	\brief
-        */
-        void CycleEnd(JackClientInterface** table, jack_nframes_t frame_rate, jack_nframes_t buffer_size);
+    /*
+            \brief
+    */
+    void SetSyncTimeout(jack_time_t timeout)
+    {
+        fSyncTimeout = timeout;
+    }
 
-        /*
-        	\brief
-        */
-        void SetSyncTimeout(jack_time_t timeout)
-        {
-            fSyncTimeout = timeout;
-        }
+    void ReadCurrentPos(jack_position_t* pos);
 
-        void ReadCurrentPos(jack_position_t* pos);
+    jack_unique_t GenerateUniqueID()
+    {
+        return (jack_unique_t)INC_ATOMIC(&fWriteCounter);
+    }
 
-        jack_unique_t GenerateUniqueID()
-        {
-            return (jack_unique_t)INC_ATOMIC(&fWriteCounter);
-        }
+    void RequestNewPos(jack_position_t* pos);
 
-        void RequestNewPos(jack_position_t* pos);
+    jack_transport_state_t Query(jack_position_t* pos);
 
-        jack_transport_state_t Query(jack_position_t* pos);
+    jack_nframes_t GetCurrentFrame();
 
-        jack_nframes_t GetCurrentFrame();
+    static void CopyPosition(jack_position_t* from, jack_position_t* to);
 
-        static void CopyPosition(jack_position_t* from, jack_position_t* to);
+    bool GetNetworkSync() const
+    {
+        return fNetworkSync;
+    }
 
-        bool GetNetworkSync() const
-        {
-            return fNetworkSync;
-        }
+    void SetNetworkSync(bool sync)
+    {
+        fNetworkSync = sync;
+    }
+};
 
-        void SetNetworkSync(bool sync)
-        {
-            fNetworkSync = sync;
-        }
-
-} POST_PACKED_STRUCTURE;
-
-} // end of namespace
-
-#endif
+} // namespace jackmini

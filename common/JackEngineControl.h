@@ -18,18 +18,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackEngineControl__
-#define __JackEngineControl__
+#pragma once
 
-#include "JackShmMem.h"
-#include "JackFrameTimer.h"
-#include "JackTransportEngine.h"
 #include "JackConstants.h"
+#include "JackFrameTimer.h"
+#include "JackShmMem.h"
+#include "JackTransportEngine.h"
 #include "types.h"
 #include <stdio.h>
+#include <atomic>
 
-namespace Jack
-{
+namespace jackmini {
 
 class JackClientInterface;
 class JackGraphManager;
@@ -41,9 +40,8 @@ class JackGraphManager;
 \brief Engine control in shared memory.
 */
 
-PRE_PACKED_STRUCTURE
-struct SERVER_EXPORT JackEngineControl : public JackShmMem
-{
+
+struct SERVER_EXPORT JackEngineControl : public JackShmMem {
     // Shared state
     jack_nframes_t fBufferSize;
     jack_nframes_t fSampleRate;
@@ -55,11 +53,12 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
     float fXrunDelayedUsecs;
     bool fTimeOut;
     bool fRealTime;
-    bool fSavedRealTime;  // RT state saved and restored during Freewheel mode
+    bool fSavedRealTime; // RT state saved and restored during Freewheel mode
+    std::atomic<bool> fFreewheel; // Freewheel mode is on: clients opened now must use the normal (not flushed) driver synchro
     int fServerPriority;
     int fClientPriority;
     int fMaxClientPriority;
-    char fServerName[JACK_SERVER_NAME_SIZE+1];
+    char fServerName[JACK_SERVER_NAME_SIZE + 1];
     alignas(UInt32) alignas(JackTransportEngine) JackTransportEngine fTransport;
     jack_timer_type_t fClockSource;
     int fDriverNum;
@@ -86,11 +85,11 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
     alignas(UInt32) alignas(JackFrameTimer) JackFrameTimer fFrameTimer;
 
     JackEngineControl(bool sync, bool temporary, long timeout, bool rt, long priority, bool verbose, jack_timer_type_t clock, const char* server_name)
-      {
+    {
         static_assert(offsetof(JackEngineControl, fTransport) % sizeof(UInt32) == 0,
-                      "fTransport must be aligned within JackEngineControl");
+            "fTransport must be aligned within JackEngineControl");
         static_assert(offsetof(JackEngineControl, fFrameTimer) % sizeof(UInt32) == 0,
-                      "fFrameTimer must be aligned within JackEngineControl");
+            "fFrameTimer must be aligned within JackEngineControl");
         fBufferSize = 512;
         fSampleRate = 48000;
         fPeriodUsecs = jack_time_t(1000000.f / fSampleRate * fBufferSize);
@@ -100,6 +99,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
         fTimeOutUsecs = timeout * 1000;
         fRealTime = rt;
         fSavedRealTime = false;
+        fFreewheel = false;
         fServerPriority = priority;
 
         fClientPriority = (rt) ? priority - 5 : 0;
@@ -124,7 +124,8 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
     }
 
     ~JackEngineControl()
-    {}
+    {
+    }
 
     void UpdateTimeOut()
     {
@@ -141,13 +142,13 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
         fFrameTimer.IncFrameTime(fBufferSize, callback_usecs, fPeriodUsecs);
     }
 
-    void CycleBegin(JackClientInterface** table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end)
+    void CycleBegin(std::atomic<JackClientInterface*>* table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end)
     {
         fTransport.CycleBegin(fSampleRate, cur_cycle_begin);
         CalcCPULoad(table, manager, cur_cycle_begin, prev_cycle_end);
     }
 
-    void CycleEnd(JackClientInterface** table)
+    void CycleEnd(std::atomic<JackClientInterface*>* table)
     {
         fTransport.CycleEnd(table, fSampleRate, fBufferSize);
     }
@@ -176,11 +177,8 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem
     }
 
     // Private
-    void CalcCPULoad(JackClientInterface** table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end);
+    void CalcCPULoad(std::atomic<JackClientInterface*>* table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end);
     void ResetRollingUsecs();
+};
 
-} POST_PACKED_STRUCTURE;
-
-} // end of namespace
-
-#endif
+} // namespace jackmini

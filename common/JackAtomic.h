@@ -17,53 +17,30 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackAtomic__
-#define __JackAtomic__
+#pragma once
 
 #include "JackTypes.h"
+#include <atomic>
 
-#if defined(__i386__) || defined(__x86_64__)
+/*
+ * Lock-free operations on counters that live in shared memory.  The object must
+ * be naturally aligned for its type; users check this with static_asserts on
+ * the offsets within their structures.  The operations are seq_cst, which is
+ * the ordering the original inline assembly gave.
+ */
 
-#define LOCK "lock ; "
-
-static inline char CAS(volatile UInt32 value, UInt32 newvalue, volatile void* addr)
+static inline bool CAS(UInt32 value, UInt32 newvalue, void* addr)
 {
-    register char ret;
-    __asm__ __volatile__ (
-        "# CAS \n\t"
-        LOCK "cmpxchg %2, (%1) \n\t"
-        "sete %0               \n\t"
-        : "=a" (ret)
-        : "c" (addr), "d" (newvalue), "a" (value)
-        );
-    return ret;
+    UInt32 expected = value;
+    return std::atomic_ref<UInt32>(*static_cast<UInt32*>(addr)).compare_exchange_strong(expected, newvalue);
 }
 
-#else
-
-static inline char CAS(volatile UInt32 value, UInt32 newvalue, volatile void* addr)
+static inline long INC_ATOMIC(SInt32* val)
 {
-    return __sync_bool_compare_and_swap((UInt32*)addr, value, newvalue);
+    return std::atomic_ref<SInt32>(*val).fetch_add(1);
 }
 
-#endif
-
-static inline long INC_ATOMIC(volatile SInt32* val)
+static inline long DEC_ATOMIC(SInt32* val)
 {
-    SInt32 actual;
-    do {
-        actual = *val;
-    } while (!CAS(actual, actual + 1, val));
-    return actual;
+    return std::atomic_ref<SInt32>(*val).fetch_sub(1);
 }
-
-static inline long DEC_ATOMIC(volatile SInt32* val)
-{
-    SInt32 actual;
-    do {
-        actual = *val;
-    } while (!CAS(actual, actual - 1, val));
-    return actual;
-}
-
-#endif

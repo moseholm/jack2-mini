@@ -18,110 +18,110 @@
 
  */
 
-#ifndef __JackThread__
-#define __JackThread__
+#pragma once
 
 #include "JackCompilerDeps.h"
 #include "JackTypes.h"
+#include <atomic>
 
-namespace Jack
-{
+namespace jackmini {
 
 /*!
  \brief The base class for runnable objects, that have an <B> Init </B> and <B> Execute </B> method to be called in a thread.
  */
 
-class JackRunnableInterface
-{
+class JackRunnableInterface {
 
-    protected:
+protected:
+    JackRunnableInterface()
+    {
+    }
+    virtual ~JackRunnableInterface()
+    {
+    }
 
-        JackRunnableInterface()
-        {}
-        virtual ~JackRunnableInterface()
-        {}
-
-    public:
-
-        virtual bool Init()          /*! Called once when the thread is started */
-        {
-            return true;
-        }
-        virtual bool Execute() = 0;  /*! Must be implemented by subclasses */
+public:
+    virtual bool Init() /*! Called once when the thread is started */
+    {
+        return true;
+    }
+    virtual bool Execute() = 0; /*! Must be implemented by subclasses */
 };
 
-namespace detail
-{
+namespace detail {
 
 /*!
  \brief The thread base class.
  */
 
-class SERVER_EXPORT JackThreadInterface
-{
+class SERVER_EXPORT JackThreadInterface {
 
-    public:
+public:
+    enum kThreadState { kIdle,
+        kStarting,
+        kIniting,
+        kRunning };
 
-        enum kThreadState {kIdle, kStarting, kIniting, kRunning};
+protected:
+    JackRunnableInterface* fRunnable;
+    int fPriority;
+    bool fRealTime;
+    std::atomic<kThreadState> fStatus;
+    int fCancellation;
 
-    protected:
+public:
+    JackThreadInterface(JackRunnableInterface* runnable, int priority, bool real_time, int cancellation)
+        : fRunnable(runnable)
+        , fPriority(priority)
+        , fRealTime(real_time)
+        , fStatus(kIdle)
+        , fCancellation(cancellation)
+    {
+    }
 
-        JackRunnableInterface* fRunnable;
-        int fPriority;
-        bool fRealTime;
-        volatile kThreadState fStatus;
-        int fCancellation;
+    kThreadState GetStatus()
+    {
+        return fStatus;
+    }
 
-    public:
+    void SetParams(UInt64 period, UInt64 computation, UInt64 constraint) // Empty implementation, will only make sense on OSX...
+    {
+    }
 
-        JackThreadInterface(JackRunnableInterface* runnable, int priority, bool real_time, int cancellation):
-        fRunnable(runnable), fPriority(priority), fRealTime(real_time), fStatus(kIdle), fCancellation(cancellation)
-        {}
+    int Start();
+    int StartSync();
+    int Kill();
+    int Stop();
+    void Terminate();
 
-        kThreadState GetStatus()
-        {
-            return fStatus;
-        }
+    int AcquireRealTime(); // Used when called from another thread
+    int AcquireSelfRealTime(); // Used when called from thread itself
 
-        void SetParams(UInt64 period, UInt64 computation, UInt64 constraint) // Empty implementation, will only make sense on OSX...
-        {}
+    int AcquireRealTime(int priority); // Used when called from another thread
+    int AcquireSelfRealTime(int priority); // Used when called from thread itself
 
-        int Start();
-        int StartSync();
-        int Kill();
-        int Stop();
-        void Terminate();
+    int DropRealTime(); // Used when called from another thread
+    int DropSelfRealTime(); // Used when called from thread itself
 
-        int AcquireRealTime();                  // Used when called from another thread
-        int AcquireSelfRealTime();              // Used when called from thread itself
+    jack_native_thread_t GetThreadID();
+    bool IsThread();
 
-        int AcquireRealTime(int priority);      // Used when called from another thread
-        int AcquireSelfRealTime(int priority);  // Used when called from thread itself
-
-        int DropRealTime();                     // Used when called from another thread
-        int DropSelfRealTime();                 // Used when called from thread itself
-
-        jack_native_thread_t GetThreadID();
-        bool IsThread();
-
-        static int AcquireRealTimeImp(jack_native_thread_t thread, int priority);
-        static int AcquireRealTimeImp(jack_native_thread_t thread, int priority, UInt64 period, UInt64 computation, UInt64 constraint);
-        static int DropRealTimeImp(jack_native_thread_t thread);
-        static int StartImp(jack_native_thread_t* thread, int priority, int realtime, void*(*start_routine)(void*), void* arg);
-        static int StopImp(jack_native_thread_t thread);
-        static int KillImp(jack_native_thread_t thread);
+    static int AcquireRealTimeImp(jack_native_thread_t thread, int priority);
+    static int AcquireRealTimeImp(jack_native_thread_t thread, int priority, UInt64 period, UInt64 computation, UInt64 constraint);
+    static int DropRealTimeImp(jack_native_thread_t thread);
+    static int StartImp(jack_native_thread_t* thread, int priority, int realtime, void* (*start_routine)(void*), void* arg);
+    static int StopImp(jack_native_thread_t thread);
+    static int KillImp(jack_native_thread_t thread);
 };
 
-}
+} // namespace detail
 
-} // end of namespace
+} // namespace jackmini
 
-bool jack_get_thread_realtime_priority_range(int * min_ptr, int * max_ptr);
+bool jack_get_thread_realtime_priority_range(int* min_ptr, int* max_ptr);
 
-bool jack_tls_allocate_key(jack_tls_key *key_ptr);
+bool jack_tls_allocate_key(jack_tls_key* key_ptr);
 bool jack_tls_free_key(jack_tls_key key);
 
-bool jack_tls_set(jack_tls_key key, void *data_ptr);
-void *jack_tls_get(jack_tls_key key);
-
-#endif
+bool jack_tls_set(jack_tls_key key, void* data_ptr);
+void* jack_tls_get(jack_tls_key key);

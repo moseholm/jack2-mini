@@ -17,57 +17,62 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackPlatformPlug__
-#define __JackPlatformPlug__
+#pragma once
 
 #define jack_server_dir "/dev/shm"
 #define jack_client_dir "/dev/shm"
 #define JACK_DEFAULT_DRIVER "alsa"
 
-namespace Jack
-{
-    struct JackRequest;
-    struct JackResult;
+namespace jackmini {
+struct JackRequest;
+struct JackResult;
 
-    class JackPosixMutex;
-    class JackPosixThread;
-    class JackSocketServerChannel;
-    class JackSocketClientChannel;
-    class JackSocketServerNotifyChannel;
-    class JackSocketNotifyChannel;
-    class JackClientSocket;
-}
+class JackPosixMutex;
+class JackPosixThread;
+class JackSocketServerChannel;
+class JackSocketServerNotifyChannel;
+class JackSocketNotifyChannel;
+class JackClientSocket;
+} // namespace jackmini
 
 /* __JackPlatformMutex__ */
 #include "JackPosixMutex.h"
-namespace Jack { typedef JackPosixMutex JackMutex; }
+namespace jackmini {
+typedef JackPosixMutex JackMutex;
+}
 
 /* __JackPlatformThread__ */
 #include "JackPosixThread.h"
-namespace Jack { typedef JackPosixThread JackThread; }
+namespace jackmini {
+typedef JackPosixThread JackThread;
+}
 
 /* __JackPlatformSynchro__  client activation */
 #include "JackLinuxFutex.h"
-namespace Jack { typedef JackLinuxFutex JackSynchro; }
+namespace jackmini {
+typedef JackLinuxFutex JackSynchro;
+}
 
 /* __JackPlatformProcessSync__ */
 #include "JackPosixProcessSync.h"
-namespace Jack { typedef JackPosixProcessSync JackProcessSync; }
+namespace jackmini {
+typedef JackPosixProcessSync JackProcessSync;
+}
 
 /* __JackPlatformServerChannel__ */
 #include "JackSocketServerChannel.h"
-namespace Jack { typedef JackSocketServerChannel JackServerChannel; }
-
-/* __JackPlatformClientChannel__ */
-#include "JackSocketClientChannel.h"
-namespace Jack { typedef JackSocketClientChannel JackClientChannel; }
+namespace jackmini {
+typedef JackSocketServerChannel JackServerChannel;
+}
 
 /* __JackPlatformServerNotifyChannel__ */
 #include "JackSocketServerNotifyChannel.h"
-namespace Jack { typedef JackSocketServerNotifyChannel JackServerNotifyChannel; }
+namespace jackmini {
+typedef JackSocketServerNotifyChannel JackServerNotifyChannel;
+}
 
 /* __JackPlatformNotifyChannel__ */
 #include "JackSocketNotifyChannel.h"
-namespace Jack { typedef JackSocketNotifyChannel JackNotifyChannel; }
-
-#endif
+namespace jackmini {
+typedef JackSocketNotifyChannel JackNotifyChannel;
+}

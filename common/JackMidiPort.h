@@ -18,33 +18,47 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackMidiPort__
-#define __JackMidiPort__
+#pragma once
 
-#include "types.h"
+#include "JackCompilerDeps.h"
 #include "JackConstants.h"
 #include "JackPlatformPlug.h"
+#include "types.h"
 #include <stddef.h>
 
 /** Type for raw event data contained in @ref jack_midi_event_t. */
 typedef unsigned char jack_midi_data_t;
 
 /** A Jack MIDI event. */
-struct jack_midi_event_t
-{
-    jack_nframes_t    time;   /**< Sample index at which event is valid */
-    size_t            size;   /**< Number of bytes of data in \a buffer */
-    jack_midi_data_t *buffer; /**< Raw MIDI data */
+struct jack_midi_event_t {
+    jack_nframes_t time; /**< Sample index at which event is valid */
+    size_t size; /**< Number of bytes of data in \a buffer */
+    jack_midi_data_t* buffer; /**< Raw MIDI data */
 };
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+LIB_EXPORT uint32_t jack_midi_get_event_count(void* port_buffer);
+LIB_EXPORT int jack_midi_event_get(jack_midi_event_t* event, void* port_buffer, uint32_t event_index);
+LIB_EXPORT void jack_midi_clear_buffer(void* port_buffer);
+LIB_EXPORT void jack_midi_reset_buffer(void* port_buffer);
+LIB_EXPORT size_t jack_midi_max_event_size(void* port_buffer);
+LIB_EXPORT jack_midi_data_t* jack_midi_event_reserve(void* port_buffer, jack_nframes_t time, size_t data_size);
+LIB_EXPORT int jack_midi_event_write(void* port_buffer, jack_nframes_t time, const jack_midi_data_t* data, size_t data_size);
+LIB_EXPORT uint32_t jack_midi_get_lost_event_count(void* port_buffer);
+
+#ifdef __cplusplus
+}
+#endif
 
 /** A Jack MIDI port type. */
 #define JACK_DEFAULT_MIDI_TYPE "8 bit raw midi"
 
-namespace Jack
-{
+namespace jackmini {
 
-struct SERVER_EXPORT JackMidiEvent
-{
+struct LIB_EXPORT JackMidiEvent {
     // Most MIDI events are < 4 bytes in size, so we can save a lot, storing them inplace.
     enum { INLINE_SIZE_MAX = sizeof(jack_shmsize_t) };
 
@@ -72,8 +86,7 @@ struct SERVER_EXPORT JackMidiEvent
  * but their data (if not inlined) is stored from the end of the same buffer.
  */
 
-struct SERVER_EXPORT JackMidiBuffer
-{
+struct LIB_EXPORT JackMidiBuffer {
     enum { MAGIC = 0x900df00d };
 
     uint32_t magic;
@@ -98,6 +111,4 @@ struct SERVER_EXPORT JackMidiBuffer
 
 void MidiBufferInit(void* buffer, size_t buffer_size, jack_nframes_t nframes);
 
-} // namespace Jack
-
-#endif
+} // namespace jackmini

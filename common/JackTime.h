@@ -18,27 +18,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackTime__
-#define __JackTime__
+#pragma once
 
 #include "JackCompilerDeps.h"
 #include "JackTypes.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+namespace jackmini {
 
-    SERVER_EXPORT void InitTime();
-    SERVER_EXPORT void EndTime();
-    SERVER_EXPORT jack_time_t GetMicroSeconds(void);
-    SERVER_EXPORT void JackSleep(long usec);
+SERVER_EXPORT void init_time();
+SERVER_EXPORT void end_time();
+SERVER_EXPORT jack_time_t get_microseconds();
+SERVER_EXPORT void sleep_microseconds(long usec);
 
-    void SetClockSource(jack_timer_type_t source);
-    const char* ClockSourceName(jack_timer_type_t source);
+void set_clock_source(jack_timer_type_t source);
+const char* clock_source_name(jack_timer_type_t source);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+} // namespace jackmini

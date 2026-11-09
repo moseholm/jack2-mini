@@ -1,0 +1,240 @@
+#!/bin/bash
+# End-to-end checks of the command-line tools (tools/), against a server that this script starts and stops.
+#
+# usage: tests/tools_e2e.sh <build-dir> [realtime|freewheel]
+#
+# A server is started with `jackd -d dummy` under a private name, and each tool is run with -s <name>.  A check passes
+# when the tool exits with the expected status and its output matches the expected pattern.  The script prints one
+# line per check and a final "tools: N checks, M failed" line.  It exits non-zero when a check fails.
+#
+# The server lock is per user, so the script refuses to run while another jackd of this user is running.  It is run
+# from check.sh, not from ctest, since it needs a server.
+set -u
+
+BUILD=${1:?usage: tools_e2e.sh <build-dir> [realtime|freewheel]}
+MODE=${2:-realtime}
+BIN=$BUILD/bin
+NAME=tools_e2e_$$
+SOCKET=/dev/shm/jack_${NAME}_$(id -u)_0
+
+export LD_LIBRARY_PATH=$BUILD/lib
+export JACK_DRIVER_DIR=$BUILD/lib/jack
+
+CHECKS=0
+FAILED=0
+SERVER_PID=
+T=$'\t'
+
+say() {
+    printf '%-64s %s\n' "$1" "$2"
+}
+
+start_server() {
+    if pgrep -x jackd > /dev/null; then
+        echo "tools: a jackd is already running; stop it first (the server lock is per user)" >&2
+        exit 2
+    fi
+    rm -f "$SOCKET"
+    local flags=()
+    [ "$MODE" = freewheel ] && flags+=(-F)
+    "$BIN/jackd" -n "$NAME" "${flags[@]}" -d dummy > "/tmp/tools_e2e_server_$$.log" 2>&1 &
+    SERVER_PID=$!
+    local tries=0
+    while [ ! -S "$SOCKET" ] && [ $tries -lt 150 ]; do
+        sleep 0.2
+        tries=$((tries + 1))
+    done
+    if [ ! -S "$SOCKET" ]; then
+        echo "tools: the server did not start (see /tmp/tools_e2e_server_$$.log)" >&2
+        exit 2
+    fi
+}
+
+stop_server() {
+    if [ -n "$SERVER_PID" ]; then
+        kill -INT "$SERVER_PID" 2> /dev/null
+        wait "$SERVER_PID" 2> /dev/null
+        SERVER_PID=
+    fi
+    rm -f "$SOCKET"
+}
+
+# check <description> <expected exit status> <expected output pattern, extended regex, or -> command...
+check() {
+    local what=$1 want_status=$2 want_text=$3
+    shift 3
+    local out status
+    out=$("$@" 2>&1)
+    status=$?
+    CHECKS=$((CHECKS + 1))
+    local ok=1
+    [ "$status" -eq "$want_status" ] || ok=0
+    if [ "$want_text" != "-" ] && ! grep -Eq -- "$want_text" <<< "$out"; then
+        ok=0
+    fi
+    if [ $ok -eq 1 ]; then
+        say "$what" "ok"
+    else
+        say "$what" "FAIL (status $status)"
+        sed 's/^/    /' <<< "$out"
+        FAILED=$((FAILED + 1))
+    fi
+}
+
+# check_absent <description> <command...>: the command exits 0 and its output has no line that the pattern matches.
+check_absent() {
+    local what=$1 pattern=$2
+    shift 2
+    local out status
+    out=$("$@" 2>&1)
+    status=$?
+    CHECKS=$((CHECKS + 1))
+    if [ "$status" -eq 0 ] && ! grep -Eq -- "$pattern" <<< "$out"; then
+        say "$what" "ok"
+    else
+        say "$what" "FAIL (status $status)"
+        sed 's/^/    /' <<< "$out"
+        FAILED=$((FAILED + 1))
+    fi
+}
+
+trap stop_server EXIT
+
+start_server
+
+# jackmini_lsp (T1).  The dummy driver has two capture ports (outputs) and two playback ports (inputs).
+LSP=$BIN/jackmini_lsp
+check "lsp: lists the capture ports" 0 '^system:capture_1$' "$LSP" -s "$NAME"
+check "lsp: lists the playback ports" 0 '^system:playback_2$' "$LSP" -s "$NAME"
+check "lsp: a filter keeps the ports that match all the strings" 0 '^system:capture_2$' "$LSP" -s "$NAME" capture _2
+check_absent "lsp: a filter drops the ports that do not match" '^system:playback' "$LSP" -s "$NAME" capture _2
+check "lsp: -t prints the stored type string" 0 "^${T}32 bit float mono audio\$" "$LSP" -s "$NAME" -t capture_1
+check "lsp: -p prints the properties with a trailing comma" 0 "^${T}properties: output,physical,terminal,\$" "$LSP" -s "$NAME" -p capture_1
+check "lsp: -l prints the playback latency, then the capture latency" 0 "^${T}port capture latency = \[ [0-9]+ [0-9]+ \] frames\$" "$LSP" -s "$NAME" -l capture_1
+check "lsp: -L prints the total latency" 0 "^${T}total latency = [0-9]+ frames\$" "$LSP" -s "$NAME" -L capture_1
+check "lsp: -U prints the port UUID" 0 "^${T}uuid: [0-9]+\$" "$LSP" -s "$NAME" -U capture_1
+check "lsp: -u prints the owner's UUID for the client part of the name" 0 '^[0-9]+:capture_1$' "$LSP" -s "$NAME" -u capture_1
+check "lsp: -h prints the usage and exits with status 1" 1 'Usage: jackmini_lsp' "$LSP" -h
+check "lsp: --version prints the version" 0 '^jackmini_lsp [0-9.]+$' "$LSP" --version
+check "lsp: an unknown option is an error with status 1" 1 'invalid option' "$LSP" -Z
+
+# jackmini_connect and jackmini_disconnect (T2).  The dummy driver's capture ports are outputs, its playback ports inputs.
+CONN=$BIN/jackmini_connect
+DISC=$BIN/jackmini_disconnect
+OWNER=$("$LSP" -s "$NAME" -u capture_1 | head -1 | cut -d: -f1)
+check "connect: an output and an input are connected" 0 '^$' "$CONN" -s "$NAME" system:capture_1 system:playback_1
+check "connect: the connection is listed by lsp -c" 0 "^   system:playback_1\$" "$LSP" -s "$NAME" -c capture_1
+check "connect: a connection that exists is an error" 1 'already connected' "$CONN" -s "$NAME" system:capture_1 system:playback_1
+check "disconnect: the connection is removed" 0 '^$' "$DISC" -s "$NAME" system:capture_1 system:playback_1
+check_absent "disconnect: lsp -c no longer lists it" '^   system:playback_1$' "$LSP" -s "$NAME" -c capture_1
+check "disconnect: a connection that is not there is an error" 1 'already disconnected' "$DISC" -s "$NAME" system:capture_1 system:playback_1
+check "connect: the ports may come in either order" 0 '^$' "$CONN" -s "$NAME" system:playback_1 system:capture_1
+check "disconnect: the reversed order removes it too" 0 '^$' "$DISC" -s "$NAME" system:playback_1 system:capture_1
+check "connect: -u takes <client UUID>:<port>" 0 '^$' "$CONN" -s "$NAME" -u "$OWNER:capture_1" "$OWNER:playback_1"
+check "disconnect: -u takes <client UUID>:<port>" 0 '^$' "$DISC" -s "$NAME" -u "$OWNER:capture_1" "$OWNER:playback_1"
+check "connect: an unknown port is an error" 1 'not a valid port' "$CONN" -s "$NAME" system:nope system:playback_1
+check "connect: two outputs are an error" 1 '1 input port and 1 output port' "$CONN" -s "$NAME" system:capture_1 system:capture_2
+check "connect: no ports print the usage" 1 'usage: jackmini_connect' "$CONN" -s "$NAME"
+check "disconnect: -h prints its usage with status 1" 1 'usage: jackmini_disconnect' "$DISC" -h
+check "connect: --version prints the version" 0 '^jackmini_connect [0-9.]+$' "$CONN" --version
+
+# jackmini_samplerate and jackmini_wait (T3).
+SR=$BIN/jackmini_samplerate
+WAIT=$BIN/jackmini_wait
+check "samplerate: prints the sample rate of the server" 0 '^48000$' "$SR" -s "$NAME"
+check "samplerate: -h prints its usage with status 1" 1 'usage: jackmini_samplerate' "$SR" -h
+check "wait: -c, the default, reports that the server runs" 0 '^running$' "$WAIT" -s "$NAME"
+check "wait: -w returns while the server runs" 0 '^server is available$' "$WAIT" -s "$NAME" -w
+check "wait: -q with a timeout reports the timeout while the server runs" 1 '^timeout$' "$WAIT" -s "$NAME" -q -t 1
+check "wait: --version prints the version" 0 '^jackmini_wait [0-9.]+$' "$WAIT" --version
+
+# jackmini_monitor_client (T4).  The dummy driver's client "system" has two audio inputs (its playback ports).
+MON=$BIN/jackmini_monitor_client
+"$MON" -s "$NAME" system > /dev/null 2>&1 &
+MON_PID=$!
+tries=0
+while ! "$LSP" -s "$NAME" | grep -q '^jackmini_monitor_client:monitor_2$' && [ $tries -lt 100 ]; do
+    sleep 0.1
+    tries=$((tries + 1))
+done
+check "monitor: an output for each audio input of the client" 0 '^jackmini_monitor_client:monitor_2$' "$LSP" -s "$NAME"
+check "monitor: an output can be connected to an input of the client" 0 '^$' "$CONN" -s "$NAME" jackmini_monitor_client:monitor_1 system:playback_2
+check "monitor: the connection is listed" 0 '^   jackmini_monitor_client:monitor_1$' "$LSP" -s "$NAME" -c system:playback_2
+check "monitor: a client with no audio inputs is an error" 1 "has no audio input ports" "$MON" -s "$NAME" nosuch
+kill -INT "$MON_PID" 2> /dev/null
+wait "$MON_PID"
+MON_STATUS=$?
+CHECKS=$((CHECKS + 1))
+if [ "$MON_STATUS" -eq 0 ]; then
+    say "monitor: SIGINT stops it with status 0" "ok"
+else
+    say "monitor: SIGINT stops it with status 0" "FAIL (status $MON_STATUS)"
+    FAILED=$((FAILED + 1))
+fi
+
+# jackmini_midi_dump (T5).  A test source (jack_midi_writer, in the tests) writes a note on in every cycle; the dump
+# prints them.  Each dump run registers its own port, so each one is connected from the writer when it starts.
+MDUMP=$BIN/jackmini_midi_dump
+WRITER=$BIN/jack_midi_writer
+DUMP_OUT=/tmp/tools_e2e_dump_$$.txt
+DUMP_PID=
+
+# start_dump <option...>: runs the dump into $DUMP_OUT, connects the writer to it, and waits for the first note on.
+start_dump() {
+    "$MDUMP" -s "$NAME" "$@" > "$DUMP_OUT" 2>&1 &
+    DUMP_PID=$!
+    local tries=0
+    while ! "$LSP" -s "$NAME" | grep -q '^midi-monitor:input$' && [ $tries -lt 100 ]; do
+        sleep 0.1
+        tries=$((tries + 1))
+    done
+    "$CONN" -s "$NAME" midi_writer:out midi-monitor:input > /dev/null 2>&1
+    tries=0
+    while ! grep -q 'note on' "$DUMP_OUT" 2> /dev/null && [ $tries -lt 100 ]; do
+        sleep 0.1
+        tries=$((tries + 1))
+    done
+}
+
+stop_dump() {
+    kill -INT "$DUMP_PID" 2> /dev/null
+    wait "$DUMP_PID" 2> /dev/null
+}
+
+if [ -x "$WRITER" ]; then
+    "$WRITER" -s "$NAME" > /dev/null 2>&1 &
+    WRITER_PID=$!
+    start_dump
+    check "midi dump: a note on is printed with its time and bytes" 0 '^ *[0-9]+: 90 3c 40 note on  \(channel  0\): pitch  60, velocity  64$' cat "$DUMP_OUT"
+    stop_dump
+    start_dump -a
+    check "midi dump -a: the absolute time is printed" 0 '^ *[0-9]+: 90 3c 40 note on' cat "$DUMP_OUT"
+    stop_dump
+    start_dump -r
+    check "midi dump -r: the time since the previous event is printed" 0 '^ *\+[0-9]+: 90 3c 40 note on' cat "$DUMP_OUT"
+    stop_dump
+    kill -INT "$WRITER_PID" 2> /dev/null
+    wait "$WRITER_PID" 2> /dev/null
+    rm -f "$DUMP_OUT"
+else
+    CHECKS=$((CHECKS + 1))
+    say "midi dump: the test source jack_midi_writer is not built" "FAIL"
+    FAILED=$((FAILED + 1))
+fi
+check "midi dump: -h prints its usage with status 0" 0 'Usage: jackmini_midi_dump' "$MDUMP" -h
+check "midi dump: --version prints the version" 0 '^jackmini_midi_dump [0-9.]+$' "$MDUMP" --version
+
+stop_server
+
+check "wait: -c reports that no server runs" 0 '^not running$' "$WAIT" -s "$NAME"
+check "wait: -q reports that the server is gone" 0 '^server is gone$' "$WAIT" -s "$NAME" -q
+check "wait: -w gives up at its timeout with status 1" 1 '^timeout$' "$WAIT" -s "$NAME" -w -t 1
+check "samplerate: no server is an error with status 1" 1 'server not running' "$SR" -s "$NAME"
+check "midi dump: no server is an error with status 1" 1 'server not running' "$MDUMP" -s "$NAME"
+
+# With no server running the tools fail with a message and status 1.
+check "lsp: no server is an error with status 1" 1 'server is not running' "$LSP" -s "$NAME"
+check "connect: no server is an error with status 1" 1 'server not running' "$CONN" -s "$NAME" a b
+
+echo "tools: $CHECKS checks, $FAILED failed"
+[ $FAILED -eq 0 ]

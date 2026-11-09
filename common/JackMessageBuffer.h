@@ -27,79 +27,81 @@
  *
  */
 
-#ifndef __JackMessageBuffer__
-#define __JackMessageBuffer__
+#pragma once
 
-#include "JackPlatformPlug.h"
-#include "JackMutex.h"
 #include "JackAtomic.h"
+#include "JackMutex.h"
+#include "JackPlatformPlug.h"
+#include <array>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <mutex>
+#include <string_view>
 
-namespace Jack
-{
+namespace jackmini {
 
-/* MB_NEXT() relies on the fact that MB_BUFFERS is a power of two */
-#define MB_BUFFERS  128
-#define MB_NEXT(index) ((index+1) & (MB_BUFFERS-1))
-#define MB_BUFFERSIZE   256     /* message length limit */
+// The ring index wraps with a mask, so MB_BUFFERS must be a power of two.
+inline constexpr std::size_t MB_BUFFERS = 128;
+inline constexpr std::size_t MB_BUFFERSIZE = 256; // message length limit, including the terminator
 
-struct JackMessage
-{
+struct JackMessage {
     int level;
-    char message[MB_BUFFERSIZE];
+    std::array<char, MB_BUFFERSIZE> message;
 };
 
 /*!
 \brief Message buffer to be used from RT threads.
+
+AddMessage() never blocks, allocates or makes a system call.  A bounded
+multi-producer ring holds the messages.  The flush thread drains the ring by
+polling, so producers never wake it.  A full ring drops the new message and
+counts it as an overrun.
 */
 
-class JackMessageBuffer : public JackRunnableInterface
-{
+class JackMessageBuffer : public JackRunnableInterface {
 
-    private:
+private:
+    struct Slot {
+        std::atomic<std::size_t> sequence;
+        JackMessage entry;
+    };
 
-        volatile JackThreadInitCallback fInit;
-        void* fInitArg;
-        JackMessage fBuffers[MB_BUFFERS];
-        JackThread fThread;
-        JackProcessSync fGuard;
-        volatile unsigned int fInBuffer;
-        volatile unsigned int fOutBuffer;
-        alignas(SInt32) SInt32 fOverruns;
-        bool fRunning;
+    std::atomic<JackThreadInitCallback> fInit;
+    void* fInitArg;
+    std::mutex fInitLock; // serializes SetInitCallback callers, which are not realtime
+    std::array<Slot, MB_BUFFERS> fSlots;
+    alignas(64) std::atomic<std::size_t> fEnqueuePos; // written by producers
+    alignas(64) std::atomic<std::size_t> fDequeuePos; // written by the flush thread only
+    std::atomic<std::uint32_t> fOverruns;
+    JackThread fThread;
+    std::atomic<bool> fRunning;
 
-        void Flush();
+    bool Enqueue(int level, std::string_view message);
+    void Flush();
 
-        bool Start();
-        bool Stop();
+    bool Start();
+    bool Stop();
 
-    public:
+public:
+    JackMessageBuffer();
+    ~JackMessageBuffer();
 
-        JackMessageBuffer();
-        ~JackMessageBuffer();
+    // JackRunnableInterface interface
+    bool Execute();
 
-        // JackRunnableInterface interface
-        bool Execute();
+    bool static Create();
+    bool static Destroy();
 
-	    bool static Create();
-	    bool static Destroy();
+    void AddMessage(int level, std::string_view message);
+    int SetInitCallback(JackThreadInitCallback callback, void* arg);
+    std::uint32_t Overruns() const;
 
-        void AddMessage(int level, const char *message);
-        int SetInitCallback(JackThreadInitCallback callback, void *arg);
-
-	    static JackMessageBuffer* fInstance;
+    static JackMessageBuffer* fInstance;
 };
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
-void JackMessageBufferAdd(int level, const char *message);
+void JackMessageBufferAdd(int level, const char* message);
 
-#ifdef __cplusplus
-}
-#endif
 
-};
-
-#endif
+}; // namespace jackmini

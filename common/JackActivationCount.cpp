@@ -17,27 +17,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#include "JackAtomic.h"
 #include "JackActivationCount.h"
-#include "JackConstants.h"
+#include "JackAtomic.h"
 #include "JackClientControl.h"
+#include "JackConstants.h"
 #include "JackError.h"
 
-namespace Jack
-{
+namespace jackmini {
 
-bool JackActivationCount::Signal(JackSynchro* synchro, JackClientControl* control)
+bool JackActivationCount::Signal(std::atomic<SInt32>& live, JackSynchro* synchro, JackClientControl* control)
 {
-    if (fValue == 0) {
+    if (live.load() == 0) {
         // Transfer activation to next clients
         jack_log("JackActivationCount::Signal value = 0 ref = %ld", control->fRefNum);
         return synchro->Signal();
-    } else if (DEC_ATOMIC(&fValue) == 1) {
+    } else if (live.fetch_sub(1) == 1) {
         return synchro->Signal();
     } else {
         return true;
     }
 }
 
-} // end of namespace
-
+} // namespace jackmini

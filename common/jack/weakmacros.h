@@ -17,8 +17,7 @@
 
 */
 
-#ifndef __weakmacros_h__
-#define __weakmacros_h__
+#pragma once
 
 /*************************************************************
  * NOTE: JACK_WEAK_EXPORT ***MUST*** be used on every function
@@ -27,9 +26,7 @@
  * Functions that predate this release are marked with
  * JACK_WEAK_OPTIONAL_EXPORT which can be defined at compile
  * time in a variety of ways. The default definition is empty,
- * so that these symbols get normal linkage. If you wish to
- * use all JACK symbols with weak linkage, include
- * <jack/weakjack.h> before jack.h.
+ * so that these symbols get normal linkage.
  *************************************************************/
 
 #define WEAK_ATTRIBUTE __weak__
@@ -43,7 +40,7 @@
    require linker arguments in the client as well.
 */
 
-    #define JACK_WEAK_EXPORT __attribute__((WEAK_ATTRIBUTE))
+#define JACK_WEAK_EXPORT __attribute__((WEAK_ATTRIBUTE))
 
 #else
 /* Add other things here for non-gcc platforms */
@@ -70,6 +67,3 @@
 #endif
 
 #endif
-
-#endif /* __weakmacros_h__ */
-

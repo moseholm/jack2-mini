@@ -1,0 +1,1 @@
+syscalls per run (dummy, 128 frames, 10 s): 100.00    1.231265          91     13516       112 total

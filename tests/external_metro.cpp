@@ -17,63 +17,85 @@
 */
 
 #include "external_metro.h"
-#include <stdio.h>
 
-typedef jack_default_audio_sample_t sample_t;
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+using namespace jackmini;
 
 const double PI = 3.14;
 
-static void JackSleep(int sec)
-{
-	sleep(sec);
-}
+namespace {
 
-int ExternalMetro::process_audio (jack_nframes_t nframes, void* arg)
+// The keys are read as they are typed.  EOF ends the wait, so that a closed input does not spin.
+bool WaitForKey(int key)
 {
-    ExternalMetro* metro = (ExternalMetro*)arg;
-    sample_t *buffer = (sample_t *) jack_port_get_buffer (metro->output_port, nframes);
-    jack_nframes_t frames_left = nframes;
-
-    while (metro->wave_length - metro->offset < frames_left) {
-        memcpy (buffer + (nframes - frames_left), metro->wave + metro->offset, sizeof (sample_t) * (metro->wave_length - metro->offset));
-        frames_left -= metro->wave_length - metro->offset;
-        metro->offset = 0;
+    int c;
+    while ((c = getchar()) != key) {
+        if (c == EOF) {
+            return false;
+        }
     }
-    if (frames_left > 0) {
-        memcpy (buffer + (nframes - frames_left), metro->wave + metro->offset, sizeof (sample_t) * frames_left);
-        metro->offset += frames_left;
-    }
-
-    return 0;
+    return true;
 }
 
-void ExternalMetro::shutdown (void* arg)
+Client OpenClient(const char* client_name)
 {
-    printf("shutdown called..\n");
-}
-
-ExternalMetro::ExternalMetro(int freq, double max_amp, int dur_arg, int bpm, const char* client_name)
-{
-    sample_t scale;
-    int i, attack_length, decay_length;
-    int attack_percent = 1, decay_percent = 10;
-    const char *bpm_string = "bpm";
-    jack_options_t options = JackNullOption;
-    jack_status_t status;
-    offset = 0;
-
-    /* Initial Jack setup, get sample rate */
-    if ((client = jack_client_open (client_name, options, &status)) == 0) {
-        fprintf (stderr, "jack server not running?\n");
+    OpenOptions options;
+    auto opened = Client::open(client_name, options);
+    if (!opened) {
+        std::fprintf(stderr, "jack server not running?\n");
         throw -1;
     }
+    return std::move(*opened);
+}
 
-    jack_set_process_callback (client, process_audio, this);
-    jack_on_shutdown (client, shutdown, this);
-    output_port = jack_port_register (client, bpm_string, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
-    input_port = jack_port_register (client, "metro_in", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
+} // namespace
 
-    sr = jack_get_sample_rate (client);
+bool ExternalMetro::process_audio(FrameCount nframes)
+{
+    float* buffer = client.audio_buffer(output_port).data();
+    FrameCount frames_left = nframes;
+
+    while (wave_length - offset < frames_left) {
+        std::memcpy(buffer + (nframes - frames_left), wave + offset, sizeof(float) * (wave_length - offset));
+        frames_left -= wave_length - offset;
+        offset = 0;
+    }
+    if (frames_left > 0) {
+        std::memcpy(buffer + (nframes - frames_left), wave + offset, sizeof(float) * frames_left);
+        offset += frames_left;
+    }
+
+    return true;
+}
+
+ExternalMetro::ExternalMetro(int freq_arg, double max_amp, int dur_arg, int bpm_arg, const char* client_name)
+    : client(OpenClient(client_name))
+{
+    float scale;
+    int i, attack_length, decay_length;
+    int attack_percent = 1, decay_percent = 10;
+    offset = 0;
+    wave = nullptr;
+    amp = nullptr;
+    freq = freq_arg;
+    bpm = bpm_arg;
+
+    client.on_process([this](const Cycle& cycle) { return process_audio(cycle.frames); });
+    client.on_shutdown([] { std::printf("shutdown called..\n"); });
+    auto out = client.register_port("bpm", PortType::Audio, PortFlags::Output);
+    auto in = client.register_port("metro_in", PortType::Audio, PortFlags::Input);
+    if (out) {
+        output_port = *out;
+    }
+    if (in) {
+        input_port = *in;
+    }
+
+    sr = client.sample_rate();
 
     /* setup wave table parameters */
     wave_length = 60 * sr / bpm;
@@ -83,54 +105,48 @@ ExternalMetro::ExternalMetro(int freq, double max_amp, int dur_arg, int bpm, con
     scale = 2 * PI * freq / sr;
 
     if (tone_length >= wave_length) {
-        /*
-        fprintf (stderr, "invalid duration (tone length = %" PRIu32
-        	 ", wave length = %" PRIu32 "\n", tone_length,
-        	 wave_length);
-        */
-        return ;
+        return;
     }
     if (attack_length + decay_length > (int)tone_length) {
-        fprintf (stderr, "invalid attack/decay\n");
-        return ;
+        std::fprintf(stderr, "invalid attack/decay\n");
+        return;
     }
 
     /* Build the wave table */
-    wave = (sample_t *) malloc (wave_length * sizeof(sample_t));
-    amp = (double *) malloc (tone_length * sizeof(double));
+    wave = (float*)std::malloc(wave_length * sizeof(float));
+    amp = (double*)std::malloc(tone_length * sizeof(double));
 
     for (i = 0; i < attack_length; i++) {
-        amp[i] = max_amp * i / ((double) attack_length);
+        amp[i] = max_amp * i / ((double)attack_length);
     }
-    for (i = attack_length; i < (int) tone_length - decay_length; i++) {
+    for (i = attack_length; i < (int)tone_length - decay_length; i++) {
         amp[i] = max_amp;
     }
     for (i = (int)tone_length - decay_length; i < (int)tone_length; i++) {
-        amp[i] = - max_amp * (i - (double) tone_length) / ((double) decay_length);
+        amp[i] = -max_amp * (i - (double)tone_length) / ((double)decay_length);
     }
-    for (i = 0; i < (int) tone_length; i++) {
-        wave[i] = amp[i] * sin (scale * i);
+    for (i = 0; i < (int)tone_length; i++) {
+        wave[i] = amp[i] * std::sin(scale * i);
     }
-    for (i = tone_length; i < (int) wave_length; i++) {
+    for (i = tone_length; i < (int)wave_length; i++) {
         wave[i] = 0;
     }
 
-    if (jack_activate (client)) {
-        fprintf (stderr, "cannot activate client");
+    if (!client.activate().has_value()) {
+        std::fprintf(stderr, "cannot activate client\n");
     }
 }
 
 ExternalMetro::~ExternalMetro()
 {
-    jack_deactivate(client);
-    jack_port_unregister(client, input_port);
-    jack_port_unregister(client, output_port);
-    jack_client_close(client);
-    free(amp);
-    free(wave);
+    // The process callback reads the wave table: the client stops before the table is freed.
+    client.deactivate();
+    client.close();
+    std::free(amp);
+    std::free(wave);
 }
 
-int main (int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     ExternalMetro* client1 = NULL;
     ExternalMetro* client2 = NULL;
@@ -138,17 +154,15 @@ int main (int argc, char *argv[])
     ExternalMetro* client4 = NULL;
     ExternalMetro* client5 = NULL;
 
-    printf("Testing multiple Jack clients in one process: open 5 metro clients...\n");
+    std::printf("Testing multiple Jack clients in one process: open 5 metro clients...\n");
     client1 = new ExternalMetro(1200, 0.4, 20, 80, "t1");
     client2 = new ExternalMetro(600, 0.4, 20, 150, "t2");
     client3 = new ExternalMetro(1000, 0.4, 20, 110, "t3");
-	client4 = new ExternalMetro(400, 0.4, 20, 200, "t4");
+    client4 = new ExternalMetro(400, 0.4, 20, 200, "t4");
     client5 = new ExternalMetro(1500, 0.4, 20, 150, "t5");
 
-    printf("Type 'c' to close all clients and go to next test...\n");
-    while ((getchar() != 'c')) {
-        JackSleep(1);
-    };
+    std::printf("Type 'c' to close all clients and go to next test...\n");
+    WaitForKey('c');
 
     delete client1;
     delete client2;
@@ -156,46 +170,38 @@ int main (int argc, char *argv[])
     delete client4;
     delete client5;
 
-    printf("Testing quitting the server while a client is running...\n");
+    std::printf("Testing quitting the server while a client is running...\n");
     client1 = new ExternalMetro(1200, 0.4, 20, 80, "t1");
 
-    printf("Now quit the server, shutdown callback should be called...\n");
-    printf("Type 'c' to move on...\n");
-    while ((getchar() != 'c')) {
-        JackSleep(1);
-    };
+    std::printf("Now quit the server, shutdown callback should be called...\n");
+    std::printf("Type 'c' to move on...\n");
+    WaitForKey('c');
 
-    printf("Closing client...\n");
+    std::printf("Closing client...\n");
     delete client1;
 
-    printf("Now start the server again...\n");
-    printf("Type 'c' to move on...\n");
-    while ((getchar() != 'c')) {
-        JackSleep(1);
-    };
+    std::printf("Now start the server again...\n");
+    std::printf("Type 'c' to move on...\n");
+    WaitForKey('c');
 
-    printf("Opening a new client....\n");
+    std::printf("Opening a new client....\n");
     client1 = new ExternalMetro(1200, 0.4, 20, 80, "t1");
-    
-    printf("Now quit the server, shutdown callback should be called...\n");
-    printf("Type 'c' to move on...\n");
-    while ((getchar() != 'c')) {
-        JackSleep(1);
-    };
 
-    printf("Simulating client not correctly closed...\n");
-    
-    printf("Opening a new client....\n"); 
+    std::printf("Now quit the server, shutdown callback should be called...\n");
+    std::printf("Type 'c' to move on...\n");
+    WaitForKey('c');
+
+    std::printf("Simulating client not correctly closed...\n");
+
+    std::printf("Opening a new client....\n");
     try {
         client1 = new ExternalMetro(1200, 0.4, 20, 80, "t1");
     } catch (int num) {
-        printf("Cannot open a new client since old one was not closed correctly... OK\n"); 
+        std::printf("Cannot open a new client since old one was not closed correctly... OK\n");
     }
 
-    printf("Type 'q' to quit...\n");
-    while ((getchar() != 'q')) {
-        JackSleep(1);
-    };
+    std::printf("Type 'q' to quit...\n");
+    WaitForKey('q');
     delete client1;
     return 0;
 }

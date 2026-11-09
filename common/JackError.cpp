@@ -19,18 +19,18 @@
 
  */
 
-#include <stdarg.h>
-#include <stdio.h>
 #include "JackError.h"
 #include "JackGlobals.h"
 #include "JackMessageBuffer.h"
+#include <stdarg.h>
+#include <stdio.h>
 
-using namespace Jack;
+using namespace jackmini;
 
 static bool change_thread_log_function(jack_log_function_t log_function)
 {
     return (jack_tls_get(JackGlobals::fKeyLogFunction) == NULL
-            && jack_tls_set(JackGlobals::fKeyLogFunction, (void*)log_function));
+        && jack_tls_set(JackGlobals::fKeyLogFunction, (void*)log_function));
 }
 
 SERVER_EXPORT int set_threaded_log_function()
@@ -38,100 +38,23 @@ SERVER_EXPORT int set_threaded_log_function()
     return change_thread_log_function(JackMessageBufferAdd);
 }
 
-void jack_log_function(int level, const char *message)
+void jack_log_thread_route(int level, const char* message)
 {
-    void (* log_callback)(const char *);
+    jack_log_function_t log_function = (jack_log_function_t)jack_tls_get(JackGlobals::fKeyLogFunction);
 
-    switch (level)
-    {
-    case LOG_LEVEL_INFO:
-        log_callback = jack_info_callback;
-        break;
-    case LOG_LEVEL_ERROR:
-        log_callback = jack_error_callback;
-        break;
-    default:
-        return;
+    /* if log function is not overridden for thread, use the default one */
+    (log_function != NULL ? log_function : jack_log_direct)(level, message);
+}
+
+/* The messages of this library go through the thread routing. */
+static const bool log_router_installed = (jack_log_router = jack_log_thread_route, true);
+
+SERVER_EXPORT void jack_log(const char* fmt, ...)
+{
+    if (JackGlobals::fVerbose) {
+        va_list ap;
+        va_start(ap, fmt);
+        jack_log_message(LOG_LEVEL_INFO, "Jack: ", fmt, ap);
+        va_end(ap);
     }
-
-    log_callback(message);
 }
-
-static void jack_format_and_log(int level, const char *prefix, const char *fmt, va_list ap)
-{
-    char buffer[256];
-    size_t len;
-    jack_log_function_t log_function;
-
-    if (prefix != NULL) {
-        len = strlen(prefix);
-        assert(len < 256);
-        memcpy(buffer, prefix, len);
-    } else {
-        len = 0;
-    }
-
-    vsnprintf(buffer + len, sizeof(buffer) - len, fmt, ap);
-
-    log_function = (jack_log_function_t)jack_tls_get(JackGlobals::fKeyLogFunction);
-
-    /* if log function is not overridden for thread, use default one */
-    if (log_function == NULL)
-    {
-        log_function = jack_log_function;
-        //log_function(LOG_LEVEL_INFO, "------ Using default log function");
-    }
-    else
-    {
-        //log_function(LOG_LEVEL_INFO, "++++++ Using thread-specific log function");
-    }
-
-    log_function(level, buffer);
-}
-
-SERVER_EXPORT void jack_error(const char *fmt, ...)
-{
-	va_list ap;
-	va_start(ap, fmt);
-	jack_format_and_log(LOG_LEVEL_ERROR, NULL, fmt, ap);
-	va_end(ap);
-}
-
-SERVER_EXPORT void jack_info(const char *fmt, ...)
-{
-	va_list ap;
-	va_start(ap, fmt);
-	jack_format_and_log(LOG_LEVEL_INFO, NULL, fmt, ap);
-	va_end(ap);
-}
-
-SERVER_EXPORT void jack_log(const char *fmt,...)
-{
-	if (JackGlobals::fVerbose) {
-		va_list ap;
-		va_start(ap, fmt);
-        jack_format_and_log(LOG_LEVEL_INFO, "Jack: ", fmt, ap);
-		va_end(ap);
-	}
-}
-
-SERVER_EXPORT void default_jack_error_callback(const char *desc)
-{
-    fprintf(stderr, "%s\n", desc);
-    fflush(stderr);
-}
-
-SERVER_EXPORT void default_jack_info_callback(const char *desc)
-{
-    fprintf(stdout, "%s\n", desc);
-    fflush(stdout);
-}
-
-SERVER_EXPORT void silent_jack_error_callback(const char *desc)
-{}
-
-SERVER_EXPORT void silent_jack_info_callback(const char *desc)
-{}
-
-LIB_EXPORT void (*jack_error_callback)(const char *desc) = &default_jack_error_callback;
-LIB_EXPORT void (*jack_info_callback)(const char *desc) = &default_jack_info_callback;

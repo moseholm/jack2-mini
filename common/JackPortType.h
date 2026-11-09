@@ -17,24 +17,21 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackPortType__
-#define __JackPortType__
+#pragma once
 
-#include "types.h"
 #include "JackConstants.h"
+#include "types.h"
 #include <stddef.h>
 
-namespace Jack
-{
+namespace jackmini {
 
 extern const jack_port_type_id_t PORT_TYPES_MAX;
 
-struct JackPortType
-{
+struct JackPortType {
     const char* fName;
     size_t (*size)();
     void (*init)(void* buffer, size_t buffer_size, jack_nframes_t nframes);
-    void (*mixdown)(void *mixbuffer, void** src_buffers, int src_count, jack_nframes_t nframes);
+    void (*mixdown)(void* mixbuffer, void** src_buffers, int src_count, jack_nframes_t nframes);
 };
 
 extern jack_port_type_id_t GetPortTypeId(const char* port_type);
@@ -43,6 +40,4 @@ extern const struct JackPortType* GetPortType(jack_port_type_id_t port_type_id);
 extern const struct JackPortType gAudioPortType;
 extern const struct JackPortType gMidiPortType;
 
-} // namespace Jack
-
-#endif
+} // namespace jackmini

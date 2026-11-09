@@ -19,41 +19,20 @@
 
 */
 
-#ifndef __JackError__
-#define __JackError__
+// The logging of the JACK server and client libraries: the basic messages (JackLog.h), plus the verbose jack_log and the
+// routing of the messages of real-time threads through the message buffer.
 
-#include <string.h>
-#include <errno.h>
+#pragma once
+
 #include "JackCompilerDeps.h"
+#include "JackLog.h"
+#include <errno.h>
+#include <string.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
-    SERVER_EXPORT void jack_error(const char *fmt, ...);
-    SERVER_EXPORT void jack_info(const char *fmt, ...);
-    SERVER_EXPORT void jack_log(const char *fmt, ...);
+SERVER_EXPORT void jack_log(const char* fmt, ...);
 
-    LIB_EXPORT extern void (*jack_error_callback)(const char *desc);
-    LIB_EXPORT extern void (*jack_info_callback)(const char *desc);
+SERVER_EXPORT int set_threaded_log_function();
 
-    SERVER_EXPORT extern void default_jack_error_callback(const char *desc);
-    SERVER_EXPORT extern void default_jack_info_callback(const char *desc);
-
-    SERVER_EXPORT void silent_jack_error_callback(const char *desc);
-    SERVER_EXPORT void silent_jack_info_callback(const char *desc);
-
-    SERVER_EXPORT int set_threaded_log_function();
-
-    #define LOG_LEVEL_INFO   1
-    #define LOG_LEVEL_ERROR  2
-
-    void jack_log_function(int level, const char *message);
-    typedef void (* jack_log_function_t)(int level, const char *message);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+/* The routing used by the host: the messages of a thread with its own log function go there. */
+void jack_log_thread_route(int level, const char* message);

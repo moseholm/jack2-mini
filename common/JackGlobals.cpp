@@ -19,28 +19,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackGlobals.h"
 
-namespace Jack
-{
+namespace jackmini {
 
-bool JackGlobals::fVerbose = 0;
-
-jack_tls_key JackGlobals::fRealTimeThread;
-static bool gKeyRealtimeThreadInitialized = jack_tls_allocate_key(&JackGlobals::fRealTimeThread);
-
-jack_tls_key JackGlobals::fNotificationThread;
-static bool gKeyNotificationThreadInitialized = jack_tls_allocate_key(&JackGlobals::fNotificationThread);
+std::atomic<bool> JackGlobals::fVerbose { false };
 
 jack_tls_key JackGlobals::fKeyLogFunction;
 static bool fKeyLogFunctionInitialized = jack_tls_allocate_key(&JackGlobals::fKeyLogFunction);
 
-JackMutex* JackGlobals::fOpenMutex = new JackMutex();
-JackMutex* JackGlobals::fSynchroMutex = new JackMutex();
-volatile bool JackGlobals::fServerRunning = false;
-JackClient* JackGlobals::fClientTable[CLIENT_NUM] = {};
-
 jack_thread_creator_t JackGlobals::fJackThreadCreator = pthread_create;
 
-void JackGlobals::CheckContext(const char* name)
-{}
-
-} // end of namespace
+} // namespace jackmini

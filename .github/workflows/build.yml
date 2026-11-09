@@ -30,6 +30,25 @@ jobs:
         CXX: ${{ matrix.cxx }}
       run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON
     - name: Build
-      run: cmake --build build --parallel
+      run: cmake --build build --parallel "$(nproc)"
     - name: Install
       run: DESTDIR=$(pwd)/destdir cmake --install build
+
+  linux-aarch64:
+    # Native AArch64 build and test on GitHub's arm64 runner.  Matches the
+    # target architecture; it does not measure realtime performance, which is
+    # checked on the boards.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y build-essential cmake ninja-build pkg-config libasound2-dev libudev-dev
+    - name: Configure
+      run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON
+    - name: Build
+      run: cmake --build build --parallel "$(nproc)"
+    - name: Test
+      run: ctest --test-dir build --output-on-failure

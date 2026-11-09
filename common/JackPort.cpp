@@ -19,13 +19,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 #include "JackPort.h"
+#include "JackCString.h"
 #include "JackError.h"
 #include "JackPortType.h"
-#include <stdio.h>
 #include <assert.h>
+#include <array>
+#include <format>
+#include <span>
+#include <string_view>
 
-namespace Jack
-{
+namespace jackmini {
 
 JackPort::JackPort()
 {
@@ -42,7 +45,7 @@ bool JackPort::Allocate(int refnum, const char* port_name, const char* port_type
     fTypeId = id;
     fFlags = flags;
     fRefNum = refnum;
-    strcpy(fName, port_name);
+    CopyCString(fName, port_name);
     fInUse = true;
     fLatency = 0;
     fTotalLatency = 0;
@@ -66,6 +69,7 @@ void JackPort::Release()
     fTypeId = 0;
     fFlags = JackPortIsInput;
     fRefNum = -1;
+    fUUID = 0;
     fInUse = false;
     fLatency = 0;
     fTotalLatency = 0;
@@ -97,47 +101,47 @@ void JackPort::SetLatency(jack_nframes_t nframes)
     fLatency = nframes;
 
     /* setup the new latency values here,
-	 * so we don't need to change the backend codes.
-	 */
-	if (fFlags & JackPortIsOutput) {
-		fCaptureLatency.min = nframes;
-		fCaptureLatency.max = nframes;
-	}
-	if (fFlags & JackPortIsInput) {
-		fPlaybackLatency.min = nframes;
-		fPlaybackLatency.max = nframes;
-	}
+     * so we don't need to change the backend codes.
+     */
+    if (fFlags & JackPortIsOutput) {
+        fCaptureLatency.min = nframes;
+        fCaptureLatency.max = nframes;
+    }
+    if (fFlags & JackPortIsInput) {
+        fPlaybackLatency.min = nframes;
+        fPlaybackLatency.max = nframes;
+    }
 }
 
 void JackPort::SetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_range_t* range)
 {
     if (mode == JackCaptureLatency) {
-		fCaptureLatency = *range;
+        fCaptureLatency = *range;
 
-		/* hack to set latency up for
-		 * backend ports
-		 */
-		if ((fFlags & JackPortIsOutput) && (fFlags & JackPortIsPhysical)) {
-			fLatency = (range->min + range->max) / 2;
+        /* hack to set latency up for
+         * backend ports
+         */
+        if ((fFlags & JackPortIsOutput) && (fFlags & JackPortIsPhysical)) {
+            fLatency = (range->min + range->max) / 2;
         }
-	} else {
+    } else {
         fPlaybackLatency = *range;
 
-		/* hack to set latency up for
-		 * backend ports
-		 */
-		if ((fFlags & JackPortIsInput) && (fFlags & JackPortIsPhysical)) {
-			fLatency = (range->min + range->max) / 2;
+        /* hack to set latency up for
+         * backend ports
+         */
+        if ((fFlags & JackPortIsInput) && (fFlags & JackPortIsPhysical)) {
+            fLatency = (range->min + range->max) / 2;
         }
-	}
+    }
 }
 
 void JackPort::GetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_range_t* range) const
 {
     if (mode == JackCaptureLatency) {
-		*range = fCaptureLatency;
-	} else {
-		*range = fPlaybackLatency;
+        *range = fCaptureLatency;
+    } else {
+        *range = fPlaybackLatency;
     }
 }
 
@@ -161,7 +165,7 @@ int JackPort::RequestMonitor(bool onoff)
     * monitoring on or off. Otherwise, do nothing.
 
     if (!(fFlags & JackPortCanMonitor))
-    	return -1;
+        return -1;
     */
 
     if (onoff) {
@@ -181,7 +185,7 @@ int JackPort::EnsureMonitor(bool onoff)
     * monitoring on or off. Otherwise, do nothing.
 
     if (!(fFlags & JackPortCanMonitor))
-    	return -1;
+        return -1;
     */
 
     if (onoff) {
@@ -224,13 +228,13 @@ const char* JackPort::GetType() const
 void JackPort::SetName(const char* new_name)
 {
     char* colon = strchr(fName, ':');
-    int len = sizeof(fName) - ((int) (colon - fName)) - 2;
-    snprintf(colon + 1, len, "%s", new_name);
+    int len = sizeof(fName) - ((int)(colon - fName)) - 2;
+    CopyCString(std::span<char>(colon + 1, len), new_name);
 }
 
-bool JackPort::NameEquals(const char* target)
+bool JackPort::NameEquals(std::string_view target)
 {
-    char buf[REAL_JACK_PORT_NAME_SIZE+1];
+    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> buf { };
 
     /* this nasty, nasty kludge is here because between 0.109.0 and 0.109.1,
        the ALSA audio backend had the name "ALSA", whereas as before and
@@ -239,14 +243,14 @@ bool JackPort::NameEquals(const char* target)
        state.
     */
 
-    if (strncmp(target, "ALSA:capture", 12) == 0 || strncmp(target, "ALSA:playback", 13) == 0) {
-        snprintf(buf, sizeof(buf), "alsa_pcm%s", target + 4);
-        target = buf;
+    if (target.starts_with("ALSA:capture") || target.starts_with("ALSA:playback")) {
+        FormatCString(buf, "alsa_pcm{}", target.substr(4));
+        target = buf.data();
     }
 
-    return (strcmp(fName, target) == 0
-            || strcmp(fAlias1, target) == 0
-            || strcmp(fAlias2, target) == 0);
+    return (std::string_view(fName) == target
+        || std::string_view(fAlias1) == target
+        || std::string_view(fAlias2) == target);
 }
 
 int JackPort::GetAliases(char* const aliases[2])
@@ -254,12 +258,12 @@ int JackPort::GetAliases(char* const aliases[2])
     int cnt = 0;
 
     if (fAlias1[0] != '\0') {
-        strncpy(aliases[0], fAlias1, REAL_JACK_PORT_NAME_SIZE);
+        CopyCString(std::span<char>(aliases[0], REAL_JACK_PORT_NAME_SIZE), fAlias1);
         cnt++;
     }
 
     if (fAlias2[0] != '\0') {
-        strncpy(aliases[1], fAlias2, REAL_JACK_PORT_NAME_SIZE);
+        CopyCString(std::span<char>(aliases[1], REAL_JACK_PORT_NAME_SIZE), fAlias2);
         cnt++;
     }
 
@@ -269,9 +273,9 @@ int JackPort::GetAliases(char* const aliases[2])
 int JackPort::SetAlias(const char* alias)
 {
     if (fAlias1[0] == '\0') {
-        strncpy(fAlias1, alias, sizeof(fAlias1));
+        CopyCString(fAlias1, alias);
     } else if (fAlias2[0] == '\0') {
-        strncpy(fAlias2, alias, sizeof(fAlias2));
+        CopyCString(fAlias2, alias);
     } else {
         return -1;
     }
@@ -304,4 +308,4 @@ void JackPort::MixBuffers(void** src_buffers, int src_count, jack_nframes_t buff
     (type->mixdown)(GetBuffer(), src_buffers, src_count, buffer_size);
 }
 
-} // end of namespace
+} // namespace jackmini

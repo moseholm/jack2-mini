@@ -17,15 +17,14 @@
 
 */
 
-#ifndef __JackSystemDeps__
-#define __JackSystemDeps__
+#pragma once
 
 #include "systemdeps.h"
 
-#include <inttypes.h>
-#include <sys/types.h>
-#include <signal.h>
 #include <dlfcn.h>
+#include <inttypes.h>
+#include <signal.h>
+#include <sys/types.h>
 
 #ifndef UINT32_MAX
 #define UINT32_MAX 4294967295U
@@ -40,5 +39,3 @@
 #define LoadJackModule(name) dlopen((name), RTLD_NOW | RTLD_LOCAL);
 #define UnloadJackModule(handle) dlclose((handle));
 #define GetJackProc(handle, name) dlsym((handle), (name));
-
-#endif

@@ -20,55 +20,60 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 // hardware: the card's control, stream and thread code is covered by the live
 // checks described in docs/secondary-alsa-cards.md.
 
+#include "JackAlsaCardDiff.h"
 #include "JackAlsaDriftController.h"
 #include "JackAlsaRateConverter.h"
 #include "JackAlsaRingBuffer.h"
-#include "JackAlsaSlotTable.h"
 #include "JackAlsaSecondaryConfig.h"
-#include "JackAlsaCardDiff.h"
+#include "JackAlsaSlotTable.h"
 #include "resample/JackResampler.h"
+#include "resample/pipewire_resample_bridge.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 
-using namespace Jack;
+using namespace jackmini;
 
 static int g_failures = 0;
 static int g_checks = 0;
 
-#define CHECK(cond) do { \
-        g_checks++; \
-        if (!(cond)) { \
-            g_failures++; \
+#define CHECK(cond)                                                    \
+    do {                                                               \
+        g_checks++;                                                    \
+        if (!(cond)) {                                                 \
+            g_failures++;                                              \
             printf("  FAILED %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-        } \
+        }                                                              \
     } while (0)
 
 // A test-only resampler that passes samples through unchanged.  It shows that
 // the converter works with any JackResampler, not only the PipeWire one.
-class PassThroughResampler : public JackResampler
-{
-    public:
-        PassThroughResampler() : fRate(1.0) {}
-        virtual void Reset() {}
-        virtual void SetRate(double rate) { fRate = rate; }
-        virtual unsigned int InputLength(unsigned int out_len) { return out_len; }
-        virtual unsigned int OutputLength(unsigned int in_len) { return in_len; }
-        virtual void Process(const float* const* src, unsigned int* in_len,
-                             float* const* dst, unsigned int* out_len)
-        {
-            unsigned int n = (*in_len < *out_len) ? *in_len : *out_len;
-            // Only the first two channels are used by these tests.
-            for (int c = 0; c < 2; c++) {
-                memcpy(dst[c], src[c], sizeof(float) * n);
-            }
-            *in_len = n;
-            *out_len = n;
+class PassThroughResampler : public JackResampler {
+public:
+    PassThroughResampler()
+        : fRate(1.0)
+    {
+    }
+    virtual void Reset() { }
+    virtual void SetRate(double rate) { fRate = rate; }
+    virtual unsigned int InputLength(unsigned int out_len) { return out_len; }
+    virtual unsigned int OutputLength(unsigned int in_len) { return in_len; }
+    virtual void Process(const float* const* src, unsigned int* in_len,
+        float* const* dst, unsigned int* out_len)
+    {
+        unsigned int n = (*in_len < *out_len) ? *in_len : *out_len;
+        // Only the first two channels are used by these tests.
+        for (int c = 0; c < 2; c++) {
+            memcpy(dst[c], src[c], sizeof(float) * n);
         }
-        virtual unsigned int Delay() { return 0; }
-        double fRate;
+        *in_len = n;
+        *out_len = n;
+    }
+    virtual unsigned int Delay() { return 0; }
+    double fRate;
 };
 
 static void TestConfigDefaults()
@@ -90,6 +95,12 @@ static void TestConfigDefaults()
 
     CHECK(JackAlsaSecondaryConfigParse("hw:2,0", &c, &err));
     CHECK(c.name == "hw2");
+
+    // strtol() accepted leading white space and '+'; keep accepting them.
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;channels=+4", &c, &err));
+    CHECK(c.capture_channels == 4);
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;channels=\"  3\"", &c, &err));
+    CHECK(c.capture_channels == 3);
 }
 
 static void TestConfigErrors()
@@ -101,8 +112,12 @@ static void TestConfigErrors()
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;clock=fast", &c, &err));
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;rate=1", &c, &err));
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;wat=1", &c, &err));
-    CHECK(!JackAlsaSecondaryConfigParse("name=x", &c, &err));       // no device
+    CHECK(!JackAlsaSecondaryConfigParse("name=x", &c, &err)); // no device
     CHECK(!JackAlsaSecondaryConfigParse("", &c, &err));
+    CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;channels=2x", &c, &err));
+    CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;channels=+-2", &c, &err));
+    CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;rate=99999999999999999999", &c, &err));
+    CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;channels=\"\"", &c, &err));
 }
 
 static void TestConfigClock()
@@ -137,8 +152,8 @@ static void TestConfigResampler()
     std::string err;
     CHECK(JackAlsaSecondaryConfigParse("device=hw:1", &c, &err));
     CHECK(c.resampler == "pipewire");
-    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;resampler=passthrough_test", &c, &err));
-    CHECK(c.resampler == "passthrough_test");
+    CHECK(JackAlsaSecondaryConfigParse("device=hw:1;resampler=other", &c, &err));
+    CHECK(c.resampler == "other");
     CHECK(!JackAlsaSecondaryConfigParse("device=hw:1;resampler=", &c, &err));
 }
 
@@ -160,7 +175,7 @@ static void TestConfigFile()
     fclose(f);
     cards.clear();
     CHECK(!JackAlsaSecondaryConfigLoadFile(bad, &cards, &err));
-    CHECK(err.find(":2:") != std::string::npos);   // names the line
+    CHECK(err.find(":2:") != std::string::npos); // names the line
     remove(good);
     remove(bad);
 }
@@ -172,19 +187,36 @@ static void TestRing()
     float a[2][5], b[2][6];
     float* out[2] = { b[0], b[1] };
     const float* in[2] = { a[0], a[1] };
-    for (int i = 0; i < 5; i++) { a[0][i] = (float)i; a[1][i] = 100.0f + i; }
+    for (int i = 0; i < 5; i++) {
+        a[0][i] = (float)i;
+        a[1][i] = 100.0f + i;
+    }
 
     CHECK(ring.Write(in, 5) == 5);
-    CHECK(ring.Write(in, 5) == 3);              // only 3 slots free
-    CHECK(ring.Read(out, 6) == 8);              // 8 buffered
+    CHECK(ring.Write(in, 5) == 3); // only 3 slots free
+    CHECK(ring.Read(out, 6) == 8); // 8 buffered
     CHECK(b[0][4] == 4.0f && b[1][0] == 100.0f);
-    CHECK(ring.Write(in, 4) == 4);              // wraps past the end
-    float c[2][6]; float* cp[2] = { c[0], c[1] };
-    CHECK(ring.Read(cp, 6) == 6);               // the 2 left over plus the 4 new
+    CHECK(ring.Write(in, 4) == 4); // wraps past the end
+    float c[2][6];
+    float* cp[2] = { c[0], c[1] };
+    CHECK(ring.Read(cp, 6) == 6); // the 2 left over plus the 4 new
     CHECK(c[0][0] == 1.0f && c[0][2] == 0.0f && c[0][5] == 3.0f);
-    float z[2][4]; float* zp[2] = { z[0], z[1] };
+    float z[2][4];
+    float* zp[2] = { z[0], z[1] };
     CHECK(ring.Read(zp, 4) == 0);
     CHECK(z[0][0] == 0.0f && z[1][3] == 0.0f);
+
+    // A non-power-of-two request is rounded up so the RT path can use a mask.
+    JackAlsaRingBuffer odd(1, 5);
+    CHECK(odd.Capacity() == 8);
+    float s[7] = { 0, 1, 2, 3, 4, 5, 6 };
+    float d[8] = { 0 };
+    const float* sin[1] = { s };
+    float* dout[1] = { d };
+    CHECK(odd.Write(sin, 7) == 7);
+    CHECK(odd.Write(sin, 7) == 1);
+    CHECK(odd.Read(dout, 8) == 8);
+    CHECK(d[0] == 0.0f && d[6] == 6.0f && d[7] == 0.0f);
 }
 
 static void TestConverterDI()
@@ -216,37 +248,18 @@ static void TestResamplerFactories()
     JackResampler* r = JackResamplerFactory::Default()->Create(p);
     CHECK(r != NULL);
     delete r;
-}
 
-static void TestResamplerPlugin()
-{
-    printf("resampler: a plugin is loaded by name from JACK_RESAMPLER_PATH\n");
-    CHECK(JackResamplerFactory::Find("passthrough_test") == NULL);   // path not set yet
-    setenv("JACK_RESAMPLER_PATH", JACK_TEST_PLUGIN_DIR, 1);
-    JackResamplerFactory* f = JackResamplerFactory::Find("passthrough_test");
-    CHECK(f != NULL);
-    CHECK(f != NULL && strcmp(f->Name(), "passthrough_test") == 0);
-    CHECK(JackResamplerFactory::Find("passthrough_test") == f);   // loaded once
-    CHECK(JackResamplerFactory::Find("no_such_plugin") == NULL);
-    CHECK(JackResamplerFactory::Find("pipewire") == JackResamplerFactory::Default());   // built-in wins
-
-    JackResamplerParams p = { 2, 48000, 44100, -1 };
-    JackResampler* r = f->Create(p);
-    CHECK(r != NULL);
-    if (r != NULL) {
-        float in0[3] = { 1, 2, 3 }, in1[3] = { 4, 5, 6 };
-        const float* in[2] = { in0, in1 };
-        float o0[3] = { 0 }, o1[3] = { 0 };
-        float* out[2] = { o0, o1 };
-        unsigned int in_len = 3, out_len = 3;
-        r->Process(in, &in_len, out, &out_len);
-        CHECK(in_len == 3 && out_len == 3);
-        CHECK(o0[2] == 3 && o1[0] == 4);
-        delete r;
+    // The bridge picks the widest kernel the running CPU supports.  This is
+    // informational on a given machine, but it must always be a known name.
+    struct jack_pw_resampler* pw = jack_pw_resampler_new(2, 44100, 48000, -1);
+    CHECK(pw != NULL);
+    if (pw != NULL) {
+        const char* kernel = jack_pw_resampler_kernel_name(pw);
+        printf("resampler: selected '%s' kernel\n", kernel);
+        bool known = strcmp(kernel, "full_c") == 0 || strcmp(kernel, "inter_c") == 0 || strcmp(kernel, "full_sse") == 0 || strcmp(kernel, "inter_sse") == 0 || strcmp(kernel, "full_avx2") == 0 || strcmp(kernel, "inter_avx2") == 0 || strcmp(kernel, "full_neon") == 0 || strcmp(kernel, "inter_neon") == 0;
+        CHECK(known);
+        jack_pw_resampler_free(pw);
     }
-    JackResamplerParams q = { 3, 48000, 44100, -1 };
-    CHECK(f->Create(q) == NULL);   // the plugin refuses three channels
-    unsetenv("JACK_RESAMPLER_PATH");
 }
 
 static void TestSlotTable()
@@ -260,14 +273,14 @@ static void TestSlotTable()
     CHECK(table.Assign(&a) == 0);
     CHECK(table.Assign(&b) == 1);
     CHECK(table.Assign(&c) == 2);
-    CHECK(table.Assign(&d) == -1);                  // full
+    CHECK(table.Assign(&d) == -1); // full
     CHECK(table.Count() == 3);
     CHECK(table.Get(1) == &b);
     CHECK(table.Remove(&b) == 1);
     CHECK(table.Get(1) == NULL);
     CHECK(table.Count() == 2);
-    CHECK(table.Remove(&b) == 0);                   // already gone
-    CHECK(table.Assign(&d) == 1);                   // the freed slot is reused
+    CHECK(table.Remove(&b) == 0); // already gone
+    CHECK(table.Assign(&d) == 1); // the freed slot is reused
     CHECK(table.Remove(&a) == 1);
     CHECK(table.Remove(&c) == 1);
     CHECK(table.Remove(&d) == 1);
@@ -291,20 +304,27 @@ static void TestCardDiff()
     JackAlsaCardChanges c = JackAlsaDiffCards(cur, want);
     CHECK(c.retire.empty() && c.add.empty());
 
-    cur.push_back("nvidia_d3|p"); cur.push_back("loop_d0|cp");
-    want.push_back("loop_d0|cp"); want.push_back("nvidia_d3|p"); want.push_back("nvidia_d7|p");
+    cur.push_back("nvidia_d3|p");
+    cur.push_back("loop_d0|cp");
+    want.push_back("loop_d0|cp");
+    want.push_back("nvidia_d3|p");
+    want.push_back("nvidia_d7|p");
     c = JackAlsaDiffCards(cur, want);
     CHECK(c.retire.empty());
     CHECK(c.add.size() == 1 && c.add[0] == 2);
 
-    cur.clear(); cur.push_back("hdmi_d3|p");
-    want.clear(); want.push_back("nvidia_d7|p");
+    cur.clear();
+    cur.push_back("hdmi_d3|p");
+    want.clear();
+    want.push_back("nvidia_d7|p");
     c = JackAlsaDiffCards(cur, want);
     CHECK(c.retire.size() == 1 && c.retire[0] == 0);
     CHECK(c.add.size() == 1 && c.add[0] == 0);
 
-    cur.clear(); cur.push_back("loop_d1|c");
-    want.clear(); want.push_back("loop_d1|cp");
+    cur.clear();
+    cur.push_back("loop_d1|c");
+    want.clear();
+    want.push_back("loop_d1|cp");
     c = JackAlsaDiffCards(cur, want);
     CHECK(c.retire.size() == 1 && c.add.size() == 1);
 }
@@ -347,10 +367,11 @@ static void TestConverterRates()
     JackAlsaRateConverter cap(JackResamplerFactory::Default()->Create(p), 2, 8192);
     CHECK(cap.IsValid());
 
-    float* ring = new float[1 << 20];
+    std::vector<float> ring(1 << 20);
     unsigned long card_n = 0, ring_r = 0;
-    float* src[2] = { new float[8192], new float[8192] };
-    float* out[2] = { new float[period], new float[period] };
+    std::vector<float> src0(8192), src1(8192), out0(period), out1(period);
+    float* src[2] = { src0.data(), src1.data() };
+    float* out[2] = { out0.data(), out1.data() };
     double acc = 0;
     bool exact = true;
     for (unsigned int c = 0; c < 400; c++) {
@@ -372,12 +393,12 @@ static void TestConverterRates()
         }
     }
     CHECK(exact);
-    delete[] ring;
 
     JackResamplerParams q = { 2, 48000, 44100, -1 };
     JackAlsaRateConverter play(JackResamplerFactory::Default()->Create(q), 2, 8192);
-    float* in[2] = { new float[period](), new float[period]() };
-    float* pout[2] = { new float[8192](), new float[8192]() };
+    std::vector<float> in0(period), in1(period), pout0(8192), pout1(8192);
+    float* in[2] = { in0.data(), in1.data() };
+    float* pout[2] = { pout0.data(), pout1.data() };
     unsigned long in_total = 0, out_total = 0;
     for (unsigned int c = 0; c < 400; c++) {
         unsigned int produced = play.Convert(in, period, pout, 8192);
@@ -458,9 +479,9 @@ static void TestDriftLimits()
 {
     printf("drift: the correction is clamped and slew limited\n");
     JackAlsaDriftController c;
-    double rate = c.Update(100000.0, 0.0, 470.0);   // huge error
+    double rate = c.Update(100000.0, 0.0, 470.0); // huge error
     CHECK(fabs(rate - 1.0) <= 1000e-6 + 1e-12);
-    CHECK(fabs(c.Correction()) <= 20e-6 + 1e-12);   // one slew step at most
+    CHECK(fabs(c.Correction()) <= 20e-6 + 1e-12); // one slew step at most
     c.Reset();
     CHECK(c.Correction() == 0.0);
 }
@@ -476,7 +497,6 @@ int main()
     TestRing();
     TestConverterDI();
     TestResamplerFactories();
-    TestResamplerPlugin();
     TestSlotTable();
     TestPcmDeviceNumber();
     TestCardDiff();
