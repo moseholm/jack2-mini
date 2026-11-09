@@ -22,3 +22,4 @@ add_jackmini_tool(jackmini_samplerate samplerate.cpp)
 add_jackmini_tool(jackmini_wait wait.cpp)
 
 add_jackmini_tool(jackmini_midi_dump midi_dump.cpp)
+add_jackmini_tool(jackmini_monitor_client monitor_client.cpp)

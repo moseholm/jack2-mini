@@ -148,6 +148,30 @@ check "wait: -w returns while the server runs" 0 '^server is available$' "$WAIT"
 check "wait: -q with a timeout reports the timeout while the server runs" 1 '^timeout$' "$WAIT" -s "$NAME" -q -t 1
 check "wait: --version prints the version" 0 '^jackmini_wait [0-9.]+$' "$WAIT" --version
 
+# jackmini_monitor_client (T4).  The dummy driver's client "system" has two audio inputs (its playback ports).
+MON=$BIN/jackmini_monitor_client
+"$MON" -s "$NAME" system > /dev/null 2>&1 &
+MON_PID=$!
+tries=0
+while ! "$LSP" -s "$NAME" | grep -q '^jackmini_monitor_client:monitor_2$' && [ $tries -lt 100 ]; do
+    sleep 0.1
+    tries=$((tries + 1))
+done
+check "monitor: an output for each audio input of the client" 0 '^jackmini_monitor_client:monitor_2$' "$LSP" -s "$NAME"
+check "monitor: an output can be connected to an input of the client" 0 '^$' "$CONN" -s "$NAME" jackmini_monitor_client:monitor_1 system:playback_2
+check "monitor: the connection is listed" 0 '^   jackmini_monitor_client:monitor_1$' "$LSP" -s "$NAME" -c system:playback_2
+check "monitor: a client with no audio inputs is an error" 1 "has no audio input ports" "$MON" -s "$NAME" nosuch
+kill -INT "$MON_PID" 2> /dev/null
+wait "$MON_PID"
+MON_STATUS=$?
+CHECKS=$((CHECKS + 1))
+if [ "$MON_STATUS" -eq 0 ]; then
+    say "monitor: SIGINT stops it with status 0" "ok"
+else
+    say "monitor: SIGINT stops it with status 0" "FAIL (status $MON_STATUS)"
+    FAILED=$((FAILED + 1))
+fi
+
 # jackmini_midi_dump (T5).  A test source (jack_midi_writer, in the tests) writes a note on in every cycle; the dump
 # prints them.  Each dump run registers its own port, so each one is connected from the writer when it starts.
 MDUMP=$BIN/jackmini_midi_dump
