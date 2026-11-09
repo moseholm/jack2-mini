@@ -143,8 +143,9 @@ Heritage
 jack2-mini is a focused fork of `JACK2 <https://github.com/jackaudio/jack2>`_.
 The JACK engine, graph and client API come from JACK2 and work as before; what
 this tree changes is how Linux hardware is discovered and owned. It builds the
-ALSA and ALSA raw MIDI drivers together with the ``dummy``, ``loopback`` and
-``proxy`` drivers. See ``COPYING`` for the license.
+ALSA driver together with the ``dummy`` driver. MIDI is sent between clients
+only: the server does not read or write MIDI on hardware. See ``COPYING`` for
+the license.
 
 For general JACK information, see the `JACK homepage <https://jackaudio.org/>`_
 and `wiki <https://github.com/jackaudio/jackaudio.github.com/wiki>`_. There are

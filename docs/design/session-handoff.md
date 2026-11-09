@@ -31,7 +31,8 @@ Architecture and scope:
   ALSA PCM only.
 - Resampler kernels stay in C (`resample-native-*.c`, `dbesi0.c`), behind a C++
   wrapper. The resampler plugin ABI goes.
-- MIDI is in scope (alsa_rawmidi ported to C++; the ALSA sequencer backend is dropped).
+- MIDI is client-to-client only. The server never reads or writes MIDI on hardware, so the ALSA RawMIDI and
+  sequencer backends and the MIDI driver are removed.
 - Internal clients keep the module (`dlopen`) mechanism, and use the same client
   API.
 - Driver modules stay loadable (`dlopen`), with one `extern "C"` entry point and
@@ -75,7 +76,7 @@ Protocol and shared memory (`docs/design/protocol.md`):
 - `server/`: the engine, the server and its control API, `jackd` (`Jackdmp.cpp`), the drivers (dummy, freewheel,
   audio, MIDI), the internal clients and the session file loader, the request decoder, the MIDI queues.
 - `platform/`: the POSIX and Linux code (threads, mutexes, sockets, futex, clock, the ALSA drivers in
-  `platform/alsa` and `platform/alsarawmidi`).
+  `platform/alsa`).
 - The rule for a file used by both sides: `common/`. Where the placement was unclear (for example `JackClient`, which
   is the base of the server's internal clients), it stays in `common/`.
 
@@ -121,9 +122,8 @@ S7 (server and protocol), S8 (the ALSA C files, now unblocked by S4; the fake-ba
 (remove the rest of the C), S10 (sanitizers and final docs), and Plan A (the jackmini client takes over from the old
 `JackLibClient`; `lib.cpp` is still the copied wrapper). Plan C (renames and dead code) runs with each area.
 
-What is left in C: `platform/alsa/alsa_rawmidi.c` (the S8 port), and
-`tests/alsa_test_resampler_plugin.c`. The ALSA C files use `server/driver_interface.h` and the old driver structs,
-so the driver module interface (S4) comes before the ALSA port (S8).
+What is left in C: `tests/alsa_test_resampler_plugin.c`. The ALSA driver is C++ (S8 is done, and the hardware MIDI
+code is removed).
 
 - `0c3d50b6` Latency on `jackmini::Client` (port ranges, recompute, the latency callback),
   and `jackctl_server_set_freewheel` (freewheel as a server control). Found: a client opened

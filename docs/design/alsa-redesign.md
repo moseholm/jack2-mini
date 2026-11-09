@@ -1,6 +1,6 @@
 # ALSA redesign (Plan B, S8)
 
-Status: started. Steps 1 to 3 are done (the session and the adapters). Step 4 (MIDI) and 5 (the rest of the C) follow. Plan A (the client on `ClientSession`) is done. The
+Status: started. Steps 1 to 3 are done (the session and the adapters). The MIDI backends are removed (steps 4 and 5). Step 6, the final measurement, is next. Plan A (the client on `ClientSession`) is done. The
 baseline the redesign must meet is in `perf-baseline/README.md`.
 
 ## What is there now
@@ -9,10 +9,8 @@ baseline the redesign must meet is in `perf-baseline/README.md`.
   start, stop, wait, read, and write of each cycle, does the xrun recovery and the clock sync, and it
   deletes the driver. It keeps the I/O function pointers (`driver->read`, `driver->write`, ...) that the
   JACK driver base calls.
-- `platform/alsa/alsa_rawmidi.c` (1261): the MIDI backend, in C. The ALSA sequencer backend (`alsa_seqmidi.c`)
-  is dropped: the in-band MIDI between clients does not need the sequencer, and raw hardware devices use the
-  RawMIDI backend.
-- `platform/alsa/alsa_midi_impl.h`, `alsa_midi.h`, `midi_pack.h`, `midi_unpack.h`: the C glue for them.
+- The MIDI backends are removed, not ported. jackmini sends MIDI between clients only: `alsa_rawmidi.c`, the C glue,
+  the `platform/alsarawmidi` driver, the server's MIDI driver and queues, and the `midi-driver` option.
 - The C++ parts are already in place: `JackAlsaDriver` (the JACK driver), `JackAlsaSecondaryCard` and
   `JackAlsaSecondaryConfig` (more cards), `JackAlsaRingBuffer`, `JackAlsaRateConverter`,
   `JackAlsaDriftController`, `JackAlsaControl*`, `JackAlsaHotplug`, `JackAlsaReconfigWorker`,
@@ -29,8 +27,7 @@ baseline the redesign must meet is in `perf-baseline/README.md`.
   records the calls, so the cycle logic can be tested without a card.
 - `jack_alsa.so` (`JackAlsaDriver`): a thin adapter. It owns the JACK driver base and the threads, and it
   calls the core.
-- MIDI: `alsa_rawmidi` in C++ on the same backend pattern (the raw hardware devices; there is no sequencer
-  backend).
+- MIDI: none. The server has no hardware MIDI (see decision 2 of the master plan).
 - The public C names that stay: `jack_midi_*` and `jack_ringbuffer_*` (decision 4).
 
 ## Requirements
@@ -83,13 +80,13 @@ baseline the redesign must meet is in `perf-baseline/README.md`.
    matter (below).
    Found while porting: the core passed the whole descriptor array to the playback `poll_revents`, and the old
    `snd_pcm_link` step was missing from the backend. Both are fixed; the unit test checks the slice.
-4. The MIDI core (raw) on the same backend pattern, with tests on a fake backend.
-5. Delete `alsa_rawmidi.c` and the C glue, in the same commit as the port. (`alsa_driver.c` is gone, step 3.)
+4. Done as a removal, not a port: the raw MIDI backend and its codec are deleted (decision 2 of the master plan).
+5. Done: `alsa_rawmidi.c` and the C glue are deleted.
 6. Final measurement against the baseline, committed as data.
 
 ## Decisions for the user
 
 - The redesign is large (about 4,600 lines of C, plus the adapter). It is done in several commits, as above. Each
   commit must keep the driver working with the card.
-- Whether the sequencer MIDI backend stays. Decided: it goes. The in-band MIDI between clients does not need
-  the ALSA sequencer, and raw hardware devices use the RawMIDI backend.
+- Whether any hardware MIDI stays. Decided: none. Clients send MIDI to each other through MIDI ports; the server
+  never reads or writes MIDI on hardware.
