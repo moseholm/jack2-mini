@@ -24,8 +24,8 @@ Written so a new session can pick up without the conversation. Read this file fi
 | MIDI: client-to-client only | done (hardware MIDI removed) | `94606177`, `5dd484db`, `a644bf85`, `abb856ad` |
 | Cleanup (unused headers, metadata) | done | `0f2e9a67`, `86daa0be` |
 | S6: engine and graph | done (`a9a1be6c` to `e2124e88`) | see "Next" |
-| S7: server and protocol | **next** | see "Next" |
-| S9: remove the C (resampler kernels stay) | open | |
+| S7: server and protocol | done (`a0f275e1` to `ab182c4e`) | see "Next" |
+| S9: remove the C (resampler kernels stay) | **next** | see "Next" |
 | S10: validation | open | |
 
 ## Decisions (do not revisit without the user)
@@ -131,11 +131,12 @@ S6 is done. Its stages (each: build, `check.sh`, commit, push) are listed for th
    report, checked against the tree before the change (procedure below). A duplicate connect is now an error
    (`InvalidState`); it was a silent success.
 
-Next is S7 (`JackServer`, `JackServerGlobals`, the request decoder, the socket channels; gate: protocol conformance
-and notification overflow tests), S9 (remove the rest of the C; the resampler kernels stay), and S10 (ASan, UBSan,
+Next is S9 (remove the rest of the C; the resampler kernels stay), then S10 (ASan, UBSan,
 TSAN in the tests; a malloc hook in the cycle; syscalls per cycle; the latency comparison with the baseline).
 
-Known cleanup candidates for S7: `JackExternalClient` and the server's socket channels (protocol code, review in S7).
+S7 is done (gate: the protocol conformance and notify overflow suites pass). Left on purpose: `JackRequestDecoder::HandleRequest`
+and the framing returns (the protocol loop's `int`); `JackExternalClient::ClientNotify` and `Close` (the client interface's `int`);
+`JackServerGlobals` (the singletons the free functions and the ALSA hooks use).
 Still `int` on purpose: the graph's sentinel lookups (`GetInputRefNum`, `GetOutputRefNum`), the driver's
 `Open`, `Close` and `Process` (module ABI and RT), `JackEngine::Process` (RT, `bool`), and `JackPort::RequestMonitor`.
 
@@ -207,7 +208,7 @@ thread) is in 4 of 5 client runs on both the tree before and after `e2124e88`; i
 1. `cd /home/hjj/Develop/jack2 && git status && git log --oneline -5`.
 2. Read this file and `docs/design/client-api.md`, `docs/design/style.md`.
 3. Rebuild the build dir (see "Build and checks"), then `bash /tmp/opencode/check.sh`.
-4. Start S7 (see "Next").
+4. Start S9 (see "Next").
 
 ## Working agreements with the user
 
