@@ -1,0 +1,2 @@
+allocations (process-wide, dummy, 128 frames): ALLOCS malloc=1675 free=715
+allocations (process-wide, dummy, 128 frames): ALLOCS malloc=1694 free=740
