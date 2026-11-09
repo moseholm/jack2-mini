@@ -1,0 +1,57 @@
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- -----------------------
+ 44.15    1.184948          78     15030           poll
+ 24.06    0.645853         105      6117         9 futex
+ 13.20    0.354391      354391         1           rt_sigtimedwait
+ 12.97    0.348082         163      2125           clock_nanosleep
+  2.74    0.073621       36810         2           mlock
+  1.31    0.035169           4      8435         8 ioctl
+  0.69    0.018545         137       135           close
+  0.32    0.008476         229        37           munmap
+  0.28    0.007595        3797         2           munlock
+  0.16    0.004299          15       274       152 openat
+  0.03    0.000849           7       107         1 mmap
+  0.01    0.000289           2       103         2 read
+  0.01    0.000223          31         7           clone3
+  0.01    0.000167           7        22           mprotect
+  0.01    0.000159          22         7           sched_setscheduler
+  0.01    0.000152           6        25         6 newfstatat
+  0.00    0.000127           3        34           rt_sigprocmask
+  0.00    0.000101           4        23           write
+  0.00    0.000095          19         5         1 setsockopt
+  0.00    0.000087           6        14           madvise
+  0.00    0.000084           3        23           fstat
+  0.00    0.000061           4        15           fcntl
+  0.00    0.000057           2        26           sendmsg
+  0.00    0.000041           4         9         7 access
+  0.00    0.000033           6         5         1 unlink
+  0.00    0.000028           3         8           rseq
+  0.00    0.000025           8         3           memfd_create
+  0.00    0.000024           6         4           socket
+  0.00    0.000024          12         2           bind
+  0.00    0.000024           6         4           getdents64
+  0.00    0.000024           3         8           set_robust_list
+  0.00    0.000022           3         6           ftruncate
+  0.00    0.000019           6         3           eventfd2
+  0.00    0.000017           2         6           shutdown
+  0.00    0.000016           4         4           brk
+  0.00    0.000013           1         8           geteuid
+  0.00    0.000012           4         3           accept
+  0.00    0.000010           5         2           connect
+  0.00    0.000009           4         2           pread64
+  0.00    0.000009           4         2           getsockopt
+  0.00    0.000008           4         2           getrandom
+  0.00    0.000005           5         1           getsockname
+  0.00    0.000005           2         2           flock
+  0.00    0.000004           4         1           listen
+  0.00    0.000004           4         1           sched_get_priority_min
+  0.00    0.000004           4         1           arch_prctl
+  0.00    0.000004           4         1           set_tid_address
+  0.00    0.000003           3         1           sched_get_priority_max
+  0.00    0.000003           3         1           prlimit64
+  0.00    0.000000           0         8           rt_sigaction
+  0.00    0.000000           0         9           recvmsg
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           setsid
+------ ----------- ----------- --------- --------- -----------------------
+100.00    2.683820          82     32678       187 total

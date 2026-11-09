@@ -1,0 +1,2 @@
+allocations (process-wide, ALSA hw:CARD=U192k, 256 frames, 6 s steady window): ALLOCS malloc=2657 free=2185
+allocations (process-wide, ALSA hw:CARD=U192k, 256 frames, 6 s steady window): ALLOCS malloc=2657 free=2185

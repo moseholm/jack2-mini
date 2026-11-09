@@ -9,8 +9,8 @@ The redesign of the ALSA driver (Plan B, S8) must perform at least as well as th
   user's, on RT hardware.
 - 12 CPUs. Sound card for the ALSA rows: BEHRINGER UMC404HD 192k (USB, `hw:CARD=U192k`). The two internal
   cards (PCH, NVidia) are excluded with `-Z`.
-- PipeWire holds the USB card again after the first runs, so the ALSA syscall and allocation counts could not
-  be taken with the card (see "Not measured").
+- The ALSA syscall and allocation counts were taken later, with PipeWire stopped, one server at a time, after the
+  churn fix of `53a5b288` (see `alsa-redesign.md`).
 
 ## Method
 
@@ -18,7 +18,8 @@ The redesign of the ALSA driver (Plan B, S8) must perform at least as well as th
   `jack_rtbench` in the same run (`tests/perf/rtbench.cpp`, `tests/perf/run-baseline.sh`).
 - Intervals are start to start of the process callback. The callback duration is measured inside it.
 - Allocations: the server runs with `alloccount.so` (LD_PRELOAD); the count is taken at two SIGURG signals, 
-  around the run. This is process-wide, not per thread.
+  around the run. This is process-wide, not per thread. The ALSA steady-state numbers use a second pair of
+  signals, after the client has connected.
 - Syscalls: the whole `jackd` process run under `strace -f -c`, for 10 s. Includes the start-up calls.
 
 ## Results: ALSA, `hw:CARD=U192k`, 20 s per row
@@ -32,6 +33,23 @@ The redesign of the ALSA driver (Plan B, S8) must perform at least as well as th
 The nominal periods are 1333, 2667, and 5333 us. The card's clock makes the start-to-start interval
 longer than the period at 64 and 128 frames (about 11 % and 12 %). The redesign must keep the cycle rate the
 card gives, not the nominal period.
+
+## Results: ALSA syscalls and allocations, `hw:CARD=U192k`
+
+Measured on the code at `53a5b288` (the old ALSA driver, after the churn fix), 8 s per run. The syscall totals
+are process-wide and include start-up and shutdown; the per-cycle column divides by the rtbench cycles.
+
+| frames | cycles | allocations (6 s steady window) | syscalls total | syscalls / cycle | poll / cycle | ioctl / cycle | futex / cycle |
+|---|---|---|---|---|---|---|---|
+| 64  | 6001 | 0 | 32678 | 5.44 | 2.50 | 1.41 | 1.02 |
+| 128 | 3000 | 0 | 16807 | 5.60 | 2.10 | 1.45 | 1.03 |
+| 256 | 1500 | 0 | 9064  | 6.04 | 1.39 | 1.54 | 1.07 |
+
+Allocations: the process made 85 allocations while the client connected and left, and none in the 6 s steady
+window (about 4,000 / 2,000 / 1,200 cycles). The realtime path does not allocate.
+`clock_nanosleep` is about 2,100 calls per run at every size: it is the message buffer, not the cycle.
+The extra `poll` calls at 64 frames are the control monitor and the hot-plug listener; the driver's own wait is
+one `poll` per cycle.
 
 ## Results: dummy driver, 10 s per row (the server cycle without hardware)
 
@@ -47,13 +65,11 @@ Syscalls: the total includes start-up. `clock_nanosleep` is about two per cycle.
 
 ## Not measured
 
-- ALSA syscalls and allocations per cycle: the card was busy, so the server had no driver. A run with the card
-  held by PipeWire showed the server creating a thread about 43,000 times in 10 s. That was the xrun recovery
-  path re-creating the control threads (fixed before the redesign, see `alsa-redesign.md`); the ALSA syscall and
-  allocation counts still need a clean run with one server and the card free.
 - Xruns with the card under load: none in these runs, with no client connected to the card's ports.
 
 ## Files
 
-- `alsa-*.txt`: the rtbench output per frame size.
+- `alsa-*.txt`: the rtbench output per frame size (the baseline table).
+- `alsa-*-cycles.txt`, `alsa-*-syscalls.txt`, `alsa-*-allocs.txt`: the ALSA cycle, syscall, and allocation runs
+  after the churn fix.
 - `dummy-*-cycles.txt`, `dummy-*-allocs.txt`, `dummy-*-syscalls.txt`: the dummy rows.
