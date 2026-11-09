@@ -75,7 +75,6 @@ set(JACK_INCLUDE_DIRS
 
 set(JACK_COMMON_SOURCES
     common/JackActivationCount.cpp
-    common/JackClient.cpp
     common/JackConnectionManager.cpp
     common/JackError.cpp
     common/JackException.cpp
@@ -86,7 +85,6 @@ set(JACK_COMMON_SOURCES
     common/JackAudioPort.cpp
     common/JackEngineControl.cpp
     common/JackShmMem.cpp
-    client/JackGenericClientChannel.cpp
     common/JackGlobals.cpp
     common/JackTransportEngine.cpp
     common/JackTools.cpp
@@ -103,15 +101,12 @@ set(JACK_COMMON_SOURCES
 
 set(JACK_CLIENT_SOURCES
     ${JACK_COMMON_SOURCES}
-    client/JackLibClient.cpp
     client/jackmini/client.cpp
     client/process_context.cpp
     client/jackmini/uuid.cpp
     client/client_session.cpp
-    client/jackmini/lib.cpp
     server/JackMetadata.cpp
-    platform/JackSocketClientChannel.cpp
-    platform/JackPosixServerLaunch.cpp)
+    client/JackServerLaunch.cpp)
 
 set(JACK_SERVER_SOURCES
     ${JACK_COMMON_SOURCES}

@@ -32,7 +32,6 @@ namespace jackmini
     class JackPosixMutex;
     class JackPosixThread;
     class JackSocketServerChannel;
-    class JackSocketClientChannel;
     class JackSocketServerNotifyChannel;
     class JackSocketNotifyChannel;
     class JackClientSocket;
@@ -57,10 +56,6 @@ namespace jackmini { typedef JackPosixProcessSync JackProcessSync; }
 /* __JackPlatformServerChannel__ */
 #include "JackSocketServerChannel.h"
 namespace jackmini { typedef JackSocketServerChannel JackServerChannel; }
-
-/* __JackPlatformClientChannel__ */
-#include "JackSocketClientChannel.h"
-namespace jackmini { typedef JackSocketClientChannel JackClientChannel; }
 
 /* __JackPlatformServerNotifyChannel__ */
 #include "JackSocketServerNotifyChannel.h"

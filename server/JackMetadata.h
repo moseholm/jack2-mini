@@ -59,8 +59,6 @@ typedef void (*JackPropertyChangeCallback)(jack_uuid_t            subject,
 namespace jackmini
 {
 
-class JackClient;
-
 /*!
 \brief Metadata base.
 */
@@ -80,11 +78,11 @@ class JackMetadata
         int GetAllDescriptions(jack_description_t** descs);
         void FreeDescription(jack_description_t* desc, int free_actual_description_too);
 
-        int SetProperty(JackClient* client, jack_uuid_t subject, const char* key, const char* value, const char* type);
+        int SetProperty(jack_uuid_t subject, const char* key, const char* value, const char* type);
 
-        int RemoveProperty(JackClient* client, jack_uuid_t subject, const char* key);
-        int RemoveProperties(JackClient* client, jack_uuid_t subject);
-        int RemoveAllProperties(JackClient* client);
+        int RemoveProperty(jack_uuid_t subject, const char* key);
+        int RemoveProperties(jack_uuid_t subject);
+        int RemoveAllProperties();
 
 };
 

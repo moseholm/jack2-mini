@@ -19,7 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "process_context.hpp"
 
 #include "JackError.h"
+#include "JackGlobals.h"
 #include "JackMessageBuffer.h"
+#include "JackMetadata.h"
 #include "JackTime.h"
 
 namespace jackmini::client
@@ -27,6 +29,7 @@ namespace jackmini::client
 
 std::mutex ProcessContext::registry_mutex_;
 std::unique_ptr<ProcessContext> ProcessContext::instance_;
+std::atomic<ProcessContext*> ProcessContext::current_{nullptr};
 int ProcessContext::count_ = 0;
 
 ProcessContext::ProcessContext()
@@ -57,17 +60,54 @@ ProcessContext& ProcessContext::acquire()
     if (count_++ == 0) {
         init_time();
         instance_.reset(new ProcessContext());
+        current_ = instance_.get();
     }
     return *instance_;
+}
+
+ProcessContext* ProcessContext::current() noexcept
+{
+    return current_.load();
 }
 
 void ProcessContext::release() noexcept
 {
     std::lock_guard lock(registry_mutex_);
     if (count_ > 0 && --count_ == 0) {
+        current_ = nullptr;
         instance_.reset();
         end_time();
     }
 }
 
-} // end of namespace
+} // end of namespace jackmini::client
+
+namespace jackmini
+{
+
+// The accessors of the shared state for the code that is common to the server and the client library. The server
+// defines them over its own state; here they are the state of the process's clients, and NULL when there is none.
+SERVER_EXPORT JackGraphManager* GetGraphManager()
+{
+    auto* context = jackmini::client::ProcessContext::current();
+    return context ? context->graph : nullptr;
+}
+
+SERVER_EXPORT JackEngineControl* GetEngineControl()
+{
+    auto* context = jackmini::client::ProcessContext::current();
+    return context ? context->engine : nullptr;
+}
+
+SERVER_EXPORT JackSynchro* GetSynchroTable()
+{
+    auto* context = jackmini::client::ProcessContext::current();
+    return context ? context->synchro : nullptr;
+}
+
+SERVER_EXPORT JackMetadata* GetMetadata()
+{
+    return nullptr;
+}
+
+} // end of namespace jackmini

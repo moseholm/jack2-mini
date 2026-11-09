@@ -143,7 +143,6 @@ public:
     Result<void> transport_locate(FrameCount frame);
 
 private:
-    friend struct ClientBridge;
 
     Client() = default;
     Result<void> set_process(ProcessFn fn);

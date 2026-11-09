@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef JACKMINI_CLIENT_PROCESS_CONTEXT_HPP
 #define JACKMINI_CLIENT_PROCESS_CONTEXT_HPP
 
+#include <atomic>
 #include <csignal>
 #include <memory>
 #include <mutex>
@@ -45,6 +46,9 @@ class ProcessContext
         // Drops a reference. The last one destroys the context.
         static void release() noexcept;
 
+        // The context of the process, or NULL when no client is open. Readable from any thread.
+        static ProcessContext* current() noexcept;
+
         ~ProcessContext();
         ProcessContext(const ProcessContext&) = delete;
         ProcessContext& operator=(const ProcessContext&) = delete;
@@ -62,6 +66,7 @@ class ProcessContext
 
         static std::mutex registry_mutex_;
         static std::unique_ptr<ProcessContext> instance_;
+        static std::atomic<ProcessContext*> current_;
         static int count_;
 };
 

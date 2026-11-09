@@ -735,7 +735,7 @@ int JackEngine::ClientCloseAux(int refnum, bool wait)
         }
     }
 
-    if (fMetadata.RemoveProperties(NULL, uuid) > 0) {
+    if (fMetadata.RemoveProperties(uuid) > 0) {
         /* have to do the notification ourselves, since the client argument
           to fMetadata->RemoveProperties() was NULL
         */
@@ -861,7 +861,7 @@ int JackEngine::PortUnRegister(int refnum, jack_port_id_t port_index)
         const jack_uuid_t uuid = jack_port_uuid_generate(port_index);
         if (!jack_uuid_empty(uuid))
         {
-            if (fMetadata.RemoveProperties(NULL, uuid) > 0) {
+            if (fMetadata.RemoveProperties(uuid) > 0) {
                 /* have to do the notification ourselves, since the client argument
                    to fMetadata->RemoveProperties() was NULL
                 */
@@ -1038,7 +1038,7 @@ int JackEngine::PortSetDefaultMetadata(jack_port_id_t port, const char* pretty_n
     static const char* type = "text/plain";
     jack_uuid_t uuid = jack_port_uuid_generate(port);
 
-    int res = fMetadata.SetProperty(NULL, uuid, JACK_METADATA_HARDWARE, pretty_name, type);
+    int res = fMetadata.SetProperty(uuid, JACK_METADATA_HARDWARE, pretty_name, type);
     if (res == -1) {
         return -1;
     }
@@ -1046,7 +1046,7 @@ int JackEngine::PortSetDefaultMetadata(jack_port_id_t port, const char* pretty_n
     char *v, *t;
     res = fMetadata.GetProperty(uuid, JACK_METADATA_PRETTY_NAME, &v, &t);
     if (res == -1) {
-        res = fMetadata.SetProperty(NULL, uuid, JACK_METADATA_PRETTY_NAME, pretty_name, type);
+        res = fMetadata.SetProperty(uuid, JACK_METADATA_PRETTY_NAME, pretty_name, type);
     }
 
     return res;

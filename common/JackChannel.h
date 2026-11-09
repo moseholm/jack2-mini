@@ -31,7 +31,6 @@ namespace jackmini
 {
 
 class JackClientInterface;
-class JackClient;
 class JackServer;
 struct JackEngineControl;
 class JackGraphManager;
@@ -96,96 +95,6 @@ class JackClientRequestInterface : public JackChannelTransactionInterface, publi
 /*!
 \brief Inter process channel for server/client bidirectionnal communication : request and (receiving) notifications.
 */
-
-class JackClientChannelInterface
-{
-
-    public:
-
-        JackClientChannelInterface()
-        {}
-        virtual ~JackClientChannelInterface()
-        {}
-
-        // Open the Server/Client connection
-        virtual int Open(const char* server_name, const char* name, jack_uuid_t uuid, char* name_res, JackClient* obj, jack_options_t options, jack_status_t* status)
-        {
-            return 0;
-        }
-
-        // Close the Server/Client connection
-        virtual void Close()
-        {}
-
-        // Start listening for messages from the server
-        virtual int Start()
-        {
-            return 0;
-        }
-
-        // Stop listening for messages from the server
-        virtual void Stop()
-        {}
-
-        virtual int ServerCheck(const char* server_name)
-        {
-            return -1;
-        }
-
-        virtual void ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, int protocol, int options, int* status, int* result, int open)
-        {}
-        virtual void ClientOpen(const char* name, int pid, jack_uuid_t uuid, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph, int* result)
-        {}
-        virtual void ClientOpen(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, int* result)
-        {}
-        virtual void ClientClose(int refnum, int* result)
-        {}
-
-        virtual void ClientActivate(int refnum, int is_real_time, int* result)
-        {}
-        virtual void ClientDeactivate(int refnum, int* result)
-        {}
-
-        virtual void PortRegister(int refnum, const char* name, const char* type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port_index, int* result)
-        {}
-        virtual void PortUnRegister(int refnum, jack_port_id_t port_index, int* result)
-        {}
-
-        virtual void PortConnect(int refnum, const char* src, const char* dst, int* result)
-        {}
-        virtual void PortDisconnect(int refnum, const char* src, const char* dst, int* result)
-        {}
-        virtual void PortConnect(int refnum, jack_port_id_t src, jack_port_id_t dst, int* result)
-        {}
-        virtual void PortDisconnect(int refnum, jack_port_id_t src, jack_port_id_t dst, int* result)
-        {}
-        virtual void PortRename(int refnum, jack_port_id_t port, const char* name, int* result)
-        {}
-
-        virtual void SetBufferSize(jack_nframes_t buffer_size, int* result)
-        {}
-        virtual void SetFreewheel(int onoff, int* result)
-        {}
-        virtual void ComputeTotalLatencies(int* result)
-        {}
-
-        virtual void ReleaseTimebase(int refnum, int* result)
-        {}
-        virtual void SetTimebaseCallback(int refnum, int conditional, int* result)
-        {}
-
-
-        virtual void GetUUIDForClientName(int refnum, const char* client_name, char* uuid_res, int* result)
-        {}
-        virtual void GetClientNameForUUID(int refnum, const char* uuid, char* name_res, int* result)
-        {}
-        virtual void ReserveClientName(int refnum, const char* client_name, const char *uuid, int* result)
-        {}
-        virtual bool IsChannelThread()
-        {
-            return false;
-        }
-};
 
 }
 

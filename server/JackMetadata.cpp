@@ -19,8 +19,8 @@
 */
 
 #include "JackMetadata.h"
+#include "JackCompilerDeps.h"
 
-#include "JackClient.h"
 
 #include <stdlib.h>
 
@@ -88,22 +88,22 @@ void JackMetadata::FreeDescription(jack_description_t* desc, int free_actual_des
     }
 }
 
-int JackMetadata::SetProperty(JackClient*, jack_uuid_t, const char*, const char*, const char*)
+int JackMetadata::SetProperty(jack_uuid_t, const char*, const char*, const char*)
 {
     return -1;
 }
 
-int JackMetadata::RemoveProperty(JackClient*, jack_uuid_t, const char*)
+int JackMetadata::RemoveProperty(jack_uuid_t, const char*)
 {
     return -1;
 }
 
-int JackMetadata::RemoveProperties(JackClient*, jack_uuid_t)
+int JackMetadata::RemoveProperties(jack_uuid_t)
 {
     return -1;
 }
 
-int JackMetadata::RemoveAllProperties(JackClient*)
+int JackMetadata::RemoveAllProperties()
 {
     return -1;
 }

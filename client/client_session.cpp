@@ -34,12 +34,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <array>
 #include <cerrno>
+#include <charconv>
 #include <climits>
 #include <cstdlib>
 #include <cstring>
 #include <sys/socket.h>
 
 #include "JackFdSegment.h"
+#include "JackCString.h"
 
 namespace jackmini::client
 {
@@ -109,6 +111,18 @@ void shut_down_fd(int fd)
     if (fd >= 0) {
         ::shutdown(fd, SHUT_RDWR);
     }
+}
+
+// The server writes a uuid as a decimal number. A uuid has the type bits set, so a smaller number is not one.
+std::optional<std::uint64_t> parse_server_uuid(std::string_view text)
+{
+    text = SkipNumericPrefix(text);
+    std::uint64_t value = 0;
+    const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
+    if (ec != std::errc() || value < (std::uint64_t(1) << 32)) {
+        return std::nullopt;
+    }
+    return value;
 }
 
 void setup_driver_sync(ProcessContext& context, bool freewheel)
@@ -645,11 +659,11 @@ Result<Uuid> ClientSession::lookup_uuid()
     if (transact(request, reply) < 0 || reply.fResult < 0) {
         return std::unexpected(Error::ServerFailure);
     }
-    const auto parsed = Uuid::parse(reply.fUUID);
+    const auto parsed = parse_server_uuid(reply.fUUID);
     if (!parsed) {
         return std::unexpected(Error::Protocol);
     }
-    return *parsed;
+    return Uuid(*parsed);
 }
 
 FrameCount ClientSession::sample_rate() const noexcept
