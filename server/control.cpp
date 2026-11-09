@@ -445,6 +445,11 @@ Result<void> Server::set_parameter(std::string_view name, Value value)
     if (!assign(*parameter, std::move(value))) {
         return std::unexpected(Error::InvalidArgument);
     }
+    // The name the server starts with is the one set here (jackd -n), not only the parameter's copy of it.
+    if (name == "name") {
+        const std::string& server_name = std::get<std::string>(parameter->value);
+        fImpl->name = server_name.empty() ? std::string(JackTools::DefaultServerName()) : server_name;
+    }
     return { };
 }
 
