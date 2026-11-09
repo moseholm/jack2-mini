@@ -12,3 +12,8 @@ function(add_jackmini_tool name)
 endfunction()
 
 add_jackmini_tool(jackmini_lsp lsp.cpp)
+
+# jackmini_connect and jackmini_disconnect: one source file, the disconnect program defines JACKMINI_DISCONNECT.
+add_jackmini_tool(jackmini_connect connect.cpp)
+add_jackmini_tool(jackmini_disconnect connect.cpp)
+target_compile_definitions(jackmini_disconnect PRIVATE JACKMINI_DISCONNECT)

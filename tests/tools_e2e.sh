@@ -118,10 +118,31 @@ check "lsp: -h prints the usage and exits with status 1" 1 'Usage: jackmini_lsp'
 check "lsp: --version prints the version" 0 '^jackmini_lsp [0-9.]+$' "$LSP" --version
 check "lsp: an unknown option is an error with status 1" 1 'invalid option' "$LSP" -Z
 
+# jackmini_connect and jackmini_disconnect (T2).  The dummy driver's capture ports are outputs, its playback ports inputs.
+CONN=$BIN/jackmini_connect
+DISC=$BIN/jackmini_disconnect
+OWNER=$("$LSP" -s "$NAME" -u capture_1 | head -1 | cut -d: -f1)
+check "connect: an output and an input are connected" 0 '^$' "$CONN" -s "$NAME" system:capture_1 system:playback_1
+check "connect: the connection is listed by lsp -c" 0 "^   system:playback_1\$" "$LSP" -s "$NAME" -c capture_1
+check "connect: a connection that exists is an error" 1 'already connected' "$CONN" -s "$NAME" system:capture_1 system:playback_1
+check "disconnect: the connection is removed" 0 '^$' "$DISC" -s "$NAME" system:capture_1 system:playback_1
+check_absent "disconnect: lsp -c no longer lists it" '^   system:playback_1$' "$LSP" -s "$NAME" -c capture_1
+check "disconnect: a connection that is not there is an error" 1 'already disconnected' "$DISC" -s "$NAME" system:capture_1 system:playback_1
+check "connect: the ports may come in either order" 0 '^$' "$CONN" -s "$NAME" system:playback_1 system:capture_1
+check "disconnect: the reversed order removes it too" 0 '^$' "$DISC" -s "$NAME" system:playback_1 system:capture_1
+check "connect: -u takes <client UUID>:<port>" 0 '^$' "$CONN" -s "$NAME" -u "$OWNER:capture_1" "$OWNER:playback_1"
+check "disconnect: -u takes <client UUID>:<port>" 0 '^$' "$DISC" -s "$NAME" -u "$OWNER:capture_1" "$OWNER:playback_1"
+check "connect: an unknown port is an error" 1 'not a valid port' "$CONN" -s "$NAME" system:nope system:playback_1
+check "connect: two outputs are an error" 1 '1 input port and 1 output port' "$CONN" -s "$NAME" system:capture_1 system:capture_2
+check "connect: no ports print the usage" 1 'usage: jackmini_connect' "$CONN" -s "$NAME"
+check "disconnect: -h prints its usage with status 1" 1 'usage: jackmini_disconnect' "$DISC" -h
+check "connect: --version prints the version" 0 '^jackmini_connect [0-9.]+$' "$CONN" --version
+
 stop_server
 
-# With no server running the tool fails with a message and status 1.
+# With no server running the tools fail with a message and status 1.
 check "lsp: no server is an error with status 1" 1 'server is not running' "$LSP" -s "$NAME"
+check "connect: no server is an error with status 1" 1 'server not running' "$CONN" -s "$NAME" a b
 
 echo "tools: $CHECKS checks, $FAILED failed"
 [ $FAILED -eq 0 ]
