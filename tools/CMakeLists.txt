@@ -17,3 +17,6 @@ add_jackmini_tool(jackmini_lsp lsp.cpp)
 add_jackmini_tool(jackmini_connect connect.cpp)
 add_jackmini_tool(jackmini_disconnect connect.cpp)
 target_compile_definitions(jackmini_disconnect PRIVATE JACKMINI_DISCONNECT)
+
+add_jackmini_tool(jackmini_samplerate samplerate.cpp)
+add_jackmini_tool(jackmini_wait wait.cpp)

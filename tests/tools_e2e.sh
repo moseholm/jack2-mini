@@ -138,7 +138,22 @@ check "connect: no ports print the usage" 1 'usage: jackmini_connect' "$CONN" -s
 check "disconnect: -h prints its usage with status 1" 1 'usage: jackmini_disconnect' "$DISC" -h
 check "connect: --version prints the version" 0 '^jackmini_connect [0-9.]+$' "$CONN" --version
 
+# jackmini_samplerate and jackmini_wait (T3).
+SR=$BIN/jackmini_samplerate
+WAIT=$BIN/jackmini_wait
+check "samplerate: prints the sample rate of the server" 0 '^48000$' "$SR" -s "$NAME"
+check "samplerate: -h prints its usage with status 1" 1 'usage: jackmini_samplerate' "$SR" -h
+check "wait: -c, the default, reports that the server runs" 0 '^running$' "$WAIT" -s "$NAME"
+check "wait: -w returns while the server runs" 0 '^server is available$' "$WAIT" -s "$NAME" -w
+check "wait: -q with a timeout reports the timeout while the server runs" 1 '^timeout$' "$WAIT" -s "$NAME" -q -t 1
+check "wait: --version prints the version" 0 '^jackmini_wait [0-9.]+$' "$WAIT" --version
+
 stop_server
+
+check "wait: -c reports that no server runs" 0 '^not running$' "$WAIT" -s "$NAME"
+check "wait: -q reports that the server is gone" 0 '^server is gone$' "$WAIT" -s "$NAME" -q
+check "wait: -w gives up at its timeout with status 1" 1 '^timeout$' "$WAIT" -s "$NAME" -w -t 1
+check "samplerate: no server is an error with status 1" 1 'server not running' "$SR" -s "$NAME"
 
 # With no server running the tools fail with a message and status 1.
 check "lsp: no server is an error with status 1" 1 'server is not running' "$LSP" -s "$NAME"
