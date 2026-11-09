@@ -27,8 +27,7 @@
  *
  */
 
-#ifndef __JackMessageBuffer__
-#define __JackMessageBuffer__
+#pragma once
 
 #include "JackAtomic.h"
 #include "JackMutex.h"
@@ -106,5 +105,3 @@ void JackMessageBufferAdd(int level, const char* message);
 
 
 }; // namespace jackmini
-
-#endif

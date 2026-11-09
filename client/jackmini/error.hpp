@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef JACKMINI_ERROR_HPP
-#define JACKMINI_ERROR_HPP
+#pragma once
 
 #include <expected>
 #include <string_view>
@@ -43,5 +42,3 @@ using Result = std::expected<T, Error>;
 std::string_view to_string(Error error);
 
 } // namespace jackmini
-
-#endif

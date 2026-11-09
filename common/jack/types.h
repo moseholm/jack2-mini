@@ -18,8 +18,7 @@
 
 */
 
-#ifndef __jack_types_h__
-#define __jack_types_h__
+#pragma once
 
 #include <jack/systemdeps.h>
 
@@ -755,6 +754,3 @@ typedef struct {
     double beats_per_minute;
 
 } jack_transport_info_t;
-
-
-#endif /* __jack_types_h__ */

@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef __JackAlsaCardDiff__
-#define __JackAlsaCardDiff__
+#pragma once
 
 #include <algorithm>
 #include <string>
@@ -55,5 +54,3 @@ inline JackAlsaCardChanges JackAlsaDiffCards(const std::vector<std::string>& cur
 }
 
 } // namespace jackmini
-
-#endif

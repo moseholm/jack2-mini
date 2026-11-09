@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef JACKMINI_RINGBUFFER_HPP
-#define JACKMINI_RINGBUFFER_HPP
+#pragma once
 
 #include <algorithm>
 #include <atomic>
@@ -106,5 +105,3 @@ private:
 };
 
 } // namespace jackmini
-
-#endif

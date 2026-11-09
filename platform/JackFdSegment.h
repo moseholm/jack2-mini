@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef __JackFdSegment__
-#define __JackFdSegment__
+#pragma once
 
 #include <cstddef>
 #include <expected>
@@ -78,5 +77,3 @@ std::expected<void*, std::error_code> MapSegment(int fd, std::size_t size);
 void UnmapSegment(void* address, std::size_t size) noexcept;
 
 } // namespace jackmini
-
-#endif

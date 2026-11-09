@@ -17,8 +17,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackAtomic__
-#define __JackAtomic__
+#pragma once
 
 #include "JackTypes.h"
 #include <atomic>
@@ -45,5 +44,3 @@ static inline long DEC_ATOMIC(SInt32* val)
 {
     return std::atomic_ref<SInt32>(*val).fetch_sub(1);
 }
-
-#endif

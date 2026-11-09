@@ -3,8 +3,7 @@
  * vendored resampler compile to nothing; JACK logging is not wired in here.
  */
 
-#ifndef JACK_SPA_SHIM_SUPPORT_LOG_H
-#define JACK_SPA_SHIM_SUPPORT_LOG_H
+#pragma once
 
 #include <spa/utils/defs.h>
 
@@ -23,5 +22,3 @@ struct spa_log_topic {
 #define spa_log_debug(l, ...) ((void)(l))
 #define spa_log_trace(l, ...) ((void)(l))
 #define spa_log_trace_fp(l, ...) ((void)(l))
-
-#endif

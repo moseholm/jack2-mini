@@ -17,8 +17,7 @@
 
 */
 
-#ifndef __weakmacros_h__
-#define __weakmacros_h__
+#pragma once
 
 /*************************************************************
  * NOTE: JACK_WEAK_EXPORT ***MUST*** be used on every function
@@ -68,5 +67,3 @@
 #endif
 
 #endif
-
-#endif /* __weakmacros_h__ */

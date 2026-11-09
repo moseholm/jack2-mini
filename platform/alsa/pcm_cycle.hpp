@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef JACKMINI_ALSA_PCM_CYCLE_HPP
-#define JACKMINI_ALSA_PCM_CYCLE_HPP
+#pragma once
 
 #include <poll.h>
 #include <algorithm>
@@ -581,5 +580,3 @@ bool Cycle<Backend>::channel_not_done(std::size_t channel) const
 }
 
 } // namespace jackmini::alsa
-
-#endif

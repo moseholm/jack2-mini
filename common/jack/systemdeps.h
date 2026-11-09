@@ -17,8 +17,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#ifndef __jack_systemdeps_h__
-#define __jack_systemdeps_h__
+#pragma once
 
 #ifndef POST_PACKED_STRUCTURE
 
@@ -49,5 +48,3 @@ typedef pthread_t jack_native_thread_t;
 
 /** define JACK_LIB_EXPORT, useful for internal clients */
 #define JACK_LIB_EXPORT __attribute__((visibility("default")))
-
-#endif /* __jack_systemdeps_h__ */

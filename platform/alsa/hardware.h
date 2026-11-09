@@ -18,8 +18,7 @@
    $Id: hardware.h,v 1.3 2005/11/23 11:24:29 letz Exp $
 */
 
-#ifndef __jack_hardware_h__
-#define __jack_hardware_h__
+#pragma once
 
 #include "types.h"
 
@@ -57,6 +56,3 @@ typedef struct _jack_hardware {
     JackHardwareGetHardwarePower get_hardware_power;
     void* private_hw;
 } jack_hardware_t;
-
-
-#endif /* __jack_hardware_h__ */

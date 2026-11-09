@@ -18,8 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackMidiPort__
-#define __JackMidiPort__
+#pragma once
 
 #include "JackCompilerDeps.h"
 #include "JackConstants.h"
@@ -113,5 +112,3 @@ struct LIB_EXPORT JackMidiBuffer {
 void MidiBufferInit(void* buffer, size_t buffer_size, jack_nframes_t nframes);
 
 } // namespace jackmini
-
-#endif

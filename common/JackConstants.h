@@ -17,8 +17,7 @@
 
 */
 
-#ifndef __JackConstants__
-#define __JackConstants__
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -88,5 +87,3 @@
 #define FREE 0xFFFC
 
 #define JACK_DEFAULT_SELF_CONNECT_MODE ' ' /* allow all requests */
-
-#endif

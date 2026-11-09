@@ -17,8 +17,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackPosixProcessSync__
-#define __JackPosixProcessSync__
+#pragma once
 
 #include "JackException.h"
 #include "JackPosixMutex.h"
@@ -63,5 +62,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

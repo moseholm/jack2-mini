@@ -17,8 +17,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackGlobals__
-#define __JackGlobals__
+#pragma once
 
 #include "JackConstants.h"
 #include "JackPlatformPlug.h"
@@ -41,5 +40,3 @@ extern SERVER_EXPORT JackEngineControl* GetEngineControl();
 extern SERVER_EXPORT JackSynchro* GetSynchroTable();
 
 } // namespace jackmini
-
-#endif

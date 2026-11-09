@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef JACKMINI_CONTROL_HPP
-#define JACKMINI_CONTROL_HPP
+#pragma once
 
 #include "error.hpp"
 
@@ -119,5 +118,3 @@ JACKMINI_CONTROL_API SignalSet setup_signals();
 JACKMINI_CONTROL_API void wait_for_signal(const SignalSet& signals);
 
 } // namespace jackmini::control
-
-#endif

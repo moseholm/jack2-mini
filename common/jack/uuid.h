@@ -17,8 +17,7 @@
 
 */
 
-#ifndef __jack_uuid_h__
-#define __jack_uuid_h__
+#pragma once
 
 #include <jack/types.h>
 
@@ -38,6 +37,3 @@ extern void jack_uuid_clear(jack_uuid_t*);
 extern int jack_uuid_parse(const char* buf, jack_uuid_t*);
 extern void jack_uuid_unparse(jack_uuid_t, char buf[JACK_UUID_STRING_SIZE]);
 extern int jack_uuid_empty(jack_uuid_t);
-
-
-#endif /* __jack_uuid_h__ */

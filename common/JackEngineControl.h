@@ -18,8 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackEngineControl__
-#define __JackEngineControl__
+#pragma once
 
 #include "JackConstants.h"
 #include "JackFrameTimer.h"
@@ -183,5 +182,3 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem {
 };
 
 } // namespace jackmini
-
-#endif

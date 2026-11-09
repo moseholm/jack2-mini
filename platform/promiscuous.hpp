@@ -17,8 +17,7 @@
 
 */
 
-#ifndef JACKMINI_PROMISCUOUS_HPP
-#define JACKMINI_PROMISCUOUS_HPP
+#pragma once
 
 #include <sys/types.h>
 
@@ -31,5 +30,3 @@ int group_to_gid(const char* group);
 int set_promiscuous_perms(int fd, const char* path, gid_t gid);
 
 } // namespace jackmini
-
-#endif

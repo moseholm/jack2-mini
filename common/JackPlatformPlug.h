@@ -17,8 +17,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackPlatformPlug__
-#define __JackPlatformPlug__
+#pragma once
 
 #define jack_server_dir "/dev/shm"
 #define jack_client_dir "/dev/shm"
@@ -77,5 +76,3 @@ typedef JackSocketServerNotifyChannel JackServerNotifyChannel;
 namespace jackmini {
 typedef JackSocketNotifyChannel JackNotifyChannel;
 }
-
-#endif

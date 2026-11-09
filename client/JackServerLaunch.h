@@ -18,13 +18,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackServerLaunch__
-#define __JackServerLaunch__
+#pragma once
 
 #include "types.h"
 
 // Connects to the server named server_name. When it is not running, starts it if the options allow that, and waits for
 // it. Returns 0 when the server answers, and -1 otherwise, with the failure bits set in status.
 int try_start_server(const char* server_name, jack_options_t options, jack_status_t* status);
-
-#endif

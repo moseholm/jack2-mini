@@ -13,8 +13,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef JACK_TESTS_JACKMINI_WAIT_HPP
-#define JACK_TESTS_JACKMINI_WAIT_HPP
+#pragma once
 
 #include <atomic>
 #include <chrono>
@@ -43,5 +42,3 @@ inline bool WaitCycles(const std::atomic<unsigned long>& counter, unsigned long 
     const unsigned long target = counter.load() + n;
     return WaitUntil([&] { return counter.load() >= target; });
 }
-
-#endif

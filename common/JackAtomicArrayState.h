@@ -17,8 +17,7 @@
 
  */
 
-#ifndef __JackAtomicArrayState__
-#define __JackAtomicArrayState__
+#pragma once
 
 #include "JackAtomic.h"
 #include "JackCompilerDeps.h"
@@ -271,6 +270,3 @@ public:
 };
 
 } // namespace jackmini
-
-
-#endif

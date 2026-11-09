@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef __JackPipeWireResampleBridge__
-#define __JackPipeWireResampleBridge__
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,6 +48,4 @@ const char* jack_pw_resampler_kernel_name(struct jack_pw_resampler* r);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

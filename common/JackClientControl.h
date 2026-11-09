@@ -18,8 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackClientControl__
-#define __JackClientControl__
+#pragma once
 
 #include "JackNotification.h"
 #include "JackPort.h"
@@ -87,6 +86,3 @@ struct JackClientControl : public JackShmMemAble {
 };
 
 } // namespace jackmini
-
-
-#endif

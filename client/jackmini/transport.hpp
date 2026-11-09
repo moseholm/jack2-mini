@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef JACKMINI_TRANSPORT_HPP
-#define JACKMINI_TRANSPORT_HPP
+#pragma once
 
 #include "port.hpp"
 
@@ -33,5 +32,3 @@ enum class TransportState : std::uint8_t {
 };
 
 } // namespace jackmini
-
-#endif

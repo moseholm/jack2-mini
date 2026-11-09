@@ -18,8 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackPosixThread__
-#define __JackPosixThread__
+#pragma once
 
 #include "JackThread.h"
 #include <pthread.h>
@@ -84,6 +83,3 @@ public:
 SERVER_EXPORT void ThreadExit();
 
 } // namespace jackmini
-
-
-#endif

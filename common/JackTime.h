@@ -18,8 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackTime__
-#define __JackTime__
+#pragma once
 
 #include "JackCompilerDeps.h"
 #include "JackTypes.h"
@@ -35,5 +34,3 @@ void set_clock_source(jack_timer_type_t source);
 const char* clock_source_name(jack_timer_type_t source);
 
 } // namespace jackmini
-
-#endif

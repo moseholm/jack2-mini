@@ -17,8 +17,7 @@
 
 */
 
-#ifndef __JackSystemDeps__
-#define __JackSystemDeps__
+#pragma once
 
 #include "systemdeps.h"
 
@@ -40,5 +39,3 @@
 #define LoadJackModule(name) dlopen((name), RTLD_NOW | RTLD_LOCAL);
 #define UnloadJackModule(handle) dlclose((handle));
 #define GetJackProc(handle, name) dlsym((handle), (name));
-
-#endif

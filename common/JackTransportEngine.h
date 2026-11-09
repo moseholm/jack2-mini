@@ -18,8 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackTransportEngine__
-#define __JackTransportEngine__
+#pragma once
 
 #include "JackAtomicArrayState.h"
 #include "JackCompilerDeps.h"
@@ -195,5 +194,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

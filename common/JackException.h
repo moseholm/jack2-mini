@@ -17,8 +17,7 @@
 
 */
 
-#ifndef __JackException__
-#define __JackException__
+#pragma once
 
 #include "JackCompilerDeps.h"
 
@@ -113,5 +112,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

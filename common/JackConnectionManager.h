@@ -17,8 +17,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackConnectionManager__
-#define __JackConnectionManager__
+#pragma once
 
 #include "JackActivationCount.h"
 #include "JackCompilerDeps.h"
@@ -477,5 +476,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

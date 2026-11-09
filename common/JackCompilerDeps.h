@@ -17,8 +17,7 @@
 
 */
 
-#ifndef __JackCompilerDeps__
-#define __JackCompilerDeps__
+#pragma once
 
 #include "JackConstants.h"
 
@@ -40,6 +39,4 @@
 #define MEM_ALIGN(x, y) x
 #define LIB_EXPORT
 #define SERVER_EXPORT
-#endif
-
 #endif

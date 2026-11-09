@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef JACKMINI_ALSA_PCM_ALSA_HPP
-#define JACKMINI_ALSA_PCM_ALSA_HPP
+#pragma once
 
 #include "pcm_cycle.hpp"
 
@@ -118,5 +117,3 @@ private:
 };
 
 } // namespace jackmini::alsa
-
-#endif

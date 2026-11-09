@@ -22,8 +22,7 @@
 // The logging of the JACK server and client libraries: the basic messages (JackLog.h), plus the verbose jack_log and the
 // routing of the messages of real-time threads through the message buffer.
 
-#ifndef __JackError__
-#define __JackError__
+#pragma once
 
 #include "JackCompilerDeps.h"
 #include "JackLog.h"
@@ -37,6 +36,3 @@ SERVER_EXPORT int set_threaded_log_function();
 
 /* The routing used by the host: the messages of a thread with its own log function go there. */
 void jack_log_thread_route(int level, const char* message);
-
-
-#endif

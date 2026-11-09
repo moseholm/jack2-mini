@@ -18,8 +18,7 @@
 
 */
 
-#ifndef __JackDriverLoader__
-#define __JackDriverLoader__
+#pragma once
 
 #include "JackPlatformPlug.h"
 #include "driver_interface.h"
@@ -28,5 +27,3 @@ jack_driver_desc_t* jack_find_driver_descriptor(JSList* drivers, const char* nam
 JSList* jack_drivers_load(JSList* drivers);
 void jack_print_driver_param_usage(jack_driver_desc_t* desc, unsigned long param, FILE* file);
 void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file);
-
-#endif

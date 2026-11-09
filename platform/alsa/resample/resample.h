@@ -2,8 +2,7 @@
 /* SPDX-FileCopyrightText: Copyright © 2018 Wim Taymans */
 /* SPDX-License-Identifier: MIT */
 
-#ifndef RESAMPLE_H
-#define RESAMPLE_H
+#pragma once
 
 #include <spa/support/cpu.h>
 #include <spa/support/log.h>
@@ -128,5 +127,3 @@ static inline uint32_t resample_param_from_label(const char* label)
     }
     return RESAMPLE_PARAM_INVALID;
 }
-
-#endif /* RESAMPLE_H */

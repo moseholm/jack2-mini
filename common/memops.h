@@ -17,8 +17,7 @@
 
 */
 
-#ifndef __jack_memops_h__
-#define __jack_memops_h__
+#pragma once
 
 #include <string.h>
 
@@ -99,6 +98,3 @@ void memcpy_fake(char* dst, char* src, unsigned long src_bytes, unsigned long fo
 void memcpy_interleave_d16_s16(char* dst, char* src, unsigned long src_bytes, unsigned long dst_skip_bytes, unsigned long src_skip_bytes);
 void memcpy_interleave_d24_s24(char* dst, char* src, unsigned long src_bytes, unsigned long dst_skip_bytes, unsigned long src_skip_bytes);
 void memcpy_interleave_d32_s32(char* dst, char* src, unsigned long src_bytes, unsigned long dst_skip_bytes, unsigned long src_skip_bytes);
-
-
-#endif /* __jack_memops_h__ */

@@ -22,8 +22,7 @@
 
 */
 
-#ifndef __jack_jslist_h__
-#define __jack_jslist_h__
+#pragma once
 
 #include <jack/systemdeps.h>
 #include <stdlib.h>
@@ -270,5 +269,3 @@ jack_slist_sort(JSList* list,
         jack_slist_sort(l2, compare_func),
         compare_func);
 }
-
-#endif /* __jack_jslist_h__ */

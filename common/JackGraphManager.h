@@ -18,8 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackGraphManager__
-#define __JackGraphManager__
+#pragma once
 
 #include "JackAtomicState.h"
 #include "JackConnectionManager.h"
@@ -142,5 +141,3 @@ public:
 
 
 } // namespace jackmini
-
-#endif

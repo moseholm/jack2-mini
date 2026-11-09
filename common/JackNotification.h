@@ -17,8 +17,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackNotification__
-#define __JackNotification__
+#pragma once
 
 namespace jackmini {
 
@@ -51,5 +50,3 @@ enum NotificationType {
 };
 
 } // namespace jackmini
-
-#endif

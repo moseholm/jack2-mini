@@ -17,8 +17,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#ifndef __JackLockedEngine__
-#define __JackLockedEngine__
+#pragma once
 
 #include "JackEngine.h"
 #include "JackException.h"
@@ -267,5 +266,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

@@ -18,8 +18,7 @@
   $Id: JackTypes.h,v 1.2.2.1 2006/06/20 14:44:00 letz Exp $
 */
 
-#ifndef __JackTypes__
-#define __JackTypes__
+#pragma once
 
 #include "JackCompilerDeps.h"
 #include "types.h"
@@ -54,5 +53,3 @@ typedef enum {
     Running,
     Finished,
 } jack_client_state_t;
-
-#endif

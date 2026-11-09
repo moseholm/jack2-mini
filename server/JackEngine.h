@@ -17,8 +17,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#ifndef __JackEngine__
-#define __JackEngine__
+#pragma once
 
 #include "JackChannel.h"
 #include "JackConstants.h"
@@ -161,5 +160,3 @@ public:
 
 
 } // namespace jackmini
-
-#endif

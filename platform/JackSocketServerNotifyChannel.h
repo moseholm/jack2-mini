@@ -17,8 +17,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackSocketServerNotifyChannel__
-#define __JackSocketServerNotifyChannel__
+#pragma once
 
 #include "JackSocket.h"
 #include "jackmini/error.hpp"
@@ -46,5 +45,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

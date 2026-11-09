@@ -18,8 +18,7 @@
 
 */
 
-#ifndef __jack_driver_interface_h__
-#define __jack_driver_interface_h__
+#pragma once
 
 #include "jslist.h"
 #include <limits.h>
@@ -184,5 +183,3 @@ JACK_CONSTRAINT_COMPOSE_ENUM(str);
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* __jack_driver_interface_h__ */

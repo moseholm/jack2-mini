@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef JACKMINI_TESTS_ALSA_FAKE_BACKEND_HPP
-#define JACKMINI_TESTS_ALSA_FAKE_BACKEND_HPP
+#pragma once
 
 #include "pcm_cycle.hpp"
 
@@ -231,5 +230,3 @@ private:
 };
 
 } // namespace jackmini::alsa
-
-#endif

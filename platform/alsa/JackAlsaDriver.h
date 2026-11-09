@@ -18,8 +18,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#ifndef __JackAlsaDriver__
-#define __JackAlsaDriver__
+#pragma once
 
 #include "JackAlsaCardDiff.h"
 #include "JackAlsaControlMonitor.h"
@@ -172,5 +171,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

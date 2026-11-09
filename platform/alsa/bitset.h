@@ -31,8 +31,7 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __bitset_h__
-#define __bitset_h__
+#pragma once
 
 #include <assert.h> /* `#define NDEBUG' to disable */
 #include <inttypes.h> /* POSIX standard fixed-size types */
@@ -118,5 +117,3 @@ bitset_remove(bitset_t set, unsigned int element)
     set
         [WORD_INDEX(element)] &= ~(1 << BIT_INDEX(element));
 }
-
-#endif /* __bitset_h__ */

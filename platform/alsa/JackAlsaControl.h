@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef __JackAlsaControl__
-#define __JackAlsaControl__
+#pragma once
 
 #include <alsa/asoundlib.h>
 #include <string>
@@ -89,5 +88,3 @@ int JackAlsaControlReadRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, lon
 int JackAlsaControlWriteRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, long value);
 
 } // namespace jackmini
-
-#endif

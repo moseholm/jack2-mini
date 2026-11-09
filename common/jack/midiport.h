@@ -18,8 +18,7 @@
 */
 
 
-#ifndef __JACK_MIDIPORT_H
-#define __JACK_MIDIPORT_H
+#pragma once
 
 #include <jack/types.h>
 #include <jack/weakmacros.h>
@@ -184,6 +183,3 @@ jack_midi_get_lost_event_count(void* port_buffer) JACK_OPTIONAL_WEAK_EXPORT;
 #ifdef __cplusplus
 }
 #endif
-
-
-#endif /* __JACK_MIDIPORT_H */

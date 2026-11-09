@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef __JackAlsaSlotTable__
-#define __JackAlsaSlotTable__
+#pragma once
 
 #include <stddef.h>
 #include <atomic>
@@ -98,5 +97,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

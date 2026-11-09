@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef JACKMINI_OPTIONS_HPP
-#define JACKMINI_OPTIONS_HPP
+#pragma once
 
 #include <string>
 
@@ -38,5 +37,3 @@ struct OpenOptions {
 };
 
 } // namespace jackmini
-
-#endif

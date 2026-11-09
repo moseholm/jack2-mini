@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef __JackServerLock__
-#define __JackServerLock__
+#pragma once
 
 #include <expected>
 #include <system_error>
@@ -34,5 +33,3 @@ std::expected<void, std::error_code> AcquireServerLock(const char* dir);
 void ReleaseServerLock() noexcept;
 
 } // namespace jackmini
-
-#endif

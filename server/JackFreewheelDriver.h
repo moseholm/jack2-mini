@@ -18,8 +18,7 @@
 
 */
 
-#ifndef __JackFreewheelDriver__
-#define __JackFreewheelDriver__
+#pragma once
 
 #include "JackDriver.h"
 
@@ -57,6 +56,3 @@ public:
 };
 
 } // namespace jackmini
-
-
-#endif

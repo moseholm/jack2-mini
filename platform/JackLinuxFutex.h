@@ -18,8 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackLinuxFutex__
-#define __JackLinuxFutex__
+#pragma once
 
 #include "JackCompilerDeps.h"
 #include "JackSynchro.h"
@@ -76,6 +75,3 @@ public:
 };
 
 } // namespace jackmini
-
-
-#endif

@@ -18,8 +18,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#ifndef __JackDummyDriver__
-#define __JackDummyDriver__
+#pragma once
 
 #include "JackTimedDriver.h"
 
@@ -54,5 +53,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

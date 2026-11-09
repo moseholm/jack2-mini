@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef __JackAlsaReconfigWorker__
-#define __JackAlsaReconfigWorker__
+#pragma once
 
 #include "JackAlsaCardFailureSink.h"
 #include "JackAlsaControl.h"
@@ -95,5 +94,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

@@ -18,8 +18,7 @@
 
  */
 
-#ifndef __JackDriver__
-#define __JackDriver__
+#pragma once
 
 #include "JackClientControl.h"
 #include "JackClientInterface.h"
@@ -255,5 +254,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef __JackMessage__
-#define __JackMessage__
+#pragma once
 
 #include "JackChannel.h"
 #include "JackConstants.h"
@@ -158,5 +157,3 @@ private:
 };
 
 } // namespace jackmini
-
-#endif

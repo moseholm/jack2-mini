@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef JACKMINI_PORT_HPP
-#define JACKMINI_PORT_HPP
+#pragma once
 
 #include "uuid.hpp"
 
@@ -96,5 +95,3 @@ private:
 };
 
 } // namespace jackmini
-
-#endif

@@ -18,8 +18,7 @@
 
 */
 
-#ifndef _RINGBUFFER_H
-#define _RINGBUFFER_H
+#pragma once
 
 #include <sys/types.h>
 
@@ -229,6 +228,4 @@ size_t jack_ringbuffer_write_space(const jack_ringbuffer_t* rb);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

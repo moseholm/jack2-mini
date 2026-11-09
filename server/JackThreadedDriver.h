@@ -18,8 +18,7 @@
 
 */
 
-#ifndef __JackThreadedDriver__
-#define __JackThreadedDriver__
+#pragma once
 
 #include "JackDriver.h"
 #include "JackPlatformPlug.h"
@@ -102,6 +101,3 @@ public:
 };
 
 } // namespace jackmini
-
-
-#endif

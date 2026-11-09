@@ -16,8 +16,7 @@
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef __external_metro__
-#define __external_metro__
+#pragma once
 
 #include "jackmini/jackmini.hpp"
 
@@ -46,5 +45,3 @@ public:
 private:
     bool process_audio(jackmini::FrameCount nframes);
 };
-
-#endif

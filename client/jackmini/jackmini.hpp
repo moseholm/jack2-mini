@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef JACKMINI_HPP
-#define JACKMINI_HPP
+#pragma once
 
 // The complete client API.  Include this, or the individual headers.
 #include "client.hpp"
@@ -29,5 +28,3 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "ringbuffer.hpp"
 #include "transport.hpp"
 #include "uuid.hpp"
-
-#endif

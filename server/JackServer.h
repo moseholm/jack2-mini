@@ -18,8 +18,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#ifndef __JackServer__
-#define __JackServer__
+#pragma once
 
 #include "JackCompilerDeps.h"
 #include "JackConnectionManager.h"
@@ -92,6 +91,3 @@ public:
 };
 
 } // namespace jackmini
-
-
-#endif

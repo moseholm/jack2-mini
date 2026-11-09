@@ -5,8 +5,7 @@
  * fallback.
  */
 
-#ifndef JACK_SPA_SHIM_SUPPORT_CPU_H
-#define JACK_SPA_SHIM_SUPPORT_CPU_H
+#pragma once
 
 #include <stdint.h>
 
@@ -22,5 +21,3 @@
 #define SPA_CPU_FLAG_AVX2 (1 << 15) /**< AVX2 */
 #define SPA_CPU_FLAG_FMA3 (1 << 16) /**< Haswell FMA3 */
 #define SPA_CPU_FLAG_SLOW_UNALIGNED (1 << 20) /**< unaligned loads/stores are slow */
-
-#endif

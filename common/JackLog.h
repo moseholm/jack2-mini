@@ -23,8 +23,7 @@
 // it is a library of its own (libjacklog).  The host (JackError) may route the messages of some threads elsewhere by
 // setting jack_log_router.
 
-#ifndef __JackLog__
-#define __JackLog__
+#pragma once
 
 #include "JackCompilerDeps.h"
 #include <stdarg.h>
@@ -55,6 +54,3 @@ LIB_EXPORT extern void default_jack_info_callback(const char* desc);
 
 LIB_EXPORT void silent_jack_error_callback(const char* desc);
 LIB_EXPORT void silent_jack_info_callback(const char* desc);
-
-
-#endif

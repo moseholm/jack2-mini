@@ -19,8 +19,7 @@
  grame@grame.fr
 */
 
-#ifndef __JackPosixMutex__
-#define __JackPosixMutex__
+#pragma once
 
 #include "JackCompilerDeps.h"
 #include "JackException.h"
@@ -63,5 +62,3 @@ public:
 };
 
 } // namespace jackmini
-
-#endif

@@ -2,6 +2,8 @@
 /* SPDX-FileCopyrightText: Copyright © 2019 Wim Taymans */
 /* SPDX-License-Identifier: MIT */
 
+#pragma once
+
 #include <math.h>
 
 #include <spa/support/log.h>

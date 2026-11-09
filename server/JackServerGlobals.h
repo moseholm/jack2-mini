@@ -17,8 +17,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#ifndef __JackServerGlobals__
-#define __JackServerGlobals__
+#pragma once
 
 #include "JackCompilerDeps.h"
 
@@ -38,5 +37,3 @@ struct SERVER_EXPORT JackServerGlobals {
 };
 
 } // namespace jackmini
-
-#endif

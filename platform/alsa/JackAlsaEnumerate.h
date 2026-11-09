@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef __JackAlsaEnumerate__
-#define __JackAlsaEnumerate__
+#pragma once
 
 #include <string>
 #include <vector>
@@ -51,5 +50,3 @@ std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcm
     bool report);
 
 } // namespace jackmini
-
-#endif

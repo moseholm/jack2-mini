@@ -17,8 +17,7 @@
 
 */
 
-#ifndef __JackTools__
-#define __JackTools__
+#pragma once
 
 #define DIR_SEPARATOR '/'
 #include <dirent.h>
@@ -66,5 +65,3 @@ void BuildClientPath(char* path_to_so, int path_len, const char* so_name);
 void PrintLoadError(const char* so_name);
 
 } // namespace jackmini
-
-#endif

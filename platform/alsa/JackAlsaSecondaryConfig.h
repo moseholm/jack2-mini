@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef __JackAlsaSecondaryConfig__
-#define __JackAlsaSecondaryConfig__
+#pragma once
 
 #include <string>
 #include <string_view>
@@ -136,5 +135,3 @@ bool JackAlsaCardExcluded(std::string_view card_id, const std::vector<std::strin
 std::string JackAlsaSecondarySanitizeName(std::string_view name);
 
 } // namespace jackmini
-
-#endif

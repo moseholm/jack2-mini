@@ -18,8 +18,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-#ifndef __JackDriverInfo__
-#define __JackDriverInfo__
+#pragma once
 
 #include "JackDriver.h"
 #include "JackSystemDeps.h"
@@ -44,5 +43,3 @@ public:
 
     jackmini::JackDriverClientInterface* Open(jack_driver_desc_t* driver_desc, jackmini::JackLockedEngine*, jackmini::JackSynchro*, const JSList*);
 };
-
-#endif

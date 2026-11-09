@@ -17,8 +17,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
 
-#ifndef JACKMINI_CLIENT_CLIENT_SESSION_HPP
-#define JACKMINI_CLIENT_CLIENT_SESSION_HPP
+#pragma once
 
 #include <atomic>
 #include <condition_variable>
@@ -178,5 +177,3 @@ private:
 };
 
 } // namespace jackmini::client
-
-#endif

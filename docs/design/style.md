@@ -44,3 +44,7 @@ style everywhere. The client code (`client/jackmini/`) is the reference.
 ## Comments
 
 - A comment says why, not what. Behaviour that is not obvious from the code is described once, at the place it happens.
+
+## Headers
+
+- A header starts with `#pragma once`, not an include guard.

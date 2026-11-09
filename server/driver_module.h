@@ -18,8 +18,7 @@
 
 */
 
-#ifndef JACKMINI_DRIVER_MODULE_H
-#define JACKMINI_DRIVER_MODULE_H
+#pragma once
 
 #include <cstdint>
 
@@ -62,5 +61,3 @@ using ModuleFunction = const Module* (*)();
 
 // Each driver module exports this function, which returns its Module.
 extern "C" SERVER_EXPORT const jackmini::driver::Module* jackmini_driver_module();
-
-#endif

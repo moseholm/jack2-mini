@@ -18,8 +18,7 @@
 
 */
 
-#ifndef __jack_transport_h__
-#define __jack_transport_h__
+#pragma once
 
 #include <jack/types.h>
 #include <jack/weakmacros.h>
@@ -236,5 +235,3 @@ void jack_set_transport_info(jack_client_t* client,
     jack_transport_info_t* tinfo) JACK_OPTIONAL_WEAK_EXPORT;
 
 /**@}*/
-
-#endif /* __jack_transport_h__ */

@@ -19,8 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
-#ifndef __JackRequest__
-#define __JackRequest__
+#pragma once
 
 #include "JackCString.h"
 #include "JackChannel.h"
@@ -1380,5 +1379,3 @@ struct JackClientNotification {
 };
 
 } // namespace jackmini
-
-#endif

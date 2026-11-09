@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef __JackCString__
-#define __JackCString__
+#pragma once
 
 #include <algorithm>
 #include <array>
@@ -104,5 +103,3 @@ T ParseLeadingInteger(std::string_view text)
 }
 
 } // namespace jackmini
-
-#endif

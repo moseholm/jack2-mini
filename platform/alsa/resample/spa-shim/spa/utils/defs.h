@@ -5,8 +5,7 @@
  * in spa/support/cpu.h and are selected at runtime by the bridge.
  */
 
-#ifndef JACK_SPA_SHIM_UTILS_DEFS_H
-#define JACK_SPA_SHIM_UTILS_DEFS_H
+#pragma once
 
 #include <errno.h>
 #include <math.h>
@@ -47,5 +46,3 @@ static inline int spa_streq(const char* a, const char* b)
 {
     return strcmp(a, b) == 0;
 }
-
-#endif
