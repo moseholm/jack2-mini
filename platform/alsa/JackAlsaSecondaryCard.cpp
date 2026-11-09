@@ -20,7 +20,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaSecondaryConfig.h"
 #include "JackError.h"
 #include "JackGraphManager.h"
-#include "alsa_driver.h"
+#include "pcm_session.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -73,7 +73,6 @@ static bool LockChannelBuffers(float** buffers, int channels, unsigned int frame
 
 JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& config, JackResamplerFactory* factory)
     : fConfig(config),
-      fAlsaDriver(NULL),
       fThread(this),
       fRunning(false),
       fOpened(false),
@@ -125,10 +124,7 @@ JackAlsaSecondaryCard::~JackAlsaSecondaryCard()
 
 void JackAlsaSecondaryCard::FreeStreamObjects()
 {
-    if (fAlsaDriver) {
-        alsa_driver_delete(fAlsaDriver);
-        fAlsaDriver = NULL;
-    }
+    fSession.close();
     FreeBuffers();
 }
 
@@ -176,6 +172,16 @@ void JackAlsaSecondaryCard::FreeBuffers()
 
 }
 
+static jackmini::alsa::SampleFormat ToAlsaFormat(JackAlsaSampleFormat format)
+{
+    switch (format) {
+    case SampleFormatFloat: return jackmini::alsa::SampleFormat::Float;
+    case SampleFormatS32: return jackmini::alsa::SampleFormat::S32;
+    case SampleFormatS16: return jackmini::alsa::SampleFormat::S16;
+    default: return jackmini::alsa::SampleFormat::Any;
+    }
+}
+
 int JackAlsaSecondaryCard::OpenStream(jack_nframes_t requested_rate,
                                       jack_nframes_t primary_buffer_size,
                                       jack_nframes_t primary_rate)
@@ -190,7 +196,8 @@ int JackAlsaSecondaryCard::OpenStream(jack_nframes_t requested_rate,
     // The hardware may not run at the requested rate.  If it doesn't, reopen at
     // the rate it actually gives, so the period matches the card's real clock.
     jack_nframes_t rate = requested_rate;
-    for (int attempt = 0; attempt < 2 && fAlsaDriver == NULL; attempt++) {
+    bool opened = false;
+    for (int attempt = 0; attempt < 2 && !opened; attempt++) {
         double period = ((double)primary_buffer_size * (double)rate) / (double)primary_rate;
         fPeriod = (jack_nframes_t)llround(period);
         if (fPeriod < 1) {
@@ -204,58 +211,46 @@ int JackAlsaSecondaryCard::OpenStream(jack_nframes_t requested_rate,
                       (fCaptureEnabled ? "capture" : "playback"),
                   rate, fPeriod, fNperiods);
 
-        alsa_driver_t* alsa = (alsa_driver_t*)alsa_driver_new((char*)"alsa_secondary",
-                                                              (char*)playback_device.c_str(),
-                                                              (char*)capture_device.c_str(),
-                                                              NULL,
-                                                              fPeriod,
-                                                              fNperiods,
-                                                              rate,
-                                                              FALSE,
-                                                              FALSE,
-                                                              fCaptureEnabled,
-                                                              fPlaybackEnabled,
-                                                              None,
-                                                              FALSE,
-                                                              FALSE,
-                                                              fCaptureEnabled ? fConfig.capture_channels : 0,
-                                                              fPlaybackEnabled ? fConfig.playback_channels : 0,
-                                                              FALSE,
-                                                              0,
-                                                              0,
-                                                              NULL,
-                                                              fConfig.sample_format);
-        if (!alsa) {
+        jackmini::alsa::Request request;
+        request.rate = rate;
+        request.frames_per_cycle = fPeriod;
+        request.periods = fNperiods;
+        request.capture_channels = fCaptureEnabled ? fConfig.capture_channels : 0;
+        request.playback_channels = fPlaybackEnabled ? fConfig.playback_channels : 0;
+        request.format = ToAlsaFormat(fConfig.sample_format);
+        if (fSession.open(fCaptureEnabled ? capture_device.c_str() : NULL,
+                          fPlaybackEnabled ? playback_device.c_str() : NULL,
+                          request, None) < 0) {
             jack_error("secondary card '%s': cannot open ALSA device %s",
                        fConfig.name.c_str(), (playback_device + "|" + capture_device).c_str());
             return -1;
         }
 
-        if (alsa->frame_rate == rate) {
-            fAlsaDriver = alsa;
+        if (fSession.rate() == rate) {
+            opened = true;
             break;
         }
 
         if (attempt == 0) {
             jack_info("secondary card '%s': device runs at %u Hz, not the requested %u Hz; using %u Hz",
-                      fConfig.name.c_str(), (unsigned int)alsa->frame_rate, (unsigned int)rate,
-                      (unsigned int)alsa->frame_rate);
-            rate = alsa->frame_rate;
+                      fConfig.name.c_str(), (unsigned int)fSession.rate(), (unsigned int)rate,
+                      (unsigned int)fSession.rate());
+            rate = fSession.rate();
         } else {
             jack_error("secondary card '%s': device rate %u Hz does not settle",
-                       fConfig.name.c_str(), (unsigned int)alsa->frame_rate);
+                       fConfig.name.c_str(), (unsigned int)fSession.rate());
         }
-        alsa_driver_delete(alsa);
+        fSession.close();
     }
 
-    if (fAlsaDriver == NULL) {
+    if (!opened) {
         return -1;
     }
 
-    fCaptureChannels = fCaptureEnabled ? fAlsaDriver->capture_nchannels : 0;
-    fPlaybackChannels = fPlaybackEnabled ? fAlsaDriver->playback_nchannels : 0;
-    fPeriod = fAlsaDriver->frames_per_cycle;
-    fRate = fAlsaDriver->frame_rate;
+    fCaptureChannels = fCaptureEnabled ? fSession.info(jackmini::alsa::Stream::Capture).channels : 0;
+    fPlaybackChannels = fPlaybackEnabled ? fSession.info(jackmini::alsa::Stream::Playback).channels : 0;
+    fPeriod = fSession.frames_per_cycle();
+    fRate = fSession.rate();
     return 0;
 }
 
@@ -288,8 +283,7 @@ int JackAlsaSecondaryCard::BuildBuffers(jack_nframes_t primary_buffer_size,
         if (fFactory == NULL) {
             jack_error("secondary card '%s': no resampler factory", fConfig.name.c_str());
             FreeBuffers();
-            alsa_driver_delete(fAlsaDriver);
-            fAlsaDriver = NULL;
+            fSession.close();
             return -1;
         }
 
@@ -302,8 +296,7 @@ int JackAlsaSecondaryCard::BuildBuffers(jack_nframes_t primary_buffer_size,
                 jack_error("secondary card '%s': cannot create capture resampler %u->%u",
                            fConfig.name.c_str(), fRate, primary_rate);
                 FreeBuffers();
-                alsa_driver_delete(fAlsaDriver);
-                fAlsaDriver = NULL;
+                fSession.close();
                 return -1;
             }
             fCaptureConvIn = AllocChannelBuffers(fCaptureChannels, fConvCap);
@@ -317,8 +310,7 @@ int JackAlsaSecondaryCard::BuildBuffers(jack_nframes_t primary_buffer_size,
                 jack_error("secondary card '%s': cannot create playback resampler %u->%u",
                            fConfig.name.c_str(), primary_rate, fRate);
                 FreeBuffers();
-                alsa_driver_delete(fAlsaDriver);
-                fAlsaDriver = NULL;
+                fSession.close();
                 return -1;
             }
             fPlaybackConvOut = AllocChannelBuffers(fPlaybackChannels, fConvCap);
@@ -363,16 +355,14 @@ int JackAlsaSecondaryCard::BuildBuffers(jack_nframes_t primary_buffer_size,
                  fConfig.name.c_str());
     }
 
-    alsa_driver_callbacks_t callbacks;
-    callbacks = {};
+    jackmini::alsa::PcmCycle::Callbacks callbacks;
     callbacks.arg = this;
     callbacks.read_input = ReadInputThunk;
-    callbacks.monitor_input = MonitorInputThunk;
     callbacks.clear_output = ClearOutputThunk;
     callbacks.write_output = WriteOutputThunk;
     callbacks.set_time = SetTimeThunk;
     callbacks.restart = RestartThunk;
-    alsa_driver_set_callbacks(fAlsaDriver, &callbacks);
+    fSession.set_callbacks(callbacks);
     return 0;
 }
 
@@ -550,7 +540,7 @@ int JackAlsaSecondaryCard::WriteRate(JackAlsaRateDirection dir, long value)
 
 int JackAlsaSecondaryCard::Close()
 {
-    if (!fOpened && !fAlsaDriver) {
+    if (!fOpened && !fSession.is_open()) {
         return 0;
     }
 
@@ -603,7 +593,7 @@ int JackAlsaSecondaryCard::Start()
         }
     }
 
-    if (alsa_driver_start(fAlsaDriver) < 0) {
+    if (fSession.start() < 0) {
         jack_error("secondary card '%s': cannot start ALSA stream", fConfig.name.c_str());
         return -1;
     }
@@ -612,7 +602,7 @@ int JackAlsaSecondaryCard::Start()
     if (fThread.StartSync() < 0) {
         jack_error("secondary card '%s': cannot start I/O thread", fConfig.name.c_str());
         fRunning.store(false);
-        alsa_driver_stop(fAlsaDriver);
+        fSession.stop();
         return -1;
     }
 
@@ -761,7 +751,7 @@ int JackAlsaSecondaryCard::Reconfigure(jack_nframes_t rate)
 
 int JackAlsaSecondaryCard::Stop()
 {
-    if (!fAlsaDriver) {
+    if (!fSession.is_open()) {
         return 0;
     }
 
@@ -775,7 +765,7 @@ int JackAlsaSecondaryCard::Stop()
     ReportDrops();
     ReportPendingIoError();
 
-    alsa_driver_stop(fAlsaDriver);
+    fSession.stop();
     return 0;
 }
 
@@ -799,7 +789,10 @@ bool JackAlsaSecondaryCard::Execute()
         return false;
     }
 
-    jack_nframes_t nframes = alsa_driver_wait(fAlsaDriver, -1, &wait_status, &delayed_usecs);
+    const jackmini::alsa::WaitResult wait = fSession.wait();
+    wait_status = wait.status;
+    delayed_usecs = wait.delayed_usecs;
+    const jack_nframes_t nframes = static_cast<jack_nframes_t>(wait.frames);
 
     if (!fRunning.load()) {
         return false;
@@ -819,7 +812,7 @@ bool JackAlsaSecondaryCard::Execute()
     }
 
     if (fCaptureEnabled) {
-        if (alsa_driver_read(fAlsaDriver, fPeriod) < 0) {
+        if (fSession.read(fPeriod) < 0) {
             fIoError.store(IoError::Read, std::memory_order_release);
             MarkFailed();
             return false;
@@ -832,7 +825,7 @@ bool JackAlsaSecondaryCard::Execute()
 
     if (fPlaybackEnabled) {
         fPlaybackRing->Read(fPlaybackTemp, fPeriod);
-        if (alsa_driver_write(fAlsaDriver, fPeriod) < 0) {
+        if (fSession.write(fPeriod) < 0) {
             fIoError.store(IoError::Write, std::memory_order_release);
             MarkFailed();
             return false;
@@ -977,18 +970,11 @@ void JackAlsaSecondaryCard::WriteFromPorts(JackGraphManager* graph_manager, jack
     }
 }
 
-void JackAlsaSecondaryCard::ReadInput(jack_nframes_t orig_nframes,
-                                      snd_pcm_sframes_t contiguous,
-                                      snd_pcm_sframes_t nread)
+void JackAlsaSecondaryCard::ReadInput(const jackmini::alsa::MappedFrames& mapped, std::ptrdiff_t nread)
 {
     for (int i = 0; i < fCaptureChannels; i++) {
-        alsa_driver_read_from_channel(fAlsaDriver, i, fCaptureTemp[i] + nread, contiguous);
+        fSession.read_channel(mapped.channels[i], fCaptureTemp[i] + nread, mapped.frames);
     }
-}
-
-void JackAlsaSecondaryCard::MonitorInput()
-{
-    // Secondary cards have no monitor ports.
 }
 
 void JackAlsaSecondaryCard::ClearOutput()
@@ -998,12 +984,10 @@ void JackAlsaSecondaryCard::ClearOutput()
     }
 }
 
-void JackAlsaSecondaryCard::WriteOutput(jack_nframes_t orig_nframes,
-                                        snd_pcm_sframes_t contiguous,
-                                        snd_pcm_sframes_t nwritten)
+void JackAlsaSecondaryCard::WriteOutput(const jackmini::alsa::MappedFrames& mapped, std::ptrdiff_t nwritten)
 {
     for (int i = 0; i < fPlaybackChannels; i++) {
-        alsa_driver_write_to_channel(fAlsaDriver, i, fPlaybackTemp[i] + nwritten, contiguous);
+        fSession.write_channel(i, mapped.channels[i], fPlaybackTemp[i] + nwritten, mapped.frames);
     }
 }
 
@@ -1014,22 +998,18 @@ void JackAlsaSecondaryCard::SetTime(jack_time_t time)
 
 int JackAlsaSecondaryCard::Restart()
 {
-    int res = alsa_driver_stop(fAlsaDriver);
+    int res = fSession.stop();
     if (res < 0) {
         return res;
     }
-    return alsa_driver_start(fAlsaDriver);
+    return fSession.start();
 }
 
-void JackAlsaSecondaryCard::ReadInputThunk(void* arg, jack_nframes_t orig_nframes,
-                                           snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread)
+void JackAlsaSecondaryCard::ReadInputThunk(void* arg, jackmini::alsa::PcmCycle&,
+                                           const jackmini::alsa::MappedFrames& mapped, std::uint32_t,
+                                           std::ptrdiff_t nread)
 {
-    static_cast<JackAlsaSecondaryCard*>(arg)->ReadInput(orig_nframes, contiguous, nread);
-}
-
-void JackAlsaSecondaryCard::MonitorInputThunk(void* arg)
-{
-    static_cast<JackAlsaSecondaryCard*>(arg)->MonitorInput();
+    static_cast<JackAlsaSecondaryCard*>(arg)->ReadInput(mapped, nread);
 }
 
 void JackAlsaSecondaryCard::ClearOutputThunk(void* arg)
@@ -1037,10 +1017,11 @@ void JackAlsaSecondaryCard::ClearOutputThunk(void* arg)
     static_cast<JackAlsaSecondaryCard*>(arg)->ClearOutput();
 }
 
-void JackAlsaSecondaryCard::WriteOutputThunk(void* arg, jack_nframes_t orig_nframes,
-                                             snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nwritten)
+void JackAlsaSecondaryCard::WriteOutputThunk(void* arg, jackmini::alsa::PcmCycle&,
+                                             const jackmini::alsa::MappedFrames& mapped, std::uint32_t,
+                                             std::ptrdiff_t nwritten)
 {
-    static_cast<JackAlsaSecondaryCard*>(arg)->WriteOutput(orig_nframes, contiguous, nwritten);
+    static_cast<JackAlsaSecondaryCard*>(arg)->WriteOutput(mapped, nwritten);
 }
 
 void JackAlsaSecondaryCard::SetTimeThunk(void* arg, jack_time_t time)

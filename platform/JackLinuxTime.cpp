@@ -229,7 +229,7 @@ jack_time_t get_microseconds()
 
 } // end of namespace jackmini
 
-// The name is kept for alsa_driver.c, which is C and is ported in the ALSA step.
+// The name is kept for the ALSA PCM code, which calls it through its C linkage.
 extern "C" SERVER_EXPORT jack_time_t jack_get_microseconds()
 {
     return jackmini::get_microseconds();

@@ -41,7 +41,8 @@ struct Request {
     std::uint32_t rate = 48000;
     std::uint32_t frames_per_cycle = 1024;
     std::uint32_t periods = 2;
-    std::uint32_t channels = 0;      // 0 takes the device maximum
+    std::uint32_t capture_channels = 0;   // 0 takes the device maximum
+    std::uint32_t playback_channels = 0;
     SampleFormat format = SampleFormat::Any;
     std::uint32_t sample_bytes = 4;  // 4 tries the 32-bit formats first, 2 the 16-bit ones first
     bool soft_mode = false;          // the stop threshold is never reached: the stream runs until dropped
@@ -70,8 +71,9 @@ public:
     Device(const Device&) = delete;
     Device& operator=(const Device&) = delete;
 
-    // A null name leaves that direction out.  Returns 0 on success, -1 on error.  The request is updated with the
-    // rate that was set.
+    // A null name leaves that direction out.  A direction that cannot be opened is left out when the other one
+    // works; EBUSY and EPERM are errors.  Returns 0 on success, -1 on error.  The request is updated with the rate
+    // that was set.
     int open(const char* capture_name, const char* playback_name, Request& request);
     void close();
 

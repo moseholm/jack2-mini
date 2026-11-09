@@ -32,7 +32,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackAlsaHotplug.h"
 #include "JackAlsaSlotTable.h"
 #include "JackAlsaSecondaryConfig.h"
-#include "alsa_driver.h"
+#include "alsa_midi.h"
+#include "pcm_session.hpp"
 
 #include <atomic>
 #include <mutex>
@@ -54,7 +55,15 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
 
     private:
 
-        jack_driver_t* fDriver;
+        jackmini::alsa::Session fSession;
+        jackmini::alsa::Request fRequest;   // the open parameters; the rate is the one last set
+        DitherAlgorithm fDither;
+        std::string fCaptureDevice;         // empty when the direction is not used
+        std::string fPlaybackDevice;
+        alsa_midi_t* fMidi;
+        jack_nframes_t fCaptureFrameLatency;
+        jack_nframes_t fPlaybackFrameLatency;
+        bool fXrunRecovery;                 // set while an xrun recovery restarts the streams
         jack_native_thread_t fReservationLoopThread;
         std::vector<JackAlsaSecondaryCard*> fSecondaryCards;   // owned cards, guarded by fCardsMutex
         JackAlsaCardSlots fSlots;                              // the RT thread's view of promoted cards
@@ -85,9 +94,8 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
         bool WaitForRTSafePoint();
         void PrimaryFailed(int status);
         std::atomic<bool> fPrimaryFailed;
-        JackAlsaSecondaryCard* CreateCard(const JackAlsaSecondaryConfig& cfg, JackResamplerFactory* factory,
-                                          alsa_driver_t* primary);
-        bool AddCard(const JackAlsaSecondaryConfig& cfg, alsa_driver_t* primary);
+        JackAlsaSecondaryCard* CreateCard(const JackAlsaSecondaryConfig& cfg, JackResamplerFactory* factory);
+        bool AddCard(const JackAlsaSecondaryConfig& cfg);
         void ReportOnce(const std::string& message);
 
     public:
@@ -96,6 +104,9 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
 
     private:
         void StopSecondaryCards();
+        int OpenPrimary(jack_nframes_t frames_per_cycle);
+        int StartPrimary();
+        int StopPrimary();
         void StartControlMonitoring();
         void StopControlMonitoring();
 
@@ -107,7 +118,8 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
     public:
 
         JackAlsaDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
-		: JackAudioDriver(name, alias, engine, table),fDriver(NULL),fControlMonitor(NULL),fReconfigWorker(NULL),fHotplug(NULL)
+		: JackAudioDriver(name, alias, engine, table),fDither(None),fMidi(NULL),fCaptureFrameLatency(0),
+          fPlaybackFrameLatency(0),fXrunRecovery(false),fControlMonitor(NULL),fReconfigWorker(NULL),fHotplug(NULL)
         {
             fRTRunning.store(false);
             fRestarting.store(false);
@@ -156,10 +168,10 @@ class JackAlsaDriver : public JackAudioDriver, public JackAlsaRateRequestHandler
 
         int SetBufferSize(jack_nframes_t buffer_size);
 
-        void ReadInputAux(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread);
-        void MonitorInputAux();
+        void ReadInputAux(jack_nframes_t orig_nframes, const jackmini::alsa::MappedFrames& mapped, std::ptrdiff_t nread);
         void ClearOutputAux();
-        void WriteOutputAux(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nwritten);
+        void WriteOutputAux(jack_nframes_t orig_nframes, const jackmini::alsa::MappedFrames& mapped,
+                            std::ptrdiff_t nwritten);
         void SetTimetAux(jack_time_t time);
 
         int PortSetDefaultMetadata(jack_port_id_t port_id, const char* pretty_name);

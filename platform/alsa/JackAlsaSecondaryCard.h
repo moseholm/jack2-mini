@@ -28,15 +28,12 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "resample/JackResampler.h"
 #include "JackPlatformPlug.h"
 #include "JackThread.h"
+#include "pcm_session.hpp"
 #include "types.h"
 
-#include <alsa/asoundlib.h>
 #include <atomic>
 #include <string>
 #include <vector>
-
-struct _alsa_driver;
-typedef struct _alsa_driver alsa_driver_t;
 
 namespace jackmini
 {
@@ -58,7 +55,7 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
     private:
 
         JackAlsaSecondaryConfig fConfig;
-        alsa_driver_t* fAlsaDriver;
+        jackmini::alsa::Session fSession;
         JackThread fThread;
         std::atomic<bool> fRunning;
 
@@ -141,19 +138,18 @@ class JackAlsaSecondaryCard : public JackRunnableInterface
         void CloseControls();
 
         // ALSA core callbacks
-        void ReadInput(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread);
-        void MonitorInput();
+        void ReadInput(const jackmini::alsa::MappedFrames& mapped, std::ptrdiff_t nread);
         void ClearOutput();
-        void WriteOutput(jack_nframes_t orig_nframes, snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nwritten);
+        void WriteOutput(const jackmini::alsa::MappedFrames& mapped, std::ptrdiff_t nwritten);
         void SetTime(jack_time_t time);
         int Restart();
 
-        static void ReadInputThunk(void* arg, jack_nframes_t orig_nframes,
-                                   snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nread);
-        static void MonitorInputThunk(void* arg);
+        static void ReadInputThunk(void* arg, jackmini::alsa::PcmCycle& cycle, const jackmini::alsa::MappedFrames& mapped,
+                                   std::uint32_t orig_frames, std::ptrdiff_t nread);
         static void ClearOutputThunk(void* arg);
-        static void WriteOutputThunk(void* arg, jack_nframes_t orig_nframes,
-                                    snd_pcm_sframes_t contiguous, snd_pcm_sframes_t nwritten);
+        static void WriteOutputThunk(void* arg, jackmini::alsa::PcmCycle& cycle,
+                                     const jackmini::alsa::MappedFrames& mapped, std::uint32_t orig_frames,
+                                     std::ptrdiff_t nwritten);
         static void SetTimeThunk(void* arg, jack_time_t time);
         static int RestartThunk(void* arg);
 

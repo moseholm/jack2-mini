@@ -51,6 +51,8 @@ public:
     int open(const char* capture_name, const char* playback_name, Request& request, DitherAlgorithm dither);
     void close();
     bool is_open() const { return cycle_ != nullptr; }
+    bool has_capture() const { return device_.has_capture(); }
+    bool has_playback() const { return device_.has_playback(); }
 
     void set_callbacks(const PcmCycle::Callbacks& callbacks);
 

@@ -68,8 +68,8 @@ std::size_t requested_format_index(SampleFormat format)
 // The ALSA default plug device reports up to 16 million channels; the old driver limits an unset count to 2.
 constexpr unsigned kMaxDefaultChannels = 1024;
 
-int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direction, Request& request,
-                     StreamInfo& info, std::uint32_t user_periods, bool playback)
+int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direction, const Request& request,
+                     std::uint32_t wanted_channels, StreamInfo& info, std::uint32_t user_periods, bool playback)
 {
     snd_pcm_hw_params_t* hw = nullptr;
     snd_pcm_sw_params_t* sw = nullptr;
@@ -131,7 +131,7 @@ int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direc
     }
     info.rate = rate;
 
-    unsigned int channels = request.channels;
+    unsigned int channels = wanted_channels;
     if (channels == 0) {
         if (snd_pcm_hw_params_get_channels_max(hw, &channels) < 0) {
             jack_error("ALSA: cannot read the channel count of the %s stream", stream_name);
@@ -225,21 +225,41 @@ int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direc
     return 0;
 }
 
-int open_stream(const char* name, snd_pcm_stream_t direction, Request& request, std::uint32_t user_periods,
-                snd_pcm_t*& handle, StreamInfo& info)
+enum class OpenResult {
+    Opened,
+    Unavailable,  // the device could not be opened; the other direction may still work
+    Failed,
+};
+
+OpenResult open_stream(const char* name, snd_pcm_stream_t direction, const Request& request,
+                       std::uint32_t wanted_channels, std::uint32_t user_periods, snd_pcm_t*& handle,
+                       StreamInfo& info)
 {
-    if (snd_pcm_open(&handle, name, direction, SND_PCM_NONBLOCK) < 0) {
-        jack_error("ALSA: cannot open \"%s\"", name);
+    const int err = snd_pcm_open(&handle, name, direction, SND_PCM_NONBLOCK);
+    if (err < 0) {
         handle = nullptr;
-        return -1;
+        if (err == -EBUSY) {
+            jack_error("ALSA: the device \"%s\" is already in use; stop the application using it and start again",
+                       name);
+            return OpenResult::Failed;
+        }
+        if (err == -EPERM) {
+            jack_error("ALSA: you do not have permission to open the audio device \"%s\"", name);
+            return OpenResult::Failed;
+        }
+        jack_error("ALSA: cannot open PCM device %s (%s)", name, snd_strerror(err));
+        return OpenResult::Unavailable;
     }
+
+    // The streams are used in blocking mode, as the old driver set them.
+    snd_pcm_nonblock(handle, 0);
     const bool playback = direction == SND_PCM_STREAM_PLAYBACK;
-    if (configure_stream(name, handle, direction, request, info, user_periods, playback) < 0) {
+    if (configure_stream(name, handle, direction, request, wanted_channels, info, user_periods, playback) < 0) {
         snd_pcm_close(handle);
         handle = nullptr;
-        return -1;
+        return OpenResult::Failed;
     }
-    return 0;
+    return OpenResult::Opened;
 }
 
 } // namespace
@@ -253,18 +273,29 @@ int Device::open(const char* capture_name, const char* playback_name, Request& r
 {
     close();
     const std::uint32_t user_periods = request.periods;
-    Request capture_request = request;
-    Request playback_request = request;
 
-    if (capture_name != nullptr &&
-        open_stream(capture_name, SND_PCM_STREAM_CAPTURE, capture_request, user_periods, capture_.handle,
-                    capture_.info) < 0) {
+    OpenResult capture = OpenResult::Unavailable;
+    if (capture_name != nullptr) {
+        capture = open_stream(capture_name, SND_PCM_STREAM_CAPTURE, request, request.capture_channels, user_periods,
+                              capture_.handle, capture_.info);
+    }
+    OpenResult playback = OpenResult::Unavailable;
+    if (playback_name != nullptr) {
+        playback = open_stream(playback_name, SND_PCM_STREAM_PLAYBACK, request, request.playback_channels,
+                               user_periods, playback_.handle, playback_.info);
+    }
+    if (capture == OpenResult::Failed || playback == OpenResult::Failed) {
+        close();
         return -1;
     }
-    if (playback_name != nullptr &&
-        open_stream(playback_name, SND_PCM_STREAM_PLAYBACK, playback_request, user_periods, playback_.handle,
-                    playback_.info) < 0) {
-        close();
+    if (capture_name != nullptr && capture == OpenResult::Unavailable && playback_.handle != nullptr) {
+        jack_info("ALSA: cannot open PCM device %s for capture; falling back to playback only", capture_name);
+    }
+    if (playback_name != nullptr && playback == OpenResult::Unavailable && capture_.handle != nullptr) {
+        jack_info("ALSA: cannot open PCM device %s for playback; falling back to capture only", playback_name);
+    }
+    if (capture_.handle == nullptr && playback_.handle == nullptr) {
+        jack_error("ALSA: no PCM device could be opened");
         return -1;
     }
 
@@ -296,15 +327,14 @@ int Device::open(const char* capture_name, const char* playback_name, Request& r
         if (stream->handle == nullptr) {
             continue;
         }
-        const std::uint32_t frames = request.frames_per_cycle;
         snd_pcm_uframes_t period = 0;
         int dir = 0;
         snd_pcm_hw_params_t* hw = nullptr;
         snd_pcm_hw_params_alloca(&hw);
         snd_pcm_hw_params_current(stream->handle, hw);
         snd_pcm_hw_params_get_period_size(hw, &period, &dir);
-        if (period != frames) {
-            jack_error("alsa_pcm: requested an interrupt every %u frames but got %lu frames", frames,
+        if (period != request.frames_per_cycle) {
+            jack_error("alsa_pcm: requested an interrupt every %u frames but got %lu frames", request.frames_per_cycle,
                        static_cast<unsigned long>(period));
             close();
             return -1;

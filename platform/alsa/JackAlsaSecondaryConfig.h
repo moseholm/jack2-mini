@@ -34,7 +34,7 @@ enum JackAlsaSecondaryMode {
 
 /*
  * Sample format for a secondary card.  Auto lets the ALSA core choose, which
- * prefers 32-bit float.  The numbers match ALSA_SAMPLE_FORMAT_* in alsa_driver.h.
+ * prefers 32-bit float.
  */
 enum JackAlsaSampleFormat {
     SampleFormatAuto = 0,

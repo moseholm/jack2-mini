@@ -1,11 +1,11 @@
 # ALSA redesign (Plan B, S8)
 
-Status: started. Steps 1 and 2 are done, step 3 is partly done (the backend, not the adapter). Plan A (the client on `ClientSession`) is done. The
+Status: started. Steps 1 to 3 are done (the session and the adapters). Step 4 (MIDI) and 5 (the rest of the C) follow. Plan A (the client on `ClientSession`) is done. The
 baseline the redesign must meet is in `perf-baseline/README.md`.
 
 ## What is there now
 
-- `platform/alsa/alsa_driver.c` (2342 lines): the driver core in C. It configures the streams, runs the
+- `platform/alsa/alsa_driver.c` (2342 lines, deleted in the step 3 commit): the driver core in C. It configures the streams, runs the
   start, stop, wait, read, and write of each cycle, does the xrun recovery and the clock sync, and it
   deletes the driver. It keeps the I/O function pointers (`driver->read`, `driver->write`, ...) that the
   JACK driver base calls.
@@ -55,6 +55,11 @@ baseline the redesign must meet is in `perf-baseline/README.md`.
   - The server opens the client's notification channel only after `WaitForSwitches` succeeds, so a refused open
     does not create a writer thread.
   After the fix an idle server under `strace` showed 6 `clone3` in 10 s (only the start-up threads).
+- **Secondary cards at 64 frames (not caused by the port).** With the auto-added secondary cards on, at 64 frames:
+  the PCH card fails with status -5 (its wait times out), which matches the known PCH xrun at 64 frames. With PCH
+  excluded, the primary U192k fails with -5 once the NVidia playback cards run beside it. The build before the
+  adapter switch (`526c0fbc`) does the same. Both are for the user's hardware runs; the baseline excludes all of them
+  with `-Z PCH,NVidia`.
 - **The card's clock.** At 64 and 128 frames the start-to-start interval is about 11 % to 12 % longer than the
   nominal period. The drift controller and the wait must keep working with that, not against the nominal rate.
 
@@ -72,16 +77,14 @@ baseline the redesign must meet is in `perf-baseline/README.md`.
    The session is `platform/alsa/pcm_session.{hpp,cpp}` (`jackmini::alsa::Session`, `3cf04a5a`): the device, the cycle
    on it, the copy functions chosen once at open (ported from `alsa_driver_setup_io_function_pointers`), and
    `read_channel`/`write_channel` for the callbacks. Checked on the card at 64, 128, 256 frames.
-   Not done: the adapter. `JackAlsaDriver` and `JackAlsaSecondaryCard` still call the `alsa_driver_*` C API (about
-   40 call sites and fields: `alsa_driver_new`, `reset_parameters`, `start`, `stop`, `wait`, `read`, `write`, the
-   channel helpers, `set_callbacks`, the MIDI attach and start, and the clock-sync listeners). The adapter switch
-   and the deletion of `alsa_driver.c` belong in one commit (step 5). The measurement that counts for step 6 is the
-   server's, with the adapter; the harness's syscalls (2.2 per cycle) have no engine or client IPC and are not
-   comparable with the baseline's 5.4 to 6.0.
+   The adapters now run on the session: `JackAlsaDriver` and `JackAlsaSecondaryCard` (this commit). `alsa_driver.c`
+   and `alsa_driver.h` are deleted in the same commit. Checked on the card (see step 6 for the numbers): the cycle
+   matches the baseline at 64, 128 and 256 frames with no xrun. The secondary cards at 64 frames are a separate
+   matter (below).
    Found while porting: the core passed the whole descriptor array to the playback `poll_revents`, and the old
    `snd_pcm_link` step was missing from the backend. Both are fixed; the unit test checks the slice.
 4. The MIDI core (raw) on the same backend pattern, with tests on a fake backend.
-5. Delete `alsa_driver.c`, `alsa_rawmidi.c`, and the C glue, in the same commit as each port.
+5. Delete `alsa_rawmidi.c` and the C glue, in the same commit as the port. (`alsa_driver.c` is gone, step 3.)
 6. Final measurement against the baseline, committed as data.
 
 ## Decisions for the user

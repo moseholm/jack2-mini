@@ -116,7 +116,6 @@ public:
                            std::uint32_t orig_frames, std::ptrdiff_t nread) = nullptr;
         void (*write_output)(void* arg, Cycle& cycle, const MappedFrames& mapped,
                              std::uint32_t orig_frames, std::ptrdiff_t nwritten) = nullptr;
-        void (*monitor_input)(void* arg) = nullptr;
         void (*clear_output)(void* arg) = nullptr;
         int (*restart)(void* arg) = nullptr;
         void (*set_time)(void* arg, std::uint64_t usecs) = nullptr;
@@ -516,10 +515,6 @@ int Cycle<Backend>::write(std::uint32_t frames)
     }
     if (frames > config_.frames_per_cycle) {
         return -1;
-    }
-
-    if (callbacks_.monitor_input) {
-        callbacks_.monitor_input(callbacks_.arg);
     }
 
     std::uint32_t remaining = frames;

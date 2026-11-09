@@ -247,7 +247,6 @@ set(JACK_ALSA_SOURCES
     platform/alsa/JackAlsaDriver.cpp
     platform/alsa/alsa_rawmidi.c
     platform/alsa/alsa_midi_jackmp.cpp
-    platform/alsa/alsa_driver.c
     platform/alsa/pcm_alsa.cpp
     platform/alsa/pcm_session.cpp
     platform/alsa/JackAlsaRingBuffer.cpp

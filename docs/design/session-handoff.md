@@ -121,7 +121,7 @@ S7 (server and protocol), S8 (the ALSA C files, now unblocked by S4; the fake-ba
 (remove the rest of the C), S10 (sanitizers and final docs), and Plan A (the jackmini client takes over from the old
 `JackLibClient`; `lib.cpp` is still the copied wrapper). Plan C (renames and dead code) runs with each area.
 
-What is left in C: `platform/alsa/alsa_driver.c`, `alsa_rawmidi.c` (the S8 port), and
+What is left in C: `platform/alsa/alsa_rawmidi.c` (the S8 port), and
 `tests/alsa_test_resampler_plugin.c`. The ALSA C files use `server/driver_interface.h` and the old driver structs,
 so the driver module interface (S4) comes before the ALSA port (S8).
 
