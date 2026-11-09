@@ -30,7 +30,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackCString.h"
 #include "JackPlatformPlug.h"
 #include "driver_interface.h"
-#include "jack.h"
+#include "JackLog.h"
+#include "JackTypes.h"
 
 using jackmini::control::Choice;
 using jackmini::control::Driver;
