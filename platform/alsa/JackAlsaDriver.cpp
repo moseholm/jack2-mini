@@ -57,7 +57,6 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 static struct jack_constraint_enum_str_descriptor midi_constraint_descr_array[] =
 {
     { "none", "no MIDI driver" },
-    { "seq", "ALSA Sequencer driver" },
     { "raw", "ALSA RawMIDI driver" },
     { 0 }
 };
@@ -687,9 +686,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
     }
 
     alsa_midi_t *midi = 0;
-    if (strcmp(midi_driver_name, "seq") == 0)
-        midi = alsa_seqmidi_new((jack_client_t*)this, 0);
-    else if (strcmp(midi_driver_name, "raw") == 0)
+    if (strcmp(midi_driver_name, "raw") == 0)
         midi = alsa_rawmidi_new((jack_client_t*)this);
 
     if (JackServerGlobals::on_device_acquire != NULL) {

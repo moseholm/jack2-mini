@@ -440,7 +440,7 @@ inline int midi_port_open_jack(alsa_rawmidi_t *midi, midi_port_t *port, int type
 	port->jack = jack_port_register(midi->client, name, JACK_DEFAULT_MIDI_TYPE,
 		type | JackPortIsPhysical | JackPortIsTerminal, 0);
 
-	// Like in alsa_seqmidi.c, use the Jack1 port name as alias. -ag
+	// Use the Jack1 port name as alias. -ag
 	const char *prefix = "alsa_midi:";
 	const char* device_name = port->device_name;
 	const char* port_name = port->subdev_name;

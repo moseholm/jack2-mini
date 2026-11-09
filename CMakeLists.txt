@@ -246,7 +246,6 @@ set(JACK_ALSA_SOURCES
     common/memops.cpp
     platform/alsa/JackAlsaDriver.cpp
     platform/alsa/alsa_rawmidi.c
-    platform/alsa/alsa_seqmidi.c
     platform/alsa/alsa_midi_jackmp.cpp
     platform/alsa/alsa_driver.c
     platform/alsa/JackAlsaRingBuffer.cpp

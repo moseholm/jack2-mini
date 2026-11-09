@@ -38,7 +38,6 @@ extern "C"
     };
 
     alsa_midi_t* alsa_rawmidi_new(jack_client_t *jack);
-    alsa_midi_t* alsa_seqmidi_new(jack_client_t *jack, const char* alsa_name);
 
 #ifdef __cplusplus
 } // extern "C"

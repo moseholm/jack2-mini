@@ -1,7 +1,7 @@
 # ALSA redesign (Plan B, S8)
 
-Status: planned, not started in code. Plan A (the client on `ClientSession`) is done. The baseline the
-redesign must meet is in `perf-baseline/README.md`.
+Status: started. Step 1 (the thread churn) is done and pushed; Plan A (the client on `ClientSession`) is done. The
+baseline the redesign must meet is in `perf-baseline/README.md`.
 
 ## What is there now
 
@@ -9,7 +9,9 @@ redesign must meet is in `perf-baseline/README.md`.
   start, stop, wait, read, and write of each cycle, does the xrun recovery and the clock sync, and it
   deletes the driver. It keeps the I/O function pointers (`driver->read`, `driver->write`, ...) that the
   JACK driver base calls.
-- `platform/alsa/alsa_rawmidi.c` (1261) and `alsa_seqmidi.c` (970): the MIDI backends, in C.
+- `platform/alsa/alsa_rawmidi.c` (1261): the MIDI backend, in C. The ALSA sequencer backend (`alsa_seqmidi.c`)
+  is dropped: the in-band MIDI between clients does not need the sequencer, and raw hardware devices use the
+  RawMIDI backend.
 - `platform/alsa/alsa_midi_impl.h`, `alsa_midi.h`, `midi_pack.h`, `midi_unpack.h`: the C glue for them.
 - The C++ parts are already in place: `JackAlsaDriver` (the JACK driver), `JackAlsaSecondaryCard` and
   `JackAlsaSecondaryConfig` (more cards), `JackAlsaRingBuffer`, `JackAlsaRateConverter`,
@@ -27,8 +29,8 @@ redesign must meet is in `perf-baseline/README.md`.
   records the calls, so the cycle logic can be tested without a card.
 - `jack_alsa.so` (`JackAlsaDriver`): a thin adapter. It owns the JACK driver base and the threads, and it
   calls the core.
-- MIDI: `alsa_rawmidi` and `alsa_seqmidi` in C++ on the same backend pattern (the sequencer and the raw
-  backends are separate backends of one MIDI core).
+- MIDI: `alsa_rawmidi` in C++ on the same backend pattern (the raw hardware devices; there is no sequencer
+  backend).
 - The public C names that stay: `jack_midi_*` and `jack_ringbuffer_*` (decision 4).
 
 ## Requirements
@@ -64,12 +66,13 @@ redesign must meet is in `perf-baseline/README.md`.
    on the fake backend: the avail, the xrun recovery, the sync, and the cycle counts.
 3. The libasound backend, and the adapter: `JackAlsaDriver` runs on the core. Check with the baseline script
    on this machine, with PipeWire stopped by the user (or with the card free).
-4. The MIDI cores (raw and sequencer) on the same backend pattern, with tests on a fake sequencer.
-5. Delete `alsa_driver.c`, `alsa_rawmidi.c`, `alsa_seqmidi.c`, and the C glue, in the same commit as each port.
+4. The MIDI core (raw) on the same backend pattern, with tests on a fake backend.
+5. Delete `alsa_driver.c`, `alsa_rawmidi.c`, and the C glue, in the same commit as each port.
 6. Final measurement against the baseline, committed as data.
 
 ## Decisions for the user
 
 - The redesign is large (about 4,600 lines of C, plus the adapter). It is done in several commits, as above. Each
   commit must keep the driver working with the card.
-- Whether the sequencer MIDI backend stays. It is used by the drivers that some users run; the plan keeps it.
+- Whether the sequencer MIDI backend stays. Decided: it goes. The in-band MIDI between clients does not need
+  the ALSA sequencer, and raw hardware devices use the RawMIDI backend.
