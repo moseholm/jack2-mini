@@ -45,16 +45,6 @@ class SERVER_EXPORT JackLockedEngine
 
         JackEngine fEngine;
 
-        static Result<void> FromCode(int code)
-        {
-            return (code == 0) ? Result<void>{} : std::unexpected(Error::ServerFailure);
-        }
-
-        static Result<int> FromValue(int value)
-        {
-            return (value < 0) ? Result<int>(std::unexpected(Error::NotFound)) : Result<int>(value);
-        }
-
         // An allocation failure in the engine becomes ServerFailure. Other exceptions are not handled here.
         template <class F>
         static auto Guard(F&& f) -> std::invoke_result_t<F>
@@ -119,44 +109,44 @@ class SERVER_EXPORT JackLockedEngine
         Result<void> Open()
         {
             // No lock needed
-            return Guard([&] { return FromCode(fEngine.Open()); });
+            return Guard([&] { return fEngine.Open(); });
         }
         Result<void> Close()
         {
             // No lock needed
-            return Guard([&] { return FromCode(fEngine.Close()); });
+            return Guard([&] { return fEngine.Close(); });
         }
 
         // Client management
         Result<void> ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, int protocol, int options, int* status)
         {
-            return Locked([&] { return FromCode(fEngine.ClientCheck(name, uuid, name_res, protocol, options, status)); });
+            return Locked([&] { return fEngine.ClientCheck(name, uuid, name_res, protocol, options, status); });
         }
         Result<void> ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager)
         {
-            return Locked([&] { return FromCode(fEngine.ClientExternalOpen(name, pid, uuid, ref, shared_engine, shared_client, shared_graph_manager)); });
+            return Locked([&] { return fEngine.ClientExternalOpen(name, pid, uuid, ref, shared_engine, shared_client, shared_graph_manager); });
         }
         Result<void> RegisterDriver(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait)
         {
-            return Locked([&] { return FromCode(fEngine.RegisterDriver(name, ref, shared_engine, shared_manager, client, wait)); });
+            return Locked([&] { return fEngine.RegisterDriver(name, ref, shared_engine, shared_manager, client, wait); });
         }
 
         Result<void> ClientExternalClose(int refnum)
         {
-            return Closing(refnum, [&] { return FromCode(fEngine.ClientExternalClose(refnum)); });
+            return Closing(refnum, [&] { return fEngine.ClientExternalClose(refnum); });
         }
         Result<void> UnregisterDriver(int refnum, bool wait)
         {
-            return Closing(refnum, [&] { return FromCode(fEngine.UnregisterDriver(refnum, wait)); });
+            return Closing(refnum, [&] { return fEngine.UnregisterDriver(refnum, wait); });
         }
 
         Result<void> ClientActivate(int refnum, bool is_real_time, bool wait)
         {
-            return Client(refnum, [&] { return FromCode(fEngine.ClientActivate(refnum, is_real_time, wait)); });
+            return Client(refnum, [&] { return fEngine.ClientActivate(refnum, is_real_time, wait); });
         }
         Result<void> ClientDeactivate(int refnum, bool wait)
         {
-            return Client(refnum, [&] { return FromCode(fEngine.ClientDeactivate(refnum, wait)); });
+            return Client(refnum, [&] { return fEngine.ClientDeactivate(refnum, wait); });
         }
         void ClientKill(int refnum)
         {
@@ -166,39 +156,39 @@ class SERVER_EXPORT JackLockedEngine
         // Port management
         Result<void> PortRegister(int refnum, const char* name, const char *type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port)
         {
-            return Client(refnum, [&] { return FromCode(fEngine.PortRegister(refnum, name, type, flags, buffer_size, port)); });
+            return Client(refnum, [&] { return fEngine.PortRegister(refnum, name, type, flags, buffer_size, port); });
         }
         Result<void> PortUnRegister(int refnum, jack_port_id_t port)
         {
-            return Client(refnum, [&] { return FromCode(fEngine.PortUnRegister(refnum, port)); });
+            return Client(refnum, [&] { return fEngine.PortUnRegister(refnum, port); });
         }
 
         Result<void> PortConnect(int refnum, const char* src, const char* dst)
         {
-            return Client(refnum, [&] { return FromCode(fEngine.PortConnect(refnum, src, dst)); });
+            return Client(refnum, [&] { return fEngine.PortConnect(refnum, src, dst); });
         }
         Result<void> PortDisconnect(int refnum, const char* src, const char* dst)
         {
-            return Client(refnum, [&] { return FromCode(fEngine.PortDisconnect(refnum, src, dst)); });
+            return Client(refnum, [&] { return fEngine.PortDisconnect(refnum, src, dst); });
         }
 
         Result<void> PortConnect(int refnum, jack_port_id_t src, jack_port_id_t dst)
         {
-            return Client(refnum, [&] { return FromCode(fEngine.PortConnect(refnum, src, dst)); });
+            return Client(refnum, [&] { return fEngine.PortConnect(refnum, src, dst); });
         }
         Result<void> PortDisconnect(int refnum, jack_port_id_t src, jack_port_id_t dst)
         {
-            return Client(refnum, [&] { return FromCode(fEngine.PortDisconnect(refnum, src, dst)); });
+            return Client(refnum, [&] { return fEngine.PortDisconnect(refnum, src, dst); });
         }
 
         Result<void> PortRename(int refnum, jack_port_id_t port, const char* name)
         {
-            return Client(refnum, [&] { return FromCode(fEngine.PortRename(refnum, port, name)); });
+            return Client(refnum, [&] { return fEngine.PortRename(refnum, port, name); });
         }
 
         Result<void> ComputeTotalLatencies()
         {
-            return Locked([&] { return FromCode(fEngine.ComputeTotalLatencies()); });
+            return Locked([&] { return fEngine.ComputeTotalLatencies(); });
         }
 
         // Graph
@@ -249,12 +239,12 @@ class SERVER_EXPORT JackLockedEngine
 
         Result<int> GetClientPID(const char* name)
         {
-            return Locked([&] { return FromValue(fEngine.GetClientPID(name)); });
+            return Locked([&] { return fEngine.GetClientPID(name); });
         }
 
         Result<int> GetClientRefNum(const char* name)
         {
-            return Locked([&] { return FromValue(fEngine.GetClientRefNum(name)); });
+            return Locked([&] { return fEngine.GetClientRefNum(name); });
         }
 
         void NotifyQuit()
@@ -265,16 +255,16 @@ class SERVER_EXPORT JackLockedEngine
 
         Result<void> GetUUIDForClientName(const char *client_name, char *uuid_res)
         {
-            return Locked([&] { return FromCode(fEngine.GetUUIDForClientName(client_name, uuid_res)); });
+            return Locked([&] { return fEngine.GetUUIDForClientName(client_name, uuid_res); });
         }
 
         Result<void> GetClientNameForUUID(const char *uuid, char *name_res)
         {
-            return Locked([&] { return FromCode(fEngine.GetClientNameForUUID(uuid, name_res)); });
+            return Locked([&] { return fEngine.GetClientNameForUUID(uuid, name_res); });
         }
         Result<void> ReserveClientName(const char *name, const char *uuid)
         {
-            return Locked([&] { return FromCode(fEngine.ReserveClientName(name, uuid)); });
+            return Locked([&] { return fEngine.ReserveClientName(name, uuid); });
         }
 
 };

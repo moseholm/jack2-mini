@@ -29,6 +29,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackPlatformPlug.h"
 #include "JackRequest.h"
 #include "JackChannel.h"
+#include "jackmini/error.hpp"
 #include <map>
 
 namespace jackmini
@@ -64,10 +65,10 @@ class SERVER_EXPORT JackEngine : public JackLockAble
 
         std::map<int,std::string> fReservationMap;
 
-        int ClientCloseAux(int refnum, bool wait);
+        Result<void> ClientCloseAux(int refnum, bool wait);
         void CheckXRun(jack_time_t callback_usecs);
 
-        int NotifyAddClient(JackClientInterface* new_client, const char* new_name, int refnum);
+        Result<void> NotifyAddClient(JackClientInterface* new_client, const char* new_name, int refnum);
         void NotifyRemoveClient(const char* name, int refnum);
 
         void ProcessNext(jack_time_t callback_usecs);
@@ -80,10 +81,10 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         bool ClientCheckName(const char* name);
         bool GenerateUniqueName(char* name);
 
-        int AllocateRefnum();
+        Result<int> AllocateRefnum();
         void ReleaseRefnum(int refnum);
 
-        int ClientNotify(JackClientInterface* client, int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
+        Result<void> ClientNotify(JackClientInterface* client, int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
 
         void NotifyClient(int refnum, int event, int sync, const char*  message, int value1, int value2);
         void NotifyClients(int event, int sync, const char*  message,  int value1, int value2);
@@ -100,48 +101,48 @@ class SERVER_EXPORT JackEngine : public JackLockAble
             return (refnum >= 0 && refnum < CLIENT_NUM && fClientTable[refnum] != NULL);
         }
 
-        int CheckPortsConnect(int refnum, jack_port_id_t src, jack_port_id_t dst);
+        Result<bool> CheckPortsConnect(int refnum, jack_port_id_t src, jack_port_id_t dst);
 
     public:
 
         JackEngine(JackGraphManager* manager, JackSynchro* table, JackEngineControl* controler, char self_connect_mode);
         ~JackEngine();
 
-        int Open();
-        int Close();
+        Result<void> Open();
+        Result<void> Close();
 
         // Client management
-        int ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, int protocol, int options, int* status);
+        Result<void> ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, int protocol, int options, int* status);
 
-        int ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager);
-        int RegisterDriver(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait);
+        Result<void> ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager);
+        Result<void> RegisterDriver(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait);
 
-        int ClientExternalClose(int refnum);
-        int UnregisterDriver(int refnum, bool wait);
+        Result<void> ClientExternalClose(int refnum);
+        Result<void> UnregisterDriver(int refnum, bool wait);
 
-        int ClientActivate(int refnum, bool is_real_time, bool wait);
-        int ClientDeactivate(int refnum, bool wait);
+        Result<void> ClientActivate(int refnum, bool is_real_time, bool wait);
+        Result<void> ClientDeactivate(int refnum, bool wait);
 
         void ClientKill(int refnum);
 
-        int GetClientPID(const char* name);
-        int GetClientRefNum(const char* name);
+        Result<int> GetClientPID(const char* name);
+        Result<int> GetClientRefNum(const char* name);
 
 
         // Port management
-        int PortRegister(int refnum, const char* name, const char *type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port);
-        int PortUnRegister(int refnum, jack_port_id_t port);
+        Result<void> PortRegister(int refnum, const char* name, const char *type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port);
+        Result<void> PortUnRegister(int refnum, jack_port_id_t port);
 
-        int PortConnect(int refnum, const char* src, const char* dst);
-        int PortDisconnect(int refnum, const char* src, const char* dst);
+        Result<void> PortConnect(int refnum, const char* src, const char* dst);
+        Result<void> PortDisconnect(int refnum, const char* src, const char* dst);
 
-        int PortConnect(int refnum, jack_port_id_t src, jack_port_id_t dst);
-        int PortDisconnect(int refnum, jack_port_id_t src, jack_port_id_t dst);
+        Result<void> PortConnect(int refnum, jack_port_id_t src, jack_port_id_t dst);
+        Result<void> PortDisconnect(int refnum, jack_port_id_t src, jack_port_id_t dst);
 
-        int PortRename(int refnum, jack_port_id_t port, const char* name);
+        Result<void> PortRename(int refnum, jack_port_id_t port, const char* name);
 
 
-        int ComputeTotalLatencies();
+        Result<void> ComputeTotalLatencies();
 
         // Graph
         bool Process(jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end);
@@ -157,9 +158,9 @@ class SERVER_EXPORT JackEngine : public JackLockAble
         void NotifyFreewheel(bool onoff);
         void NotifyQuit();
 
-        int GetUUIDForClientName(const char *client_name, char *uuid_res);
-        int GetClientNameForUUID(const char *uuid, char *name_res);
-        int ReserveClientName(const char *name, const char *uuid);
+        Result<void> GetUUIDForClientName(const char *client_name, char *uuid_res);
+        Result<void> GetClientNameForUUID(const char *uuid, char *name_res);
+        Result<void> ReserveClientName(const char *name, const char *uuid);
 };
 
 
