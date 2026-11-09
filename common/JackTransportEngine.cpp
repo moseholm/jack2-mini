@@ -58,35 +58,35 @@ void JackTransportEngine::SyncTimeout(jack_nframes_t frame_rate, jack_nframes_t 
 }
 
 // Server
-int JackTransportEngine::ResetTimebase(int refnum)
+Result<void> JackTransportEngine::ResetTimebase(int refnum)
 {
     if (fTimeBaseMaster == refnum) {
         jack_position_t* request = WriteNextStateStart(2); // To check
         request->valid = (jack_position_bits_t)0;
         WriteNextStateStop(2);
         fTimeBaseMaster = -1;
-        return 0;
+        return {};
     } else {
-        return EINVAL;
+        return std::unexpected(Error::InvalidState);
     }
 }
 
 // Server
-int JackTransportEngine::SetTimebaseMaster(int refnum, bool conditionnal)
+Result<void> JackTransportEngine::SetTimebaseMaster(int refnum, bool conditionnal)
 {
     if (conditionnal && fTimeBaseMaster > 0) {
         if (refnum != fTimeBaseMaster) {
             jack_log("conditional timebase for ref = %ld failed: %ld is already the master", refnum, fTimeBaseMaster);
-            return EBUSY;
+            return std::unexpected(Error::InvalidState);
         } else {
             jack_log("ref = %ld was already timebase master", refnum);
-            return 0;
+            return {};
         }
     } else {
         fTimeBaseMaster = refnum;
         fConditionnal = conditionnal;
         jack_log("new timebase master: ref = %ld", refnum);
-        return 0;
+        return {};
     }
 }
 

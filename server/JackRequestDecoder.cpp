@@ -196,7 +196,7 @@ int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* s
             JackSetBufferSizeRequest req;
             JackResult res;
             CheckRead(req, socket);
-            res.fResult = fServer->SetBufferSize(req.fBufferSize);
+            res.fResult = ReplyCode(fServer->SetBufferSize(req.fBufferSize));
             CheckWrite("JackRequest::SetBufferSize", socket);
             break;
         }
@@ -206,7 +206,7 @@ int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* s
             JackSetFreeWheelRequest req;
             JackResult res;
             CheckRead(req, socket);
-            res.fResult = fServer->SetFreewheel(req.fOnOff);
+            res.fResult = ReplyCode(fServer->SetFreewheel(req.fOnOff));
             CheckWrite("JackRequest::SetFreeWheel", socket);
             break;
         }
@@ -226,7 +226,7 @@ int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* s
             JackReleaseTimebaseRequest req;
             JackResult res;
             CheckRead(req, socket);
-            res.fResult = fServer->ReleaseTimebase(req.fRefNum);
+            res.fResult = ReplyCode(fServer->ReleaseTimebase(req.fRefNum));
             CheckWriteRefNum("JackRequest::ReleaseTimebase", socket);
             break;
         }
@@ -236,7 +236,7 @@ int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* s
             JackSetTimebaseCallbackRequest req;
             JackResult res;
             CheckRead(req, socket);
-            res.fResult = fServer->SetTimebaseCallback(req.fRefNum, req.fConditionnal);
+            res.fResult = ReplyCode(fServer->SetTimebaseCallback(req.fRefNum, req.fConditionnal));
             CheckWriteRefNum("JackRequest::SetTimebaseCallback", socket);
             break;
         }

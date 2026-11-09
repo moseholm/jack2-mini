@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define __JackTransportEngine__
 
 #include <atomic>
+#include "jackmini/error.hpp"
 #include "JackAtomicArrayState.h"
 #include "JackCompilerDeps.h"
 #include "types.h"
@@ -139,12 +140,12 @@ class SERVER_EXPORT JackTransportEngine : public JackAtomicArrayState<jack_posit
         /*
         	\brief
         */
-        int ResetTimebase(int refnum);
+        Result<void> ResetTimebase(int refnum);
 
         /*
         	\brief
         */
-        int SetTimebaseMaster(int refnum, bool conditionnal);
+        Result<void> SetTimebaseMaster(int refnum, bool conditionnal);
 
         void GetTimebaseMaster(int& refnum, bool& conditionnal)
         {

@@ -29,6 +29,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "JackGlobals.h"
 #include "JackPlatformPlug.h"
 #include "jslist.h"
+#include "jackmini/error.hpp"
 
 namespace jackmini
 {
@@ -66,11 +67,11 @@ class SERVER_EXPORT JackServer
         ~JackServer();
 
         // Server control
-        int Open(jack_driver_desc_t* driver_desc, JSList* driver_params);
-        int Close();
+        Result<void> Open(jack_driver_desc_t* driver_desc, JSList* driver_params);
+        void Close();
 
-        int Start(bool freewheel = false);
-        int Stop();
+        Result<void> Start(bool freewheel = false);
+        Result<void> Stop();
 
         bool IsRunning();
 
@@ -78,17 +79,12 @@ class SERVER_EXPORT JackServer
         void Notify(int refnum, int notify, int value);
 
         // From request thread : API
-        int SetBufferSize(jack_nframes_t buffer_size);
-        int SetFreewheel(bool onoff);
+        Result<void> SetBufferSize(jack_nframes_t buffer_size);
+        Result<void> SetFreewheel(bool onoff);
 
         // Transport management
-        int ReleaseTimebase(int refnum);
-        int SetTimebaseCallback(int refnum, int conditional);
-
-        // Backend management
-        JackDriverInfo* AddSlave(jack_driver_desc_t* driver_desc, JSList* driver_params);
-        void RemoveSlave(JackDriverInfo* info);
-        int SwitchMaster(jack_driver_desc_t* driver_desc, JSList* driver_params);
+        Result<void> ReleaseTimebase(int refnum);
+        Result<void> SetTimebaseCallback(int refnum, int conditional);
 
         // Object access
         JackLockedEngine* GetEngine();

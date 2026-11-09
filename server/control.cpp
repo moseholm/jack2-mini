@@ -622,19 +622,19 @@ Result<void> Server::start()
     if (!params) {
         return fail(params.error());
     }
-    int rc = impl.engine->Open(master.descriptor.get(), *params);
+    auto opened = impl.engine->Open(master.descriptor.get(), *params);
     destroy_param_list(*params);
-    if (rc < 0) {
-        jack_error("JackServer::Open failed with %d", rc);
-        return fail(Error::ServerFailure);
+    if (!opened) {
+        jack_error("JackServer::Open failed");
+        return fail(opened.error());
     }
 
     const bool freewheel = std::get<bool>(find_parameter(impl.parameters, "freewheel")->value);
-    rc = impl.engine->Start(freewheel);
-    if (rc < 0) {
-        jack_error("JackServer::Start() failed with %d", rc);
+    auto started = impl.engine->Start(freewheel);
+    if (!started) {
+        jack_error("JackServer::Start() failed");
         impl.engine->Close();
-        return fail(Error::ServerFailure);
+        return fail(started.error());
     }
 
     impl.running = true;

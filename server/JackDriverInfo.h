@@ -43,11 +43,6 @@ class SERVER_EXPORT JackDriverInfo
 
         jackmini::JackDriverClientInterface* Open(jack_driver_desc_t* driver_desc, jackmini::JackLockedEngine*, jackmini::JackSynchro*, const JSList*);
 
-        jackmini::JackDriverClientInterface* GetBackend()
-        {
-            return fBackend;
-        }
-
 };
 
 #endif

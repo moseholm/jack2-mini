@@ -25,7 +25,6 @@ namespace jackmini
 {
 
 JackServer* JackServerGlobals::fInstance = nullptr;
-unsigned int JackServerGlobals::fUserCount = 0;
 
 bool (* JackServerGlobals::on_device_acquire)(const char * device_name) = nullptr;
 void (* JackServerGlobals::on_device_release)(const char * device_name) = nullptr;

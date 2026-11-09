@@ -65,10 +65,10 @@ class JackSocketServerChannel : public JackRunnableInterface, public JackClientH
         JackSocketServerChannel();
         ~JackSocketServerChannel();
 
-        int Open(const char* server_name, JackServer* server);  // Open the Server/Client connection
+        Result<void> Open(const char* server_name, JackServer* server);  // Open the Server/Client connection
         void Close();                                           // Close the Server/Client connection
 
-        int Start();
+        Result<void> Start();
         void Stop();
 
         // JackRunnableInterface interface

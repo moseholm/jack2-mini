@@ -47,22 +47,22 @@ JackSocketServerChannel::~JackSocketServerChannel()
     delete[] fPollTable;
 }
 
-int JackSocketServerChannel::Open(const char* server_name, JackServer* server)
+Result<void> JackSocketServerChannel::Open(const char* server_name, JackServer* server)
 {
     jack_log("JackSocketServerChannel::Open");
-  
+
     // Prepare request socket
     if (fRequestListenSocket.Bind(jack_server_dir, server_name, 0) < 0) {
         jack_log("JackSocketServerChannel::Open : cannot create result listen socket");
-        return -1;
+        return std::unexpected(Error::ServerFailure);
     }
 
     // Prepare for poll
     BuildPoolTable();
-    
+
     fDecoder = new JackRequestDecoder(server, this);
     fServer = server;
-    return 0;
+    return {};
 }
 
 void JackSocketServerChannel::Close()
@@ -84,13 +84,13 @@ void JackSocketServerChannel::Close()
     fDecoder = NULL;
 }
 
-int JackSocketServerChannel::Start()
+Result<void> JackSocketServerChannel::Start()
 {
     if (fThread.Start() != 0) {
         jack_error("Cannot start Jack server listener");
-        return -1;
+        return std::unexpected(Error::ServerFailure);
     } else {
-        return 0;
+        return {};
     }
 }
 
