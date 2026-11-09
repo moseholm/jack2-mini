@@ -1,6 +1,6 @@
 # ALSA redesign (Plan B, S8)
 
-Status: started. Step 1 (the thread churn) is done and pushed; Plan A (the client on `ClientSession`) is done. The
+Status: started. Steps 1 and 2 are done, step 3 is partly done (the backend, not the adapter). Plan A (the client on `ClientSession`) is done. The
 baseline the redesign must meet is in `perf-baseline/README.md`.
 
 ## What is there now
@@ -62,10 +62,21 @@ baseline the redesign must meet is in `perf-baseline/README.md`.
 
 1. ~~Find and fix the thread churn when the device cannot run.~~ Done: the control threads are not restarted by an
    xrun recovery, the recovery loop is bounded, and the notification channel opens after the driver runs.
-2. The backend concept, the fake backend, and the cycle core for the playback and the capture, with unit tests
-   on the fake backend: the avail, the xrun recovery, the sync, and the cycle counts.
-3. The libasound backend, and the adapter: `JackAlsaDriver` runs on the core. Check with the baseline script
-   on this machine, with PipeWire stopped by the user (or with the card free).
+2. Done (`96fdde5e`). The backend concept, the fake backend, and the cycle core `platform/alsa/pcm_cycle.hpp`, with
+   `tests/pcm_cycle_unit.cpp` (807 checks in ctest): the avail, the xrun recovery, the poll retries, the sync, the
+   read and write through the mapped areas, and the silencing of untouched channels.
+3. Partly done. The libasound backend is `platform/alsa/pcm_alsa.{hpp,cpp}` (`jackmini::alsa::Device`, the
+   `PcmBackend` for the core, in `jack_alsa`). It configures the streams with the old negotiation, links them, and
+   reports `capture_and_playback_not_synced()`. Checked on the UMC404HD (U192k) at 48 kHz: 64, 128 and 256 frames,
+   0 xruns, cycle time equal to the period (`c03e30a2`).
+   Not done: the adapter. `JackAlsaDriver` and `JackAlsaSecondaryCard` still call the `alsa_driver_*` C API (about
+   40 call sites and fields: `alsa_driver_new`, `reset_parameters`, `start`, `stop`, `wait`, `read`, `write`, the
+   channel helpers, `set_callbacks`, the MIDI attach and start, and the clock-sync listeners). The adapter switch
+   and the deletion of `alsa_driver.c` belong in one commit (step 5). The measurement that counts for step 6 is the
+   server's, with the adapter; the harness's syscalls (2.2 per cycle) have no engine or client IPC and are not
+   comparable with the baseline's 5.4 to 6.0.
+   Found while porting: the core passed the whole descriptor array to the playback `poll_revents`, and the old
+   `snd_pcm_link` step was missing from the backend. Both are fixed; the unit test checks the slice.
 4. The MIDI core (raw) on the same backend pattern, with tests on a fake backend.
 5. Delete `alsa_driver.c`, `alsa_rawmidi.c`, and the C glue, in the same commit as each port.
 6. Final measurement against the baseline, committed as data.
