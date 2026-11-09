@@ -26,6 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <poll.h>
 #include <map>
+#include <memory>
+#include <vector>
 
 namespace jackmini
 {
@@ -43,10 +45,10 @@ class JackSocketServerChannel : public JackRunnableInterface, public JackClientH
 
         JackServerSocket fRequestListenSocket;  // Socket to create request socket for the client
         JackThread fThread;                     // Thread to execute the event loop
-        JackRequestDecoder* fDecoder;
+        std::unique_ptr<JackRequestDecoder> fDecoder;
         JackServer* fServer;
 
-        pollfd* fPollTable;
+        std::vector<pollfd> fPollTable;
         bool fRebuild;
         std::map<int, std::pair<int, JackClientSocket*> > fSocketTable;
 

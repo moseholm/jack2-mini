@@ -67,12 +67,7 @@ Result<void> JackEngine::Open()
     jack_log("JackEngine::Open");
 
     // Open audio thread => request thread communication channel
-    if (fChannel.Open(fEngineControl->fServerName) < 0) {
-        jack_error("Cannot connect to server");
-        return std::unexpected(Error::ServerFailure);
-    } else {
-        return {};
-    }
+    return fChannel.Open(fEngineControl->fServerName);
 }
 
 Result<void> JackEngine::Close()

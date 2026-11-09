@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define __JackSocketServerNotifyChannel__
 
 #include "JackSocket.h"
+#include "jackmini/error.hpp"
 
 namespace jackmini
 {
@@ -40,7 +41,7 @@ class JackSocketServerNotifyChannel
         JackSocketServerNotifyChannel()
         {}
 
-        int Open(const char* server_name);
+        Result<void> Open(const char* server_name);
         void Close();
 
         void Notify(int refnum, int notify, int value);

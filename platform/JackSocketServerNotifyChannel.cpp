@@ -26,14 +26,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 namespace jackmini
 {
 
-int JackSocketServerNotifyChannel::Open(const char* server_name)
+Result<void> JackSocketServerNotifyChannel::Open(const char* server_name)
 {
     if (fRequestSocket.Connect(jack_server_dir, server_name, 0) < 0) {
         jack_error("Cannot connect to server socket");
-        return -1;
+        return std::unexpected(Error::ServerFailure);
     } else {
         fRequestSocket.SetNonBlocking(true);
-        return 0;
+        return {};
     }
 }
 

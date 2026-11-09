@@ -36,16 +36,13 @@ namespace jackmini
 {
 
 JackSocketServerChannel::JackSocketServerChannel():
-    fThread(this), fDecoder(NULL)
+    fThread(this)
 {
-    fPollTable = NULL;
     fRebuild = true;
 }
 
 JackSocketServerChannel::~JackSocketServerChannel()
-{
-    delete[] fPollTable;
-}
+{}
 
 Result<void> JackSocketServerChannel::Open(const char* server_name, JackServer* server)
 {
@@ -60,7 +57,7 @@ Result<void> JackSocketServerChannel::Open(const char* server_name, JackServer* 
     // Prepare for poll
     BuildPoolTable();
 
-    fDecoder = new JackRequestDecoder(server, this);
+    fDecoder = std::make_unique<JackRequestDecoder>(server, this);
     fServer = server;
     return {};
 }
@@ -80,8 +77,7 @@ void JackSocketServerChannel::Close()
         delete socket;
     }
 
-    delete fDecoder;
-    fDecoder = NULL;
+    fDecoder.reset();
 }
 
 Result<void> JackSocketServerChannel::Start()
@@ -180,8 +176,7 @@ void JackSocketServerChannel::BuildPoolTable()
 {
     if (fRebuild) {
         fRebuild = false;
-        delete[] fPollTable;
-        fPollTable = new pollfd[fSocketTable.size() + 1];
+        fPollTable.resize(fSocketTable.size() + 1);
 
         jack_log("JackSocketServerChannel::BuildPoolTable size = %d", fSocketTable.size() + 1);
 
@@ -215,7 +210,7 @@ bool JackSocketServerChannel::Execute()
     try {
 
         // Global poll
-        if ((poll(fPollTable, fSocketTable.size() + 1, 10000) < 0) && (errno != EINTR)) {
+        if ((poll(fPollTable.data(), fSocketTable.size() + 1, 10000) < 0) && (errno != EINTR)) {
             jack_error("JackSocketServerChannel::Execute : engine poll failed err = %s request thread quits...", strerror(errno));
             return false;
         } else {
