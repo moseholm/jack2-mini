@@ -1,0 +1,3 @@
+cycles 6000  xruns 0  period 128  rate 48000
+interval (start-start) p50   2973.9 us  p99   3103.5 us  p99.9   3132.2 us  max   3155.9 us
+callback duration      p50      1.5 us  p99      2.2 us  p99.9      7.0 us  max     26.3 us

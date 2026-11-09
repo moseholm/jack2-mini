@@ -73,3 +73,27 @@ Syscalls: the total includes start-up. `clock_nanosleep` is about two per cycle.
 - `alsa-*-cycles.txt`, `alsa-*-syscalls.txt`, `alsa-*-allocs.txt`: the ALSA cycle, syscall, and allocation runs
   after the churn fix.
 - `dummy-*-cycles.txt`, `dummy-*-allocs.txt`, `dummy-*-syscalls.txt`: the dummy rows.
+
+## After the ALSA redesign (plan S8, step 6)
+
+The same method on the code at `abb856ad`: the ALSA driver on the PCM session, the hardware MIDI removed, 48 kHz,
+the card with `-Z PCH,NVidia`. The files are `s8-alsa-*`. The baseline files above are unchanged.
+
+| frames | interval p50 / p99 / max (us) | callback p50 / p99 / max (us) | xruns | allocations in the 6 s steady window |
+|---|---|---|---|---|
+| 64  | 1459.4 / 1568.9 / 1612.2 | 1.4 / 1.9 / 38.6 | 0 | 0 |
+| 128 | 2973.9 / 3103.5 / 3155.9 | 1.5 / 2.2 / 26.3 | 0 | 0 |
+| 256 | 5008.6 / 6063.8 / 6106.6 | 2.0 / 3.3 / 38.3 | 0 | 0 |
+
+Syscalls (process-wide `strace -f -c` of `jackd`, includes start-up; per cycle divides by the rtbench cycles):
+
+| frames | syscalls total | syscalls / cycle (baseline) | poll / cycle (baseline) | ioctl / cycle (baseline) | futex / cycle (baseline) |
+|---|---|---|---|---|---|
+| 64  | 24062 | 4.00 (5.44) | 1.23 (2.50) | 1.27 (1.41) | 1.01 (1.02) |
+| 128 | 16184 | 5.39 (5.60) | 2.09 (2.10) | 1.32 (1.45) | 1.03 (1.03) |
+| 256 | 8473  | 5.64 (6.04) | 1.27 (1.39) | 1.41 (1.54) | 1.06 (1.07) |
+
+The interval matches the baseline at every size; the callback is within noise. The allocations are the difference
+between two signals 6 s apart, inside a steady window (the baseline file lists the cumulative total instead).
+The syscall drop at 64 frames is the removed MIDI threads; the rest is the same.
+The dummy rows were not re-measured. The ALSA driver is the path this redesign changed.
