@@ -23,7 +23,7 @@ Written so a new session can pick up without the conversation. Read this file fi
 | S8: ALSA redesign | done (measured) | `96fdde5e` to `89b9b564`, below |
 | MIDI: client-to-client only | done (hardware MIDI removed) | `94606177`, `5dd484db`, `a644bf85`, `abb856ad` |
 | Cleanup (unused headers, metadata) | done | `0f2e9a67`, `86daa0be` |
-| S6: engine and graph | in progress (stages 1 and 2 done, `a9a1be6c`) | see "Next" |
+| S6: engine and graph | in progress (stages 1 to 3 done, `a9a1be6c`, `8653ede5`) | see "Next" |
 | S7: server and protocol | open | |
 | S9: remove the C (resampler kernels stay) | open | |
 | S10: validation | open | |
@@ -125,8 +125,8 @@ S6, engine and graph, in stages. Each stage: build, `check.sh`, commit, push.
    `JackRequestDecoder.h`) is the one wire mapping. The engine internals still return `int`, which stage 3 converts.
    `JackTemporaryException` (last client of a temporary server) is caught on the two close calls.
 2. **Done (`a9a1be6c`): the call sites** in the server, the drivers and the socket channel.
-3. **`JackEngine` internals (32 methods).** Gate: deactivate and counter unit tests (`jack_deactivate_graph_unit`,
-   `jack_counter_unit`), protocol conformance (`jack_protocol_conformance_unit`).
+3. **Done (`8653ede5`): `JackEngine` internals return `Result`.** The error kind says what failed. The graph
+   manager and the client's `int` returns are unchanged (stage 4 and the client side).
 4. **`JackGraphManager`, `JackConnectionManager`.** Gate: a thread-sanitizer run with no new report
    (procedure below).
 
