@@ -11,6 +11,7 @@ endif()
 include(GNUInstallDirs)
 
 option(JACK_BUILD_TESTS "Build test programs" OFF)
+option(JACK_TOOLS "Build the command-line tools (jackmini_<tool>)" ON)
 option(JACK_RESAMPLER_SIMD "Build the x86 SSE/AVX2 resampler kernels and select one at runtime" ON)
 set(JACK_MAX_CLIENTS 256 CACHE STRING "Maximum number of JACK clients")
 set(JACK_PORTS_PER_APPLICATION 2048 CACHE STRING "Maximum number of ports per application")
@@ -290,6 +291,15 @@ install(FILES
     common/jack/weakmacros.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/jack)
 
+# The parts of jackmini that need no server: ring buffer, Uuid, error text.  The tools link it too.
+add_library(jackmini_base STATIC client/jackmini/uuid.cpp client/jackmini/error.cpp)
+target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/client)
+target_compile_features(jackmini_base PUBLIC cxx_std_23)
+
+if(JACK_TOOLS)
+    add_subdirectory(tools)
+endif()
+
 if(JACK_BUILD_TESTS)
     # Benchmarks and interactive test clients, on the jackmini client API.  They need a running server.
     set(JACK_BENCH_PROGRAMS
@@ -424,10 +434,6 @@ if(JACK_BUILD_TESTS)
     target_link_libraries(jack_notify_overflow_unit PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt m)
     add_test(NAME notify_overflow_unit COMMAND jack_notify_overflow_unit)
 
-    # The parts of jackmini that need no server: ring buffer, Uuid, error text.
-    add_library(jackmini_base STATIC client/jackmini/uuid.cpp client/jackmini/error.cpp)
-    target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/client)
-    target_compile_features(jackmini_base PUBLIC cxx_std_23)
     add_executable(jack_jackmini_unit tests/jackmini_unit.cpp)
     target_link_libraries(jack_jackmini_unit PRIVATE jackmini_base Threads::Threads)
     add_test(NAME jackmini_unit COMMAND jack_jackmini_unit)
