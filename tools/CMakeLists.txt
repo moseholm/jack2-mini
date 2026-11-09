@@ -20,3 +20,5 @@ target_compile_definitions(jackmini_disconnect PRIVATE JACKMINI_DISCONNECT)
 
 add_jackmini_tool(jackmini_samplerate samplerate.cpp)
 add_jackmini_tool(jackmini_wait wait.cpp)
+
+add_jackmini_tool(jackmini_midi_dump midi_dump.cpp)

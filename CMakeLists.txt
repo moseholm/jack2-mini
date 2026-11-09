@@ -453,6 +453,10 @@ if(JACK_BUILD_TESTS)
     target_include_directories(jack_client_session_e2e PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/client")
     target_link_libraries(jack_client_session_e2e PRIVATE jack jackmini_base Threads::Threads)
 
+    # A MIDI source for the tests of jackmini_midi_dump: a note on in every cycle, until it is stopped.
+    add_executable(jack_midi_writer tests/midi_writer.cpp)
+    target_link_libraries(jack_midi_writer PRIVATE jack jackmini_base Threads::Threads)
+
     # The port listing (Client::ports, total latency, UUIDs, connections), with a server.
     add_executable(jack_jackmini_ports_e2e tests/jackmini_ports_e2e.cpp)
     target_include_directories(jack_jackmini_ports_e2e PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/tests")

@@ -148,12 +148,65 @@ check "wait: -w returns while the server runs" 0 '^server is available$' "$WAIT"
 check "wait: -q with a timeout reports the timeout while the server runs" 1 '^timeout$' "$WAIT" -s "$NAME" -q -t 1
 check "wait: --version prints the version" 0 '^jackmini_wait [0-9.]+$' "$WAIT" --version
 
+# jackmini_midi_dump (T5).  A test source (jack_midi_writer, in the tests) writes a note on in every cycle; the dump
+# prints them.  Each dump run registers its own port, so each one is connected from the writer when it starts.
+MDUMP=$BIN/jackmini_midi_dump
+WRITER=$BIN/jack_midi_writer
+DUMP_OUT=/tmp/tools_e2e_dump_$$.txt
+DUMP_PID=
+
+# start_dump <option...>: runs the dump into $DUMP_OUT, connects the writer to it, and waits for the first note on.
+start_dump() {
+    "$MDUMP" -s "$NAME" "$@" > "$DUMP_OUT" 2>&1 &
+    DUMP_PID=$!
+    local tries=0
+    while ! "$LSP" -s "$NAME" | grep -q '^midi-monitor:input$' && [ $tries -lt 100 ]; do
+        sleep 0.1
+        tries=$((tries + 1))
+    done
+    "$CONN" -s "$NAME" midi_writer:out midi-monitor:input > /dev/null 2>&1
+    tries=0
+    while ! grep -q 'note on' "$DUMP_OUT" 2> /dev/null && [ $tries -lt 100 ]; do
+        sleep 0.1
+        tries=$((tries + 1))
+    done
+}
+
+stop_dump() {
+    kill -INT "$DUMP_PID" 2> /dev/null
+    wait "$DUMP_PID" 2> /dev/null
+}
+
+if [ -x "$WRITER" ]; then
+    "$WRITER" -s "$NAME" > /dev/null 2>&1 &
+    WRITER_PID=$!
+    start_dump
+    check "midi dump: a note on is printed with its time and bytes" 0 '^ *[0-9]+: 90 3c 40 note on  \(channel  0\): pitch  60, velocity  64$' cat "$DUMP_OUT"
+    stop_dump
+    start_dump -a
+    check "midi dump -a: the absolute time is printed" 0 '^ *[0-9]+: 90 3c 40 note on' cat "$DUMP_OUT"
+    stop_dump
+    start_dump -r
+    check "midi dump -r: the time since the previous event is printed" 0 '^ *\+[0-9]+: 90 3c 40 note on' cat "$DUMP_OUT"
+    stop_dump
+    kill -INT "$WRITER_PID" 2> /dev/null
+    wait "$WRITER_PID" 2> /dev/null
+    rm -f "$DUMP_OUT"
+else
+    CHECKS=$((CHECKS + 1))
+    say "midi dump: the test source jack_midi_writer is not built" "FAIL"
+    FAILED=$((FAILED + 1))
+fi
+check "midi dump: -h prints its usage with status 0" 0 'Usage: jackmini_midi_dump' "$MDUMP" -h
+check "midi dump: --version prints the version" 0 '^jackmini_midi_dump [0-9.]+$' "$MDUMP" --version
+
 stop_server
 
 check "wait: -c reports that no server runs" 0 '^not running$' "$WAIT" -s "$NAME"
 check "wait: -q reports that the server is gone" 0 '^server is gone$' "$WAIT" -s "$NAME" -q
 check "wait: -w gives up at its timeout with status 1" 1 '^timeout$' "$WAIT" -s "$NAME" -w -t 1
 check "samplerate: no server is an error with status 1" 1 'server not running' "$SR" -s "$NAME"
+check "midi dump: no server is an error with status 1" 1 'server not running' "$MDUMP" -s "$NAME"
 
 # With no server running the tools fail with a message and status 1.
 check "lsp: no server is an error with status 1" 1 'server is not running' "$LSP" -s "$NAME"
