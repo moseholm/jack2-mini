@@ -541,9 +541,10 @@ int resample_native_init(struct resample *r)
 	    spa_overflow_add(alloc_size, (size_t)64, &alloc_size))
 		return -ENOMEM;
 
-	d = calloc(1, alloc_size);
-	if (d == NULL)
+	/* The filter is read with aligned AVX loads: the block must be 64-byte aligned, which calloc does not promise. */
+	if ((errno = posix_memalign((void **)&d, 64, alloc_size)) != 0)
 		return -errno;
+	memset(d, 0, alloc_size);
 
 	r->data = d;
 	c->n_taps = d->n_taps = n_taps;
