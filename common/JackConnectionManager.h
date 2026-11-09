@@ -481,9 +481,11 @@ class SERVER_EXPORT JackConnectionManager
         // A deactivated client keeps its connections, but they stop counting toward the clients they feed, and its
         // ports are silent (protocol.md section 6).
         void SetInactive(int refnum, bool inactive);
+        // A port with no owner has been released; the RT thread can still see it in the connections of the current
+        // state, so it counts as inactive (silent) rather than indexing the table with -1.
         bool IsInactive(int refnum) const
         {
-            return fInactive[refnum] != 0;
+            return refnum < 0 || fInactive[refnum] != 0;
         }
 
 

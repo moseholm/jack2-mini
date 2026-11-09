@@ -87,5 +87,11 @@ int main()
     control.join();
 
     std::printf("counter test: %d failed cycles\n", failures.load());
-    return failures.load() == 0 ? 0 : 1;
+    const int result = failures.load() == 0 ? 0 : 1;
+    for (int ref : { kInputRef, kOutputRef }) {
+        table[ref].Destroy();
+    }
+    delete[] table;
+    JackGraphManager::Destroy(graph);
+    return result;
 }

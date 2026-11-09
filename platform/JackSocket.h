@@ -45,11 +45,11 @@ class JackClientSocket : public detail::JackClientRequestInterface
 
     private:
 
-        int fSocket;
-        int fTimeOut;
-        bool fNonBlocking;
-        bool fPromiscuous;
-        int fPromiscuousGid;
+        int fSocket = -1;
+        int fTimeOut = 0;
+        bool fNonBlocking = false;   // the socket(int) constructor does not set it
+        bool fPromiscuous = false;
+        int fPromiscuousGid = -1;
 
     public:
 

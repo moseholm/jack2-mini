@@ -33,6 +33,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 
 using namespace jackmini;
 
@@ -354,10 +355,11 @@ static void TestConverterRates()
     JackAlsaRateConverter cap(JackResamplerFactory::Default()->Create(p), 2, 8192);
     CHECK(cap.IsValid());
 
-    float* ring = new float[1 << 20];
+    std::vector<float> ring(1 << 20);
     unsigned long card_n = 0, ring_r = 0;
-    float* src[2] = { new float[8192], new float[8192] };
-    float* out[2] = { new float[period], new float[period] };
+    std::vector<float> src0(8192), src1(8192), out0(period), out1(period);
+    float* src[2] = { src0.data(), src1.data() };
+    float* out[2] = { out0.data(), out1.data() };
     double acc = 0;
     bool exact = true;
     for (unsigned int c = 0; c < 400; c++) {
@@ -379,12 +381,12 @@ static void TestConverterRates()
         }
     }
     CHECK(exact);
-    delete[] ring;
 
     JackResamplerParams q = { 2, 48000, 44100, -1 };
     JackAlsaRateConverter play(JackResamplerFactory::Default()->Create(q), 2, 8192);
-    float* in[2] = { new float[period](), new float[period]() };
-    float* pout[2] = { new float[8192](), new float[8192]() };
+    std::vector<float> in0(period), in1(period), pout0(8192), pout1(8192);
+    float* in[2] = { in0.data(), in1.data() };
+    float* pout[2] = { pout0.data(), pout1.data() };
     unsigned long in_total = 0, out_total = 0;
     for (unsigned int c = 0; c < 400; c++) {
         unsigned int produced = play.Convert(in, period, pout, 8192);
