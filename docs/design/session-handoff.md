@@ -7,11 +7,47 @@ Written so a new session can pick up without the conversation. Read this file fi
 
 ## Branch and state
 
-- Branch `hjj/cxx23`, pushed to origin. Head: `git log -1`. `git status` should show only
-  `.vscode/launch.json` (modified; never commit it).
-- `origin/develop` is the base. `hjj/cxx23` contains all of `develop`; do not rebase.
-- PR #3 (`hjj/cxx23` into `develop`) is open.
-- Local tag `backup/cxx23-pre-p0-merge` (not pushed) marks the tip before the secondary-alsa merge.
+- `origin/develop` is the base and contains all of the WebKit style work (PR #4, merged). Its tree is identical to
+  the PR head `079e43a0`; the history was rewritten by the merge. Start new work from `develop`, on a new branch.
+- The local branch `format/webkit` is the old PR branch; it is safe to delete once you are sure nothing is needed from it.
+- `git status` should be clean. `.vscode/launch.json` must never be committed.
+- PR #3 (`hjj/cxx23`) merged into `develop` earlier. `backup/cxx23-pre-p0-merge` is a local tag, not pushed.
+
+## Current work: licensing and the README (not started)
+
+The user wants the README to describe the new project honestly, and the licence layout made explicit. Agreed plan:
+
+1. **Licence audit** in a separate file (not in this handoff). Classify every file as JACK2-derived or new, from the
+   git history (the original tree is `e102e682`). Derived files keep their original licence.
+2. **Licence layout:** `COPYING` stays GPLv2 for the server. The client stays LGPL-2.1-or-later, with its text in
+   `COPYING.LGPL`. A short `LICENSING.md` says which files fall under which licence. The LGPL text lets integrators link
+   without disclosing their own code. No MIT licence for the client: the original JACK2 client code is LGPL, not MIT.
+3. **Contributor blocks:** keep every existing name and append the user's name and year (format still to be confirmed
+   with the user). Never remove a name or a copyright line.
+4. **README rewrite:** state plainly that jack2-mini is not compatible with the old JACK2 server or client API, and say
+   what changed (C API names and types, wire protocol, shared-memory layout, ALSA-only backend). Credit JACK2 as the
+   basis of the code. The current README says existing clients "work unchanged"; that is probably wrong, so verify the
+   actual C API and protocol before writing the compatibility statement.
+5. Build with `scripts/ci.sh`, then open a PR against `develop`.
+
+## Status
+
+| Step | State | Where |
+|---|---|---|
+| Plan A: the client on `ClientSession` | done | commits `c7e8dfd3` to `0df63f3a` |
+| S1 to S4: foundations, memops, driver interface | done | earlier history |
+| S5: control API and `jackd` | done | `05a8a528`, `5ac28048` |
+| S8: ALSA redesign | done (measured) | `96fdde5e` to `89b9b564`, below |
+| MIDI: client-to-client only | done (hardware MIDI removed) | `94606177`, `5dd484db`, `a644bf85`, `abb856ad` |
+| Cleanup (unused headers, metadata) | done | `0f2e9a67`, `86daa0be` |
+| S6: engine and graph | done (`a9a1be6c` to `e2124e88`) | see "Next" |
+| S7: server and protocol | done (`a0f275e1` to `ab182c4e`) | see "Next" |
+| S9: remove the C (resampler kernels stay) | done (`9ab39c81`, `38bcbfe5`) | see "Next" |
+| S10: validation | done (`f38b6e2c`; `docs/design/validation.md`) | see "Next" |
+| Tools: the command-line tools, rebuilt on the jackmini API | done (T0 to T5) | see "Tools" |
+| WebKit style (PR #4, merged into `develop`) | done | identifier names, CamelCase files, `std::array`, `constexpr`, `//` comments; see "Decisions" |
+| CI: `scripts/ci.sh` shared by the workflow and local runs | done | SSE4.1/AVX2 matrix entry added; latest run green |
+| Licensing and README | not started | see "Current work" |
 
 ## Status
 
@@ -77,6 +113,22 @@ Hardware and measurement:
 
 - Hardware runs (RT kernel, real latency, the secondary cards at 64 frames) are the user's, at the end. Do not wait for them.
 - Report process-wide counts as process-wide. The realtime path must not allocate, lock, or make syscalls.
+
+Style and naming (PR #4, the WebKit style; `docs/design/style.md` is the reference):
+
+- Types CamelCase without a `Jack` prefix. Functions and methods camelCase. Data members `m_` (classes and structs),
+  static members `s_`, globals `g`, constants and enumerators `kCamelCase`. Files CamelCase, named after their main type.
+- Functions declared in `common/jack/`, `jack_error`/`jack_info`/`jack_log`, and `jack_slist_*` keep their names. C API
+  types in `common/jack/` carry a `C` suffix (e.g. `PortIdC`). Internal classes that clashed were renamed:
+  `JackPort` is `ServerPort`, `JackServer` is `ServerCore`, `JackResult` is `Reply`.
+- Integers from `<cstdint>`; `char` for text only, `std::byte` for raw bytes; `std::array` for fixed arrays (the struct-hack
+  trailing arrays stay); `nullptr`; `constexpr` constants; `//` comments only.
+- The C files under `platform/alsa/resample/` and their headers are untouched by the style work.
+
+Licensing (agreed with the user; see "Current work"):
+
+- The server is GPLv2 (`COPYING`). The client is LGPL-2.1-or-later, because the original JACK2 client code is LGPL.
+- Do not relicense JACK2-derived code. Do not remove copyright or contributor lines; append only.
 
 ## Layout (current)
 
@@ -216,23 +268,39 @@ The baseline (before S8) is in `docs/design/perf-baseline/README.md`. The dummy-
   Options after `-d` go to the driver. Automatic discovery adds the other cards as secondaries; exclude with `-Z PCH,NVidia`.
 - `ptrace`: `kernel.yama.ptrace_scope=1`; `strace` works only when it starts the server.
 - `/dev/shm`: killed servers leave `jack_*` files. Clear them (`rm -f /dev/shm/jack_*`) only when no `jackd` runs.
-- Git push: `SSH_AUTH_SOCK=/run/user/1000/gcr/ssh git push origin hjj/cxx23`. `gh` works for PR checks.
-- Container checks (GCC 13 and clang 18 on AArch64): `docker run ubuntu:24.04` with `g++-13` and `clang`; about 40 minutes.
+- Git push: SSH to GitHub is not reliable from this machine. Push over HTTPS with the `gh` token, and keep the token
+  out of the repo config: `TOKEN=$(gh auth token); GIT_CONFIG_GLOBAL=/tmp/opencode/empty.gitconfig git push
+  "https://x-access-token:${TOKEN}@github.com/moseholm/jack2-mini.git" <local>:refs/heads/<branch>`. The global git
+  config rewrites HTTPS GitHub URLs to SSH, which is why the empty config is needed. Do not use `-u` with the token URL,
+  because git then stores the token in `.git/config`.
+- A workflow file (`.github/workflows/*`) needs the `workflow` scope on the token. Without it GitHub rejects the push.
+  Ask the user to refresh the token (`gh auth refresh -h github.com -s workflow`) or to push that commit themselves.
+- `gh` works for PR checks and PR creation (`GIT_CONFIG_GLOBAL` as above).
+- CI does not use Docker. It runs on GitHub's hosted runners: `ubuntu-latest` (gcc and clang matrix, plus a gcc entry with
+  `-msse4.1 -mavx2`) and `ubuntu-24.04-arm` (AArch64, Ninja). Each job installs its packages with `apt-get`.
+- Local machine: the apt packages from the workflow are installed (`build-essential clang cmake ninja-build pkg-config
+  libasound2-dev libudev-dev`), so no sysroot is needed. ziglang (pip, in `/tmp/opencode/cf`) is used only for the
+  AArch64 syntax check, because its libc++ lacks `std::move_only_function`, so it cannot check the client code.
 
-### Build and checks (`/tmp/opencode`; not in the repo, may be gone)
+### Build and checks
 
-- Sysroot for the ALSA and udev headers: `/tmp/opencode/sysroot`. Build with
-  `PKG_CONFIG_PATH=/tmp/opencode/sysroot/usr/lib/x86_64-linux-gnu/pkgconfig PKG_CONFIG_SYSROOT_DIR=/tmp/opencode/sysroot`.
-  If `/tmp` was cleared, recreate the sysroot from the ALSA and udev development packages.
-- Build dir: `/tmp/opencode/build-jack2-cxx23`. Configure with `-DJACK_BUILD_TESTS=ON`, or `ctest` finds nothing.
-  Delete the build dir after removing targets: stale `.so` files from removed drivers still load and break `jackd --help`.
-- `bash /tmp/opencode/check.sh`: configure, build, ctest, the e2e, graph and session tests in freewheel and
-  realtime, and `jack_cpu`. Prints one line per check.
-- Baseline script: `tests/perf/run-baseline.sh <build-dir> U192k <frames> <seconds> <label> "PCH,NVidia"`.
-- `alloccount.so` (allocation counter, LD_PRELOAD, SIGURG for the counts): `g++ -std=c++23 -shared -fPIC -o /tmp/opencode/alloccount.so tests/perf/Alloccount.cpp`.
-  The counter reports cumulative totals; take two signals and subtract for a window.
+- **Use `scripts/ci.sh`** for the build, test and install steps. The workflow calls the same script, so a local run
+  and a CI run take the same steps. Run it per configuration, each in its own build directory:
+
+      CC=gcc CXX=g++ BUILD_DIR=/tmp/build-gcc scripts/ci.sh configure
+      BUILD_DIR=/tmp/build-gcc scripts/ci.sh build
+      BUILD_DIR=/tmp/build-gcc scripts/ci.sh test
+      BUILD_DIR=/tmp/build-gcc scripts/ci.sh install
+
+  The configurations CI runs: gcc; clang (`CC=clang CXX=clang++`); gcc with `EXTRA_FLAGS="-msse4.1 -mavx2"`;
+  AArch64 with `GENERATOR=Ninja` on an arm64 machine.
+- The SIMD and AArch64 branches are not compiled by a default x86 build. Check them with a flag variant
+  (`-msse4.1 -mavx2`) and, for NEON, a syntax check with an AArch64 target. The PR #4 CI failures came from exactly these branches.
 - Before an ALSA run: `pkill -KILL -x jackd; rm -f /dev/shm/jack_*`, and check that
   `/proc/asound/card2/pcm0p/sub0/status` and `pcm0c` say `closed`.
+- Build for timing with `RelWithDebInfo` or `Release`, not a debug or asserts-on tree.
+- `/tmp/opencode/check.sh`, the baseline script and the allocation counter from earlier sessions are described in the
+  repository's `tests/perf/` and `docs/design/validation.md`. `/tmp/opencode` may have been cleared.
 
 ### Thread sanitizer
 
@@ -258,16 +326,17 @@ thread) is in 4 of 5 client runs on both the tree before and after `e2124e88`; i
 
 ## How to resume
 
-1. `cd /home/hjj/Develop/jack2 && git status && git log --oneline -5`.
-2. Read this file and `docs/design/client-api.md`, `docs/design/style.md`.
-3. Rebuild the build dir (see "Build and checks"), then `bash /tmp/opencode/check.sh`.
-4. Read `docs/design/validation.md` for the current state of the checks. Build for timing with `RelWithDebInfo`, not the
-   `check.sh` build directory (no build type, asserts on).
+1. `cd /home/hjj/Develop/jack2 && git status && git log --oneline -5 origin/develop`.
+2. Read this file, `docs/design/style.md`, and `docs/design/client-api.md`.
+3. Start the licensing work on a new branch from `origin/develop`. Build and test it with `scripts/ci.sh` (see "Build and checks").
+4. Read `docs/design/validation.md` for the current state of the checks.
 
 ## Working agreements with the user
 
-- Commit and push each completed step; do not rewrite pushed history.
+- Commit and push each completed step; do not rewrite pushed history. The one exception so far was the author rewrite
+  of PR #4, which the user asked for while the branch was still local only.
 - Keep the realtime path honest: no allocation, locks, or syscalls in the cycle. Report process-wide counts as process-wide.
 - Hardware measurement on the real RT distribution and boards is the user's job at the end. Do not wait for it.
 - Plan mode: write plan files only when asked, in `/home/hjj/.opencode/plan`.
+- Commit author: the repository's configured identity (`moseholm <mose.holm@gmail.com>`). Never use a placeholder.
 - Clean up as you go: delete a ported file in the same commit as its port; remove dead code and headers.
