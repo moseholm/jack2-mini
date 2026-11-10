@@ -95,7 +95,7 @@ static void startServerClassicAux(const char* serverName)
 {
     std::vector<std::string> words = splitCommandLine(readJackdrc());
     if (words.empty()) {
-        words = splitCommandLine(std::format("{}/jackd -T -d {}", JACK_LOCATION, kDefaultDriver));
+        words = splitCommandLine(std::format("{}/jackd -T -d {}", kLocation, kDefaultDriver));
     }
 
     // insert -T and -nserver_name in front of arguments
