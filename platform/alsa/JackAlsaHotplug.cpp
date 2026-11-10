@@ -17,10 +17,11 @@
 #include "JackAlsaHotplug.h"
 #include "JackError.h"
 
+#include <cstdint>
 #include <errno.h>
 #include <libudev.h>
 #include <poll.h>
-#include <stdint.h>
+#include <cstdint>
 #include <string.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
@@ -28,7 +29,7 @@
 namespace jackmini {
 
 // Quiet time after the last sound event before listeners are told.
-static const int kSettleMs = 250;
+static const std::int32_t kSettleMs = 250;
 
 JackAlsaHotplug::JackAlsaHotplug(JackAlsaHotplugListener* listener)
     : fListener(listener)
@@ -86,7 +87,7 @@ bool JackAlsaHotplug::Execute()
     // Waits forever for the first event.  After an event, waits only as long as
     // the burst is still coming in.
     bool pending = false;
-    int ret = poll(fds, 2, -1);
+    std::int32_t ret = poll(fds, 2, -1);
     for (;;) {
         if (ret < 0) {
             if (errno == EINTR) {
@@ -122,12 +123,12 @@ bool JackAlsaHotplug::Execute()
     }
 }
 
-int JackAlsaHotplug::Start()
+std::int32_t JackAlsaHotplug::Start()
 {
     if (fMonitor == nullptr) {
         return 0;
     }
-    uint64_t dummy;
+    std::uint64_t dummy;
     while (read(fWakeFd, &dummy, sizeof(dummy)) > 0) {
     }
     if (fThread.StartSync() < 0) {
@@ -137,12 +138,12 @@ int JackAlsaHotplug::Start()
     return 0;
 }
 
-int JackAlsaHotplug::Stop()
+std::int32_t JackAlsaHotplug::Stop()
 {
     if (fMonitor == nullptr || fWakeFd < 0) {
         return 0;
     }
-    uint64_t one = 1;
+    std::uint64_t one = 1;
     if (write(fWakeFd, &one, sizeof(one)) < 0) {
         jack_error("hot-plug: cannot wake the udev thread");
     }

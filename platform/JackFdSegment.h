@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <cstddef>
 #include <expected>
 #include <span>
@@ -29,7 +30,7 @@ namespace jackmini {
 class UniqueFd {
 public:
     UniqueFd() noexcept = default;
-    explicit UniqueFd(int fd) noexcept
+    explicit UniqueFd(std::int32_t fd) noexcept
         : fFd(fd)
     {
     }
@@ -42,26 +43,26 @@ public:
     UniqueFd& operator=(const UniqueFd&) = delete;
     ~UniqueFd();
 
-    int get() const noexcept { return fFd; }
+    std::int32_t get() const noexcept { return fFd; }
     bool valid() const noexcept { return fFd >= 0; }
-    int release() noexcept;
-    void reset(int fd = -1) noexcept;
+    std::int32_t release() noexcept;
+    void reset(std::int32_t fd = -1) noexcept;
 
 private:
-    int fFd = -1;
+    std::int32_t fFd = -1;
 };
 
 // Sends a message and file descriptors on a connected Unix socket, in one
 // sendmsg().  The descriptors are duplicated into the receiver.  The caller
 // keeps its copies, which it closes when it no longer needs them.
-std::expected<void, std::error_code> SendWithFds(int socket,
+std::expected<void, std::error_code> SendWithFds(std::int32_t socket,
     std::span<const std::byte> data,
-    std::span<const int> fds);
+    std::span<const std::int32_t> fds);
 
 // Receives a message and any descriptors sent with it.  The descriptors are
 // close-on-exec.  Returns the number of data bytes read; 0 means the peer
 // closed the connection.
-std::expected<std::size_t, std::error_code> RecvWithFds(int socket,
+std::expected<std::size_t, std::error_code> RecvWithFds(std::int32_t socket,
     std::span<std::byte> data,
     std::vector<UniqueFd>& fds);
 
@@ -71,7 +72,7 @@ std::expected<UniqueFd, std::error_code> CreateSegment(std::size_t size, const c
 
 // Maps a segment and returns its address.  The mapping is shared, so writes by
 // one process are seen by the others.
-std::expected<void*, std::error_code> MapSegment(int fd, std::size_t size);
+std::expected<void*, std::error_code> MapSegment(std::int32_t fd, std::size_t size);
 void UnmapSegment(void* address, std::size_t size) noexcept;
 
 } // namespace jackmini

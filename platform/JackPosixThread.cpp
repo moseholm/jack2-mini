@@ -19,6 +19,7 @@
 #include "JackError.h"
 #include "JackGlobals.h"
 #include "JackTime.h"
+#include <cstdint>
 #include <string.h> // for memset
 #include <unistd.h> // for _POSIX_PRIORITY_SCHEDULING check
 
@@ -35,7 +36,7 @@ void* JackPosixThread::ThreadHandler(void* arg)
 {
     JackPosixThread* obj = (JackPosixThread*)arg;
     JackRunnableInterface* runnable = obj->fRunnable;
-    int err;
+    std::int32_t err;
 
     if ((err = pthread_setcanceltype(obj->fCancellation, nullptr)) != 0) {
         jack_error("pthread_setcanceltype err = %s", strerror(err));
@@ -64,7 +65,7 @@ void* JackPosixThread::ThreadHandler(void* arg)
     return 0; // never reached
 }
 
-int JackPosixThread::Start()
+std::int32_t JackPosixThread::Start()
 {
     fStatus = kStarting;
 
@@ -77,7 +78,7 @@ int JackPosixThread::Start()
     }
 }
 
-int JackPosixThread::StartSync()
+std::int32_t JackPosixThread::StartSync()
 {
     fStatus = kStarting;
 
@@ -85,7 +86,7 @@ int JackPosixThread::StartSync()
         fStatus = kIdle;
         return -1;
     } else {
-        int count = 0;
+        std::int32_t count = 0;
         while (fStatus == kStarting && ++count < 1000) {
             sleep_microseconds(1000);
         }
@@ -93,12 +94,12 @@ int JackPosixThread::StartSync()
     }
 }
 
-int JackPosixThread::StartImp(jack_native_thread_t* thread, int priority, int realtime, void* (*start_routine)(void*), void* arg)
+std::int32_t JackPosixThread::StartImp(jack_native_thread_t* thread, std::int32_t priority, std::int32_t realtime, void* (*start_routine)(void*), void* arg)
 {
     pthread_attr_t attributes;
     struct sched_param rt_param;
     pthread_attr_init(&attributes);
-    int res;
+    std::int32_t res;
 
     if ((res = pthread_attr_setdetachstate(&attributes, PTHREAD_CREATE_JOINABLE))) {
         jack_error("Cannot request joinable thread creation for thread res = %d", res);
@@ -153,7 +154,7 @@ int JackPosixThread::StartImp(jack_native_thread_t* thread, int priority, int re
     return 0;
 }
 
-int JackPosixThread::Kill()
+std::int32_t JackPosixThread::Kill()
 {
     if (fThread != (jack_native_thread_t)nullptr) { // If thread has been started
         jack_log("JackPosixThread::Kill");
@@ -168,7 +169,7 @@ int JackPosixThread::Kill()
     }
 }
 
-int JackPosixThread::Stop()
+std::int32_t JackPosixThread::Stop()
 {
     if (fThread != (jack_native_thread_t)nullptr) { // If thread has been started
         jack_log("JackPosixThread::Stop");
@@ -182,7 +183,7 @@ int JackPosixThread::Stop()
     }
 }
 
-int JackPosixThread::KillImp(jack_native_thread_t thread)
+std::int32_t JackPosixThread::KillImp(jack_native_thread_t thread)
 {
     if (thread != (jack_native_thread_t)nullptr) { // If thread has been started
         jack_log("JackPosixThread::Kill");
@@ -195,7 +196,7 @@ int JackPosixThread::KillImp(jack_native_thread_t thread)
     }
 }
 
-int JackPosixThread::StopImp(jack_native_thread_t thread)
+std::int32_t JackPosixThread::StopImp(jack_native_thread_t thread)
 {
     if (thread != (jack_native_thread_t)nullptr) { // If thread has been started
         jack_log("JackPosixThread::Stop");
@@ -207,31 +208,31 @@ int JackPosixThread::StopImp(jack_native_thread_t thread)
     }
 }
 
-int JackPosixThread::AcquireRealTime()
+std::int32_t JackPosixThread::AcquireRealTime()
 {
     return (fThread != (jack_native_thread_t)nullptr) ? AcquireRealTimeImp(fThread, fPriority) : -1;
 }
 
-int JackPosixThread::AcquireSelfRealTime()
+std::int32_t JackPosixThread::AcquireSelfRealTime()
 {
     return AcquireRealTimeImp(pthread_self(), fPriority);
 }
 
-int JackPosixThread::AcquireRealTime(int priority)
+std::int32_t JackPosixThread::AcquireRealTime(std::int32_t priority)
 {
     fPriority = priority;
     return AcquireRealTime();
 }
 
-int JackPosixThread::AcquireSelfRealTime(int priority)
+std::int32_t JackPosixThread::AcquireSelfRealTime(std::int32_t priority)
 {
     fPriority = priority;
     return AcquireSelfRealTime();
 }
-int JackPosixThread::AcquireRealTimeImp(jack_native_thread_t thread, int priority)
+std::int32_t JackPosixThread::AcquireRealTimeImp(jack_native_thread_t thread, std::int32_t priority)
 {
     struct sched_param rtparam;
-    int res;
+    std::int32_t res;
     rtparam = { };
     rtparam.sched_priority = priority;
 
@@ -253,20 +254,20 @@ int JackPosixThread::AcquireRealTimeImp(jack_native_thread_t thread, int priorit
     return -1;
 }
 
-int JackPosixThread::DropRealTime()
+std::int32_t JackPosixThread::DropRealTime()
 {
     return (fThread != (jack_native_thread_t)nullptr) ? DropRealTimeImp(fThread) : -1;
 }
 
-int JackPosixThread::DropSelfRealTime()
+std::int32_t JackPosixThread::DropSelfRealTime()
 {
     return DropRealTimeImp(pthread_self());
 }
 
-int JackPosixThread::DropRealTimeImp(jack_native_thread_t thread)
+std::int32_t JackPosixThread::DropRealTimeImp(jack_native_thread_t thread)
 {
     struct sched_param rtparam;
-    int res;
+    std::int32_t res;
     rtparam = { };
     rtparam.sched_priority = 0;
 
@@ -301,10 +302,10 @@ SERVER_EXPORT void ThreadExit()
 
 } // namespace jackmini
 
-bool jack_get_thread_realtime_priority_range(int* min_ptr, int* max_ptr)
+bool jack_get_thread_realtime_priority_range(std::int32_t* min_ptr, std::int32_t* max_ptr)
 {
 #if defined(_POSIX_PRIORITY_SCHEDULING)
-    int min, max;
+    std::int32_t min, max;
 
     min = sched_get_priority_min(JACK_SCHED_POLICY);
     if (min == -1) {
@@ -329,7 +330,7 @@ bool jack_get_thread_realtime_priority_range(int* min_ptr, int* max_ptr)
 
 bool jack_tls_allocate_key(jack_tls_key* key_ptr)
 {
-    int ret;
+    std::int32_t ret;
 
     ret = pthread_key_create(key_ptr, nullptr);
     if (ret != 0) {
@@ -342,7 +343,7 @@ bool jack_tls_allocate_key(jack_tls_key* key_ptr)
 
 bool jack_tls_free_key(jack_tls_key key)
 {
-    int ret;
+    std::int32_t ret;
 
     ret = pthread_key_delete(key);
     if (ret != 0) {
@@ -355,7 +356,7 @@ bool jack_tls_free_key(jack_tls_key key)
 
 bool jack_tls_set(jack_tls_key key, void* data_ptr)
 {
-    int ret;
+    std::int32_t ret;
 
     ret = pthread_setspecific(key, (const void*)data_ptr);
     if (ret != 0) {

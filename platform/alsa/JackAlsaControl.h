@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <alsa/asoundlib.h>
 #include <string>
 
@@ -31,9 +32,9 @@ enum JackAlsaRateDirection {
 // Elements are addressed by numid, which is what ALSA events report.
 
 struct JackAlsaRateElement {
-    unsigned int numid;
-    unsigned int iface;
-    unsigned int index;
+    std::uint32_t numid;
+    std::uint32_t iface;
+    std::uint32_t index;
     std::string name;
     bool user;
     bool writable;
@@ -55,28 +56,28 @@ std::string JackAlsaControlDeviceName(const std::string& pcm);
 // lock fd (>= 0) or -1 when the card is already held by another server or by
 // another device of this server.  The kernel releases the lock if the process
 // dies, so a crashed server never leaves the card locked.
-int JackAlsaControlLockCard(const std::string& ctl_name);
-void JackAlsaControlUnlockCard(int fd);
+std::int32_t JackAlsaControlLockCard(const std::string& ctl_name);
+void JackAlsaControlUnlockCard(std::int32_t fd);
 
 // Element name JACK creates for a direction, e.g. "JACK Secondary Capture Rate".
 // With a device number, the name carries it, e.g. "JACK Secondary Capture Rate d3".
-std::string JackAlsaRateElementName(JackAlsaRateDirection dir, int device);
+std::string JackAlsaRateElementName(JackAlsaRateDirection dir, std::int32_t device);
 
 // Find an existing native rate element.  A configured name is used exclusively;
 // otherwise common names are probed in order.  Returns 0 when an element was
 // selected, 1 when none is suitable (the caller then creates a JACK element), and
 // -1 with *error set when a configured element cannot be used.
-int JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection dir,
+std::int32_t JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection dir,
     const std::string& configured,
     JackAlsaRateElement* out, std::string* error);
 
 // Create the JACK user element for a direction with the given initial rate.
 // A stale element with no owner is replaced; one held by a live client is an error.
-int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, int device, long initial,
+std::int32_t JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, std::int32_t device, std::int64_t initial,
     JackAlsaRateElement* out);
 
-int JackAlsaControlRemoveRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem);
-int JackAlsaControlReadRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, long* value);
-int JackAlsaControlWriteRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, long value);
+std::int32_t JackAlsaControlRemoveRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem);
+std::int32_t JackAlsaControlReadRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, std::int64_t* value);
+std::int32_t JackAlsaControlWriteRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, std::int64_t value);
 
 } // namespace jackmini

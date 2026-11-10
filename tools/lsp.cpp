@@ -16,6 +16,7 @@
 
 #include "tool_common.hpp"
 
+#include <cstdint>
 #include <getopt.h>
 
 #include <cstdio>
@@ -114,7 +115,7 @@ void print_properties(jackmini::PortFlags flags)
 
 } // namespace
 
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
     Options options;
     static const char kShortOptions[] = "s:AclLpthvtuU";
@@ -133,7 +134,7 @@ int main(int argc, char** argv)
         { nullptr, 0, nullptr, 0 },
     };
 
-    int c;
+    std::int32_t c;
     while ((c = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
         switch (c) {
         case 's':

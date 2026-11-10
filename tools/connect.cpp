@@ -18,6 +18,7 @@
 
 #include "tool_common.hpp"
 
+#include <cstdint>
 #include <getopt.h>
 
 #include <chrono>
@@ -66,7 +67,7 @@ std::string name_from_uuid(const std::string& text, const std::map<std::string, 
 // graph in its next cycle; the tool waits for that, as jack_connect waited for the connect callback.
 bool wait_for(const jackmini::Client& client, jackmini::Port source, jackmini::Port destination, bool connected)
 {
-    for (int i = 0; i < 500; i++) {
+    for (std::int32_t i = 0; i < 500; i++) {
         if (client.is_connected(source, destination) == connected) {
             return true;
         }
@@ -77,7 +78,7 @@ bool wait_for(const jackmini::Client& client, jackmini::Port source, jackmini::P
 
 } // namespace
 
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
     std::string server;
     bool use_uuid = false;
@@ -90,7 +91,7 @@ int main(int argc, char** argv)
         { nullptr, 0, nullptr, 0 },
     };
 
-    int c;
+    std::int32_t c;
     while ((c = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
         switch (c) {
         case 's':

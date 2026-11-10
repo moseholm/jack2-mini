@@ -20,6 +20,7 @@
 #include "JackCompilerDeps.h"
 #include "JackConstants.h"
 #include "types.h"
+#include <cstdint>
 #include <string_view>
 
 namespace jackmini {
@@ -35,19 +36,19 @@ class SERVER_EXPORT JackPort {
     friend class JackGraphManager;
 
 private:
-    int fTypeId;
+    std::int32_t fTypeId;
     enum JackPortFlags fFlags;
     char fName[REAL_JACK_PORT_NAME_SIZE + 1];
     char fAlias1[REAL_JACK_PORT_NAME_SIZE + 1];
     char fAlias2[REAL_JACK_PORT_NAME_SIZE + 1];
-    int fRefNum;
+    std::int32_t fRefNum;
     jack_uuid_t fUUID; // set when the port is allocated; the UUID is reported by the client tools
 
     jack_nframes_t fLatency;
     jack_nframes_t fTotalLatency;
     jack_latency_range_t fPlaybackLatency;
     jack_latency_range_t fCaptureLatency;
-    uint8_t fMonitorRequests;
+    std::uint8_t fMonitorRequests;
 
     bool fInUse;
     jack_port_id_t fTied; // Locally tied source port
@@ -60,27 +61,27 @@ private:
 
     // RT
     void ClearBuffer(jack_nframes_t frames);
-    void MixBuffers(void** src_buffers, int src_count, jack_nframes_t frames);
+    void MixBuffers(void** src_buffers, std::int32_t src_count, jack_nframes_t frames);
 
 public:
     JackPort();
 
-    bool Allocate(int refnum, const char* port_name, const char* port_type, JackPortFlags flags);
+    bool Allocate(std::int32_t refnum, const char* port_name, const char* port_type, JackPortFlags flags);
     void Release();
     const char* GetName() const;
     const char* GetShortName() const;
     void SetName(const char* name);
 
-    int GetAliases(char* const aliases[2]);
-    int SetAlias(const char* alias);
-    int UnsetAlias(const char* alias);
+    std::int32_t GetAliases(char* const aliases[2]);
+    std::int32_t SetAlias(const char* alias);
+    std::int32_t UnsetAlias(const char* alias);
     bool NameEquals(std::string_view target);
 
-    int GetFlags() const;
+    std::int32_t GetFlags() const;
     const char* GetType() const;
 
-    int Tie(jack_port_id_t port_index);
-    int UnTie();
+    std::int32_t Tie(jack_port_id_t port_index);
+    std::int32_t UnTie();
 
     jack_nframes_t GetLatency() const;
     void SetLatency(jack_nframes_t latency);
@@ -90,8 +91,8 @@ public:
 
     jack_nframes_t GetTotalLatency() const;
 
-    int RequestMonitor(bool onoff);
-    int EnsureMonitor(bool onoff);
+    std::int32_t RequestMonitor(bool onoff);
+    std::int32_t EnsureMonitor(bool onoff);
     bool MonitoringInput()
     {
         return (fMonitorRequests > 0);
@@ -100,10 +101,10 @@ public:
     // Since we are in shared memory, the resulting pointer cannot be cached, so align it here...
     jack_default_audio_sample_t* GetBuffer()
     {
-        return (jack_default_audio_sample_t*)((uintptr_t)fBuffer & ~31L) + 8;
+        return (jack_default_audio_sample_t*)((std::uintptr_t)fBuffer & ~31L) + 8;
     }
 
-    int GetRefNum() const;
+    std::int32_t GetRefNum() const;
     jack_uuid_t GetUUID() const
     {
         return fUUID;

@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "JackSocket.h"
 #include "jackmini/error.hpp"
 
@@ -35,7 +37,7 @@ public:
     Result<void> Open(const char* server_name);
     void Close();
 
-    void Notify(int refnum, int notify, int value);
+    void Notify(std::int32_t refnum, std::int32_t notify, std::int32_t value);
     void NotifyQuit();
 };
 

@@ -22,6 +22,7 @@
 #include "JackError.h"
 #include "JackGlobals.h"
 #include "JackTime.h"
+#include <cstdint>
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
@@ -49,13 +50,13 @@ JackTransportEngine::JackTransportEngine()
 // compute the number of cycle for timeout
 void JackTransportEngine::SyncTimeout(jack_nframes_t frame_rate, jack_nframes_t buffer_size)
 {
-    long buf_usecs = (long)((buffer_size * (jack_time_t)1000000) / frame_rate);
+    std::int64_t buf_usecs = (std::int64_t)((buffer_size * (jack_time_t)1000000) / frame_rate);
     fSyncTimeLeft = fSyncTimeout / buf_usecs;
-    jack_log("SyncTimeout fSyncTimeout = %ld fSyncTimeLeft = %ld", (long)fSyncTimeout, (long)fSyncTimeLeft);
+    jack_log("SyncTimeout fSyncTimeout = %ld fSyncTimeLeft = %ld", (std::int64_t)fSyncTimeout, (std::int64_t)fSyncTimeLeft);
 }
 
 // Server
-Result<void> JackTransportEngine::ResetTimebase(int refnum)
+Result<void> JackTransportEngine::ResetTimebase(std::int32_t refnum)
 {
     if (fTimeBaseMaster == refnum) {
         jack_position_t* request = WriteNextStateStart(2); // To check
@@ -69,7 +70,7 @@ Result<void> JackTransportEngine::ResetTimebase(int refnum)
 }
 
 // Server
-Result<void> JackTransportEngine::SetTimebaseMaster(int refnum, bool conditionnal)
+Result<void> JackTransportEngine::SetTimebaseMaster(std::int32_t refnum, bool conditionnal)
 {
     if (conditionnal && fTimeBaseMaster > 0) {
         if (refnum != fTimeBaseMaster) {
@@ -90,7 +91,7 @@ Result<void> JackTransportEngine::SetTimebaseMaster(int refnum, bool conditionna
 // RT
 bool JackTransportEngine::CheckAllRolling(std::atomic<JackClientInterface*>* table)
 {
-    for (int i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
         JackClientInterface* client = table[i];
         if (client && client->GetClientControl()->fTransportState != JackTransportRolling) {
             jack_log("CheckAllRolling ref = %ld is not rolling", i);
@@ -104,7 +105,7 @@ bool JackTransportEngine::CheckAllRolling(std::atomic<JackClientInterface*>* tab
 // RT
 void JackTransportEngine::MakeAllStartingLocating(std::atomic<JackClientInterface*>* table)
 {
-    for (int i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
         JackClientInterface* client = table[i];
         if (client) {
             JackClientControl* control = client->GetClientControl();
@@ -120,7 +121,7 @@ void JackTransportEngine::MakeAllStartingLocating(std::atomic<JackClientInterfac
 // RT
 void JackTransportEngine::MakeAllStopping(std::atomic<JackClientInterface*>* table)
 {
-    for (int i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
         JackClientInterface* client = table[i];
         if (client) {
             JackClientControl* control = client->GetClientControl();
@@ -135,7 +136,7 @@ void JackTransportEngine::MakeAllStopping(std::atomic<JackClientInterface*>* tab
 // RT
 void JackTransportEngine::MakeAllLocating(std::atomic<JackClientInterface*>* table)
 {
-    for (int i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
         JackClientInterface* client = table[i];
         if (client) {
             JackClientControl* control = client->GetClientControl();
@@ -289,8 +290,8 @@ jack_nframes_t JackTransportEngine::GetCurrentFrame()
 // RT, client
 void JackTransportEngine::CopyPosition(jack_position_t* from, jack_position_t* to)
 {
-    int tries = 0;
-    long timeout = 1000;
+    std::int32_t tries = 0;
+    std::int64_t timeout = 1000;
 
     do {
         // throttle the busy wait if we don't get the answer

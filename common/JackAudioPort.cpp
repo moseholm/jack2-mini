@@ -19,6 +19,7 @@
 #include "JackGlobals.h"
 #include "JackPortType.h"
 
+#include <cstdint>
 #include <string.h>
 
 #if defined(__SSE__)
@@ -92,7 +93,7 @@ static inline void MixAudioBuffer(jack_default_audio_sample_t* mixbuffer, jack_d
     }
 }
 
-static void AudioBufferMixdown(void* mixbuffer, void** src_buffers, int src_count, jack_nframes_t nframes)
+static void AudioBufferMixdown(void* mixbuffer, void** src_buffers, std::int32_t src_count, jack_nframes_t nframes)
 {
     void* buffer;
 
@@ -138,7 +139,7 @@ static void AudioBufferMixdown(void* mixbuffer, void** src_buffers, int src_coun
 #endif
 
     // Mix remaining buffers
-    for (int i = 1; i < src_count; ++i) {
+    for (std::int32_t i = 1; i < src_count; ++i) {
         buffer = src_buffers[i];
         MixAudioBuffer(static_cast<jack_default_audio_sample_t*>(mixbuffer), static_cast<jack_default_audio_sample_t*>(buffer), nframes);
     }

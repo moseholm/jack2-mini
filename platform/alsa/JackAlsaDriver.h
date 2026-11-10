@@ -30,7 +30,8 @@
 #include "JackTime.h"
 #include "pcm_session.hpp"
 
-#include <stdint.h>
+#include <cstdint>
+#include <cstdint>
 #include <atomic>
 #include <mutex>
 #include <vector>
@@ -56,12 +57,12 @@ private:
     std::vector<JackAlsaSecondaryCard*> fSecondaryCards; // owned cards, guarded by fCardsMutex
     JackAlsaCardSlots fSlots; // the RT thread's view of promoted cards
     std::mutex fCardsMutex;
-    int fNextCardId;
+    std::int32_t fNextCardId;
     JackAlsaControlMonitor* fControlMonitor;
     JackAlsaHotplug* fHotplug;
     JackAlsaReconfigWorker* fReconfigWorker;
-    std::vector<int> fCardLocks;
-    std::atomic<uint64_t> fRTEpoch;
+    std::vector<std::int32_t> fCardLocks;
+    std::atomic<std::uint64_t> fRTEpoch;
     std::atomic<bool> fRTRunning;
     std::atomic<bool> fRestarting;
     std::vector<std::string> fCardLockNames;
@@ -75,12 +76,12 @@ private:
 
     void UpdateLatencies();
     void UpdateSecondaryLatencies();
-    JackAlsaSecondaryCard* FindCard(int id);
+    JackAlsaSecondaryCard* FindCard(std::int32_t id);
     bool PromoteCard(JackAlsaSecondaryCard* card);
     void UnregisterCardPorts(JackAlsaSecondaryCard* card);
     void RetireCard(JackAlsaSecondaryCard* card);
     bool WaitForRTSafePoint();
-    void PrimaryFailed(int status);
+    void PrimaryFailed(std::int32_t status);
     std::atomic<bool> fPrimaryFailed;
     JackAlsaSecondaryCard* CreateCard(const JackAlsaSecondaryConfig& cfg, JackResamplerFactory* factory);
     bool AddCard(const JackAlsaSecondaryConfig& cfg);
@@ -88,17 +89,17 @@ private:
 
 public:
     // Called on the RT thread when the ALSA core asks for a restart after an xrun.
-    int RestartFromRT();
+    std::int32_t RestartFromRT();
 
 private:
     void StopSecondaryCards();
-    int OpenPrimary(jack_nframes_t frames_per_cycle);
+    std::int32_t OpenPrimary(jack_nframes_t frames_per_cycle);
     void StartControlMonitoring();
     void StopControlMonitoring();
 
     // JackAlsaRateRequestHandler
-    virtual void HandleRateRequest(int card, JackAlsaRateDirection dir, long value);
-    virtual void HandleCardFailure(int card);
+    virtual void HandleRateRequest(std::int32_t card, JackAlsaRateDirection dir, std::int64_t value);
+    virtual void HandleCardFailure(std::int32_t card);
     virtual void HandleSoundChanged();
 
 public:
@@ -120,7 +121,7 @@ public:
     {
     }
 
-    int Open(jack_nframes_t buffer_size,
+    std::int32_t Open(jack_nframes_t buffer_size,
         jack_nframes_t user_nperiods,
         jack_nframes_t samplerate,
         bool hw_monitoring,
@@ -130,8 +131,8 @@ public:
         DitherAlgorithm dither,
         bool soft_mode,
         bool monitor,
-        int inchannels,
-        int outchannels,
+        std::int32_t inchannels,
+        std::int32_t outchannels,
         bool shorts_first,
         const char* capture_driver_name,
         const char* playback_driver_name,
@@ -140,15 +141,15 @@ public:
         const std::vector<JackAlsaSecondaryConfig>& secondaries,
         const std::vector<std::string>& excluded_cards);
 
-    int Close();
-    int Attach();
-    int Detach();
+    std::int32_t Close();
+    std::int32_t Attach();
+    std::int32_t Detach();
 
-    int Start();
-    int Stop();
+    std::int32_t Start();
+    std::int32_t Stop();
 
-    int Read();
-    int Write();
+    std::int32_t Read();
+    std::int32_t Write();
 
     // BufferSize can be changed
     bool IsFixedBufferSize()
@@ -156,7 +157,7 @@ public:
         return false;
     }
 
-    int SetBufferSize(jack_nframes_t buffer_size);
+    std::int32_t SetBufferSize(jack_nframes_t buffer_size);
 
     void ReadInputAux(jack_nframes_t orig_nframes, const jackmini::alsa::MappedFrames& mapped, std::ptrdiff_t nread);
     void ClearOutputAux();

@@ -19,6 +19,7 @@
 #include "JackEngineControl.h"
 #include "JackError.h"
 #include "JackGlobals.h"
+#include <cstdint>
 #include <assert.h>
 #include <iostream>
 #include <set>
@@ -27,7 +28,7 @@ namespace jackmini {
 
 JackConnectionManager::JackConnectionManager()
 {
-    int i;
+    std::int32_t i;
     static_assert(offsetof(JackConnectionManager, fInputCounter) % sizeof(UInt32) == 0,
         "fInputCounter must be aligned within JackConnectionManager");
 
@@ -53,7 +54,7 @@ JackConnectionManager::~JackConnectionManager()
 // Internal API
 //--------------
 
-bool JackConnectionManager::IsLoopPathAux(int ref1, int ref2) const
+bool JackConnectionManager::IsLoopPathAux(std::int32_t ref1, std::int32_t ref2) const
 {
     jack_log("JackConnectionManager::IsLoopPathAux ref1 = %ld ref2 = %ld", ref1, ref2);
 
@@ -68,7 +69,7 @@ bool JackConnectionManager::IsLoopPathAux(int ref1, int ref2) const
         if (fConnectionRef.IsInsideTable(ref2, output)) { // If ref2 is contained in the outputs of ref1
             return true;
         } else {
-            for (int i = 0; i < CLIENT_NUM && output[i] != EMPTY; i++) { // Otherwise recurse for all ref1 outputs
+            for (std::int32_t i = 0; i < CLIENT_NUM && output[i] != EMPTY; i++) { // Otherwise recurse for all ref1 outputs
                 if (IsLoopPathAux(output[i], ref2)) {
                     return true; // Stop when a path is found
                 }
@@ -125,7 +126,7 @@ const jack_int_t* JackConnectionManager::GetConnections(jack_port_id_t port_inde
 //------------------------
 
 // \brief Add an input port to a client.
-Result<void> JackConnectionManager::AddInputPort(int refnum, jack_port_id_t port_index)
+Result<void> JackConnectionManager::AddInputPort(std::int32_t refnum, jack_port_id_t port_index)
 {
     if (fInputPort[refnum].AddItem(port_index)) {
         jack_log("JackConnectionManager::AddInputPort ref = %ld port = %ld", refnum, port_index);
@@ -137,7 +138,7 @@ Result<void> JackConnectionManager::AddInputPort(int refnum, jack_port_id_t port
 }
 
 // \brief Add an output port to a client.
-Result<void> JackConnectionManager::AddOutputPort(int refnum, jack_port_id_t port_index)
+Result<void> JackConnectionManager::AddOutputPort(std::int32_t refnum, jack_port_id_t port_index)
 {
     if (fOutputPort[refnum].AddItem(port_index)) {
         jack_log("JackConnectionManager::AddOutputPort ref = %ld port = %ld", refnum, port_index);
@@ -149,7 +150,7 @@ Result<void> JackConnectionManager::AddOutputPort(int refnum, jack_port_id_t por
 }
 
 // \brief Remove an input port from a client.
-Result<void> JackConnectionManager::RemoveInputPort(int refnum, jack_port_id_t port_index)
+Result<void> JackConnectionManager::RemoveInputPort(std::int32_t refnum, jack_port_id_t port_index)
 {
     jack_log("JackConnectionManager::RemoveInputPort ref = %ld port_index = %ld ", refnum, port_index);
 
@@ -162,7 +163,7 @@ Result<void> JackConnectionManager::RemoveInputPort(int refnum, jack_port_id_t p
 }
 
 // \brief Remove an output port from a client.
-Result<void> JackConnectionManager::RemoveOutputPort(int refnum, jack_port_id_t port_index)
+Result<void> JackConnectionManager::RemoveOutputPort(std::int32_t refnum, jack_port_id_t port_index)
 {
     jack_log("JackConnectionManager::RemoveOutputPort ref = %ld port_index = %ld ", refnum, port_index);
 
@@ -175,19 +176,19 @@ Result<void> JackConnectionManager::RemoveOutputPort(int refnum, jack_port_id_t 
 }
 
 // \brief Get the input port array of a given refnum.
-const jack_int_t* JackConnectionManager::GetInputPorts(int refnum)
+const jack_int_t* JackConnectionManager::GetInputPorts(std::int32_t refnum)
 {
     return fInputPort[refnum].GetItems();
 }
 
 // \brief Get the output port array of a given refnum.
-const jack_int_t* JackConnectionManager::GetOutputPorts(int refnum)
+const jack_int_t* JackConnectionManager::GetOutputPorts(std::int32_t refnum)
 {
     return fOutputPort[refnum].GetItems();
 }
 
 // \brief Init the refnum.
-void JackConnectionManager::InitRefNum(int refnum)
+void JackConnectionManager::InitRefNum(std::int32_t refnum)
 {
     fInputPort[refnum].Init();
     fOutputPort[refnum].Init();
@@ -200,14 +201,14 @@ void JackConnectionManager::InitRefNum(int refnum)
 void JackConnectionManager::ResetGraph(JackClientTiming* timing, std::atomic<SInt32>* live)
 {
     // Reset activation counter : must be done *before* starting to resume clients
-    for (int i = 0; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
         live[i].store(fInputCounter[i].GetCount());
         timing[i].fStatus = NotTriggered;
     }
 }
 
 // \brief Wait on the input synchro.
-Result<void> JackConnectionManager::SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, long time_out_usec)
+Result<void> JackConnectionManager::SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::int64_t time_out_usec)
 {
     bool res;
     if ((res = table[control->fRefNum].TimedWait(time_out_usec))) {
@@ -231,7 +232,7 @@ Result<void> JackConnectionManager::ResumeRefNum(JackClientControl* control, Jac
     timing[control->fRefNum].fStatus = Finished;
     timing[control->fRefNum].fFinishedAt = current_date;
 
-    for (int i = 0; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
 
         // Signal connected clients or drivers
         if (output_ref[i] > 0) {
@@ -252,7 +253,7 @@ Result<void> JackConnectionManager::ResumeRefNum(JackClientControl* control, Jac
 
 static bool HasNoConnection(jack_int_t* table)
 {
-    for (int ref = 0; ref < CLIENT_NUM; ref++) {
+    for (std::int32_t ref = 0; ref < CLIENT_NUM; ref++) {
         if (table[ref] > 0)
             return false;
     }
@@ -277,7 +278,7 @@ void JackConnectionManager::TopologicalSort(std::vector<jack_int_t>& sorted)
         sorted.push_back(refnum);
         level.erase(level.begin());
         const jack_int_t* output_ref1 = tmp->GetItems(refnum);
-        for (int dst = 0; dst < CLIENT_NUM; dst++) {
+        for (std::int32_t dst = 0; dst < CLIENT_NUM; dst++) {
             if (output_ref1[dst] > 0) {
                 tmp->ClearItem(refnum, dst);
                 jack_int_t output_ref2[CLIENT_NUM];
@@ -295,8 +296,8 @@ void JackConnectionManager::TopologicalSort(std::vector<jack_int_t>& sorted)
 // \brief Increment the number of ports between 2 clients, if the 2 clients become connected, then the Activation counter is updated.
 void JackConnectionManager::IncDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst)
 {
-    int ref1 = GetOutputRefNum(port_src);
-    int ref2 = GetInputRefNum(port_dst);
+    std::int32_t ref1 = GetOutputRefNum(port_src);
+    std::int32_t ref2 = GetInputRefNum(port_dst);
 
     assert(ref1 >= 0 && ref2 >= 0);
 
@@ -307,8 +308,8 @@ void JackConnectionManager::IncDirectConnection(jack_port_id_t port_src, jack_po
 // \brief Decrement the number of ports between 2 clients, if the 2 clients become disconnected, then the Activation counter is updated.
 void JackConnectionManager::DecDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst)
 {
-    int ref1 = GetOutputRefNum(port_src);
-    int ref2 = GetInputRefNum(port_dst);
+    std::int32_t ref1 = GetOutputRefNum(port_src);
+    std::int32_t ref2 = GetInputRefNum(port_dst);
 
     assert(ref1 >= 0 && ref2 >= 0);
 
@@ -317,7 +318,7 @@ void JackConnectionManager::DecDirectConnection(jack_port_id_t port_src, jack_po
 }
 
 // \brief Directly connect 2 reference numbers.
-void JackConnectionManager::DirectConnect(int ref1, int ref2)
+void JackConnectionManager::DirectConnect(std::int32_t ref1, std::int32_t ref2)
 {
     assert(ref1 >= 0 && ref2 >= 0);
 
@@ -330,7 +331,7 @@ void JackConnectionManager::DirectConnect(int ref1, int ref2)
 }
 
 // \brief Directly disconnect 2 reference numbers.
-void JackConnectionManager::DirectDisconnect(int ref1, int ref2)
+void JackConnectionManager::DirectDisconnect(std::int32_t ref1, std::int32_t ref2)
 {
     assert(ref1 >= 0 && ref2 >= 0);
 
@@ -344,14 +345,14 @@ void JackConnectionManager::DirectDisconnect(int ref1, int ref2)
 
 // \brief Deactivates or activates a client. Its connections are kept; the activation count of each client it feeds
 // follows: they stop counting while the client is inactive.
-void JackConnectionManager::SetInactive(int refnum, bool inactive)
+void JackConnectionManager::SetInactive(std::int32_t refnum, bool inactive)
 {
     assert(refnum >= 0 && refnum < CLIENT_NUM);
     if (IsInactive(refnum) == inactive) {
         return;
     }
     const jack_int_t* outputs = fConnectionRef.GetItems(refnum);
-    for (int ref = 0; ref < CLIENT_NUM; ref++) {
+    for (std::int32_t ref = 0; ref < CLIENT_NUM; ref++) {
         if (outputs[ref] > 0) {
             if (inactive) {
                 fInputCounter[ref].DecValue();
@@ -364,16 +365,16 @@ void JackConnectionManager::SetInactive(int refnum, bool inactive)
 }
 
 // \brief Returns the connections state between 2 refnum.
-bool JackConnectionManager::IsDirectConnection(int ref1, int ref2) const
+bool JackConnectionManager::IsDirectConnection(std::int32_t ref1, std::int32_t ref2) const
 {
     assert(ref1 >= 0 && ref2 >= 0);
     return (fConnectionRef.GetItemCount(ref1, ref2) > 0);
 }
 
 // \brief Get the client refnum of a given input port.
-int JackConnectionManager::GetInputRefNum(jack_port_id_t port_index) const
+std::int32_t JackConnectionManager::GetInputRefNum(jack_port_id_t port_index) const
 {
-    for (int i = 0; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
         if (fInputPort[i].CheckItem(port_index)) {
             return i;
         }
@@ -383,9 +384,9 @@ int JackConnectionManager::GetInputRefNum(jack_port_id_t port_index) const
 }
 
 // \brief Get the client refnum of a given output port.
-int JackConnectionManager::GetOutputRefNum(jack_port_id_t port_index) const
+std::int32_t JackConnectionManager::GetOutputRefNum(jack_port_id_t port_index) const
 {
-    for (int i = 0; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
         if (fOutputPort[i].CheckItem(port_index)) {
             return i;
         }
@@ -407,8 +408,8 @@ bool JackConnectionManager::IsFeedbackConnection(jack_port_id_t port_src, jack_p
 
 bool JackConnectionManager::IncFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst)
 {
-    int ref1 = GetOutputRefNum(port_src);
-    int ref2 = GetInputRefNum(port_dst);
+    std::int32_t ref1 = GetOutputRefNum(port_src);
+    std::int32_t ref2 = GetInputRefNum(port_dst);
 
     // Add an activation connection in the other direction
     jack_log("JackConnectionManager::IncFeedbackConnection ref1 = %ld ref2 = %ld", ref1, ref2);
@@ -423,8 +424,8 @@ bool JackConnectionManager::IncFeedbackConnection(jack_port_id_t port_src, jack_
 
 bool JackConnectionManager::DecFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst)
 {
-    int ref1 = GetOutputRefNum(port_src);
-    int ref2 = GetInputRefNum(port_dst);
+    std::int32_t ref1 = GetOutputRefNum(port_src);
+    std::int32_t ref2 = GetInputRefNum(port_dst);
 
     // Remove an activation connection in the other direction
     jack_log("JackConnectionManager::DecFeedbackConnection ref1 = %ld ref2 = %ld", ref1, ref2);

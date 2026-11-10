@@ -19,6 +19,7 @@
 
 #include "JackCompilerDeps.h"
 #include "JackTypes.h"
+#include <cstdint>
 #include <atomic>
 
 namespace jackmini {
@@ -57,13 +58,13 @@ public:
 
 protected:
     JackRunnableInterface* fRunnable;
-    int fPriority;
+    std::int32_t fPriority;
     bool fRealTime;
     std::atomic<kThreadState> fStatus;
-    int fCancellation;
+    std::int32_t fCancellation;
 
 public:
-    JackThreadInterface(JackRunnableInterface* runnable, int priority, bool real_time, int cancellation)
+    JackThreadInterface(JackRunnableInterface* runnable, std::int32_t priority, bool real_time, std::int32_t cancellation)
         : fRunnable(runnable)
         , fPriority(priority)
         , fRealTime(real_time)
@@ -81,37 +82,37 @@ public:
     {
     }
 
-    int Start();
-    int StartSync();
-    int Kill();
-    int Stop();
+    std::int32_t Start();
+    std::int32_t StartSync();
+    std::int32_t Kill();
+    std::int32_t Stop();
     void Terminate();
 
-    int AcquireRealTime(); // Used when called from another thread
-    int AcquireSelfRealTime(); // Used when called from thread itself
+    std::int32_t AcquireRealTime(); // Used when called from another thread
+    std::int32_t AcquireSelfRealTime(); // Used when called from thread itself
 
-    int AcquireRealTime(int priority); // Used when called from another thread
-    int AcquireSelfRealTime(int priority); // Used when called from thread itself
+    std::int32_t AcquireRealTime(std::int32_t priority); // Used when called from another thread
+    std::int32_t AcquireSelfRealTime(std::int32_t priority); // Used when called from thread itself
 
-    int DropRealTime(); // Used when called from another thread
-    int DropSelfRealTime(); // Used when called from thread itself
+    std::int32_t DropRealTime(); // Used when called from another thread
+    std::int32_t DropSelfRealTime(); // Used when called from thread itself
 
     jack_native_thread_t GetThreadID();
     bool IsThread();
 
-    static int AcquireRealTimeImp(jack_native_thread_t thread, int priority);
-    static int AcquireRealTimeImp(jack_native_thread_t thread, int priority, UInt64 period, UInt64 computation, UInt64 constraint);
-    static int DropRealTimeImp(jack_native_thread_t thread);
-    static int StartImp(jack_native_thread_t* thread, int priority, int realtime, void* (*start_routine)(void*), void* arg);
-    static int StopImp(jack_native_thread_t thread);
-    static int KillImp(jack_native_thread_t thread);
+    static std::int32_t AcquireRealTimeImp(jack_native_thread_t thread, std::int32_t priority);
+    static std::int32_t AcquireRealTimeImp(jack_native_thread_t thread, std::int32_t priority, UInt64 period, UInt64 computation, UInt64 constraint);
+    static std::int32_t DropRealTimeImp(jack_native_thread_t thread);
+    static std::int32_t StartImp(jack_native_thread_t* thread, std::int32_t priority, std::int32_t realtime, void* (*start_routine)(void*), void* arg);
+    static std::int32_t StopImp(jack_native_thread_t thread);
+    static std::int32_t KillImp(jack_native_thread_t thread);
 };
 
 } // namespace detail
 
 } // namespace jackmini
 
-bool jack_get_thread_realtime_priority_range(int* min_ptr, int* max_ptr);
+bool jack_get_thread_realtime_priority_range(std::int32_t* min_ptr, std::int32_t* max_ptr);
 
 bool jack_tls_allocate_key(jack_tls_key* key_ptr);
 bool jack_tls_free_key(jack_tls_key key);

@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "JackTimedDriver.h"
 
 namespace jackmini {
@@ -34,7 +36,7 @@ public:
     {
     }
 
-    virtual int Process()
+    virtual std::int32_t Process()
     {
         JackDriver::CycleTakeBeginTime();
 

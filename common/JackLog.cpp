@@ -17,12 +17,13 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackLog.h"
+#include <cstdint>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <array>
 
-static void jack_format_and_log(int level, const char* prefix, const char* fmt, va_list ap)
+static void jack_format_and_log(std::int32_t level, const char* prefix, const char* fmt, va_list ap)
 {
     std::array<char, 256> buffer { };
     size_t len;
@@ -39,7 +40,7 @@ static void jack_format_and_log(int level, const char* prefix, const char* fmt, 
     jack_log_router(level, buffer.data());
 }
 
-void jack_log_message(int level, const char* prefix, const char* fmt, va_list ap)
+void jack_log_message(std::int32_t level, const char* prefix, const char* fmt, va_list ap)
 {
     jack_format_and_log(level, prefix, fmt, ap);
 }
@@ -60,7 +61,7 @@ void jack_info(const char* fmt, ...)
     va_end(ap);
 }
 
-void jack_log_direct(int level, const char* message)
+void jack_log_direct(std::int32_t level, const char* message)
 {
     void (*log_callback)(const char*);
 

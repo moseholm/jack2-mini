@@ -1,3 +1,5 @@
+#include <cstdint>
+
 // Copyright (C) 2001 Paul Davis
 // Copyright (C) 2004-2008 Grame
 //
@@ -35,17 +37,17 @@ JackThreadedDriver::~JackThreadedDriver()
     delete fDriver;
 }
 
-int JackThreadedDriver::Open()
+std::int32_t JackThreadedDriver::Open()
 {
     return fDriver->Open();
 }
 
-int JackThreadedDriver::Open(jack_nframes_t buffer_size,
+std::int32_t JackThreadedDriver::Open(jack_nframes_t buffer_size,
     jack_nframes_t samplerate,
     bool capturing,
     bool playing,
-    int inchannels,
-    int outchannels,
+    std::int32_t inchannels,
+    std::int32_t outchannels,
     bool monitor,
     const char* capture_driver_name,
     const char* playback_driver_name,
@@ -60,32 +62,32 @@ int JackThreadedDriver::Open(jack_nframes_t buffer_size,
         capture_latency, playback_latency);
 }
 
-int JackThreadedDriver::Close()
+std::int32_t JackThreadedDriver::Close()
 {
     return fDriver->Close();
 }
 
-int JackThreadedDriver::Process()
+std::int32_t JackThreadedDriver::Process()
 {
     return fDriver->Process();
 }
 
-int JackThreadedDriver::Attach()
+std::int32_t JackThreadedDriver::Attach()
 {
     return fDriver->Attach();
 }
 
-int JackThreadedDriver::Detach()
+std::int32_t JackThreadedDriver::Detach()
 {
     return fDriver->Detach();
 }
 
-int JackThreadedDriver::Read()
+std::int32_t JackThreadedDriver::Read()
 {
     return fDriver->Read();
 }
 
-int JackThreadedDriver::Write()
+std::int32_t JackThreadedDriver::Write()
 {
     return fDriver->Write();
 }
@@ -95,12 +97,12 @@ bool JackThreadedDriver::IsFixedBufferSize()
     return fDriver->IsFixedBufferSize();
 }
 
-int JackThreadedDriver::SetBufferSize(jack_nframes_t buffer_size)
+std::int32_t JackThreadedDriver::SetBufferSize(jack_nframes_t buffer_size)
 {
     return fDriver->SetBufferSize(buffer_size);
 }
 
-int JackThreadedDriver::SetSampleRate(jack_nframes_t sample_rate)
+std::int32_t JackThreadedDriver::SetSampleRate(jack_nframes_t sample_rate)
 {
     return fDriver->SetSampleRate(sample_rate);
 }
@@ -125,42 +127,42 @@ void JackThreadedDriver::RemoveSlave(JackDriverInterface* slave)
     fDriver->RemoveSlave(slave);
 }
 
-int JackThreadedDriver::ProcessReadSlaves()
+std::int32_t JackThreadedDriver::ProcessReadSlaves()
 {
     return fDriver->ProcessReadSlaves();
 }
 
-int JackThreadedDriver::ProcessWriteSlaves()
+std::int32_t JackThreadedDriver::ProcessWriteSlaves()
 {
     return fDriver->ProcessWriteSlaves();
 }
 
-int JackThreadedDriver::ProcessRead()
+std::int32_t JackThreadedDriver::ProcessRead()
 {
     return fDriver->ProcessRead();
 }
 
-int JackThreadedDriver::ProcessWrite()
+std::int32_t JackThreadedDriver::ProcessWrite()
 {
     return fDriver->ProcessWrite();
 }
 
-int JackThreadedDriver::ProcessReadSync()
+std::int32_t JackThreadedDriver::ProcessReadSync()
 {
     return fDriver->ProcessReadSync();
 }
 
-int JackThreadedDriver::ProcessWriteSync()
+std::int32_t JackThreadedDriver::ProcessWriteSync()
 {
     return fDriver->ProcessWriteSync();
 }
 
-int JackThreadedDriver::ProcessReadAsync()
+std::int32_t JackThreadedDriver::ProcessReadAsync()
 {
     return fDriver->ProcessReadAsync();
 }
 
-int JackThreadedDriver::ProcessWriteAsync()
+std::int32_t JackThreadedDriver::ProcessWriteAsync()
 {
     return fDriver->ProcessWriteAsync();
 }
@@ -170,7 +172,7 @@ std::list<JackDriverInterface*> JackThreadedDriver::GetSlaves()
     return fDriver->GetSlaves();
 }
 
-int JackThreadedDriver::ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2)
+std::int32_t JackThreadedDriver::ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2)
 {
     return fDriver->ClientNotify(refnum, name, notify, sync, message, value1, value2);
 }
@@ -190,7 +192,7 @@ bool JackThreadedDriver::IsRunning() const
     return fDriver->IsRunning();
 }
 
-int JackThreadedDriver::Start()
+std::int32_t JackThreadedDriver::Start()
 {
     jack_log("JackThreadedDriver::Start");
 
@@ -206,7 +208,7 @@ int JackThreadedDriver::Start()
     return 0;
 }
 
-int JackThreadedDriver::Stop()
+std::int32_t JackThreadedDriver::Stop()
 {
     jack_log("JackThreadedDriver::Stop");
 

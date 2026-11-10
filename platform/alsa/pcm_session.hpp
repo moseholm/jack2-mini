@@ -20,6 +20,7 @@
 
 #include "memops.h"
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -27,10 +28,10 @@ namespace jackmini::alsa {
 
 using PcmCycle = Cycle<Device>;
 
-using ReadCopyFunction = void (*)(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples,
-    unsigned long src_skip);
-using WriteCopyFunction = void (*)(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples,
-    unsigned long dst_skip, dither_state_t* state);
+using ReadCopyFunction = void (*)(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples,
+    std::uint64_t src_skip);
+using WriteCopyFunction = void (*)(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples,
+    std::uint64_t dst_skip, dither_state_t* state);
 
 // One ALSA card as the JACK drivers use it: the device, the cycle core on the device, and the sample conversion
 // between the device buffers and JACK's float buffers.  The conversion functions are chosen once, in open().
@@ -43,7 +44,7 @@ public:
 
     // Opens and configures the streams, and builds the cycle.  Returns 0 on success, -1 on error.  The request is
     // updated with the rate and the period count that were set.
-    int open(const char* capture_name, const char* playback_name, Request& request, DitherAlgorithm dither);
+    std::int32_t open(const char* capture_name, const char* playback_name, Request& request, DitherAlgorithm dither);
     void close();
     bool is_open() const { return cycle_ != nullptr; }
     bool has_capture() const { return device_.has_capture(); }
@@ -57,11 +58,11 @@ public:
     std::uint32_t periods() const { return periods_; }
     std::uint32_t rate() const { return rate_; }
 
-    int start() { return cycle_->start(); }
-    int stop() { return cycle_->stop(); }
+    std::int32_t start() { return cycle_->start(); }
+    std::int32_t stop() { return cycle_->stop(); }
     WaitResult wait() { return cycle_->wait(); }
-    int read(std::uint32_t frames) { return cycle_->read(frames); }
-    int write(std::uint32_t frames) { return cycle_->write(frames); }
+    std::int32_t read(std::uint32_t frames) { return cycle_->read(frames); }
+    std::int32_t write(std::uint32_t frames) { return cycle_->write(frames); }
     PcmCycle& cycle() { return *cycle_; }
 
     // Converts one channel between a mapped device area and a JACK buffer.  The playback channel is marked done,

@@ -19,6 +19,7 @@
 
 #include "alsa_fake_backend.hpp"
 
+#include <cstdint>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -27,8 +28,8 @@
 
 using namespace jackmini::alsa;
 
-static int g_failures = 0;
-static int g_checks = 0;
+static std::int32_t g_failures = 0;
+static std::int32_t g_checks = 0;
 
 #define CHECK(cond)                                                         \
     do {                                                                    \
@@ -54,10 +55,10 @@ Config MakeConfig(std::uint32_t frames, std::uint32_t periods, bool not_synced =
 }
 
 struct RestartCounter {
-    int count = 0;
+    std::int32_t count = 0;
 };
 
-int RestartThunk(void* arg)
+std::int32_t RestartThunk(void* arg)
 {
     ++static_cast<RestartCounter*>(arg)->count;
     return 0;
@@ -153,7 +154,7 @@ void TestCycleCounts()
     callbacks.write_output = WriteThunk;
     cycle.set_callbacks(callbacks);
 
-    for (int i = 0; i < 100; ++i) {
+    for (std::int32_t i = 0; i < 100; ++i) {
         backend.capture().avail = 64;
         backend.playback().avail = 64;
         const WaitResult result = cycle.wait();
@@ -261,7 +262,7 @@ void TestPollTimeout()
     callbacks.restart = RestartThunk;
     cycle.set_callbacks(callbacks);
 
-    for (int i = 0; i < 6; ++i) {
+    for (std::int32_t i = 0; i < 6; ++i) {
         backend.script_poll(0);
     }
 

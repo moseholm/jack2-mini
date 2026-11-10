@@ -1,3 +1,5 @@
+#include <cstdint>
+
 // Copyright (C) 2004-2008 Grame
 //
 // This program is free software; you can redistribute it and/or modify
@@ -23,7 +25,7 @@
 namespace jackmini {
 
 // Server to client
-int JackSocketNotifyChannel::Open(const char* name)
+std::int32_t JackSocketNotifyChannel::Open(const char* name)
 {
     jack_log("JackSocketNotifyChannel::Open name = %s", name);
 
@@ -35,13 +37,13 @@ int JackSocketNotifyChannel::Open(const char* name)
     return Start();
 }
 
-int JackSocketNotifyChannel::Attach(int fd)
+std::int32_t JackSocketNotifyChannel::Attach(std::int32_t fd)
 {
     fNotifySocket = JackClientSocket(fd);
     return Start();
 }
 
-int JackSocketNotifyChannel::Start()
+std::int32_t JackSocketNotifyChannel::Start()
 {
     // Use a time out for notifications
     fNotifySocket.SetReadTimeOut(SOCKET_TIME_OUT);
@@ -70,7 +72,7 @@ void JackSocketNotifyChannel::Close()
 
 // Called from the server's threads.  It does not wait for the client, except for a synchronous notification, whose
 // result the client sends back.
-void JackSocketNotifyChannel::ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2, int* result)
+void JackSocketNotifyChannel::ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2, std::int32_t* result)
 {
     auto pending = std::make_shared<Pending>();
     pending->event = std::make_shared<JackClientNotification>(name, refnum, notify, sync, message, value1, value2);
@@ -118,7 +120,7 @@ void JackSocketNotifyChannel::Writer()
         const std::uint32_t dropped = std::exchange(fDropped, 0);
 
         lock.unlock();
-        const int result = Send(*pending, dropped);
+        const std::int32_t result = Send(*pending, dropped);
         lock.lock();
 
         pending->result = result;
@@ -137,10 +139,10 @@ void JackSocketNotifyChannel::Writer()
     fCondition.notify_all();
 }
 
-int JackSocketNotifyChannel::Send(Pending& pending, std::uint32_t dropped)
+std::int32_t JackSocketNotifyChannel::Send(Pending& pending, std::uint32_t dropped)
 {
     if (dropped != 0) {
-        JackClientNotification notice("", pending.event->fRefNum, kDropped, 0, nullptr, static_cast<int>(dropped), 0);
+        JackClientNotification notice("", pending.event->fRefNum, kDropped, 0, nullptr, static_cast<std::int32_t>(dropped), 0);
         if (notice.Write(&fNotifySocket, 0) < 0) {
             jack_error("Could not write the dropped notification count");
             return -1;

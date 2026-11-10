@@ -20,6 +20,7 @@
 #include "JackMessage.h"
 #include "jackmini/error.hpp"
 
+#include <cstdint>
 #include <expected>
 
 namespace jackmini {
@@ -27,7 +28,7 @@ namespace jackmini {
 class JackServer;
 
 // The protocol replies 0 on success and -1 on failure. The reason is logged where it was detected.
-inline int ReplyCode(const Result<void>& result)
+inline std::int32_t ReplyCode(const Result<void>& result)
 {
     return result ? 0 : -1;
 }
@@ -38,7 +39,7 @@ struct JackClientOpenResult;
 struct JackClientHandlerInterface {
 
     virtual void ClientAdd(detail::JackChannelTransactionInterface* socket, JackClientOpenRequest* req, JackClientOpenResult* res) = 0;
-    virtual void ClientRemove(detail::JackChannelTransactionInterface* socket, int refnum) = 0;
+    virtual void ClientRemove(detail::JackChannelTransactionInterface* socket, std::int32_t refnum) = 0;
 
     virtual ~JackClientHandlerInterface()
     {
@@ -56,9 +57,9 @@ public:
     JackRequestDecoder(JackServer* server, JackClientHandlerInterface* handler);
     virtual ~JackRequestDecoder();
 
-    int HandleRequest(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
+    std::int32_t HandleRequest(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
     // Refuses a message of another protocol version: the reply carries the protocol error.
-    int Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
+    std::int32_t Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
 };
 
 } // namespace jackmini

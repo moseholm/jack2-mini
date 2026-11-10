@@ -25,6 +25,7 @@
 #include "JackPort.h"
 #include "JackSystemDeps.h"
 #include "JackTime.h"
+#include <cstdint>
 #include <assert.h>
 #include <array>
 
@@ -41,7 +42,7 @@ JackAudioDriver::~JackAudioDriver()
 {
 }
 
-int JackAudioDriver::SetBufferSize(jack_nframes_t buffer_size)
+std::int32_t JackAudioDriver::SetBufferSize(jack_nframes_t buffer_size)
 {
     // Update engine and graph manager state
     fEngineControl->fBufferSize = buffer_size;
@@ -54,7 +55,7 @@ int JackAudioDriver::SetBufferSize(jack_nframes_t buffer_size)
     return JackDriver::SetBufferSize(buffer_size);
 }
 
-int JackAudioDriver::SetSampleRate(jack_nframes_t sample_rate)
+std::int32_t JackAudioDriver::SetSampleRate(jack_nframes_t sample_rate)
 {
     fEngineControl->fSampleRate = sample_rate;
     fEngineControl->UpdateTimeOut();
@@ -63,12 +64,12 @@ int JackAudioDriver::SetSampleRate(jack_nframes_t sample_rate)
     return JackDriver::SetSampleRate(sample_rate);
 }
 
-int JackAudioDriver::Open(jack_nframes_t buffer_size,
+std::int32_t JackAudioDriver::Open(jack_nframes_t buffer_size,
     jack_nframes_t samplerate,
     bool capturing,
     bool playing,
-    int inchannels,
-    int outchannels,
+    std::int32_t inchannels,
+    std::int32_t outchannels,
     bool monitor,
     const char* capture_driver_name,
     const char* playback_driver_name,
@@ -91,12 +92,12 @@ void JackAudioDriver::UpdateLatencies()
     jack_latency_range_t output_range;
     jack_latency_range_t monitor_range;
 
-    for (int i = 0; i < fCaptureChannels; i++) {
+    for (std::int32_t i = 0; i < fCaptureChannels; i++) {
         input_range.max = input_range.min = fEngineControl->fBufferSize + fCaptureLatency;
         fGraphManager->GetPort(fCapturePortList[i])->SetLatencyRange(JackCaptureLatency, &input_range);
     }
 
-    for (int i = 0; i < fPlaybackChannels; i++) {
+    for (std::int32_t i = 0; i < fPlaybackChannels; i++) {
         output_range.max = output_range.min = fPlaybackLatency;
         if (fEngineControl->fSyncMode) {
             output_range.max = output_range.min += fEngineControl->fBufferSize;
@@ -111,13 +112,13 @@ void JackAudioDriver::UpdateLatencies()
     }
 }
 
-int JackAudioDriver::Attach()
+std::int32_t JackAudioDriver::Attach()
 {
     JackPort* port;
     jack_port_id_t port_index;
     std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> name { };
     std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias { };
-    int i;
+    std::int32_t i;
 
     jack_log("JackAudioDriver::Attach fBufferSize = %ld fSampleRate = %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
 
@@ -163,9 +164,9 @@ int JackAudioDriver::Attach()
     return 0;
 }
 
-int JackAudioDriver::Detach()
+std::int32_t JackAudioDriver::Detach()
 {
-    int i;
+    std::int32_t i;
     jack_log("JackAudioDriver::Detach");
 
     for (i = 0; i < fCaptureChannels; i++) {
@@ -182,12 +183,12 @@ int JackAudioDriver::Detach()
     return 0;
 }
 
-int JackAudioDriver::Write()
+std::int32_t JackAudioDriver::Write()
 {
-    for (int i = 0; i < fPlaybackChannels; i++) {
+    for (std::int32_t i = 0; i < fPlaybackChannels; i++) {
         if (fGraphManager->GetConnectionsNum(fPlaybackPortList[i]) > 0) {
             jack_default_audio_sample_t* buffer = GetOutputBuffer(i);
-            int size = sizeof(jack_default_audio_sample_t) * fEngineControl->fBufferSize;
+            std::int32_t size = sizeof(jack_default_audio_sample_t) * fEngineControl->fBufferSize;
             // Monitor ports
             if (fWithMonitorPorts && fGraphManager->GetConnectionsNum(fMonitorPortList[i]) > 0) {
                 memcpy(GetMonitorBuffer(i), buffer, size);
@@ -197,7 +198,7 @@ int JackAudioDriver::Write()
     return 0;
 }
 
-int JackAudioDriver::Process()
+std::int32_t JackAudioDriver::Process()
 {
     return (fEngineControl->fSyncMode) ? ProcessSync() : ProcessAsync();
 }
@@ -205,7 +206,7 @@ int JackAudioDriver::Process()
 // The driver "asynchronous" mode: output buffers computed at the *previous cycle* are used, the server does not
 // synchronize to the end of client graph execution.
 
-int JackAudioDriver::ProcessAsync()
+std::int32_t JackAudioDriver::ProcessAsync()
 {
     // Read input buffers for the current cycle
     if (Read() < 0) {
@@ -273,7 +274,7 @@ void JackAudioDriver::ProcessGraphAsyncSlave()
 // The driver "synchronous" mode: the server does synchronize to the end of client graph execution,
 // if graph process succeed, output buffers computed at the *current cycle* are used.
 
-int JackAudioDriver::ProcessSync()
+std::int32_t JackAudioDriver::ProcessSync()
 {
     // Read input buffers for the current cycle
     if (Read() < 0) {
@@ -343,28 +344,28 @@ void JackAudioDriver::ProcessGraphSyncSlave()
     }
 }
 
-jack_default_audio_sample_t* JackAudioDriver::GetInputBuffer(int port_index)
+jack_default_audio_sample_t* JackAudioDriver::GetInputBuffer(std::int32_t port_index)
 {
     return fCapturePortList[port_index]
         ? (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fCapturePortList[port_index], fEngineControl->fBufferSize)
         : nullptr;
 }
 
-jack_default_audio_sample_t* JackAudioDriver::GetOutputBuffer(int port_index)
+jack_default_audio_sample_t* JackAudioDriver::GetOutputBuffer(std::int32_t port_index)
 {
     return fPlaybackPortList[port_index]
         ? (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fPlaybackPortList[port_index], fEngineControl->fBufferSize)
         : nullptr;
 }
 
-jack_default_audio_sample_t* JackAudioDriver::GetMonitorBuffer(int port_index)
+jack_default_audio_sample_t* JackAudioDriver::GetMonitorBuffer(std::int32_t port_index)
 {
     return fMonitorPortList[port_index]
         ? (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fMonitorPortList[port_index], fEngineControl->fBufferSize)
         : nullptr;
 }
 
-int JackAudioDriver::ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2)
+std::int32_t JackAudioDriver::ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2)
 {
     switch (notify) {
 
@@ -380,17 +381,17 @@ int JackAudioDriver::ClientNotify(int refnum, const char* name, int notify, int 
     return 0;
 }
 
-void JackAudioDriver::HandleLatencyCallback(int status)
+void JackAudioDriver::HandleLatencyCallback(std::int32_t status)
 {
     jack_latency_callback_mode_t mode = (status == 0) ? JackCaptureLatency : JackPlaybackLatency;
 
-    for (int i = 0; i < fCaptureChannels; i++) {
+    for (std::int32_t i = 0; i < fCaptureChannels; i++) {
         if (mode == JackPlaybackLatency) {
             fGraphManager->RecalculateLatency(fCapturePortList[i], mode);
         }
     }
 
-    for (int i = 0; i < fPlaybackChannels; i++) {
+    for (std::int32_t i = 0; i < fPlaybackChannels; i++) {
         if (mode == JackCaptureLatency) {
             fGraphManager->RecalculateLatency(fPlaybackPortList[i], mode);
         }

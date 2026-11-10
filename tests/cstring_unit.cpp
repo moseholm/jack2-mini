@@ -18,14 +18,15 @@
 
 #include "JackCString.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <span>
 
 namespace {
 
-int g_failures = 0;
-int g_checks = 0;
+std::int32_t g_failures = 0;
+std::int32_t g_checks = 0;
 
 #define CHECK(cond)                                                                       \
     do {                                                                                  \
@@ -41,7 +42,7 @@ void TestFits()
     char buf[8];
     jackmini::CopyCString(buf, "abc");
     CHECK(std::strcmp(buf, "abc") == 0);
-    for (int i = 4; i < 8; i++) {
+    for (std::int32_t i = 4; i < 8; i++) {
         CHECK(buf[i] == '\0');
     }
 }
@@ -68,7 +69,7 @@ void TestZeroFillsStaleBytes()
     std::memset(buf, 'x', sizeof(buf));
     jackmini::CopyCString(buf, "ab");
     CHECK(buf[0] == 'a' && buf[1] == 'b');
-    for (int i = 2; i < 8; i++) {
+    for (std::int32_t i = 2; i < 8; i++) {
         CHECK(buf[i] == '\0');
     }
 }
@@ -76,15 +77,15 @@ void TestZeroFillsStaleBytes()
 void TestLeadingInteger()
 {
     // The same answers atoi() gives for these inputs.
-    CHECK(jackmini::ParseLeadingInteger<int>("42") == 42);
-    CHECK(jackmini::ParseLeadingInteger<int>("  -7") == -7);
-    CHECK(jackmini::ParseLeadingInteger<int>("+5") == 5);
-    CHECK(jackmini::ParseLeadingInteger<int>("12abc") == 12);
-    CHECK(jackmini::ParseLeadingInteger<int>("abc") == 0);
-    CHECK(jackmini::ParseLeadingInteger<int>("") == 0);
-    CHECK(jackmini::ParseLeadingInteger<int>("+-3") == 0);
-    CHECK(jackmini::ParseLeadingInteger<int>("99999999999") == 0);
-    CHECK(jackmini::ParseLeadingInteger<unsigned int>("300") == 300u);
+    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("42") == 42);
+    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("  -7") == -7);
+    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("+5") == 5);
+    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("12abc") == 12);
+    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("abc") == 0);
+    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("") == 0);
+    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("+-3") == 0);
+    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("99999999999") == 0);
+    CHECK(jackmini::ParseLeadingInteger<std::uint32_t>("300") == 300u);
 }
 
 void TestEmptyBuffer()

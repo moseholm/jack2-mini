@@ -115,7 +115,7 @@ private:
         return *reinterpret_cast<const volatile T*>(fPtr + offset);
     }
 
-    int fFd = -1;
+    std::int32_t fFd = -1;
     unsigned char* fPtr = nullptr;
     std::uint32_t fPeriod = 0; // femtoseconds
     std::uint64_t fOffset = 0;
@@ -169,7 +169,7 @@ jack_time_t (*current_clock)() = nullptr;
 
 } // end of anonymous namespace
 
-void sleep_microseconds(long usec)
+void sleep_microseconds(std::int64_t usec)
 {
     usleep(usec);
 }

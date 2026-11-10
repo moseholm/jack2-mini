@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <stddef.h>
 
 namespace jackmini {
@@ -23,10 +24,10 @@ namespace jackmini {
 // \brief Parameters used to create a resampler.
 
 struct JackResamplerParams {
-    unsigned int channels;
-    unsigned int in_rate;
-    unsigned int out_rate;
-    int quality;
+    std::uint32_t channels;
+    std::uint32_t in_rate;
+    std::uint32_t out_rate;
+    std::int32_t quality;
 };
 
 // \brief Multi-channel planar float sample rate converter.
@@ -50,18 +51,18 @@ public:
     virtual void SetRate(double rate) = 0;
 
     // Number of input frames needed to produce out_len output frames.
-    virtual unsigned int InputLength(unsigned int out_len) = 0;
+    virtual std::uint32_t InputLength(std::uint32_t out_len) = 0;
 
     // Number of output frames produced from in_len input frames.
-    virtual unsigned int OutputLength(unsigned int in_len) = 0;
+    virtual std::uint32_t OutputLength(std::uint32_t in_len) = 0;
 
     // Consume up to *in_len input frames and produce up to *out_len
     // output frames.  Both counts are updated to the frames actually used.
-    virtual void Process(const float* const* src, unsigned int* in_len,
-        float* const* dst, unsigned int* out_len) = 0;
+    virtual void Process(const float* const* src, std::uint32_t* in_len,
+        float* const* dst, std::uint32_t* out_len) = 0;
 
     // Latency introduced by the filter, in output frames.
-    virtual unsigned int Delay() = 0;
+    virtual std::uint32_t Delay() = 0;
 };
 
 // \brief Creates resamplers.  Factories are looked up by name.

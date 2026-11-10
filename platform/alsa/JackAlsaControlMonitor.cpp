@@ -17,9 +17,10 @@
 #include "JackAlsaControlMonitor.h"
 #include "JackError.h"
 
+#include <cstdint>
 #include <errno.h>
 #include <poll.h>
-#include <stdint.h>
+#include <cstdint>
 #include <sys/eventfd.h>
 #include <unistd.h>
 
@@ -53,21 +54,21 @@ JackAlsaControlMonitor::~JackAlsaControlMonitor()
     }
 }
 
-void JackAlsaControlMonitor::RemoveWatches(int card)
+void JackAlsaControlMonitor::RemoveWatches(std::int32_t card)
 {
     {
         std::lock_guard<std::mutex> lock(fUpdateMutex);
         fRemovals.push_back(card);
     }
     if (fUpdateFd >= 0) {
-        uint64_t one = 1;
+        std::uint64_t one = 1;
         if (write(fUpdateFd, &one, sizeof(one)) < 0) {
             jack_error("control monitor: cannot signal a watch change");
         }
     }
 }
 
-void JackAlsaControlMonitor::QueueWatch(int card, const std::string& ctl_name,
+void JackAlsaControlMonitor::QueueWatch(std::int32_t card, const std::string& ctl_name,
     const JackAlsaRateElement& elem, JackAlsaRateDirection dir)
 {
     PendingWatch watch;
@@ -80,7 +81,7 @@ void JackAlsaControlMonitor::QueueWatch(int card, const std::string& ctl_name,
         fAdditions.push_back(watch);
     }
     if (fUpdateFd >= 0) {
-        uint64_t one = 1;
+        std::uint64_t one = 1;
         if (write(fUpdateFd, &one, sizeof(one)) < 0) {
             jack_error("control monitor: cannot signal a watch change");
         }
@@ -99,7 +100,7 @@ void JackAlsaControlMonitor::AddPendingWatch(const PendingWatch& pending)
     }
     if (device == nullptr) {
         snd_ctl_t* ctl;
-        int err = snd_ctl_open(&ctl, pending.ctl_name.c_str(), 0);
+        std::int32_t err = snd_ctl_open(&ctl, pending.ctl_name.c_str(), 0);
         if (err < 0) {
             jack_error("control monitor: cannot open %s for events (%s)",
                 pending.ctl_name.c_str(), snd_strerror(err));
@@ -122,14 +123,14 @@ void JackAlsaControlMonitor::AddPendingWatch(const PendingWatch& pending)
 
 void JackAlsaControlMonitor::ApplyUpdates()
 {
-    std::vector<int> cards;
+    std::vector<std::int32_t> cards;
     std::vector<PendingWatch> additions;
     {
         std::lock_guard<std::mutex> lock(fUpdateMutex);
         cards.swap(fRemovals);
         additions.swap(fAdditions);
     }
-    uint64_t dummy;
+    std::uint64_t dummy;
     while (read(fUpdateFd, &dummy, sizeof(dummy)) > 0) {
     }
 
@@ -154,7 +155,7 @@ void JackAlsaControlMonitor::ApplyUpdates()
     }
 }
 
-int JackAlsaControlMonitor::AddWatch(int card, const std::string& ctl_name,
+std::int32_t JackAlsaControlMonitor::AddWatch(std::int32_t card, const std::string& ctl_name,
     const JackAlsaRateElement& elem, JackAlsaRateDirection dir)
 {
     Device* device = nullptr;
@@ -167,7 +168,7 @@ int JackAlsaControlMonitor::AddWatch(int card, const std::string& ctl_name,
 
     if (device == nullptr) {
         snd_ctl_t* ctl;
-        int err = snd_ctl_open(&ctl, ctl_name.c_str(), 0);
+        std::int32_t err = snd_ctl_open(&ctl, ctl_name.c_str(), 0);
         if (err < 0) {
             jack_error("secondary card control '%s': cannot open for events (%s)",
                 ctl_name.c_str(), snd_strerror(err));
@@ -215,7 +216,7 @@ bool JackAlsaControlMonitor::Init()
 // longer be read, which means it has gone away.
 bool JackAlsaControlMonitor::Dispatch(Device* device)
 {
-    int ret;
+    std::int32_t ret;
     while ((ret = snd_ctl_read(device->ctl, fEvent)) == 1) {
         if (snd_ctl_event_get_type(fEvent) != SND_CTL_EVENT_ELEM) {
             continue;
@@ -224,13 +225,13 @@ bool JackAlsaControlMonitor::Dispatch(Device* device)
             continue;
         }
 
-        unsigned int numid = snd_ctl_event_elem_get_numid(fEvent);
+        std::uint32_t numid = snd_ctl_event_elem_get_numid(fEvent);
         for (size_t w = 0; w < device->watches.size(); w++) {
             const Watch& watch = device->watches[w];
             if (watch.elem.numid != numid) {
                 continue;
             }
-            long value = 0;
+            std::int64_t value = 0;
             if (JackAlsaControlReadRate(device->ctl, watch.elem, &value) == 0 && fListener) {
                 fListener->OnRateEvent(watch.card, watch.dir, value);
             }
@@ -268,13 +269,13 @@ bool JackAlsaControlMonitor::Execute()
             continue;
         }
         struct pollfd pfd[8];
-        int count = snd_ctl_poll_descriptors_count(device->ctl);
+        std::int32_t count = snd_ctl_poll_descriptors_count(device->ctl);
         if (count <= 0 || count > 8 || snd_ctl_poll_descriptors(device->ctl, pfd, count) < 0) {
             MarkDead(device);
             continue;
         }
         Range range = { device, fds.size(), (size_t)count };
-        for (int k = 0; k < count; k++) {
+        for (std::int32_t k = 0; k < count; k++) {
             fds.push_back(pfd[k]);
         }
         ranges.push_back(range);
@@ -292,7 +293,7 @@ bool JackAlsaControlMonitor::Execute()
     wake.revents = 0;
     fds.push_back(wake);
 
-    int ret = poll(&fds[0], fds.size(), -1);
+    std::int32_t ret = poll(&fds[0], fds.size(), -1);
     if (ret < 0) {
         if (errno == EINTR) {
             return true;
@@ -312,7 +313,7 @@ bool JackAlsaControlMonitor::Execute()
 
     for (size_t i = 0; i < ranges.size(); i++) {
         Device* device = ranges[i].device;
-        unsigned short revents = 0;
+        std::uint16_t revents = 0;
         if (snd_ctl_poll_descriptors_revents(device->ctl, &fds[ranges[i].begin],
                 ranges[i].count, &revents)
             < 0) {
@@ -332,7 +333,7 @@ bool JackAlsaControlMonitor::Execute()
     return true;
 }
 
-int JackAlsaControlMonitor::Start()
+std::int32_t JackAlsaControlMonitor::Start()
 {
     // Runs even with nothing watched yet: watches can be queued while it runs.
     if (fWakeFd < 0) {
@@ -343,7 +344,7 @@ int JackAlsaControlMonitor::Start()
         }
     }
     // Drain a wake-up left over from an earlier Stop().
-    uint64_t dummy;
+    std::uint64_t dummy;
     while (read(fWakeFd, &dummy, sizeof(dummy)) > 0) {
     }
     if (fThread.StartSync() < 0) {
@@ -353,10 +354,10 @@ int JackAlsaControlMonitor::Start()
     return 0;
 }
 
-int JackAlsaControlMonitor::Stop()
+std::int32_t JackAlsaControlMonitor::Stop()
 {
     if (fWakeFd >= 0) {
-        uint64_t one = 1;
+        std::uint64_t one = 1;
         if (write(fWakeFd, &one, sizeof(one)) < 0) {
             jack_error("control monitor: cannot wake thread");
         }

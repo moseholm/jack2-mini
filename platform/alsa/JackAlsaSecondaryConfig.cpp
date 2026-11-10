@@ -16,6 +16,7 @@
 
 #include "JackAlsaSecondaryConfig.h"
 #include "JackCString.h"
+#include <cstdint>
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -89,14 +90,14 @@ static bool ParseBool(std::string_view value, bool* result)
     return false;
 }
 
-static bool ParseInt(std::string_view value, int* result)
+static bool ParseInt(std::string_view value, std::int32_t* result)
 {
     // Accepts what strtol() accepted (leading white space and '+'), but stays strict after the digits.
     value = SkipNumericPrefix(value);
     if (value.empty()) {
         return false;
     }
-    int parsed = 0;
+    std::int32_t parsed = 0;
     const char* end = value.data() + value.size();
     const auto [ptr, ec] = std::from_chars(value.data(), end, parsed);
     if (ec != std::errc() || ptr != end) {
@@ -106,13 +107,13 @@ static bool ParseInt(std::string_view value, int* result)
     return true;
 }
 
-int JackAlsaPcmDeviceNumber(std::string_view pcm)
+std::int32_t JackAlsaPcmDeviceNumber(std::string_view pcm)
 {
     if (const auto dev = pcm.find("DEV="); dev != std::string_view::npos) {
-        return ParseLeadingInteger<int>(pcm.substr(dev + 4));
+        return ParseLeadingInteger<std::int32_t>(pcm.substr(dev + 4));
     }
     if (const auto comma = pcm.rfind(','); comma != std::string_view::npos) {
-        return ParseLeadingInteger<int>(pcm.substr(comma + 1));
+        return ParseLeadingInteger<std::int32_t>(pcm.substr(comma + 1));
     }
     return 0;
 }
@@ -416,7 +417,7 @@ bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
     }
 
     std::string line;
-    int line_number = 0;
+    std::int32_t line_number = 0;
     while (std::getline(file, line)) {
         line_number++;
         const std::string_view content(line);

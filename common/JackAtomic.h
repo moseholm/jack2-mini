@@ -17,6 +17,7 @@
 #pragma once
 
 #include "JackTypes.h"
+#include <cstdint>
 #include <atomic>
 
 // Lock-free operations on counters that live in shared memory.  The object must
@@ -30,12 +31,12 @@ static inline bool CAS(UInt32 value, UInt32 newvalue, void* addr)
     return std::atomic_ref<UInt32>(*static_cast<UInt32*>(addr)).compare_exchange_strong(expected, newvalue);
 }
 
-static inline long INC_ATOMIC(SInt32* val)
+static inline std::int64_t INC_ATOMIC(SInt32* val)
 {
     return std::atomic_ref<SInt32>(*val).fetch_add(1);
 }
 
-static inline long DEC_ATOMIC(SInt32* val)
+static inline std::int64_t DEC_ATOMIC(SInt32* val)
 {
     return std::atomic_ref<SInt32>(*val).fetch_sub(1);
 }

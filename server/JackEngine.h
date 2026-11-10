@@ -25,6 +25,7 @@
 #include "JackSynchro.h"
 #include "JackTransportEngine.h"
 #include "jackmini/error.hpp"
+#include <cstdint>
 #include <atomic>
 #include <map>
 
@@ -50,49 +51,49 @@ private:
     JackServerNotifyChannel fChannel;  // To communicate between the RT thread and server
     JackProcessSync fSignal;
     // Number of graph switches so far.  Changed by the RT thread (ProcessNext) only.
-    std::atomic<unsigned long> fSwitchCount;
+    std::atomic<std::uint64_t> fSwitchCount;
     // Written by the RT thread at each switch, and by the server thread when a client is deactivated.
     std::atomic<jack_time_t> fLastSwitchUsecs;
 
-    std::map<int, std::string> fReservationMap;
+    std::map<std::int32_t, std::string> fReservationMap;
 
-    Result<void> ClientCloseAux(int refnum, bool wait);
+    Result<void> ClientCloseAux(std::int32_t refnum, bool wait);
     void CheckXRun(jack_time_t callback_usecs);
 
-    Result<void> NotifyAddClient(JackClientInterface* new_client, const char* new_name, int refnum);
-    void NotifyRemoveClient(const char* name, int refnum);
+    Result<void> NotifyAddClient(JackClientInterface* new_client, const char* new_name, std::int32_t refnum);
+    void NotifyRemoveClient(const char* name, std::int32_t refnum);
 
     void ProcessNext(jack_time_t callback_usecs);
     void ProcessCurrent(jack_time_t callback_usecs);
 
     // Waits until fSwitchCount reaches count.  A change written to the next state is in effect after the second
     // switch that begins after the write (the first may have begun before it), so a waiter asks for two more switches.
-    bool WaitForSwitches(unsigned long count);
+    bool WaitForSwitches(std::uint64_t count);
 
     bool ClientCheckName(const char* name);
     bool GenerateUniqueName(char* name);
 
-    Result<int> AllocateRefnum();
-    void ReleaseRefnum(int refnum);
+    Result<std::int32_t> AllocateRefnum();
+    void ReleaseRefnum(std::int32_t refnum);
 
-    Result<void> ClientNotify(JackClientInterface* client, int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
+    Result<void> ClientNotify(JackClientInterface* client, std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
 
-    void NotifyClient(int refnum, int event, int sync, const char* message, int value1, int value2);
-    void NotifyClients(int event, int sync, const char* message, int value1, int value2);
+    void NotifyClient(std::int32_t refnum, std::int32_t event, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
+    void NotifyClients(std::int32_t event, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
 
     void NotifyPortRegistation(jack_port_id_t port_index, bool onoff);
     void NotifyPortConnect(jack_port_id_t src, jack_port_id_t dst, bool onoff);
     void NotifyPortRename(jack_port_id_t src, const char* old_name);
-    void NotifyActivate(int refnum);
+    void NotifyActivate(std::int32_t refnum);
 
     void EnsureUUID(jack_uuid_t uuid);
 
-    bool CheckClient(int refnum)
+    bool CheckClient(std::int32_t refnum)
     {
         return (refnum >= 0 && refnum < CLIENT_NUM && fClientTable[refnum] != nullptr);
     }
 
-    Result<bool> CheckPortsConnect(int refnum, jack_port_id_t src, jack_port_id_t dst);
+    Result<bool> CheckPortsConnect(std::int32_t refnum, jack_port_id_t src, jack_port_id_t dst);
 
 public:
     JackEngine(JackGraphManager* manager, JackSynchro* table, JackEngineControl* controler, char self_connect_mode);
@@ -102,34 +103,34 @@ public:
     Result<void> Close();
 
     // Client management
-    Result<void> ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, int protocol, int options, int* status);
+    Result<void> ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, std::int32_t protocol, std::int32_t options, std::int32_t* status);
 
-    Result<void> ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager);
-    Result<void> RegisterDriver(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait);
+    Result<void> ClientExternalOpen(const char* name, std::int32_t pid, jack_uuid_t uuid, std::int32_t* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager);
+    Result<void> RegisterDriver(const char* name, std::int32_t* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait);
 
-    Result<void> ClientExternalClose(int refnum);
-    Result<void> UnregisterDriver(int refnum, bool wait);
+    Result<void> ClientExternalClose(std::int32_t refnum);
+    Result<void> UnregisterDriver(std::int32_t refnum, bool wait);
 
-    Result<void> ClientActivate(int refnum, bool is_real_time, bool wait);
-    Result<void> ClientDeactivate(int refnum, bool wait);
+    Result<void> ClientActivate(std::int32_t refnum, bool is_real_time, bool wait);
+    Result<void> ClientDeactivate(std::int32_t refnum, bool wait);
 
-    void ClientKill(int refnum);
+    void ClientKill(std::int32_t refnum);
 
-    Result<int> GetClientPID(const char* name);
-    Result<int> GetClientRefNum(const char* name);
+    Result<std::int32_t> GetClientPID(const char* name);
+    Result<std::int32_t> GetClientRefNum(const char* name);
 
 
     // Port management
-    Result<void> PortRegister(int refnum, const char* name, const char* type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port);
-    Result<void> PortUnRegister(int refnum, jack_port_id_t port);
+    Result<void> PortRegister(std::int32_t refnum, const char* name, const char* type, std::uint32_t flags, std::uint32_t buffer_size, jack_port_id_t* port);
+    Result<void> PortUnRegister(std::int32_t refnum, jack_port_id_t port);
 
-    Result<void> PortConnect(int refnum, const char* src, const char* dst);
-    Result<void> PortDisconnect(int refnum, const char* src, const char* dst);
+    Result<void> PortConnect(std::int32_t refnum, const char* src, const char* dst);
+    Result<void> PortDisconnect(std::int32_t refnum, const char* src, const char* dst);
 
-    Result<void> PortConnect(int refnum, jack_port_id_t src, jack_port_id_t dst);
-    Result<void> PortDisconnect(int refnum, jack_port_id_t src, jack_port_id_t dst);
+    Result<void> PortConnect(std::int32_t refnum, jack_port_id_t src, jack_port_id_t dst);
+    Result<void> PortDisconnect(std::int32_t refnum, jack_port_id_t src, jack_port_id_t dst);
 
-    Result<void> PortRename(int refnum, jack_port_id_t port, const char* name);
+    Result<void> PortRename(std::int32_t refnum, jack_port_id_t port, const char* name);
 
 
     Result<void> ComputeTotalLatencies();
@@ -139,12 +140,12 @@ public:
 
     // Notifications
     void NotifyDriverXRun();
-    void NotifyClientXRun(int refnum);
-    void NotifyFailure(int code, const char* reason);
+    void NotifyClientXRun(std::int32_t refnum);
+    void NotifyFailure(std::int32_t code, const char* reason);
     void NotifyGraphReorder();
     void NotifyBufferSize(jack_nframes_t buffer_size);
     void NotifySampleRate(jack_nframes_t sample_rate);
-    void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, int direction);
+    void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, std::int32_t direction);
     void NotifyFreewheel(bool onoff);
     void NotifyQuit();
 

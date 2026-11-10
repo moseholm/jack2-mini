@@ -19,6 +19,7 @@
 #include "JackClientControl.h"
 #include "JackClientInterface.h"
 #include "JackGraphManager.h"
+#include <cstdint>
 #include <math.h>
 #include <algorithm>
 
@@ -35,7 +36,7 @@ void JackEngineControl::CalcCPULoad(std::atomic<JackClientInterface*>* table,
 
     // In Asynchronous mode, last cycle end is the max of client end dates
     if (!fSyncMode) {
-        for (int i = fDriverNum; i < CLIENT_NUM; i++) {
+        for (std::int32_t i = fDriverNum; i < CLIENT_NUM; i++) {
             JackClientInterface* client = table[i];
             JackClientTiming* timing = manager->GetClientTiming(i);
             if (client && client->GetClientControl()->fActive && timing->fStatus == Finished) {
@@ -58,7 +59,7 @@ void JackEngineControl::CalcCPULoad(std::atomic<JackClientInterface*>* table,
         jack_time_t avg_usecs = 0;
         jack_time_t max_usecs = 0;
 
-        for (int i = 0; i < JACK_ENGINE_ROLLING_COUNT; i++) {
+        for (std::int32_t i = 0; i < JACK_ENGINE_ROLLING_COUNT; i++) {
             avg_usecs += fRollingClientUsecs[i]; // This is really a running total to be averaged later
             max_usecs = std::max(fRollingClientUsecs[i], max_usecs);
         }
@@ -91,7 +92,7 @@ void JackEngineControl::ResetRollingUsecs()
     fRollingClientUsecsIndex = 0;
     fRollingClientUsecsCnt = 0;
     fSpareUsecs = 0;
-    fRollingInterval = int(floor((JACK_ENGINE_ROLLING_INTERVAL * 1000.f) / fPeriodUsecs));
+    fRollingInterval = std::int32_t(floor((JACK_ENGINE_ROLLING_INTERVAL * 1000.f) / fPeriodUsecs));
 }
 
 void JackEngineControl::NotifyXRun(jack_time_t callback_usecs, float delayed_usecs)

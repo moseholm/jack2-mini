@@ -19,6 +19,7 @@
 #include "JackError.h"
 #include "JackTime.h"
 
+#include <cstdint>
 #include <poll.h>
 #include <sys/time.h>
 #include <algorithm>
@@ -64,9 +65,9 @@ std::size_t requested_format_index(SampleFormat format)
 }
 
 // The ALSA default plug device reports up to 16 million channels; the old driver limits an unset count to 2.
-constexpr unsigned kMaxDefaultChannels = 1024;
+constexpr std::uint32_t kMaxDefaultChannels = 1024;
 
-int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direction, const Request& request,
+std::int32_t configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direction, const Request& request,
     std::uint32_t wanted_channels, StreamInfo& info, std::uint32_t user_periods, bool playback)
 {
     snd_pcm_hw_params_t* hw = nullptr;
@@ -74,7 +75,7 @@ int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direc
     snd_pcm_hw_params_alloca(&hw);
     snd_pcm_sw_params_alloca(&sw);
     const char* stream_name = direction == SND_PCM_STREAM_PLAYBACK ? "playback" : "capture";
-    int err = 0;
+    std::int32_t err = 0;
 
     if ((err = snd_pcm_hw_params_any(handle, hw)) < 0) {
         jack_error("ALSA: no %s configurations available (%s)", stream_name, snd_strerror(err));
@@ -123,14 +124,14 @@ int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direc
     info.byte_swapped = kFormats[index].little_endian != kHostLittleEndian;
     info.sample_bytes = snd_pcm_format_physical_width(info.format) / 8;
 
-    unsigned int rate = request.rate;
+    std::uint32_t rate = request.rate;
     if (snd_pcm_hw_params_set_rate_near(handle, hw, &rate, nullptr) < 0) {
         jack_error("ALSA: cannot set sample/frame rate to %u for %s", request.rate, stream_name);
         return -1;
     }
     info.rate = rate;
 
-    unsigned int channels = wanted_channels;
+    std::uint32_t channels = wanted_channels;
     if (channels == 0) {
         if (snd_pcm_hw_params_get_channels_max(hw, &channels) < 0) {
             jack_error("ALSA: cannot read the channel count of the %s stream", stream_name);
@@ -153,7 +154,7 @@ int configure_stream(const char* name, snd_pcm_t* handle, snd_pcm_stream_t direc
         return -1;
     }
 
-    unsigned int periods = user_periods;
+    std::uint32_t periods = user_periods;
     snd_pcm_hw_params_set_periods_min(handle, hw, &periods, nullptr);
     if (periods < user_periods) {
         periods = user_periods;
@@ -234,7 +235,7 @@ OpenResult open_stream(const char* name, snd_pcm_stream_t direction, const Reque
     std::uint32_t wanted_channels, std::uint32_t user_periods, snd_pcm_t*& handle,
     StreamInfo& info)
 {
-    const int err = snd_pcm_open(&handle, name, direction, SND_PCM_NONBLOCK);
+    const std::int32_t err = snd_pcm_open(&handle, name, direction, SND_PCM_NONBLOCK);
     if (err < 0) {
         handle = nullptr;
         if (err == -EBUSY) {
@@ -268,7 +269,7 @@ Device::~Device()
     close();
 }
 
-int Device::open(const char* capture_name, const char* playback_name, Request& request)
+std::int32_t Device::open(const char* capture_name, const char* playback_name, Request& request)
 {
     close();
     const std::uint32_t user_periods = request.periods;
@@ -327,14 +328,14 @@ int Device::open(const char* capture_name, const char* playback_name, Request& r
             continue;
         }
         snd_pcm_uframes_t period = 0;
-        int dir = 0;
+        std::int32_t dir = 0;
         snd_pcm_hw_params_t* hw = nullptr;
         snd_pcm_hw_params_alloca(&hw);
         snd_pcm_hw_params_current(stream->handle, hw);
         snd_pcm_hw_params_get_period_size(hw, &period, &dir);
         if (period != request.frames_per_cycle) {
             jack_error("alsa_pcm: requested an interrupt every %u frames but got %lu frames", request.frames_per_cycle,
-                static_cast<unsigned long>(period));
+                static_cast<std::uint64_t>(period));
             close();
             return -1;
         }
@@ -357,22 +358,22 @@ void Device::close()
     }
 }
 
-int Device::poll_descriptor_count(Stream stream) const
+std::int32_t Device::poll_descriptor_count(Stream stream) const
 {
     return snd_pcm_poll_descriptors_count(state(stream).handle);
 }
 
-int Device::poll_descriptors(Stream stream, struct pollfd* fds, nfds_t nfds)
+std::int32_t Device::poll_descriptors(Stream stream, struct pollfd* fds, nfds_t nfds)
 {
-    return snd_pcm_poll_descriptors(state(stream).handle, fds, static_cast<unsigned int>(nfds));
+    return snd_pcm_poll_descriptors(state(stream).handle, fds, static_cast<std::uint32_t>(nfds));
 }
 
-int Device::poll_revents(Stream stream, struct pollfd* fds, nfds_t nfds, unsigned short* revents)
+std::int32_t Device::poll_revents(Stream stream, struct pollfd* fds, nfds_t nfds, std::uint16_t* revents)
 {
-    return snd_pcm_poll_descriptors_revents(state(stream).handle, fds, static_cast<unsigned int>(nfds), revents);
+    return snd_pcm_poll_descriptors_revents(state(stream).handle, fds, static_cast<std::uint32_t>(nfds), revents);
 }
 
-int Device::poll(struct pollfd* fds, nfds_t nfds, int timeout_ms)
+std::int32_t Device::poll(struct pollfd* fds, nfds_t nfds, std::int32_t timeout_ms)
 {
     return ::poll(fds, nfds, timeout_ms);
 }
@@ -387,14 +388,14 @@ std::ptrdiff_t Device::avail(Stream stream)
     return snd_pcm_avail_update(state(stream).handle);
 }
 
-int Device::begin(Stream stream, MappedFrames& mapped)
+std::int32_t Device::begin(Stream stream, MappedFrames& mapped)
 {
     StreamState& s = state(stream);
     const snd_pcm_channel_area_t* areas = nullptr;
     snd_pcm_uframes_t offset = 0;
     snd_pcm_uframes_t frames = mapped.requested;
 
-    const int err = snd_pcm_mmap_begin(s.handle, &areas, &offset, &frames);
+    const std::int32_t err = snd_pcm_mmap_begin(s.handle, &areas, &offset, &frames);
     if (err < 0) {
         return err;
     }
@@ -411,11 +412,11 @@ int Device::begin(Stream stream, MappedFrames& mapped)
     return 0;
 }
 
-int Device::commit(Stream stream, std::size_t offset, std::size_t frames)
+std::int32_t Device::commit(Stream stream, std::size_t offset, std::size_t frames)
 {
     const snd_pcm_sframes_t done = snd_pcm_mmap_commit(state(stream).handle, offset, frames);
     if (done < 0) {
-        return static_cast<int>(done);
+        return static_cast<std::int32_t>(done);
     }
     return 0;
 }
@@ -436,29 +437,29 @@ void Device::silence(Stream stream, std::size_t channel, std::size_t frames)
     }
 }
 
-int Device::prepare(Stream stream)
+std::int32_t Device::prepare(Stream stream)
 {
     return snd_pcm_prepare(state(stream).handle);
 }
 
-int Device::start(Stream stream)
+std::int32_t Device::start(Stream stream)
 {
     return snd_pcm_start(state(stream).handle);
 }
 
-int Device::drop(Stream stream)
+std::int32_t Device::drop(Stream stream)
 {
     return snd_pcm_drop(state(stream).handle);
 }
 
-int Device::status(XrunStatus& out)
+std::int32_t Device::status(XrunStatus& out)
 {
     out = XrunStatus { };
     const StreamState& s = capture_.handle ? capture_ : playback_;
 
     snd_pcm_status_t* status = nullptr;
     snd_pcm_status_alloca(&status);
-    const int err = snd_pcm_status(s.handle, status);
+    const std::int32_t err = snd_pcm_status(s.handle, status);
     if (err < 0) {
         return err;
     }

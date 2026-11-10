@@ -17,6 +17,7 @@
 
 #include "jackmini/jackmini.hpp"
 
+#include <cstdint>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -29,14 +30,14 @@ namespace {
 
 std::atomic<bool> gStop { false };
 
-void on_signal(int)
+void on_signal(std::int32_t)
 {
     gStop.store(true);
 }
 
 } // namespace
 
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
     std::string server;
     if (argc == 3 && std::string(argv[1]) == "-s") {

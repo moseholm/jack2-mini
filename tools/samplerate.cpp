@@ -16,6 +16,7 @@
 
 #include "tool_common.hpp"
 
+#include <cstdint>
 #include <getopt.h>
 
 #include <cstdio>
@@ -36,7 +37,7 @@ void show_usage(FILE* out)
 
 } // namespace
 
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
     std::string server;
     static const char kShortOptions[] = "s:hv";
@@ -47,7 +48,7 @@ int main(int argc, char** argv)
         { nullptr, 0, nullptr, 0 },
     };
 
-    int c;
+    std::int32_t c;
     while ((c = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
         switch (c) {
         case 's':
@@ -73,6 +74,6 @@ int main(int argc, char** argv)
     if (!opened) {
         return jackmini::tools::fail(kTool, opened.error());
     }
-    std::printf("%u\n", static_cast<unsigned int>(opened->sample_rate()));
+    std::printf("%u\n", static_cast<std::uint32_t>(opened->sample_rate()));
     return 0;
 }

@@ -18,6 +18,7 @@
 
 #include "JackError.h"
 
+#include <cstdint>
 #include <fcntl.h>
 #include <grp.h>
 #include <sys/stat.h>
@@ -29,37 +30,37 @@
 
 namespace jackmini {
 
-int group_to_gid(const char* group)
+std::int32_t group_to_gid(const char* group)
 {
     if (!group || !*group) {
         return -1;
     }
 
     char* end = nullptr;
-    const long number = std::strtol(group, &end, 10);
+    const std::int64_t number = std::strtol(group, &end, 10);
     if (*end == '\0') {
-        return static_cast<int>(number);
+        return static_cast<std::int32_t>(number);
     }
 
-    const long size = sysconf(_SC_GETGR_R_SIZE_MAX);
+    const std::int64_t size = sysconf(_SC_GETGR_R_SIZE_MAX);
     std::vector<char> buffer(size == -1 ? 4096 : static_cast<std::size_t>(size));
     struct group entry;
     struct group* result = nullptr;
-    int ret;
+    std::int32_t ret;
     while ((ret = getgrnam_r(group, &entry, buffer.data(), buffer.size(), &result)) == ERANGE) {
         buffer.resize(buffer.size() * 2);
     }
     if (ret || !result) {
         return -1;
     }
-    return static_cast<int>(entry.gr_gid);
+    return static_cast<std::int32_t>(entry.gr_gid);
 }
 
-int set_promiscuous_perms(int fd, const char* path, gid_t gid)
+std::int32_t set_promiscuous_perms(std::int32_t fd, const char* path, gid_t gid)
 {
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
     // gid_t is unsigned, so the group is always changed here. A gid of -1 leaves the group as it is.
-    const int chown_result = (fd < 0) ? chown(path, -1, gid) : fchown(fd, -1, gid);
+    const std::int32_t chown_result = (fd < 0) ? chown(path, -1, gid) : fchown(fd, -1, gid);
     if (chown_result < 0) {
         jack_log("Cannot chgrp %s: %s. Falling back to permissive perms.", path, strerror(errno));
     } else {

@@ -17,6 +17,7 @@
 #include "JackResampler.h"
 #include "pipewire_resample_bridge.h"
 
+#include <cstdint>
 #include <string.h>
 
 #ifndef RESAMPLE_DEFAULT_QUALITY
@@ -51,23 +52,23 @@ public:
         jack_pw_resampler_set_rate(fHandle, rate);
     }
 
-    unsigned int InputLength(unsigned int out_len)
+    std::uint32_t InputLength(std::uint32_t out_len)
     {
         return jack_pw_resampler_in_len(fHandle, out_len);
     }
 
-    unsigned int OutputLength(unsigned int in_len)
+    std::uint32_t OutputLength(std::uint32_t in_len)
     {
         return jack_pw_resampler_out_len(fHandle, in_len);
     }
 
-    void Process(const float* const* src, unsigned int* in_len,
-        float* const* dst, unsigned int* out_len)
+    void Process(const float* const* src, std::uint32_t* in_len,
+        float* const* dst, std::uint32_t* out_len)
     {
         jack_pw_resampler_process(fHandle, src, in_len, dst, out_len);
     }
 
-    unsigned int Delay()
+    std::uint32_t Delay()
     {
         return jack_pw_resampler_delay(fHandle);
     }
@@ -83,7 +84,7 @@ public:
 
     JackResampler* Create(const JackResamplerParams& params)
     {
-        int quality = (params.quality < 0) ? RESAMPLE_DEFAULT_QUALITY : params.quality;
+        std::int32_t quality = (params.quality < 0) ? RESAMPLE_DEFAULT_QUALITY : params.quality;
         jack_pw_resampler* handle = jack_pw_resampler_new(params.channels, params.in_rate,
             params.out_rate, quality);
         if (handle == nullptr) {

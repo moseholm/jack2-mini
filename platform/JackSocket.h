@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/ioctl.h>
@@ -36,28 +37,28 @@ namespace jackmini {
 class JackClientSocket : public detail::JackClientRequestInterface {
 
 private:
-    int fSocket = -1;
-    int fTimeOut = 0;
+    std::int32_t fSocket = -1;
+    std::int32_t fTimeOut = 0;
     bool fNonBlocking = false; // the socket(int) constructor does not set it
     bool fPromiscuous = false;
-    int fPromiscuousGid = -1;
+    std::int32_t fPromiscuousGid = -1;
 
 public:
     JackClientSocket();
-    JackClientSocket(int socket);
+    JackClientSocket(std::int32_t socket);
 
-    int Connect(const char* dir, const char* name, int which);
-    int Close();
-    int Read(void* data, int len);
-    int Write(void* data, int len);
-    int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) override;
-    int WriteWithFds(void* data, int len, std::span<const int> fds) override;
-    int GetFd()
+    std::int32_t Connect(const char* dir, const char* name, std::int32_t which);
+    std::int32_t Close();
+    std::int32_t Read(void* data, std::int32_t len);
+    std::int32_t Write(void* data, std::int32_t len);
+    std::int32_t ReadWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) override;
+    std::int32_t WriteWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) override;
+    std::int32_t GetFd()
     {
         return fSocket;
     }
-    void SetReadTimeOut(long sec);
-    void SetWriteTimeOut(long sec);
+    void SetReadTimeOut(std::int64_t sec);
+    void SetWriteTimeOut(std::int64_t sec);
 
     void SetNonBlocking(bool onoff);
 };
@@ -70,10 +71,10 @@ public:
 class JackServerSocket {
 
 private:
-    int fSocket;
+    std::int32_t fSocket;
     char fName[SOCKET_MAX_NAME_SIZE];
     bool fPromiscuous;
-    int fPromiscuousGid;
+    std::int32_t fPromiscuousGid;
 
 public:
     JackServerSocket();
@@ -81,10 +82,10 @@ public:
     {
     }
 
-    int Bind(const char* dir, const char* name, int which);
+    std::int32_t Bind(const char* dir, const char* name, std::int32_t which);
     JackClientSocket* Accept();
-    int Close();
-    int GetFd()
+    std::int32_t Close();
+    std::int32_t GetFd()
     {
         return fSocket;
     }

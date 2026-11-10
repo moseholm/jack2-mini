@@ -17,6 +17,7 @@
 #include "jackmini/jackmini.hpp"
 #include "jackmini_wait.hpp"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <set>
@@ -27,7 +28,7 @@ using namespace jackmini;
 
 namespace {
 
-int gFailures = 0;
+std::int32_t gFailures = 0;
 
 void Check(const char* what, bool ok)
 {

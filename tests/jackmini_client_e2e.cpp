@@ -21,6 +21,7 @@
 #include "jackmini/jackmini.hpp"
 #include "jackmini_wait.hpp"
 
+#include <cstdint>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -33,7 +34,7 @@ using namespace jackmini;
 
 namespace {
 
-int gFailures = 0;
+std::int32_t gFailures = 0;
 
 void Check(const char* what, bool ok)
 {
@@ -45,7 +46,7 @@ void Check(const char* what, bool ok)
 
 } // namespace
 
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
     OpenOptions options;
     options.start_server = false;
@@ -73,7 +74,7 @@ int main(int argc, char** argv)
     Check("opened: sample rate is set", client.sample_rate() != 0);
     Check("opened: buffer size is set", client.buffer_size() != 0);
 
-    std::atomic<unsigned long> cycles { 0 };
+    std::atomic<std::uint64_t> cycles { 0 };
     std::atomic<bool> xrun_called { false };
     Check("on_process while opened", client.on_process([&](const Cycle&) {
                                                cycles++;
@@ -94,7 +95,7 @@ int main(int argc, char** argv)
         return 1;
     }
     Client clock = std::move(*clock_opened);
-    std::atomic<unsigned long> clock_cycles { 0 };
+    std::atomic<std::uint64_t> clock_cycles { 0 };
     Check("clock: on_process", clock.on_process([&](const Cycle&) {
                                         clock_cycles++;
                                         return true;
@@ -108,7 +109,7 @@ int main(int argc, char** argv)
     Check("inactive: is_active is false", !client.is_active());
     Check("inactive: a second deactivate is refused", client.deactivate().error() == Error::InvalidState);
 
-    const unsigned long after = cycles.load();
+    const std::uint64_t after = cycles.load();
     Check("inactive: the clock runs on", WaitCycles(clock_cycles, 200));
     Check("inactive: the process callback no longer runs", cycles.load() == after);
 
@@ -186,11 +187,11 @@ int main(int argc, char** argv)
         auto midi_in = dst.register_port("min", PortType::Midi, PortFlags::Input);
         Check("audio and MIDI ports register", audio_out && midi_out && audio_in && midi_in);
 
-        std::atomic<unsigned long> dst_cycles { 0 };
+        std::atomic<std::uint64_t> dst_cycles { 0 };
         std::atomic<float> last_sample { -1.0f };
         std::atomic<std::size_t> midi_seen { 0 };
-        std::atomic<unsigned> first_byte { 0 };
-        std::atomic<unsigned> event_size { 0 };
+        std::atomic<std::uint32_t> first_byte { 0 };
+        std::atomic<std::uint32_t> event_size { 0 };
         if (audio_out && midi_out && audio_in && midi_in) {
             Port aout = *audio_out;
             Port mout = *midi_out;
@@ -217,15 +218,15 @@ int main(int argc, char** argv)
                                                      midi_seen = midi.count();
                                                      if (midi.count() > 0) {
                                                          const auto event = midi.event(0);
-                                                         first_byte = static_cast<unsigned>(event.data.empty() ? 0 : std::to_integer<unsigned>(event.data[0]));
-                                                         event_size = static_cast<unsigned>(event.data.size());
+                                                         first_byte = static_cast<std::uint32_t>(event.data.empty() ? 0 : std::to_integer<std::uint32_t>(event.data[0]));
+                                                         event_size = static_cast<std::uint32_t>(event.data.size());
                                                      }
                                                      return true;
                                                  })
                                                   .has_value());
         }
 
-        std::atomic<unsigned> latency_calls { 0 };
+        std::atomic<std::uint32_t> latency_calls { 0 };
         Check("latency callback: set while inactive", dst.on_latency([&](LatencyMode) { latency_calls++; }).has_value());
         Check("audio clients activate", src.activate().has_value() && dst.activate().has_value());
         if (audio_out) {

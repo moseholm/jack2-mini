@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <stddef.h>
 #include <atomic>
 
@@ -49,12 +50,12 @@ public:
     static size_t Capacity() { return N; }
 
     // Returns the slot index, or -1 if the table is full.  Not for the RT thread.
-    int Assign(T* object)
+    std::int32_t Assign(T* object)
     {
         for (size_t i = 0; i < N; i++) {
             if (fSlots[i].load(std::memory_order_relaxed) == nullptr) {
                 fSlots[i].store(object, std::memory_order_release);
-                return (int)i;
+                return (std::int32_t)i;
             }
         }
         return -1;

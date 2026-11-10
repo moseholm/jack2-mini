@@ -16,6 +16,7 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+#include <cstdint>
 #include <getopt.h>
 #include <cctype>
 #include <cstdio>
@@ -125,9 +126,9 @@ static bool self_connect_mode_is_valid(const Server& server, char mode)
     return false;
 }
 
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
-    for (int a = 1; a < argc; ++a) {
+    for (std::int32_t a = 1; a < argc; ++a) {
         if (!strcmp(argv[a], "--version") || !strcmp(argv[a], "-V")) {
             print_version();
             return 0;
@@ -166,8 +167,8 @@ int main(int argc, char** argv)
     Server server = std::move(*created);
 
     opterr = 0;
-    int opt = 0;
-    int option_index = 0;
+    std::int32_t opt = 0;
+    std::int32_t option_index = 0;
     while (!master_driver_name && (opt = getopt_long(argc, argv, options, long_options, &option_index)) != EOF) {
         switch (opt) {
 
@@ -196,7 +197,7 @@ int main(int argc, char** argv)
             break;
 
         case 'p':
-            server.set_parameter("port-max", static_cast<std::uint64_t>(jackmini::ParseLeadingInteger<unsigned int>(optarg)));
+            server.set_parameter("port-max", static_cast<std::uint64_t>(jackmini::ParseLeadingInteger<std::uint32_t>(optarg)));
             break;
 
         case 'v':
@@ -216,7 +217,7 @@ int main(int argc, char** argv)
             break;
 
         case 'P':
-            server.set_parameter("realtime-priority", static_cast<std::int64_t>(jackmini::ParseLeadingInteger<int>(optarg)));
+            server.set_parameter("realtime-priority", static_cast<std::int64_t>(jackmini::ParseLeadingInteger<std::int32_t>(optarg)));
             break;
 
         case 'r':
@@ -236,7 +237,7 @@ int main(int argc, char** argv)
             break;
 
         case 't':
-            server.set_parameter("client-timeout", static_cast<std::int64_t>(jackmini::ParseLeadingInteger<int>(optarg)));
+            server.set_parameter("client-timeout", static_cast<std::int64_t>(jackmini::ParseLeadingInteger<std::int32_t>(optarg)));
             break;
 
         case 'h':
@@ -261,10 +262,10 @@ int main(int argc, char** argv)
 
     // The driver's arguments are the rest of the command line, after its name.
     std::vector<char*> driver_args { master_driver_name };
-    for (int i = optind; i < argc; i++) {
+    for (std::int32_t i = optind; i < argc; i++) {
         driver_args.push_back(argv[i]);
     }
-    if (!server.parse_driver_arguments(static_cast<int>(driver_args.size()), driver_args.data())) {
+    if (!server.parse_driver_arguments(static_cast<std::int32_t>(driver_args.size()), driver_args.data())) {
         return -1;
     }
 

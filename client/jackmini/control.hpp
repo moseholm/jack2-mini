@@ -94,7 +94,7 @@ public:
     // Parses the selected driver's options: argv[0] is the driver name, the
     // rest are its options, as on the jackd command line.  Prints the help and
     // fails for "-h" or an unknown option.
-    Result<void> parse_driver_arguments(int argc, char* argv[]);
+    Result<void> parse_driver_arguments(std::int32_t argc, char* argv[]);
     Result<void> set_driver_parameter(std::string_view name, Value value);
 
     std::vector<Parameter> parameters() const;

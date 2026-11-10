@@ -32,7 +32,7 @@ using namespace jackmini;
 
 namespace {
 
-int gFailures = 0;
+std::int32_t gFailures = 0;
 
 void Check(const char* what, bool ok)
 {
@@ -63,7 +63,7 @@ Client OpenOrDie(const char* name)
 } // namespace
 
 // The mode the server runs in is given by the caller: "freewheel" for jackd -F, otherwise real time.
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
     const bool expect_freewheel = argc > 1 && std::string(argv[1]) == "freewheel";
 
@@ -80,7 +80,7 @@ int main(int argc, char** argv)
         auto snk_in = sink.register_port("in", PortType::Audio, PortFlags::Input);
         Check("chain: ports register", src_out && dbl_in && dbl_out && snk_in);
 
-        std::atomic<unsigned long> sink_cycles { 0 };
+        std::atomic<std::uint64_t> sink_cycles { 0 };
         std::atomic<float> sink_last { -1.0f };
         if (src_out && dbl_in && dbl_out && snk_in) {
             const Port so = *src_out, di = *dbl_in, dO = *dbl_out, si = *snk_in;
@@ -131,16 +131,16 @@ int main(int argc, char** argv)
     // client removes them, which the next client sees.
     {
         Client many = OpenOrDie("jackmini_many");
-        const int count = 64;
-        int registered = 0;
-        for (int i = 0; i < count; i++) {
+        const std::int32_t count = 64;
+        std::int32_t registered = 0;
+        for (std::int32_t i = 0; i < count; i++) {
             if (many.register_port("p" + std::to_string(i), PortType::Audio, PortFlags::Output).has_value()) {
                 registered++;
             }
         }
         Check("many ports: 64 registered", registered == count);
 
-        int listed = 0;
+        std::int32_t listed = 0;
         for (const auto& name : many.port_names(PortType::Audio, PortFlags::Output)) {
             if (StartsWith(name, "jackmini_many:p")) {
                 listed++;
@@ -148,8 +148,8 @@ int main(int argc, char** argv)
         }
         Check("many ports: the server lists all 64", listed == count);
 
-        int removed = 0;
-        for (int i = 0; i < count; i++) {
+        std::int32_t removed = 0;
+        for (std::int32_t i = 0; i < count; i++) {
             auto handle = many.find_port("jackmini_many:p" + std::to_string(i));
             if (handle && many.unregister_port(*handle).has_value()) {
                 removed++;
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
         many.close();
 
         Client after = OpenOrDie("jackmini_many");
-        int left = 0;
+        std::int32_t left = 0;
         for (const auto& name : after.port_names(PortType::Audio, PortFlags::Output)) {
             if (StartsWith(name, "jackmini_many:p")) {
                 left++;
@@ -212,11 +212,11 @@ int main(int argc, char** argv)
     // Several clients running together.  Each runs its process callback; a transport started by one client is seen by
     // all of them.
     {
-        const int n = 8;
+        const std::int32_t n = 8;
         std::vector<std::unique_ptr<Client>> clients;
-        std::vector<std::unique_ptr<std::atomic<unsigned long>>> counts;
+        std::vector<std::unique_ptr<std::atomic<std::uint64_t>>> counts;
         bool all_open = true;
-        for (int i = 0; i < n; i++) {
+        for (std::int32_t i = 0; i < n; i++) {
             OpenOptions options;
             options.start_server = false;
             auto opened = Client::open("jackmini_group" + std::to_string(i), options);
@@ -225,11 +225,11 @@ int main(int argc, char** argv)
                 break;
             }
             clients.push_back(std::make_unique<Client>(std::move(*opened)));
-            counts.push_back(std::make_unique<std::atomic<unsigned long>>(0));
+            counts.push_back(std::make_unique<std::atomic<std::uint64_t>>(0));
         }
         Check("group: eight clients open", all_open);
         if (all_open) {
-            for (int i = 0; i < n; i++) {
+            for (std::int32_t i = 0; i < n; i++) {
                 auto* counter = counts[i].get();
                 clients[i]->on_process([counter](const Cycle&) {
                     (*counter)++;
@@ -243,7 +243,7 @@ int main(int argc, char** argv)
             Check("group: eight clients activate", all_active);
 
             bool all_run = true;
-            for (int i = 0; i < n; i++) {
+            for (std::int32_t i = 0; i < n; i++) {
                 all_run = all_run && WaitCycles(*counts[i], 10);
             }
             Check("group: every client runs its cycles", all_run);
@@ -277,7 +277,7 @@ int main(int argc, char** argv)
         if (opened) {
             Client cycle_client = std::move(*opened);
             const FrameCount buffer = cycle_client.buffer_size();
-            std::atomic<unsigned long> cycles { 0 };
+            std::atomic<std::uint64_t> cycles { 0 };
             std::atomic<FrameCount> last_frames { 0 };
             std::atomic<std::uint64_t> last_usecs { 0 };
             std::atomic<bool> frames_ok { true }, times_ok { true }, flag_ok { true }, period_ok { true }, size_ok { true };

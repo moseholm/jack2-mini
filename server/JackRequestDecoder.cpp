@@ -19,6 +19,7 @@
 #include "JackLockedEngine.h"
 #include "JackServer.h"
 
+#include <cstdint>
 #include <assert.h>
 #include <signal.h>
 
@@ -62,14 +63,14 @@ JackRequestDecoder::~JackRequestDecoder()
 {
 }
 
-int JackRequestDecoder::Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header)
+std::int32_t JackRequestDecoder::Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header)
 {
     jack_error("JACK protocol mismatch: request version %d, server version %d", header.version, kJackMsgVersion);
     JackResult res(kJackMsgProtocolError);
     return SendJackReply(socket, res, header);
 }
 
-int JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header)
+std::int32_t JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header)
 {
     if (header.version != kJackMsgVersion) {
         Refuse(socket, header);

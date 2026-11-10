@@ -22,6 +22,7 @@
 #include "JackTools.h"
 #include "jackmini/error.hpp"
 
+#include <cstdint>
 #include <expected>
 #include <new>
 #include <type_traits>
@@ -63,7 +64,7 @@ private:
 
     // Runs f with the engine locked, if the client is registered.
     template <class F>
-    auto Client(int refnum, F&& f) -> std::invoke_result_t<F>
+    auto Client(std::int32_t refnum, F&& f) -> std::invoke_result_t<F>
     {
         JackLock lock(&fEngine);
         if (!fEngine.CheckClient(refnum)) {
@@ -74,7 +75,7 @@ private:
 
     // Closing the last client of a temporary server throws JackTemporaryException: the server quits.
     template <class F>
-    Result<void> Closing(int refnum, F&& f)
+    Result<void> Closing(std::int32_t refnum, F&& f)
     {
         try {
             return Client(refnum, f);
@@ -110,70 +111,70 @@ public:
     }
 
     // Client management
-    Result<void> ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, int protocol, int options, int* status)
+    Result<void> ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, std::int32_t protocol, std::int32_t options, std::int32_t* status)
     {
         return Locked([&] { return fEngine.ClientCheck(name, uuid, name_res, protocol, options, status); });
     }
-    Result<void> ClientExternalOpen(const char* name, int pid, jack_uuid_t uuid, int* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager)
+    Result<void> ClientExternalOpen(const char* name, std::int32_t pid, jack_uuid_t uuid, std::int32_t* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager)
     {
         return Locked([&] { return fEngine.ClientExternalOpen(name, pid, uuid, ref, shared_engine, shared_client, shared_graph_manager); });
     }
-    Result<void> RegisterDriver(const char* name, int* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait)
+    Result<void> RegisterDriver(const char* name, std::int32_t* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait)
     {
         return Locked([&] { return fEngine.RegisterDriver(name, ref, shared_engine, shared_manager, client, wait); });
     }
 
-    Result<void> ClientExternalClose(int refnum)
+    Result<void> ClientExternalClose(std::int32_t refnum)
     {
         return Closing(refnum, [&] { return fEngine.ClientExternalClose(refnum); });
     }
-    Result<void> UnregisterDriver(int refnum, bool wait)
+    Result<void> UnregisterDriver(std::int32_t refnum, bool wait)
     {
         return Closing(refnum, [&] { return fEngine.UnregisterDriver(refnum, wait); });
     }
 
-    Result<void> ClientActivate(int refnum, bool is_real_time, bool wait)
+    Result<void> ClientActivate(std::int32_t refnum, bool is_real_time, bool wait)
     {
         return Client(refnum, [&] { return fEngine.ClientActivate(refnum, is_real_time, wait); });
     }
-    Result<void> ClientDeactivate(int refnum, bool wait)
+    Result<void> ClientDeactivate(std::int32_t refnum, bool wait)
     {
         return Client(refnum, [&] { return fEngine.ClientDeactivate(refnum, wait); });
     }
-    void ClientKill(int refnum)
+    void ClientKill(std::int32_t refnum)
     {
         Locked([&] { fEngine.ClientKill(refnum); });
     }
 
     // Port management
-    Result<void> PortRegister(int refnum, const char* name, const char* type, unsigned int flags, unsigned int buffer_size, jack_port_id_t* port)
+    Result<void> PortRegister(std::int32_t refnum, const char* name, const char* type, std::uint32_t flags, std::uint32_t buffer_size, jack_port_id_t* port)
     {
         return Client(refnum, [&] { return fEngine.PortRegister(refnum, name, type, flags, buffer_size, port); });
     }
-    Result<void> PortUnRegister(int refnum, jack_port_id_t port)
+    Result<void> PortUnRegister(std::int32_t refnum, jack_port_id_t port)
     {
         return Client(refnum, [&] { return fEngine.PortUnRegister(refnum, port); });
     }
 
-    Result<void> PortConnect(int refnum, const char* src, const char* dst)
+    Result<void> PortConnect(std::int32_t refnum, const char* src, const char* dst)
     {
         return Client(refnum, [&] { return fEngine.PortConnect(refnum, src, dst); });
     }
-    Result<void> PortDisconnect(int refnum, const char* src, const char* dst)
+    Result<void> PortDisconnect(std::int32_t refnum, const char* src, const char* dst)
     {
         return Client(refnum, [&] { return fEngine.PortDisconnect(refnum, src, dst); });
     }
 
-    Result<void> PortConnect(int refnum, jack_port_id_t src, jack_port_id_t dst)
+    Result<void> PortConnect(std::int32_t refnum, jack_port_id_t src, jack_port_id_t dst)
     {
         return Client(refnum, [&] { return fEngine.PortConnect(refnum, src, dst); });
     }
-    Result<void> PortDisconnect(int refnum, jack_port_id_t src, jack_port_id_t dst)
+    Result<void> PortDisconnect(std::int32_t refnum, jack_port_id_t src, jack_port_id_t dst)
     {
         return Client(refnum, [&] { return fEngine.PortDisconnect(refnum, src, dst); });
     }
 
-    Result<void> PortRename(int refnum, jack_port_id_t port, const char* name)
+    Result<void> PortRename(std::int32_t refnum, jack_port_id_t port, const char* name)
     {
         return Client(refnum, [&] { return fEngine.PortRename(refnum, port, name); });
     }
@@ -197,7 +198,7 @@ public:
         fEngine.NotifyDriverXRun();
     }
 
-    void NotifyClientXRun(int refnum)
+    void NotifyClientXRun(std::int32_t refnum)
     {
         Locked([&] { fEngine.NotifyClientXRun(refnum); });
     }
@@ -215,7 +216,7 @@ public:
     {
         Locked([&] { fEngine.NotifySampleRate(sample_rate); });
     }
-    void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, int direction)
+    void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, std::int32_t direction)
     {
         Locked([&] { fEngine.NotifySecondarySampleRate(card, sample_rate, direction); });
     }
@@ -224,17 +225,17 @@ public:
         Locked([&] { fEngine.NotifyFreewheel(onoff); });
     }
 
-    void NotifyFailure(int code, const char* reason)
+    void NotifyFailure(std::int32_t code, const char* reason)
     {
         Locked([&] { fEngine.NotifyFailure(code, reason); });
     }
 
-    Result<int> GetClientPID(const char* name)
+    Result<std::int32_t> GetClientPID(const char* name)
     {
         return Locked([&] { return fEngine.GetClientPID(name); });
     }
 
-    Result<int> GetClientRefNum(const char* name)
+    Result<std::int32_t> GetClientRefNum(const char* name)
     {
         return Locked([&] { return fEngine.GetClientRefNum(name); });
     }

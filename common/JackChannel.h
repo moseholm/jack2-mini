@@ -19,6 +19,7 @@
 #include "JackFdSegment.h"
 #include "types.h"
 
+#include <cstdint>
 #include <span>
 #include <vector>
 
@@ -42,13 +43,13 @@ public:
     {
     }
 
-    virtual int Read(void* data, int len) = 0;
-    virtual int Write(void* data, int len) = 0;
+    virtual std::int32_t Read(void* data, std::int32_t len) = 0;
+    virtual std::int32_t Write(void* data, std::int32_t len) = 0;
 
     // Writes data with descriptors, in one message. The receiver gets its own copies.
-    virtual int WriteWithFds(void* data, int len, std::span<const int> fds) { return -1; }
+    virtual std::int32_t WriteWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) { return -1; }
     // Reads data and the descriptors sent with it. The caller owns the descriptors it gets.
-    virtual int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) { return -1; }
+    virtual std::int32_t ReadWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) { return -1; }
 };
 
 class JackRequestInterface {
@@ -61,8 +62,8 @@ public:
     {
     }
 
-    virtual int Connect(const char* dir, const char* name, int which) = 0;
-    virtual int Close() = 0;
+    virtual std::int32_t Connect(const char* dir, const char* name, std::int32_t which) = 0;
+    virtual std::int32_t Close() = 0;
 };
 
 class JackClientRequestInterface : public JackChannelTransactionInterface, public JackRequestInterface {
@@ -75,11 +76,11 @@ public:
     {
     }
 
-    virtual int Read(void* data, int len) { return -1; }
-    virtual int Write(void* data, int len) { return -1; }
+    virtual std::int32_t Read(void* data, std::int32_t len) { return -1; }
+    virtual std::int32_t Write(void* data, std::int32_t len) { return -1; }
 
-    virtual int Connect(const char* dir, const char* name, int which) { return -1; }
-    virtual int Close() { return -1; }
+    virtual std::int32_t Connect(const char* dir, const char* name, std::int32_t which) { return -1; }
+    virtual std::int32_t Close() { return -1; }
 };
 
 // \brief Inter process channel for server/client bidirectionnal communication : request and (receiving) notifications.

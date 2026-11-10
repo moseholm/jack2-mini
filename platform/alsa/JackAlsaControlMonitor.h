@@ -20,6 +20,7 @@
 #include "JackPlatformPlug.h"
 #include "JackThread.h"
 
+#include <cstdint>
 #include <alsa/asoundlib.h>
 #include <mutex>
 #include <string>
@@ -34,7 +35,7 @@ public:
     virtual ~JackAlsaControlListener()
     {
     }
-    virtual void OnRateEvent(int card, JackAlsaRateDirection dir, long value) = 0;
+    virtual void OnRateEvent(std::int32_t card, JackAlsaRateDirection dir, std::int64_t value) = 0;
 };
 
 // \brief One thread that watches the rate elements of all secondary cards.
@@ -48,7 +49,7 @@ class JackAlsaControlMonitor : public JackRunnableInterface {
 
 private:
     struct Watch {
-        int card;
+        std::int32_t card;
         JackAlsaRateDirection dir;
         JackAlsaRateElement elem;
     };
@@ -63,12 +64,12 @@ private:
     JackAlsaControlListener* fListener;
     std::vector<Device*> fDevices;
     JackThread fThread;
-    int fWakeFd;
-    int fUpdateFd;
+    std::int32_t fWakeFd;
+    std::int32_t fUpdateFd;
     std::mutex fUpdateMutex;
-    std::vector<int> fRemovals;
+    std::vector<std::int32_t> fRemovals;
     struct PendingWatch {
-        int card;
+        std::int32_t card;
         std::string ctl_name;
         JackAlsaRateElement elem;
         JackAlsaRateDirection dir;
@@ -90,21 +91,21 @@ public:
     virtual ~JackAlsaControlMonitor();
 
     // Must be called before Start().  Opens the device on first use.
-    int AddWatch(int card, const std::string& ctl_name, const JackAlsaRateElement& elem,
+    std::int32_t AddWatch(std::int32_t card, const std::string& ctl_name, const JackAlsaRateElement& elem,
         JackAlsaRateDirection dir);
 
     // Starts watching an element while the thread is running.  The thread adds it
     // between polls; the control device is opened and subscribed on that thread.
-    void QueueWatch(int card, const std::string& ctl_name, const JackAlsaRateElement& elem,
+    void QueueWatch(std::int32_t card, const std::string& ctl_name, const JackAlsaRateElement& elem,
         JackAlsaRateDirection dir);
 
     // Stops watching a card's elements.  Safe while the thread is running: the
     // thread applies the removal between polls.  A device with no watches left
     // is closed.
-    void RemoveWatches(int card);
+    void RemoveWatches(std::int32_t card);
 
-    int Start();
-    int Stop();
+    std::int32_t Start();
+    std::int32_t Stop();
 
     virtual bool Init();
     virtual bool Execute();

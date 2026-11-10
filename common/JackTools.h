@@ -17,6 +17,7 @@
 #pragma once
 
 #define DIR_SEPARATOR '/'
+#include <cstdint>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -31,20 +32,20 @@ namespace jackmini {
 // \brief Utility functions.
 
 struct SERVER_EXPORT JackTools {
-    static int GetPID();
-    static int GetUID();
+    static std::int32_t GetPID();
+    static std::int32_t GetUID();
 
     static void KillServer();
 
-    static int MkDir(const char* path);
+    static std::int32_t MkDir(const char* path);
     static const char* UserDir();
     static const char* ServerDir(const char* server_name, char* server_dir);
     static const char* DefaultServerName();
     static void CleanupFiles(const char* server_name);
-    static int GetTmpdir();
+    static std::int32_t GetTmpdir();
     static void RewriteName(const char* name, char* new_name);
 
-    static int ComputationMicroSec(int buffer_size)
+    static std::int32_t ComputationMicroSec(std::int32_t buffer_size)
     {
         if (buffer_size < 128) {
             return 500;
@@ -56,7 +57,7 @@ struct SERVER_EXPORT JackTools {
     }
 };
 
-void BuildClientPath(char* path_to_so, int path_len, const char* so_name);
+void BuildClientPath(char* path_to_so, std::int32_t path_len, const char* so_name);
 void PrintLoadError(const char* so_name);
 
 } // namespace jackmini

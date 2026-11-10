@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <sys/types.h>
 
 #ifdef __cplusplus
@@ -148,7 +149,7 @@ size_t jack_ringbuffer_read_space(const jack_ringbuffer_t* rb);
 // Uses the mlock() system call.  This is not a realtime operation.
 //
 // @param rb a pointer to the ringbuffer structure.
-int jack_ringbuffer_mlock(jack_ringbuffer_t* rb);
+std::int32_t jack_ringbuffer_mlock(jack_ringbuffer_t* rb);
 
 // Reset the read and write pointers, making an empty buffer.
 //

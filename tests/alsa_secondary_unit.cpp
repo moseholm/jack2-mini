@@ -27,6 +27,7 @@
 #include "resample/JackResampler.h"
 #include "resample/pipewire_resample_bridge.h"
 
+#include <cstdint>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,8 +36,8 @@
 
 using namespace jackmini;
 
-static int g_failures = 0;
-static int g_checks = 0;
+static std::int32_t g_failures = 0;
+static std::int32_t g_checks = 0;
 
 #define CHECK(cond)                                                    \
     do {                                                               \
@@ -57,20 +58,20 @@ public:
     }
     virtual void Reset() { }
     virtual void SetRate(double rate) { fRate = rate; }
-    virtual unsigned int InputLength(unsigned int out_len) { return out_len; }
-    virtual unsigned int OutputLength(unsigned int in_len) { return in_len; }
-    virtual void Process(const float* const* src, unsigned int* in_len,
-        float* const* dst, unsigned int* out_len)
+    virtual std::uint32_t InputLength(std::uint32_t out_len) { return out_len; }
+    virtual std::uint32_t OutputLength(std::uint32_t in_len) { return in_len; }
+    virtual void Process(const float* const* src, std::uint32_t* in_len,
+        float* const* dst, std::uint32_t* out_len)
     {
-        unsigned int n = (*in_len < *out_len) ? *in_len : *out_len;
+        std::uint32_t n = (*in_len < *out_len) ? *in_len : *out_len;
         // Only the first two channels are used by these tests.
-        for (int c = 0; c < 2; c++) {
+        for (std::int32_t c = 0; c < 2; c++) {
             memcpy(dst[c], src[c], sizeof(float) * n);
         }
         *in_len = n;
         *out_len = n;
     }
-    virtual unsigned int Delay() { return 0; }
+    virtual std::uint32_t Delay() { return 0; }
     double fRate;
 };
 
@@ -185,7 +186,7 @@ static void TestRing()
     float a[2][5], b[2][6];
     float* out[2] = { b[0], b[1] };
     const float* in[2] = { a[0], a[1] };
-    for (int i = 0; i < 5; i++) {
+    for (std::int32_t i = 0; i < 5; i++) {
         a[0][i] = (float)i;
         a[1][i] = 100.0f + i;
     }
@@ -263,9 +264,9 @@ static void TestResamplerFactories()
 static void TestSlotTable()
 {
     printf("slots: fixed table, full and free, RT-readable\n");
-    typedef JackAlsaSlotTable<int, 3> Table;
+    typedef JackAlsaSlotTable<std::int32_t, 3> Table;
     Table table;
-    int a = 1, b = 2, c = 3, d = 4;
+    std::int32_t a = 1, b = 2, c = 3, d = 4;
     CHECK(Table::Capacity() == 3);
     CHECK(table.Count() == 0);
     CHECK(table.Assign(&a) == 0);
@@ -360,32 +361,32 @@ static void TestPrimaryById()
 static void TestConverterRates()
 {
     printf("converter: 44.1 kHz capture and 48 kHz playback keep exact counts\n");
-    const unsigned int period = 512;
+    const std::uint32_t period = 512;
     JackResamplerParams p = { 2, 44100, 48000, -1 };
     JackAlsaRateConverter cap(JackResamplerFactory::Default()->Create(p), 2, 8192);
     CHECK(cap.IsValid());
 
     std::vector<float> ring(1 << 20);
-    unsigned long card_n = 0, ring_r = 0;
+    std::uint64_t card_n = 0, ring_r = 0;
     std::vector<float> src0(8192), src1(8192), out0(period), out1(period);
     float* src[2] = { src0.data(), src1.data() };
     float* out[2] = { out0.data(), out1.data() };
     double acc = 0;
     bool exact = true;
-    for (unsigned int c = 0; c < 400; c++) {
+    for (std::uint32_t c = 0; c < 400; c++) {
         acc += period * 44100.0 / 48000.0;
-        unsigned int w = (unsigned int)acc;
+        std::uint32_t w = (std::uint32_t)acc;
         acc -= w;
-        for (unsigned int i = 0; i < w; i++, card_n++) {
+        for (std::uint32_t i = 0; i < w; i++, card_n++) {
             ring[card_n] = sinf(2 * (float)M_PI * 1000.0f * card_n / 44100.0f);
         }
-        unsigned int need = cap.NeedInput(period);
-        for (unsigned int i = 0; i < need; i++) {
-            unsigned long idx = ring_r + i;
+        std::uint32_t need = cap.NeedInput(period);
+        for (std::uint32_t i = 0; i < need; i++) {
+            std::uint64_t idx = ring_r + i;
             src[0][i] = src[1][i] = idx < card_n ? ring[idx] : 0.0f;
         }
         ring_r += need;
-        unsigned int got = cap.Convert(src, need, out, period);
+        std::uint32_t got = cap.Convert(src, need, out, period);
         if (got != period) {
             exact = false;
         }
@@ -397,9 +398,9 @@ static void TestConverterRates()
     std::vector<float> in0(period), in1(period), pout0(8192), pout1(8192);
     float* in[2] = { in0.data(), in1.data() };
     float* pout[2] = { pout0.data(), pout1.data() };
-    unsigned long in_total = 0, out_total = 0;
-    for (unsigned int c = 0; c < 400; c++) {
-        unsigned int produced = play.Convert(in, period, pout, 8192);
+    std::uint64_t in_total = 0, out_total = 0;
+    for (std::uint32_t c = 0; c < 400; c++) {
+        std::uint32_t produced = play.Convert(in, period, pout, 8192);
         if (c > 20) {
             out_total += produced;
             in_total += period;
@@ -413,9 +414,9 @@ static void TestConverterRates()
 // through the converter and the drift controller, as the card does at run time.
 static void SimulateCapture(double drift, double* final_correction, double* mean_fill_error)
 {
-    const unsigned int primary = 512;
-    const unsigned int card_period = 470;
-    const unsigned int target = 3 * card_period;
+    const std::uint32_t primary = 512;
+    const std::uint32_t card_period = 470;
+    const std::uint32_t target = 3 * card_period;
 
     JackResamplerParams p = { 2, 44100, 48000, -1 };
     JackAlsaRateConverter conv(JackResamplerFactory::Default()->Create(p), 2, 8192);
@@ -429,10 +430,10 @@ static void SimulateCapture(double drift, double* final_correction, double* mean
     float* need_buf[2] = { new float[8192](), new float[8192]() };
     float* out[2] = { new float[primary](), new float[primary]() };
     double acc = 0, error_sum = 0;
-    unsigned long samples = 0;
-    for (unsigned int cycle = 0; cycle < 4000; cycle++) {
+    std::uint64_t samples = 0;
+    for (std::uint32_t cycle = 0; cycle < 4000; cycle++) {
         acc += primary * 44100.0 / 48000.0 * (1.0 + drift);
-        unsigned int w = (unsigned int)acc;
+        std::uint32_t w = (std::uint32_t)acc;
         acc -= w;
         float* wr[2] = { new float[w + 1](), new float[w + 1]() };
         const float* wc[2] = { wr[0], wr[1] };
@@ -442,7 +443,7 @@ static void SimulateCapture(double drift, double* final_correction, double* mean
 
         double fill = ring.AvailableRead() + conv.Backlog();
         conv.SetRate(drift_ctl.Update(fill, target, card_period));
-        unsigned int need = conv.NeedInput(primary);
+        std::uint32_t need = conv.NeedInput(primary);
         ring.Read(need_buf, need);
         conv.Convert(need_buf, need, out, primary);
 
@@ -453,7 +454,7 @@ static void SimulateCapture(double drift, double* final_correction, double* mean
     }
     *final_correction = drift_ctl.Correction();
     *mean_fill_error = error_sum / samples;
-    for (int c = 0; c < 2; c++) {
+    for (std::int32_t c = 0; c < 2; c++) {
         delete[] prime[c];
         delete[] need_buf[c];
         delete[] out[c];
@@ -464,7 +465,7 @@ static void TestDriftController()
 {
     printf("drift: the correction follows the card's clock\n");
     const double drifts[] = { 0.0, 300e-6, -300e-6 };
-    for (int i = 0; i < 3; i++) {
+    for (std::int32_t i = 0; i < 3; i++) {
         double correction = 0, error = 0;
         SimulateCapture(drifts[i], &correction, &error);
         // The correction must cancel the drift, and the buffer must stay on target.

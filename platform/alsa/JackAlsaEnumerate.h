@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -25,13 +26,13 @@ namespace jackmini {
 
 struct JackAlsaPcmInfo {
     std::string card_id; // ALSA card id, e.g. "NVidia"
-    int card_num; // card index when enumerated
-    int device; // PCM device number
+    std::int32_t card_num; // card index when enumerated
+    std::int32_t device; // PCM device number
     std::string pcm; // stable name, "hw:CARD=<id>,DEV=<n>"
     bool playback; // has a playback stream
     bool capture; // has a capture stream
-    int playback_channels; // maximum channels, 0 if no playback stream
-    int capture_channels; // maximum channels, 0 if no capture stream
+    std::int32_t playback_channels; // maximum channels, 0 if no playback stream
+    std::int32_t capture_channels; // maximum channels, 0 if no capture stream
 };
 
 // Lists every PCM device that has a stream, on every card.

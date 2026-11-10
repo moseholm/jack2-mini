@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <assert.h>  // `#define NDEBUG' to disable
 #include <inttypes.h>  // POSIX standard fixed-size types
 
@@ -37,7 +38,7 @@
 // uint32_t.  For the set sizes I currently need, this is acceptable.
 // It should not be hard to pack the bits better, if that becomes
 // worthwhile.
-typedef uint32_t _bitset_word_t;
+typedef std::uint32_t _bitset_word_t;
 typedef _bitset_word_t* bitset_t;
 
 #define WORD_SIZE(cardinality) (1 + ((cardinality) + 31) / 32)
@@ -46,7 +47,7 @@ typedef _bitset_word_t* bitset_t;
 #define BIT_INDEX(element) ((element) & 037)
 
 static inline void
-bitset_add(bitset_t set, unsigned int element)
+bitset_add(bitset_t set, std::uint32_t element)
 {
     assert(element < set
                [0]);
@@ -62,7 +63,7 @@ bitset_copy(bitset_t to_set, bitset_t from_set)
 }
 
 static inline void
-bitset_create(bitset_t* set, unsigned int cardinality)
+bitset_create(bitset_t* set, std::uint32_t cardinality)
 {
     *set
         = (bitset_t)calloc(WORD_SIZE(cardinality),
@@ -82,12 +83,12 @@ bitset_destroy(bitset_t* set)
     }
 }
 
-static inline int
+static inline std::int32_t
 bitset_empty(bitset_t set)
 {
-    int i;
+    std::int32_t i;
     _bitset_word_t result = 0;
-    int nwords = WORD_SIZE(set
+    std::int32_t nwords = WORD_SIZE(set
             [0]);
     for (i = 1; i < nwords; i++) {
         result |= set
@@ -96,8 +97,8 @@ bitset_empty(bitset_t set)
     return (result == 0);
 }
 
-static inline int
-bitset_contains(bitset_t set, unsigned int element)
+static inline std::int32_t
+bitset_contains(bitset_t set, std::uint32_t element)
 {
     assert(element < set
                [0]);
@@ -105,7 +106,7 @@ bitset_contains(bitset_t set, unsigned int element)
 }
 
 static inline void
-bitset_remove(bitset_t set, unsigned int element)
+bitset_remove(bitset_t set, std::uint32_t element)
 {
     assert(element < set
                [0]);

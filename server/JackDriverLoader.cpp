@@ -21,6 +21,7 @@
 #include "JackDriverInfo.h"
 #include "JackError.h"
 #include "JackSystemDeps.h"
+#include <cstdint>
 #include <errno.h>
 #include <getopt.h>
 #include <stdio.h>
@@ -39,7 +40,7 @@
 
 void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file)
 {
-    unsigned long i;
+    std::uint64_t i;
     std::array<char, JACK_DRIVER_PARAM_STRING_MAX + 1> arg_default { };
 
     for (i = 0; i < desc->nparams; i++) {
@@ -73,7 +74,7 @@ void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file)
     }
 }
 
-void jack_print_driver_param_usage(jack_driver_desc_t* desc, unsigned long param, FILE* file)
+void jack_print_driver_param_usage(jack_driver_desc_t* desc, std::uint64_t param, FILE* file)
 {
     fprintf(file, "Usage information for the '%s' parameter for driver '%s':\n",
         desc->params[param].name, desc->name);
@@ -325,7 +326,7 @@ SERVER_EXPORT jack_driver_desc_t* jack_driver_descriptor_construct(
     return desc_ptr;
 }
 
-SERVER_EXPORT int jack_driver_descriptor_add_parameter(
+SERVER_EXPORT std::int32_t jack_driver_descriptor_add_parameter(
     jack_driver_desc_t* desc_ptr,
     jack_driver_desc_filler_t* filler_ptr,
     const char* name,
@@ -384,14 +385,14 @@ SERVER_EXPORT int jack_driver_descriptor_add_parameter(
 }
 
 SERVER_EXPORT
-int jack_constraint_add_enum(
+std::int32_t jack_constraint_add_enum(
     jack_driver_param_constraint_desc_t** constraint_ptr_ptr,
-    uint32_t* array_size_ptr,
+    std::uint32_t* array_size_ptr,
     jack_driver_param_value_t* value_ptr,
     const char* short_desc)
 {
     jack_driver_param_constraint_desc_t* constraint_ptr;
-    uint32_t array_size;
+    std::uint32_t array_size;
     jack_driver_param_value_enum_t* possible_value_ptr;
     size_t len;
 
@@ -457,7 +458,7 @@ void jack_constraint_free(
     JACK_CONSTRAINT_COMPOSE_ENUM(type)                              \
     {                                                               \
         jack_driver_param_constraint_desc_t* constraint_ptr;        \
-        uint32_t array_size;                                        \
+        std::uint32_t array_size;                                        \
         jack_driver_param_value_t value;                            \
         struct jack_constraint_enum_##type##_descriptor* descr_ptr; \
                                                                     \

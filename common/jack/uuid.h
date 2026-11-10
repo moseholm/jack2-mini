@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <jack/types.h>
 
 
@@ -24,13 +25,13 @@
 #define JACK_UUID_EMPTY_INITIALIZER 0
 
 extern jack_uuid_t jack_client_uuid_generate();
-extern jack_uuid_t jack_port_uuid_generate(uint32_t port_id);
+extern jack_uuid_t jack_port_uuid_generate(std::uint32_t port_id);
 
-extern uint32_t jack_uuid_to_index(jack_uuid_t);
+extern std::uint32_t jack_uuid_to_index(jack_uuid_t);
 
-extern int jack_uuid_compare(jack_uuid_t, jack_uuid_t);
+extern std::int32_t jack_uuid_compare(jack_uuid_t, jack_uuid_t);
 extern void jack_uuid_copy(jack_uuid_t* dst, jack_uuid_t src);
 extern void jack_uuid_clear(jack_uuid_t*);
-extern int jack_uuid_parse(const char* buf, jack_uuid_t*);
+extern std::int32_t jack_uuid_parse(const char* buf, jack_uuid_t*);
 extern void jack_uuid_unparse(jack_uuid_t, char buf[JACK_UUID_STRING_SIZE]);
-extern int jack_uuid_empty(jack_uuid_t);
+extern std::int32_t jack_uuid_empty(jack_uuid_t);

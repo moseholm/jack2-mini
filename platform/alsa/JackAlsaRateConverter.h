@@ -18,6 +18,7 @@
 
 #include "resample/JackResampler.h"
 
+#include <cstdint>
 #include <stddef.h>
 
 namespace jackmini {
@@ -33,20 +34,20 @@ class JackAlsaRateConverter {
 
 private:
     JackResampler* fResampler;
-    int fChannels;
-    unsigned int fCapacity;
+    std::int32_t fChannels;
+    std::uint32_t fCapacity;
     float** fIn;
     float** fOut;
     float** fOutPtr;
-    unsigned int fInCount;
-    unsigned int fOutCount;
+    std::uint32_t fInCount;
+    std::uint32_t fOutCount;
 
     JackAlsaRateConverter(const JackAlsaRateConverter&);
     JackAlsaRateConverter& operator=(const JackAlsaRateConverter&);
 
 public:
     // Takes ownership of resampler.
-    JackAlsaRateConverter(JackResampler* resampler, int channels, unsigned int capacity);
+    JackAlsaRateConverter(JackResampler* resampler, std::int32_t channels, std::uint32_t capacity);
     ~JackAlsaRateConverter();
 
     bool IsValid() const { return fIn != nullptr && fOut != nullptr; }
@@ -57,20 +58,20 @@ public:
     void SetRate(double rate);
 
     // Input frames held in staging, not yet consumed by the resampler.
-    unsigned int Backlog() const { return fInCount; }
+    std::uint32_t Backlog() const { return fInCount; }
 
     // Filter delay of the resampler, in frames.
-    unsigned int Delay();
+    std::uint32_t Delay();
 
     // Output frames the staged input would produce, not yet converted.
-    unsigned int OutputBacklog();
+    std::uint32_t OutputBacklog();
 
     // Input frames to supply before Convert(out_frames) to produce out_frames.
-    unsigned int NeedInput(unsigned int out_frames);
+    std::uint32_t NeedInput(std::uint32_t out_frames);
 
     // Pushes in_frames and produces up to out_frames.  Returns the count produced.
-    unsigned int Convert(const float* const* in, unsigned int in_frames,
-        float* const* out, unsigned int out_frames);
+    std::uint32_t Convert(const float* const* in, std::uint32_t in_frames,
+        float* const* out, std::uint32_t out_frames);
 };
 
 } // namespace jackmini

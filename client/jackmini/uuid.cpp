@@ -16,6 +16,7 @@
 
 #include "uuid.hpp"
 
+#include <cstdint>
 #include <charconv>
 #include <format>
 

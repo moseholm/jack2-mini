@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "JackClientInterface.h"
 #include "JackPlatformPlug.h"
 #include "jackmini/error.hpp"
@@ -39,11 +41,11 @@ public:
 
     // The shared client control is allocated first; the notification channel is opened only once the driver is
     // known to be running, so a refused open does not create a writer thread.
-    Result<void> OpenClient(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client);
+    Result<void> OpenClient(const char* name, std::int32_t pid, std::int32_t refnum, jack_uuid_t uuid, JackShmSegment* shared_client);
     Result<void> OpenChannel(const char* name);
-    int Close();
+    std::int32_t Close();
 
-    int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
+    std::int32_t ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
 
     JackClientControl* GetClientControl() const;
 };

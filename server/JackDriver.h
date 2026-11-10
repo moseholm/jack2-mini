@@ -23,6 +23,7 @@
 #include "JackPlatformPlug.h"
 #include "jackmini/error.hpp"
 #include "types.h"
+#include <cstdint>
 #include <array>
 #include <list>
 
@@ -45,34 +46,34 @@ public:
     {
     }
 
-    virtual int Open() = 0;
+    virtual std::int32_t Open() = 0;
 
-    virtual int Open(jack_nframes_t buffer_size,
+    virtual std::int32_t Open(jack_nframes_t buffer_size,
         jack_nframes_t samplerate,
         bool capturing,
         bool playing,
-        int inchannels,
-        int outchannels,
+        std::int32_t inchannels,
+        std::int32_t outchannels,
         bool monitor,
         const char* capture_driver_name,
         const char* playback_driver_name,
         jack_nframes_t capture_latency,
         jack_nframes_t playback_latency) = 0;
 
-    virtual int Attach() = 0;
-    virtual int Detach() = 0;
+    virtual std::int32_t Attach() = 0;
+    virtual std::int32_t Detach() = 0;
 
-    virtual int Read() = 0;
-    virtual int Write() = 0;
+    virtual std::int32_t Read() = 0;
+    virtual std::int32_t Write() = 0;
 
-    virtual int Start() = 0;
-    virtual int Stop() = 0;
+    virtual std::int32_t Start() = 0;
+    virtual std::int32_t Stop() = 0;
 
     virtual bool IsFixedBufferSize() = 0;
-    virtual int SetBufferSize(jack_nframes_t buffer_size) = 0;
-    virtual int SetSampleRate(jack_nframes_t sample_rate) = 0;
+    virtual std::int32_t SetBufferSize(jack_nframes_t buffer_size) = 0;
+    virtual std::int32_t SetSampleRate(jack_nframes_t sample_rate) = 0;
 
-    virtual int Process() = 0;
+    virtual std::int32_t Process() = 0;
 
     virtual void SetMaster(bool onoff) = 0;
     virtual bool GetMaster() = 0;
@@ -83,20 +84,20 @@ public:
     virtual std::list<JackDriverInterface*> GetSlaves() = 0;
 
     // For "master" driver
-    virtual int ProcessReadSlaves() = 0;
-    virtual int ProcessWriteSlaves() = 0;
+    virtual std::int32_t ProcessReadSlaves() = 0;
+    virtual std::int32_t ProcessWriteSlaves() = 0;
 
     // For "slave" driver
-    virtual int ProcessRead() = 0;
-    virtual int ProcessWrite() = 0;
+    virtual std::int32_t ProcessRead() = 0;
+    virtual std::int32_t ProcessWrite() = 0;
 
     // For "slave" driver in "synchronous" mode
-    virtual int ProcessReadSync() = 0;
-    virtual int ProcessWriteSync() = 0;
+    virtual std::int32_t ProcessReadSync() = 0;
+    virtual std::int32_t ProcessWriteSync() = 0;
 
     // For "slave" driver in "asynchronous" mode
-    virtual int ProcessReadAsync() = 0;
-    virtual int ProcessWriteAsync() = 0;
+    virtual std::int32_t ProcessReadAsync() = 0;
+    virtual std::int32_t ProcessWriteAsync() = 0;
 
     virtual bool IsRealTime() const = 0;
     virtual bool IsRunning() const = 0;
@@ -124,8 +125,8 @@ protected:
     jack_nframes_t fCaptureLatency;
     jack_nframes_t fPlaybackLatency;
 
-    int fCaptureChannels;
-    int fPlaybackChannels;
+    std::int32_t fCaptureChannels;
+    std::int32_t fPlaybackChannels;
 
     jack_time_t fBeginDateUst;
     jack_time_t fEndDateUst;
@@ -156,20 +157,20 @@ protected:
     void CycleTakeBeginTime();
     void CycleTakeEndTime();
 
-    void SetupDriverSync(int ref, bool freewheel);
+    void SetupDriverSync(std::int32_t ref, bool freewheel);
 
     void NotifyXRun(jack_time_t callback_usecs, float delayed_usecs); // XRun notification sent by the driver
     void NotifyBufferSize(jack_nframes_t buffer_size); // BufferSize notification sent by the driver
     void NotifySampleRate(jack_nframes_t sample_rate); // SampleRate notification sent by the driver
-    void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, int direction); // secondary card rate change
-    void NotifyFailure(int code, const char* reason); // Failure notification sent by the driver
+    void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, std::int32_t direction); // secondary card rate change
+    void NotifyFailure(std::int32_t code, const char* reason); // Failure notification sent by the driver
 
-    virtual void SaveConnections(int alias);
-    virtual void LoadConnections(int alias, bool full_name = true);
-    std::string MatchPortName(const char* name, const char** ports, int alias, const std::string& type);
+    virtual void SaveConnections(std::int32_t alias);
+    virtual void LoadConnections(std::int32_t alias, bool full_name = true);
+    std::string MatchPortName(const char* name, const char** ports, std::int32_t alias, const std::string& type);
 
-    virtual int StartSlaves();
-    virtual int StopSlaves();
+    virtual std::int32_t StartSlaves();
+    virtual std::int32_t StopSlaves();
 
     virtual Result<void> ResumeRefNum();
     virtual Result<void> SuspendRefNum();
@@ -189,54 +190,54 @@ public:
         return fSlaveList;
     }
 
-    virtual int Open();
+    virtual std::int32_t Open();
 
-    virtual int Open(jack_nframes_t buffer_size,
+    virtual std::int32_t Open(jack_nframes_t buffer_size,
         jack_nframes_t samplerate,
         bool capturing,
         bool playing,
-        int inchannels,
-        int outchannels,
+        std::int32_t inchannels,
+        std::int32_t outchannels,
         bool monitor,
         const char* capture_driver_name,
         const char* playback_driver_name,
         jack_nframes_t capture_latency,
         jack_nframes_t playback_latency);
 
-    virtual int Close();
+    virtual std::int32_t Close();
 
-    virtual int Process();
+    virtual std::int32_t Process();
 
-    virtual int Attach();
-    virtual int Detach();
+    virtual std::int32_t Attach();
+    virtual std::int32_t Detach();
 
-    virtual int Read();
-    virtual int Write();
+    virtual std::int32_t Read();
+    virtual std::int32_t Write();
 
-    virtual int Start();
-    virtual int Stop();
+    virtual std::int32_t Start();
+    virtual std::int32_t Stop();
 
     // For "master" driver
-    int ProcessReadSlaves();
-    int ProcessWriteSlaves();
+    std::int32_t ProcessReadSlaves();
+    std::int32_t ProcessWriteSlaves();
 
     // For "slave" driver with typically decompose a given cycle in separated Read and Write parts.
-    virtual int ProcessRead();
-    virtual int ProcessWrite();
+    virtual std::int32_t ProcessRead();
+    virtual std::int32_t ProcessWrite();
 
     // For "slave" driver in "synchronous" mode
-    virtual int ProcessReadSync();
-    virtual int ProcessWriteSync();
+    virtual std::int32_t ProcessReadSync();
+    virtual std::int32_t ProcessWriteSync();
 
     // For "slave" driver in "asynchronous" mode
-    virtual int ProcessReadAsync();
-    virtual int ProcessWriteAsync();
+    virtual std::int32_t ProcessReadAsync();
+    virtual std::int32_t ProcessWriteAsync();
 
     virtual bool IsFixedBufferSize();
-    virtual int SetBufferSize(jack_nframes_t buffer_size);
-    virtual int SetSampleRate(jack_nframes_t sample_rate);
+    virtual std::int32_t SetBufferSize(jack_nframes_t buffer_size);
+    virtual std::int32_t SetSampleRate(jack_nframes_t sample_rate);
 
-    virtual int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
+    virtual std::int32_t ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
     virtual JackClientControl* GetClientControl() const;
 
     virtual bool IsRealTime() const;

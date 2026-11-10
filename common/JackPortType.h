@@ -18,6 +18,7 @@
 
 #include "JackConstants.h"
 #include "types.h"
+#include <cstdint>
 #include <stddef.h>
 
 namespace jackmini {
@@ -28,7 +29,7 @@ struct JackPortType {
     const char* fName;
     size_t (*size)();
     void (*init)(void* buffer, size_t buffer_size, jack_nframes_t nframes);
-    void (*mixdown)(void* mixbuffer, void** src_buffers, int src_count, jack_nframes_t nframes);
+    void (*mixdown)(void* mixbuffer, void** src_buffers, std::int32_t src_count, jack_nframes_t nframes);
 };
 
 extern jack_port_type_id_t GetPortTypeId(const char* port_type);

@@ -27,6 +27,7 @@
 #include "jslist.h"
 #include "driver_interface.h"
 
+#include <cstdint>
 #include <memory>
 
 namespace jackmini {
@@ -55,7 +56,7 @@ private:
 
 
 public:
-    JackServer(bool sync, bool temporary, int timeout, bool rt, int priority, int port_max, bool verbose, jack_timer_type_t clock, char self_connect_mode, const char* server_name);
+    JackServer(bool sync, bool temporary, std::int32_t timeout, bool rt, std::int32_t priority, std::int32_t port_max, bool verbose, jack_timer_type_t clock, char self_connect_mode, const char* server_name);
     ~JackServer();
 
     // Server control
@@ -68,15 +69,15 @@ public:
     bool IsRunning();
 
     // RT thread
-    void Notify(int refnum, int notify, int value);
+    void Notify(std::int32_t refnum, std::int32_t notify, std::int32_t value);
 
     // From request thread : API
     Result<void> SetBufferSize(jack_nframes_t buffer_size);
     Result<void> SetFreewheel(bool onoff);
 
     // Transport management
-    Result<void> ReleaseTimebase(int refnum);
-    Result<void> SetTimebaseCallback(int refnum, int conditional);
+    Result<void> ReleaseTimebase(std::int32_t refnum);
+    Result<void> SetTimebaseCallback(std::int32_t refnum, std::int32_t conditional);
 
     // Object access
     JackLockedEngine* GetEngine();

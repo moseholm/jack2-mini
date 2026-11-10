@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "JackPlatformPlug.h"
 #include "JackThread.h"
 
@@ -50,7 +52,7 @@ private:
     JackThread fThread;
     struct udev* fUdev;
     struct udev_monitor* fMonitor;
-    int fWakeFd;
+    std::int32_t fWakeFd;
 
     JackAlsaHotplug(const JackAlsaHotplug&);
     JackAlsaHotplug& operator=(const JackAlsaHotplug&);
@@ -61,8 +63,8 @@ public:
 
     bool Available() const { return fMonitor != nullptr; }
 
-    int Start();
-    int Stop();
+    std::int32_t Start();
+    std::int32_t Stop();
 
     virtual bool Init();
     virtual bool Execute();

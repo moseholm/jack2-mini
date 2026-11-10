@@ -22,7 +22,7 @@
 
 namespace {
 
-int failures = 0;
+std::int32_t failures = 0;
 
 #define CHECK(cond)                                              \
     do {                                                         \
@@ -280,7 +280,7 @@ const unsigned char kMemcpyFake[] = {
 void check_floats_to_samples()
 {
     const float in[] = { 0.0f, 1.0f, -1.0f, 0.5f, -0.25f, 2.0f, -2.0f, 0.3333333f };
-    const unsigned long n = sizeof in / sizeof in[0];
+    const std::uint64_t n = sizeof in / sizeof in[0];
     dither_state_t st { };
 
     char d16[n * 2] = { };
@@ -302,14 +302,14 @@ void check_floats_to_samples()
 
 void check_samples_to_floats()
 {
-    const short s16[] = { 0, 32767, -32767, 16384, -8192, 1 };
+    const std::int16_t s16[] = { 0, 32767, -32767, 16384, -8192, 1 };
     float back[6] = { };
-    sample_move_dS_s16(back, reinterpret_cast<char*>(const_cast<short*>(s16)), 6, 2);
+    sample_move_dS_s16(back, reinterpret_cast<char*>(const_cast<std::int16_t*>(s16)), 6, 2);
     check_bytes("s16 to float", back, kS16Float);
 
-    const int32_t s32[] = { 0, 2147483647, -2147483647, 1073741824, -536870912 };
+    const std::int32_t s32[] = { 0, 2147483647, -2147483647, 1073741824, -536870912 };
     float backs[5] = { };
-    sample_move_dS_s32(backs, reinterpret_cast<char*>(const_cast<int32_t*>(s32)), 5, 4);
+    sample_move_dS_s32(backs, reinterpret_cast<char*>(const_cast<std::int32_t*>(s32)), 5, 4);
     check_bytes("s32 to float", backs, kS32Float);
 }
 

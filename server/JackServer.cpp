@@ -1,3 +1,5 @@
+#include <cstdint>
+
 // Copyright (C) 2001 Paul Davis
 // Copyright (C) 2004-2008 Grame
 //
@@ -39,7 +41,7 @@ const char* jack_get_self_connect_mode_description(char mode);
 namespace jackmini {
 
 // The driver reports 0 on success and -1 on failure.
-static Result<void> DriverResult(int rc)
+static Result<void> DriverResult(std::int32_t rc)
 {
     return (rc < 0) ? Result<void>(std::unexpected(Error::ServerFailure)) : Result<void> { };
 }
@@ -47,7 +49,7 @@ static Result<void> DriverResult(int rc)
 //----------------
 // Server control
 //----------------
-JackServer::JackServer(bool sync, bool temporary, int timeout, bool rt, int priority, int port_max, bool verbose, jack_timer_type_t clock, char self_connect_mode, const char* server_name)
+JackServer::JackServer(bool sync, bool temporary, std::int32_t timeout, bool rt, std::int32_t priority, std::int32_t port_max, bool verbose, jack_timer_type_t clock, char self_connect_mode, const char* server_name)
 {
     if (rt) {
         jack_info("JACK server starting in realtime mode with priority %ld", priority);
@@ -175,7 +177,7 @@ Result<void> JackServer::Start(bool freewheel)
 Result<void> JackServer::Stop()
 {
     jack_log("JackServer::Stop");
-    int res = -1;
+    std::int32_t res = -1;
 
     if (fFreewheel) {
         if (fThreadedFreewheelDriver) {
@@ -292,7 +294,7 @@ Result<void> JackServer::SetFreewheel(bool onoff)
 // Coming from the RT thread
 //---------------------------
 
-void JackServer::Notify(int refnum, int notify, int value)
+void JackServer::Notify(std::int32_t refnum, std::int32_t notify, std::int32_t value)
 {
     switch (notify) {
 
@@ -314,12 +316,12 @@ void JackServer::Notify(int refnum, int notify, int value)
 // Transport management
 //----------------------
 
-Result<void> JackServer::ReleaseTimebase(int refnum)
+Result<void> JackServer::ReleaseTimebase(std::int32_t refnum)
 {
     return fEngineControl->fTransport.ResetTimebase(refnum);
 }
 
-Result<void> JackServer::SetTimebaseCallback(int refnum, int conditional)
+Result<void> JackServer::SetTimebaseCallback(std::int32_t refnum, std::int32_t conditional)
 {
     return fEngineControl->fTransport.SetTimebaseMaster(refnum, conditional);
 }

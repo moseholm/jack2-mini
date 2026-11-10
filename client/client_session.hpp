@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <atomic>
 #include <condition_variable>
 #include <functional>
@@ -69,16 +70,16 @@ public:
     bool is_active() const noexcept;
 
     // Ports, by the graph's port numbers. The public Client keeps the handles that it gives out.
-    Result<jack_port_id_t> register_port(std::string_view short_name, const char* type, unsigned long flags, unsigned long buffer_size);
+    Result<jack_port_id_t> register_port(std::string_view short_name, const char* type, std::uint64_t flags, std::uint64_t buffer_size);
     Result<void> unregister_port(jack_port_id_t port);
     Result<void> connect_ports(std::string_view source, std::string_view destination);
     Result<void> disconnect_ports(std::string_view source, std::string_view destination);
     bool owns(jack_port_id_t port) const;
     std::string_view port_name(jack_port_id_t port) const;
     const char* port_type(jack_port_id_t port) const;
-    unsigned long port_flags(jack_port_id_t port) const;
+    std::uint64_t port_flags(jack_port_id_t port) const;
     std::optional<jack_port_id_t> find_port(std::string_view full_name) const;
-    std::vector<std::string> port_names(const char* type, unsigned long flags) const;
+    std::vector<std::string> port_names(const char* type, std::uint64_t flags) const;
     std::vector<std::string> connections(jack_port_id_t port) const;
 
     // Everything about each port in use, in port-number order.  The owner is the UUID of the client that registered
@@ -87,7 +88,7 @@ public:
     struct PortRecord {
         std::string name;
         std::string type;
-        unsigned long flags = 0;
+        std::uint64_t flags = 0;
         jack_latency_range_t playback_latency { };
         jack_latency_range_t capture_latency { };
         jack_nframes_t total_latency = 0;
@@ -135,7 +136,7 @@ public:
     // deactivated first.
     Result<void> close();
 
-    int ref() const noexcept { return ref_; }
+    std::int32_t ref() const noexcept { return ref_; }
     std::string_view name() const noexcept { return name_; }
     bool server_alive() const noexcept { return !server_down_.load(); }
 
@@ -145,10 +146,10 @@ private:
     Result<void> connect_and_register(std::string_view name, const OpenOptions& options);
     bool start_notifications();
     void notification_loop();
-    int handle_notification(const JackClientNotification& event);
-    int handle_latency(int status);
+    std::int32_t handle_notification(const JackClientNotification& event);
+    std::int32_t handle_latency(std::int32_t status);
     void deliver_shutdown();
-    int transact(JackRequest& request, JackResult& reply);
+    std::int32_t transact(JackRequest& request, JackResult& reply);
     void shut_down_sockets();
 
     static void* realtime_entry(void* arg);
@@ -167,7 +168,7 @@ private:
 
     JackServerSocket notify_listen_;
     std::unique_ptr<JackClientSocket> notify_;
-    std::atomic<int> notify_fd_ { -1 }; // a copy of notify_'s descriptor, so close can shut it down
+    std::atomic<std::int32_t> notify_fd_ { -1 }; // a copy of notify_'s descriptor, so close can shut it down
     std::jthread notifier_;
     std::mutex ready_mutex_;
     std::condition_variable ready_;
@@ -176,7 +177,7 @@ private:
     JackShmReadWritePtr<JackClientControl> client_;
     std::string server_name_;
     std::string name_;
-    int ref_ = -1;
+    std::int32_t ref_ = -1;
     std::atomic<bool> closing_ { false };
     std::atomic<bool> server_down_ { false };
 

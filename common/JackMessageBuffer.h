@@ -41,7 +41,7 @@ inline constexpr std::size_t MB_BUFFERS = 128;
 inline constexpr std::size_t MB_BUFFERSIZE = 256; // message length limit, including the terminator
 
 struct JackMessage {
-    int level;
+    std::int32_t level;
     std::array<char, MB_BUFFERSIZE> message;
 };
 
@@ -70,7 +70,7 @@ private:
     JackThread fThread;
     std::atomic<bool> fRunning;
 
-    bool Enqueue(int level, std::string_view message);
+    bool Enqueue(std::int32_t level, std::string_view message);
     void Flush();
 
     bool Start();
@@ -86,15 +86,15 @@ public:
     bool static Create();
     bool static Destroy();
 
-    void AddMessage(int level, std::string_view message);
-    int SetInitCallback(JackThreadInitCallback callback, void* arg);
+    void AddMessage(std::int32_t level, std::string_view message);
+    std::int32_t SetInitCallback(JackThreadInitCallback callback, void* arg);
     std::uint32_t Overruns() const;
 
     static JackMessageBuffer* fInstance;
 };
 
 
-void JackMessageBufferAdd(int level, const char* message);
+void JackMessageBufferAdd(std::int32_t level, const char* message);
 
 
 }; // namespace jackmini

@@ -16,6 +16,7 @@
 
 #include "external_metro.h"
 
+#include <cstdint>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -28,9 +29,9 @@ const double PI = 3.14;
 namespace {
 
 // The keys are read as they are typed.  EOF ends the wait, so that a closed input does not spin.
-bool WaitForKey(int key)
+bool WaitForKey(std::int32_t key)
 {
-    int c;
+    std::int32_t c;
     while ((c = getchar()) != key) {
         if (c == EOF) {
             return false;
@@ -70,12 +71,12 @@ bool ExternalMetro::process_audio(FrameCount nframes)
     return true;
 }
 
-ExternalMetro::ExternalMetro(int freq_arg, double max_amp, int dur_arg, int bpm_arg, const char* client_name)
+ExternalMetro::ExternalMetro(std::int32_t freq_arg, double max_amp, std::int32_t dur_arg, std::int32_t bpm_arg, const char* client_name)
     : client(OpenClient(client_name))
 {
     float scale;
-    int i, attack_length, decay_length;
-    int attack_percent = 1, decay_percent = 10;
+    std::int32_t i, attack_length, decay_length;
+    std::int32_t attack_percent = 1, decay_percent = 10;
     offset = 0;
     wave = nullptr;
     amp = nullptr;
@@ -105,7 +106,7 @@ ExternalMetro::ExternalMetro(int freq_arg, double max_amp, int dur_arg, int bpm_
     if (tone_length >= wave_length) {
         return;
     }
-    if (attack_length + decay_length > (int)tone_length) {
+    if (attack_length + decay_length > (std::int32_t)tone_length) {
         std::fprintf(stderr, "invalid attack/decay\n");
         return;
     }
@@ -117,16 +118,16 @@ ExternalMetro::ExternalMetro(int freq_arg, double max_amp, int dur_arg, int bpm_
     for (i = 0; i < attack_length; i++) {
         amp[i] = max_amp * i / ((double)attack_length);
     }
-    for (i = attack_length; i < (int)tone_length - decay_length; i++) {
+    for (i = attack_length; i < (std::int32_t)tone_length - decay_length; i++) {
         amp[i] = max_amp;
     }
-    for (i = (int)tone_length - decay_length; i < (int)tone_length; i++) {
+    for (i = (std::int32_t)tone_length - decay_length; i < (std::int32_t)tone_length; i++) {
         amp[i] = -max_amp * (i - (double)tone_length) / ((double)decay_length);
     }
-    for (i = 0; i < (int)tone_length; i++) {
+    for (i = 0; i < (std::int32_t)tone_length; i++) {
         wave[i] = amp[i] * std::sin(scale * i);
     }
-    for (i = tone_length; i < (int)wave_length; i++) {
+    for (i = tone_length; i < (std::int32_t)wave_length; i++) {
         wave[i] = 0;
     }
 
@@ -144,7 +145,7 @@ ExternalMetro::~ExternalMetro()
     std::free(wave);
 }
 
-int main(int argc, char* argv[])
+int main(std::int32_t argc, char* argv[])
 {
     ExternalMetro* client1 = nullptr;
     ExternalMetro* client2 = nullptr;
@@ -194,7 +195,7 @@ int main(int argc, char* argv[])
     std::printf("Opening a new client....\n");
     try {
         client1 = new ExternalMetro(1200, 0.4, 20, 80, "t1");
-    } catch (int num) {
+    } catch (std::int32_t num) {
         std::printf("Cannot open a new client since old one was not closed correctly... OK\n");
     }
 

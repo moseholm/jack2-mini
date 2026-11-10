@@ -19,6 +19,7 @@
 #include "JackCString.h"
 #include "JackError.h"
 #include "JackPortType.h"
+#include <cstdint>
 #include <assert.h>
 #include <array>
 #include <format>
@@ -32,7 +33,7 @@ JackPort::JackPort()
     Release();
 }
 
-bool JackPort::Allocate(int refnum, const char* port_name, const char* port_type, JackPortFlags flags)
+bool JackPort::Allocate(std::int32_t refnum, const char* port_name, const char* port_type, JackPortFlags flags)
 {
     jack_port_type_id_t id = GetPortTypeId(port_type);
     assert(id >= 0 && id <= PORT_TYPES_MAX);
@@ -78,7 +79,7 @@ void JackPort::Release()
     fAlias2[0] = '\0';
 }
 
-int JackPort::GetRefNum() const
+std::int32_t JackPort::GetRefNum() const
 {
     return fRefNum;
 }
@@ -139,19 +140,19 @@ void JackPort::GetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_r
     }
 }
 
-int JackPort::Tie(jack_port_id_t port_index)
+std::int32_t JackPort::Tie(jack_port_id_t port_index)
 {
     fTied = port_index;
     return 0;
 }
 
-int JackPort::UnTie()
+std::int32_t JackPort::UnTie()
 {
     fTied = NO_PORT;
     return 0;
 }
 
-int JackPort::RequestMonitor(bool onoff)
+std::int32_t JackPort::RequestMonitor(bool onoff)
 {
     // jackd.h
     // * If @ref JackPortCanMonitor is set for this @a port, turn input
@@ -169,7 +170,7 @@ int JackPort::RequestMonitor(bool onoff)
     return 0;
 }
 
-int JackPort::EnsureMonitor(bool onoff)
+std::int32_t JackPort::EnsureMonitor(bool onoff)
 {
     // jackd.h
     // * If @ref JackPortCanMonitor is set for this @a port, turn input
@@ -203,7 +204,7 @@ const char* JackPort::GetShortName() const
     return strchr(fName, ':') + 1;
 }
 
-int JackPort::GetFlags() const
+std::int32_t JackPort::GetFlags() const
 {
     return fFlags;
 }
@@ -217,7 +218,7 @@ const char* JackPort::GetType() const
 void JackPort::SetName(const char* new_name)
 {
     char* colon = strchr(fName, ':');
-    int len = sizeof(fName) - ((int)(colon - fName)) - 2;
+    std::int32_t len = sizeof(fName) - ((std::int32_t)(colon - fName)) - 2;
     CopyCString(std::span<char>(colon + 1, len), new_name);
 }
 
@@ -241,9 +242,9 @@ bool JackPort::NameEquals(std::string_view target)
         || std::string_view(fAlias2) == target);
 }
 
-int JackPort::GetAliases(char* const aliases[2])
+std::int32_t JackPort::GetAliases(char* const aliases[2])
 {
-    int cnt = 0;
+    std::int32_t cnt = 0;
 
     if (fAlias1[0] != '\0') {
         CopyCString(std::span<char>(aliases[0], REAL_JACK_PORT_NAME_SIZE), fAlias1);
@@ -258,7 +259,7 @@ int JackPort::GetAliases(char* const aliases[2])
     return cnt;
 }
 
-int JackPort::SetAlias(const char* alias)
+std::int32_t JackPort::SetAlias(const char* alias)
 {
     if (fAlias1[0] == '\0') {
         CopyCString(fAlias1, alias);
@@ -271,7 +272,7 @@ int JackPort::SetAlias(const char* alias)
     return 0;
 }
 
-int JackPort::UnsetAlias(const char* alias)
+std::int32_t JackPort::UnsetAlias(const char* alias)
 {
     if (strcmp(fAlias1, alias) == 0) {
         fAlias1[0] = '\0';
@@ -290,7 +291,7 @@ void JackPort::ClearBuffer(jack_nframes_t frames)
     (type->init)(GetBuffer(), frames * sizeof(jack_default_audio_sample_t), frames);
 }
 
-void JackPort::MixBuffers(void** src_buffers, int src_count, jack_nframes_t buffer_size)
+void JackPort::MixBuffers(void** src_buffers, std::int32_t src_count, jack_nframes_t buffer_size)
 {
     const JackPortType* type = GetPortType(fTypeId);
     (type->mixdown)(GetBuffer(), src_buffers, src_count, buffer_size);
