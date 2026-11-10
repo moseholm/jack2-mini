@@ -25,6 +25,7 @@
 #include "JackSynchro.h"
 #include "JackTransportEngine.h"
 #include "jackmini/error.hpp"
+#include <array>
 #include <cstdint>
 #include <atomic>
 #include <map>
@@ -44,7 +45,7 @@ private:
     JackGraphManager* fGraphManager;
     JackEngineControl* fEngineControl;
     char fSelfConnectMode;
-    std::atomic<JackClientInterface*> fClientTable[CLIENT_NUM];
+    std::array<std::atomic<JackClientInterface*>, CLIENT_NUM> fClientTable;
     // Set by client open and close, cleared by the engine thread, which owns the rolling CPU statistics
     std::atomic<bool> fRollingResetPending;
     JackSynchro* fSynchroTable;

@@ -41,8 +41,8 @@ JackEngine::JackEngine(JackGraphManager* manager,
     JackSynchro* table,
     JackEngineControl* control,
     char self_connect_mode)
-    : JackLockAble(control->fServerName)
-    , fSignal(control->fServerName)
+    : JackLockAble(control->fServerName.data())
+    , fSignal(control->fServerName.data())
 {
     fGraphManager = manager;
     fSynchroTable = table;
@@ -65,7 +65,7 @@ Result<void> JackEngine::Open()
     jack_log("JackEngine::Open");
 
     // Open audio thread => request thread communication channel
-    return fChannel.Open(fEngineControl->fServerName);
+    return fChannel.Open(fEngineControl->fServerName.data());
 }
 
 Result<void> JackEngine::Close()
@@ -173,7 +173,7 @@ bool JackEngine::Process(jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end
     if (fRollingResetPending.exchange(false)) {
         fEngineControl->ResetRollingUsecs();
     }
-    fEngineControl->CycleBegin(fClientTable, fGraphManager, cur_cycle_begin, prev_cycle_end);
+    fEngineControl->CycleBegin(fClientTable.data(), fGraphManager, cur_cycle_begin, prev_cycle_end);
 
     // Graph
     if (fGraphManager->IsFinishedGraph()) {
@@ -193,7 +193,7 @@ bool JackEngine::Process(jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end
     }
 
     // Cycle end
-    fEngineControl->CycleEnd(fClientTable);
+    fEngineControl->CycleEnd(fClientTable.data());
     return res;
 }
 
@@ -302,7 +302,7 @@ void JackEngine::NotifyClient(std::int32_t refnum, std::int32_t event, std::int3
 {
     JackClientInterface* client = fClientTable[refnum];
     if (client) {
-        ClientNotify(client, refnum, client->GetClientControl()->fName, event, sync, message, value1, value2);
+        ClientNotify(client, refnum, client->GetClientControl()->fName.data(), event, sync, message, value1, value2);
     }
 }
 
@@ -321,7 +321,7 @@ Result<void> JackEngine::NotifyAddClient(JackClientInterface* new_client, const 
     for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
         JackClientInterface* old_client = fClientTable[i];
         if (old_client && old_client != new_client) {
-            char* old_name = old_client->GetClientControl()->fName;
+            char* old_name = old_client->GetClientControl()->fName.data();
             if (!ClientNotify(old_client, refnum, new_name, kAddClient, false, "", 0, 0)) {
                 jack_error("NotifyAddClient old_client fails name = %s", old_name);
                 // Not considered as a failure...
@@ -502,7 +502,7 @@ bool JackEngine::ClientCheckName(const char* name)
 {
     for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
         JackClientInterface* client = fClientTable[i];
-        if (client && (strcmp(client->GetClientControl()->fName, name) == 0)) {
+        if (client && (strcmp(client->GetClientControl()->fName.data(), name) == 0)) {
             return true;
         }
     }
@@ -535,7 +535,7 @@ Result<std::int32_t> JackEngine::GetClientPID(const char* name)
 {
     for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
         JackClientInterface* client = fClientTable[i];
-        if (client && (strcmp(client->GetClientControl()->fName, name) == 0)) {
+        if (client && (strcmp(client->GetClientControl()->fName.data(), name) == 0)) {
             return client->GetClientControl()->fPID;
         }
     }
@@ -547,7 +547,7 @@ Result<std::int32_t> JackEngine::GetClientRefNum(const char* name)
 {
     for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
         JackClientInterface* client = fClientTable[i];
-        if (client && (strcmp(client->GetClientControl()->fName, name) == 0)) {
+        if (client && (strcmp(client->GetClientControl()->fName.data(), name) == 0)) {
             return client->GetClientControl()->fRefNum;
         }
     }
@@ -585,7 +585,7 @@ Result<void> JackEngine::ClientExternalOpen(const char* name, std::int32_t pid, 
 
     JackExternalClient* client = new JackExternalClient();
 
-    if (!fSynchroTable[refnum].Allocate(real_name.data(), fEngineControl->fServerName, 0)) {
+    if (!fSynchroTable[refnum].Allocate(real_name.data(), fEngineControl->fServerName.data(), 0)) {
         jack_error("Cannot allocate synchro");
         goto error;
     }
@@ -643,7 +643,7 @@ Result<void> JackEngine::RegisterDriver(const char* name, std::int32_t* ref, Jac
     }
     std::int32_t refnum = *allocated;
 
-    if (!fSynchroTable[refnum].Allocate(name, fEngineControl->fServerName, 0)) {
+    if (!fSynchroTable[refnum].Allocate(name, fEngineControl->fServerName.data(), 0)) {
         jack_error("Cannot allocate synchro");
         goto error;
     }
@@ -706,15 +706,15 @@ Result<void> JackEngine::ClientCloseAux(std::int32_t refnum, bool wait)
     jack_uuid_copy(&uuid, client->GetClientControl()->fSessionID);
 
     // Unregister all ports ==> notifications are sent
-    jack_int_t ports[PORT_NUM_FOR_CLIENT];
+    std::array<jack_int_t, PORT_NUM_FOR_CLIENT> ports;
     std::int32_t i;
 
-    fGraphManager->GetInputPorts(refnum, ports);
+    fGraphManager->GetInputPorts(refnum, ports.data());
     for (i = 0; (i < PORT_NUM_FOR_CLIENT) && (ports[i] != EMPTY); i++) {
         PortUnRegister(refnum, ports[i]);
     }
 
-    fGraphManager->GetOutputPorts(refnum, ports);
+    fGraphManager->GetOutputPorts(refnum, ports.data());
     for (i = 0; (i < PORT_NUM_FOR_CLIENT) && (ports[i] != EMPTY); i++) {
         PortUnRegister(refnum, ports[i]);
     }
@@ -733,7 +733,7 @@ Result<void> JackEngine::ClientCloseAux(std::int32_t refnum, bool wait)
     }
 
     // Notify running clients
-    NotifyRemoveClient(client->GetClientControl()->fName, refnum);
+    NotifyRemoveClient(client->GetClientControl()->fName.data(), refnum);
 
     // Cleanup...
     fSynchroTable[refnum].Destroy();
@@ -755,10 +755,10 @@ Result<void> JackEngine::ClientActivate(std::int32_t refnum, bool is_real_time, 
         jack_error("JackEngine::ClientActivate wait error ref = %ld name = %s", refnum, client->GetClientControl()->fName);
         return std::unexpected(Error::ServerFailure);
     } else {
-        jack_int_t input_ports[PORT_NUM_FOR_CLIENT];
-        jack_int_t output_ports[PORT_NUM_FOR_CLIENT];
-        fGraphManager->GetInputPorts(refnum, input_ports);
-        fGraphManager->GetOutputPorts(refnum, output_ports);
+        std::array<jack_int_t, PORT_NUM_FOR_CLIENT> input_ports;
+        std::array<jack_int_t, PORT_NUM_FOR_CLIENT> output_ports;
+        fGraphManager->GetInputPorts(refnum, input_ports.data());
+        fGraphManager->GetOutputPorts(refnum, output_ports.data());
 
         // Notify client
         NotifyActivate(refnum);
@@ -982,8 +982,8 @@ Result<void> JackEngine::PortDisconnect(std::int32_t refnum, jack_port_id_t src,
 
     if (dst == ALL_PORTS) {
 
-        jack_int_t connections[CONNECTION_NUM_FOR_PORT];
-        fGraphManager->GetConnections(src, connections);
+        std::array<jack_int_t, CONNECTION_NUM_FOR_PORT> connections;
+        fGraphManager->GetConnections(src, connections.data());
 
         JackPort* port = fGraphManager->GetPort(src);
         bool failed = false;
@@ -1044,7 +1044,7 @@ Result<void> JackEngine::GetUUIDForClientName(const char* client_name, char* uui
     for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
         JackClientInterface* client = fClientTable[i];
 
-        if (client && (strcmp(client_name, client->GetClientControl()->fName) == 0)) {
+        if (client && (strcmp(client_name, client->GetClientControl()->fName.data()) == 0)) {
             jack_uuid_unparse(client->GetClientControl()->fSessionID, uuid_res);
             return { };
         }
@@ -1067,7 +1067,7 @@ Result<void> JackEngine::GetClientNameForUUID(const char* uuid_buf, char* name_r
         }
 
         if (jack_uuid_compare(client->GetClientControl()->fSessionID, uuid) == 0) {
-            strncpy(name_res, client->GetClientControl()->fName, JACK_CLIENT_NAME_SIZE);
+            strncpy(name_res, client->GetClientControl()->fName.data(), JACK_CLIENT_NAME_SIZE);
             return { };
         }
     }

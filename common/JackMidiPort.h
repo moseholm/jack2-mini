@@ -21,6 +21,7 @@
 #include "JackConstants.h"
 #include "JackPlatformPlug.h"
 #include "types.h"
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <stddef.h>
@@ -65,13 +66,13 @@ struct LIB_EXPORT JackMidiEvent {
     jack_shmsize_t size;
     union {
         jack_shmsize_t offset;
-        jack_midi_data_t data[INLINE_SIZE_MAX];
+        std::array<jack_midi_data_t, INLINE_SIZE_MAX> data;
     };
 
     jack_midi_data_t* GetData(void* buffer)
     {
         if (size <= INLINE_SIZE_MAX) {
-            return data;
+            return data.data();
         } else {
             return (jack_midi_data_t*)buffer + offset;
         }

@@ -245,11 +245,11 @@ std::int32_t JackServerSocket::Bind(const char* dir, const char* name, std::int3
 
     addr.sun_family = AF_UNIX;
     // Socket name has to be kept in fName to be "unlinked".
-    BuildName(name, fName, dir, which, sizeof(addr.sun_path), fPromiscuous);
-    CopyCString(addr.sun_path, fName);
+    BuildName(name, fName.data(), dir, which, sizeof(addr.sun_path), fPromiscuous);
+    CopyCString(std::span<char>(addr.sun_path), fName.data());
 
     jack_log("JackServerSocket::Bind : addr.sun_path %s", addr.sun_path);
-    unlink(fName); // Security...
+    unlink(fName.data()); // Security...
 
     if (bind(fSocket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         jack_error("Cannot bind server to socket err = %s", strerror(errno));
@@ -261,13 +261,13 @@ std::int32_t JackServerSocket::Bind(const char* dir, const char* name, std::int3
         goto error;
     }
 
-    if (fPromiscuous && (jackmini::set_promiscuous_perms(-1, fName, fPromiscuousGid) < 0))
+    if (fPromiscuous && (jackmini::set_promiscuous_perms(-1, fName.data(), fPromiscuousGid) < 0))
         goto error;
 
     return 0;
 
 error:
-    unlink(fName);
+    unlink(fName.data());
     close(fSocket);
     fSocket = -1;
     return -1;
@@ -295,7 +295,7 @@ std::int32_t JackServerSocket::Close()
         jack_log("JackServerSocket::Close %s", fName);
         shutdown(fSocket, SHUT_RDWR);
         close(fSocket);
-        unlink(fName);
+        unlink(fName.data());
         fSocket = -1;
         return 0;
     } else {

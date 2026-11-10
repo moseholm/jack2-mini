@@ -27,6 +27,7 @@
 #include "resample/JackResampler.h"
 #include "resample/pipewire_resample_bridge.h"
 
+#include <array>
 #include <cstdint>
 #include <math.h>
 #include <stdio.h>
@@ -183,38 +184,39 @@ static void TestRing()
 {
     printf("ring: wrap-around, overflow and underflow\n");
     JackAlsaRingBuffer ring(2, 8);
-    float a[2][5], b[2][6];
-    float* out[2] = { b[0], b[1] };
-    const float* in[2] = { a[0], a[1] };
+    std::array<std::array<float, 5>, 2> a;
+    std::array<std::array<float, 6>, 2> b;
+    std::array<float*, 2> out = { b[0].data(), b[1].data() };
+    std::array<const float*, 2> in = { a[0].data(), a[1].data() };
     for (std::int32_t i = 0; i < 5; i++) {
         a[0][i] = (float)i;
         a[1][i] = 100.0f + i;
     }
 
-    CHECK(ring.Write(in, 5) == 5);
-    CHECK(ring.Write(in, 5) == 3); // only 3 slots free
-    CHECK(ring.Read(out, 6) == 8); // 8 buffered
+    CHECK(ring.Write(in.data(), 5) == 5);
+    CHECK(ring.Write(in.data(), 5) == 3); // only 3 slots free
+    CHECK(ring.Read(out.data(), 6) == 8); // 8 buffered
     CHECK(b[0][4] == 4.0f && b[1][0] == 100.0f);
-    CHECK(ring.Write(in, 4) == 4); // wraps past the end
-    float c[2][6];
-    float* cp[2] = { c[0], c[1] };
-    CHECK(ring.Read(cp, 6) == 6); // the 2 left over plus the 4 new
+    CHECK(ring.Write(in.data(), 4) == 4); // wraps past the end
+    std::array<std::array<float, 6>, 2> c;
+    std::array<float*, 2> cp = { c[0].data(), c[1].data() };
+    CHECK(ring.Read(cp.data(), 6) == 6); // the 2 left over plus the 4 new
     CHECK(c[0][0] == 1.0f && c[0][2] == 0.0f && c[0][5] == 3.0f);
-    float z[2][4];
-    float* zp[2] = { z[0], z[1] };
-    CHECK(ring.Read(zp, 4) == 0);
+    std::array<std::array<float, 4>, 2> z;
+    std::array<float*, 2> zp = { z[0].data(), z[1].data() };
+    CHECK(ring.Read(zp.data(), 4) == 0);
     CHECK(z[0][0] == 0.0f && z[1][3] == 0.0f);
 
     // A non-power-of-two request is rounded up so the RT path can use a mask.
     JackAlsaRingBuffer odd(1, 5);
     CHECK(odd.Capacity() == 8);
-    float s[7] = { 0, 1, 2, 3, 4, 5, 6 };
-    float d[8] = { 0 };
-    const float* sin[1] = { s };
-    float* dout[1] = { d };
-    CHECK(odd.Write(sin, 7) == 7);
-    CHECK(odd.Write(sin, 7) == 1);
-    CHECK(odd.Read(dout, 8) == 8);
+    std::array<float, 7> s = { 0, 1, 2, 3, 4, 5, 6 };
+    std::array<float, 8> d = { 0 };
+    std::array<const float*, 1> sin = { s.data() };
+    std::array<float*, 1> dout = { d.data() };
+    CHECK(odd.Write(sin.data(), 7) == 7);
+    CHECK(odd.Write(sin.data(), 7) == 1);
+    CHECK(odd.Read(dout.data(), 8) == 8);
     CHECK(d[0] == 0.0f && d[6] == 6.0f && d[7] == 0.0f);
 }
 
@@ -224,12 +226,14 @@ static void TestConverterDI()
     PassThroughResampler* fake = new PassThroughResampler();
     JackAlsaRateConverter conv(fake, 2, 1024);
     CHECK(conv.IsValid());
-    float in0[4] = { 1, 2, 3, 4 }, in1[4] = { 5, 6, 7, 8 };
-    const float* in[2] = { in0, in1 };
-    float o0[4] = { 0 }, o1[4] = { 0 };
-    float* out[2] = { o0, o1 };
+    std::array<float, 4> in0 = { 1, 2, 3, 4 };
+    std::array<float, 4> in1 = { 5, 6, 7, 8 };
+    std::array<const float*, 2> in = { in0.data(), in1.data() };
+    std::array<float, 4> o0 = { 0 };
+    std::array<float, 4> o1 = { 0 };
+    std::array<float*, 2> out = { o0.data(), o1.data() };
     CHECK(conv.NeedInput(4) == 4);
-    CHECK(conv.Convert(in, 4, out, 4) == 4);
+    CHECK(conv.Convert(in.data(), 4, out.data(), 4) == 4);
     CHECK(o0[0] == 1 && o0[3] == 4 && o1[2] == 7);
     conv.SetRate(1.25);
     CHECK(fabs(fake->fRate - 1.25) < 1e-12);
@@ -369,8 +373,8 @@ static void TestConverterRates()
     std::vector<float> ring(1 << 20);
     std::uint64_t card_n = 0, ring_r = 0;
     std::vector<float> src0(8192), src1(8192), out0(period), out1(period);
-    float* src[2] = { src0.data(), src1.data() };
-    float* out[2] = { out0.data(), out1.data() };
+    std::array<float*, 2> src = { src0.data(), src1.data() };
+    std::array<float*, 2> out = { out0.data(), out1.data() };
     double acc = 0;
     bool exact = true;
     for (std::uint32_t c = 0; c < 400; c++) {
@@ -386,7 +390,7 @@ static void TestConverterRates()
             src[0][i] = src[1][i] = idx < card_n ? ring[idx] : 0.0f;
         }
         ring_r += need;
-        std::uint32_t got = cap.Convert(src, need, out, period);
+        std::uint32_t got = cap.Convert(src.data(), need, out.data(), period);
         if (got != period) {
             exact = false;
         }
@@ -396,11 +400,11 @@ static void TestConverterRates()
     JackResamplerParams q = { 2, 48000, 44100, -1 };
     JackAlsaRateConverter play(JackResamplerFactory::Default()->Create(q), 2, 8192);
     std::vector<float> in0(period), in1(period), pout0(8192), pout1(8192);
-    float* in[2] = { in0.data(), in1.data() };
-    float* pout[2] = { pout0.data(), pout1.data() };
+    std::array<float*, 2> in = { in0.data(), in1.data() };
+    std::array<float*, 2> pout = { pout0.data(), pout1.data() };
     std::uint64_t in_total = 0, out_total = 0;
     for (std::uint32_t c = 0; c < 400; c++) {
-        std::uint32_t produced = play.Convert(in, period, pout, 8192);
+        std::uint32_t produced = play.Convert(in.data(), period, pout.data(), 8192);
         if (c > 20) {
             out_total += produced;
             in_total += period;
@@ -423,29 +427,29 @@ static void SimulateCapture(double drift, double* final_correction, double* mean
     JackAlsaRingBuffer ring(2, card_period * 8);
     JackAlsaDriftController drift_ctl;
 
-    float* prime[2] = { new float[target](), new float[target]() };
-    const float* prime_c[2] = { prime[0], prime[1] };
-    ring.Write(prime_c, target);
+    std::array<float*, 2> prime = { new float[target](), new float[target]() };
+    std::array<const float*, 2> prime_c = { prime[0], prime[1] };
+    ring.Write(prime_c.data(), target);
 
-    float* need_buf[2] = { new float[8192](), new float[8192]() };
-    float* out[2] = { new float[primary](), new float[primary]() };
+    std::array<float*, 2> need_buf = { new float[8192](), new float[8192]() };
+    std::array<float*, 2> out = { new float[primary](), new float[primary]() };
     double acc = 0, error_sum = 0;
     std::uint64_t samples = 0;
     for (std::uint32_t cycle = 0; cycle < 4000; cycle++) {
         acc += primary * 44100.0 / 48000.0 * (1.0 + drift);
         std::uint32_t w = (std::uint32_t)acc;
         acc -= w;
-        float* wr[2] = { new float[w + 1](), new float[w + 1]() };
-        const float* wc[2] = { wr[0], wr[1] };
-        ring.Write(wc, w);
+        std::array<float*, 2> wr = { new float[w + 1](), new float[w + 1]() };
+        std::array<const float*, 2> wc = { wr[0], wr[1] };
+        ring.Write(wc.data(), w);
         delete[] wr[0];
         delete[] wr[1];
 
         double fill = ring.AvailableRead() + conv.Backlog();
         conv.SetRate(drift_ctl.Update(fill, target, card_period));
         std::uint32_t need = conv.NeedInput(primary);
-        ring.Read(need_buf, need);
-        conv.Convert(need_buf, need, out, primary);
+        ring.Read(need_buf.data(), need);
+        conv.Convert(need_buf.data(), need, out.data(), primary);
 
         if (cycle >= 2000) {
             error_sum += fabs(fill - target);
@@ -464,7 +468,7 @@ static void SimulateCapture(double drift, double* final_correction, double* mean
 static void TestDriftController()
 {
     printf("drift: the correction follows the card's clock\n");
-    const double drifts[] = { 0.0, 300e-6, -300e-6 };
+    std::array<const double, 3> drifts = { 0.0, 300e-6, -300e-6 };
     for (std::int32_t i = 0; i < 3; i++) {
         double correction = 0, error = 0;
         SimulateCapture(drifts[i], &correction, &error);

@@ -21,6 +21,7 @@
 #include "JackConstants.h"
 #include "JackError.h"
 #include "jackmini/error.hpp"
+#include <array>
 #include <cstdint>
 #include <assert.h>
 #include <vector>
@@ -371,12 +372,12 @@ struct JackClientTiming {
 class SERVER_EXPORT JackConnectionManager {
 
 private:
-    JackFixedArray<CONNECTION_NUM_FOR_PORT> fConnection[PORT_NUM_MAX];  // Connection matrix: list of connected ports for a given port: needed to compute Mix buffer
-    JackFixedArray1<PORT_NUM_FOR_CLIENT> fInputPort[CLIENT_NUM];  // Table of input port per refnum : to find a refnum for a given port
-    JackFixedArray<PORT_NUM_FOR_CLIENT> fOutputPort[CLIENT_NUM];  // Table of output port per refnum : to find a refnum for a given port
+    std::array<JackFixedArray<CONNECTION_NUM_FOR_PORT>, PORT_NUM_MAX> fConnection;  // Connection matrix: list of connected ports for a given port: needed to compute Mix buffer
+    std::array<JackFixedArray1<PORT_NUM_FOR_CLIENT>, CLIENT_NUM> fInputPort;  // Table of input port per refnum : to find a refnum for a given port
+    std::array<JackFixedArray<PORT_NUM_FOR_CLIENT>, CLIENT_NUM> fOutputPort;  // Table of output port per refnum : to find a refnum for a given port
     JackFixedMatrix<CLIENT_NUM> fConnectionRef;  // Table of port connections by (refnum , refnum)
-    alignas(UInt32) alignas(JackActivationCount) JackActivationCount fInputCounter[CLIENT_NUM];  // Activation counter per refnum
-    UInt32 fInactive[CLIENT_NUM];  // 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed
+    alignas(UInt32) alignas(JackActivationCount) std::array<JackActivationCount, CLIENT_NUM> fInputCounter;  // Activation counter per refnum
+    std::array<UInt32, CLIENT_NUM> fInactive;  // 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed
     JackLoopFeedback<CONNECTION_NUM_FOR_PORT> fLoopFeedback;  // Loop feedback connections
 
     bool IsLoopPathAux(std::int32_t ref1, std::int32_t ref2) const;

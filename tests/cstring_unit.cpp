@@ -18,6 +18,7 @@
 
 #include "JackCString.h"
 
+#include <array>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -39,9 +40,9 @@ std::int32_t g_checks = 0;
 
 void TestFits()
 {
-    char buf[8];
+    std::array<char, 8> buf;
     jackmini::CopyCString(buf, "abc");
-    CHECK(std::strcmp(buf, "abc") == 0);
+    CHECK(std::strcmp(buf.data(), "abc") == 0);
     for (std::int32_t i = 4; i < 8; i++) {
         CHECK(buf[i] == '\0');
     }
@@ -49,24 +50,24 @@ void TestFits()
 
 void TestExactFit()
 {
-    char buf[4];
+    std::array<char, 4> buf;
     jackmini::CopyCString(buf, "abc");
-    CHECK(std::strncmp(buf, "abc", 4) == 0);
+    CHECK(std::strncmp(buf.data(), "abc", 4) == 0);
     CHECK(buf[3] == '\0');
 }
 
 void TestTruncates()
 {
-    char buf[4];
+    std::array<char, 4> buf;
     jackmini::CopyCString(buf, "abcdef");
-    CHECK(std::strncmp(buf, "abc", 4) == 0);
+    CHECK(std::strncmp(buf.data(), "abc", 4) == 0);
     CHECK(buf[3] == '\0');
 }
 
 void TestZeroFillsStaleBytes()
 {
-    char buf[8];
-    std::memset(buf, 'x', sizeof(buf));
+    std::array<char, 8> buf;
+    std::memset(buf.data(), 'x', sizeof(buf));
     jackmini::CopyCString(buf, "ab");
     CHECK(buf[0] == 'a' && buf[1] == 'b');
     for (std::int32_t i = 2; i < 8; i++) {

@@ -19,6 +19,7 @@
 #include "jackmini/jackmini.hpp"
 #include "jackmini_wait.hpp"
 
+#include <array>
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -48,7 +49,7 @@ struct MTDM {
     std::int32_t _cnt;
     std::int32_t _inv;
 
-    struct Freq _freq[13];
+    std::array<struct Freq, 13> _freq;
 };
 
 
@@ -79,7 +80,7 @@ struct MTDM* mtdm_new(double fsamp)
     retval->_freq[11].f = 3586;
     retval->_freq[12].f = 3841;
     retval->_wlp = 200.0f / fsamp;
-    for (i = 0, F = retval->_freq; i < 13; i++, F++) {
+    for (i = 0, F = retval->_freq.data(); i < 13; i++, F++) {
         F->p = 128;
         F->xa = F->ya = 0.0f;
         F->x1 = F->y1 = 0.0f;
@@ -98,7 +99,7 @@ std::int32_t mtdm_process(struct MTDM* self, size_t len, float* ip, float* op)
     while (len--) {
         vop = 0.0f;
         vip = *ip++;
-        for (i = 0, F = self->_freq; i < 13; i++, F++) {
+        for (i = 0, F = self->_freq.data(); i < 13; i++, F++) {
             a = 2 * (float)M_PI * (F->p & 65535) / 65536.0;
             F->p += F->f;
             c = cosf(a);
@@ -109,7 +110,7 @@ std::int32_t mtdm_process(struct MTDM* self, size_t len, float* ip, float* op)
         }
         *op++ = vop;
         if (++self->_cnt == 16) {
-            for (i = 0, F = self->_freq; i < 13; i++, F++) {
+            for (i = 0, F = self->_freq.data(); i < 13; i++, F++) {
                 F->x1 += self->_wlp * (F->xa - F->x1 + 1e-20);
                 F->y1 += self->_wlp * (F->ya - F->y1 + 1e-20);
                 F->x2 += self->_wlp * (F->x1 - F->x2 + 1e-20);
@@ -127,7 +128,7 @@ std::int32_t mtdm_resolve(struct MTDM* self)
 {
     std::int32_t i, k, m;
     double d, e, f0, p;
-    struct Freq* F = self->_freq;
+    struct Freq* F = self->_freq.data();
 
     if (hypot(F->x2, F->y2) < 0.001)
         return -1;

@@ -27,6 +27,7 @@
 #include "jslist.h"
 #include "driver_interface.h"
 
+#include <array>
 #include <cstdint>
 #include <memory>
 
@@ -51,7 +52,7 @@ private:
     JackGraphManager* fGraphManager;
     JackServerChannel fRequestChannel;
     JackConnectionManager fConnectionState;
-    JackSynchro fSynchroTable[CLIENT_NUM];
+    std::array<JackSynchro, CLIENT_NUM> fSynchroTable;
     bool fFreewheel;
 
 

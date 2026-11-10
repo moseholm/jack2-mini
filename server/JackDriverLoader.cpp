@@ -55,8 +55,8 @@ void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file)
             jackmini::FormatCString(arg_default, "{}", desc->params[i].value.c);
             break;
         case JackDriverParamString:
-            if (desc->params[i].value.str && strcmp(desc->params[i].value.str, "") != 0) {
-                jackmini::FormatCString(arg_default, "{}", desc->params[i].value.str);
+            if (strcmp(desc->params[i].value.str.data(), "") != 0) {
+                jackmini::FormatCString(arg_default, "{}", desc->params[i].value.str.data());
             } else {
                 jackmini::FormatCString(arg_default, "none");
             }
@@ -89,7 +89,7 @@ jack_driver_desc_t* jack_find_driver_descriptor(JSList* drivers, const char* nam
     for (node = drivers; node; node = jack_slist_next(node)) {
         desc = (jack_driver_desc_t*)node->data;
 
-        if (strcmp(desc->name, name) != 0) {
+        if (strcmp(desc->name.data(), name) != 0) {
             desc = nullptr;
         } else {
             break;
@@ -184,7 +184,7 @@ static jack_driver_desc_t* load_descriptor(JSList* drivers, const char* sofile, 
     // check it doesn't exist already
     for (node = drivers; node; node = jack_slist_next(node)) {
         other_descriptor = (jack_driver_desc_t*)node->data;
-        if (strcmp(descriptor->name, other_descriptor->name) == 0) {
+        if (strcmp(descriptor->name.data(), other_descriptor->name.data()) == 0) {
             jack_error("The drivers in '%s' and '%s' both have the name '%s'; using the first",
                 other_descriptor->file, filename.data(), other_descriptor->name);
             // FIXME: delete the descriptor
@@ -192,7 +192,7 @@ static jack_driver_desc_t* load_descriptor(JSList* drivers, const char* sofile, 
         }
     }
 
-    strncpy(descriptor->file, filename.data(), JACK_PATH_MAX);
+    strncpy(descriptor->file.data(), filename.data(), JACK_PATH_MAX);
     return descriptor;
 }
 
@@ -251,7 +251,7 @@ jackmini::JackDriverClientInterface* JackDriverInfo::Open(jack_driver_desc_t* dr
 {
     const char* errstr;
 
-    fHandle = LoadDriverModule(driver_desc->file);
+    fHandle = LoadDriverModule(driver_desc->file.data());
 
     if (fHandle == nullptr) {
         if ((errstr = dlerror()) != 0) {
@@ -313,8 +313,8 @@ SERVER_EXPORT jack_driver_desc_t* jack_driver_descriptor_construct(
         return 0;
     }
 
-    memcpy(desc_ptr->name, name, name_len + 1);
-    memcpy(desc_ptr->desc, description, description_len + 1);
+    memcpy(desc_ptr->name.data(), name, name_len + 1);
+    memcpy(desc_ptr->desc.data(), description, description_len + 1);
 
     desc_ptr->nparams = 0;
     desc_ptr->type = type;
@@ -372,13 +372,13 @@ SERVER_EXPORT std::int32_t jack_driver_descriptor_add_parameter(
     assert(desc_ptr->nparams < filler_ptr->size);
     param_ptr = desc_ptr->params + desc_ptr->nparams;
 
-    memcpy(param_ptr->name, name, name_len + 1);
+    memcpy(param_ptr->name.data(), name, name_len + 1);
     param_ptr->character = character;
     param_ptr->type = type;
     param_ptr->value = *value_ptr;
     param_ptr->constraint = constraint;
-    memcpy(param_ptr->short_desc, short_desc, short_desc_len + 1);
-    memcpy(param_ptr->long_desc, long_desc, long_desc_len + 1);
+    memcpy(param_ptr->short_desc.data(), short_desc, short_desc_len + 1);
+    memcpy(param_ptr->long_desc.data(), long_desc, long_desc_len + 1);
 
     desc_ptr->nparams++;
     return true;
@@ -433,7 +433,7 @@ std::int32_t jack_constraint_add_enum(
     constraint_ptr->constraint.enumeration.count++;
 
     possible_value_ptr->value = *value_ptr;
-    memcpy(possible_value_ptr->short_desc, short_desc, len);
+    memcpy(possible_value_ptr->short_desc.data(), short_desc, len);
 
     *constraint_ptr_ptr = constraint_ptr;
     *array_size_ptr = array_size;
@@ -485,4 +485,4 @@ void jack_constraint_free(
 JACK_CONSTRAINT_COMPOSE_ENUM_IMPL(uint32, value.c = descr_ptr->value);
 JACK_CONSTRAINT_COMPOSE_ENUM_IMPL(sint32, value.c = descr_ptr->value);
 JACK_CONSTRAINT_COMPOSE_ENUM_IMPL(char, value.c = descr_ptr->value);
-JACK_CONSTRAINT_COMPOSE_ENUM_IMPL(str, strcpy(value.str, descr_ptr->value));
+JACK_CONSTRAINT_COMPOSE_ENUM_IMPL(str, strcpy(value.str.data(), descr_ptr->value));

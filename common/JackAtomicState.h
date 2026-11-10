@@ -18,6 +18,7 @@
 
 #include "JackAtomic.h"
 #include "JackCompilerDeps.h"
+#include <array>
 #include <string.h> // for memcpy
 #include <atomic>
 #include <cassert>
@@ -99,7 +100,7 @@ template <class T>
 class JackAtomicState {
 
 protected:
-    T fState[2];
+    std::array<T, 2> fState;
     alignas(UInt32) alignas(AtomicCounter) AtomicCounter fCounter;
     SInt32 fCallWriteCounter;
 

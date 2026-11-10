@@ -186,7 +186,7 @@ Result<void> ClientSession::connect_and_register(std::string_view name_view, con
         jack_error("Client name = %s conflits with another running client", name.c_str());
         return std::unexpected(Error::NameTaken);
     }
-    const std::string name_res(check_reply.fName);
+    const std::string name_res(check_reply.fName.data());
 
     if (notify_listen_.Bind(jack_client_dir, name_res.c_str(), 0) < 0) {
         jack_error("Cannot bind socket");
@@ -319,11 +319,11 @@ std::int32_t ClientSession::handle_notification(const JackClientNotification& ev
     switch (event.fNotify) {
     case kAddClient: {
         std::lock_guard lock(context.synchro_mutex);
-        res = context.synchro[event.fRefNum].Connect(event.fName, server_name_.c_str()) ? 0 : -1;
+        res = context.synchro[event.fRefNum].Connect(event.fName.data(), server_name_.c_str()) ? 0 : -1;
         break;
     }
     case kRemoveClient:
-        if (name_ != event.fName) {
+        if (name_ != event.fName.data()) {
             std::lock_guard lock(context.synchro_mutex);
             res = context.synchro[event.fRefNum].Disconnect() ? 0 : -1;
         }
@@ -546,8 +546,8 @@ std::vector<ClientSession::PortRecord> ClientSession::port_records() const
         record.total_latency = port->GetTotalLatency();
 
         std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias1 { }, alias2 { };
-        char* const aliases[2] = { alias1.data(), alias2.data() };
-        const std::int32_t count = port->GetAliases(aliases);
+        std::array<char* const, 2> aliases = { alias1.data(), alias2.data() };
+        const std::int32_t count = port->GetAliases(aliases.data());
         for (std::int32_t i = 0; i < count; i++) {
             record.aliases.emplace_back(aliases[i]);
         }
@@ -693,7 +693,7 @@ Result<Uuid> ClientSession::lookup_uuid()
     if (transact(request, reply) < 0 || reply.fResult < 0) {
         return std::unexpected(Error::ServerFailure);
     }
-    const auto parsed = parse_server_uuid(reply.fUUID);
+    const auto parsed = parse_server_uuid(reply.fUUID.data());
     if (!parsed) {
         return std::unexpected(Error::Protocol);
     }
@@ -854,7 +854,7 @@ void ClientSession::realtime_run()
 
 bool ClientSession::wait_cycle()
 {
-    if (!context_->graph->SuspendRefNum(client_.GetShmAddress(), context_->synchro, LONG_MAX)) {
+    if (!context_->graph->SuspendRefNum(client_.GetShmAddress(), context_->synchro.data(), LONG_MAX)) {
         jack_error("SuspendRefNum error");
         return false;
     }
@@ -863,7 +863,7 @@ bool ClientSession::wait_cycle()
 
 void ClientSession::signal_cycle()
 {
-    if (!context_->graph->ResumeRefNum(client_.GetShmAddress(), context_->synchro)) {
+    if (!context_->graph->ResumeRefNum(client_.GetShmAddress(), context_->synchro.data())) {
         jack_error("ResumeRefNum error");
     }
 }

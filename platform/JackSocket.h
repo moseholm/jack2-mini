@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <arpa/inet.h>
 #include <errno.h>
@@ -72,7 +73,7 @@ class JackServerSocket {
 
 private:
     std::int32_t fSocket;
-    char fName[SOCKET_MAX_NAME_SIZE];
+    std::array<char, SOCKET_MAX_NAME_SIZE> fName;
     bool fPromiscuous;
     std::int32_t fPromiscuousGid;
 

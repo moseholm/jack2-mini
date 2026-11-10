@@ -21,6 +21,7 @@
 #include "JackNotification.h"
 #include "JackRequest.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -80,50 +81,51 @@ void TestHeaderLayout()
 void TestRoundTrip()
 {
     BufferTransport wire;
-    const char payload[] = "jackmini";
-    const JackMsgHeader sent = MakeJackMsgHeader(23, sizeof(payload), 42);
-    CHECK(SendJackMessage(&wire, sent, payload, sizeof(payload)) == 0);
-    CHECK(wire.fBytes.size() == 16 + sizeof(payload));
+    constexpr std::string_view payload = "jackmini";
+    constexpr std::size_t kPayloadSize = payload.size() + 1;
+    const JackMsgHeader sent = MakeJackMsgHeader(23, kPayloadSize, 42);
+    CHECK(SendJackMessage(&wire, sent, payload.data(), kPayloadSize) == 0);
+    CHECK(wire.fBytes.size() == 16 + kPayloadSize);
 
     JackMsgHeader got { };
     CHECK(ReadJackMsgHeader(&wire, got) == 0);
     CHECK(got.type == 23);
-    CHECK(got.length == sizeof(payload));
+    CHECK(got.length == kPayloadSize);
     CHECK(got.request == 42);
     CHECK(got.version == kJackMsgVersion);
 
     JackPayloadReader body(&wire, got.length, { });
-    char back[sizeof(payload)] = { };
-    CHECK(body.Read(back, sizeof(back)) == 0);
-    CHECK(std::strcmp(back, payload) == 0);
+    std::array<char, kPayloadSize> back = { };
+    CHECK(body.Read(back.data(), sizeof(back)) == 0);
+    CHECK(std::strcmp(back.data(), payload.data()) == 0);
     CHECK(body.Done());
 }
 
 void TestOverrunIsRefused()
 {
     BufferTransport wire;
-    const char payload[8] = { };
-    SendJackMessage(&wire, MakeJackMsgHeader(1, sizeof(payload), 1), payload, sizeof(payload));
+    std::array<const char, 8> payload = { };
+    SendJackMessage(&wire, MakeJackMsgHeader(1, sizeof(payload), 1), payload.data(), sizeof(payload));
     JackMsgHeader got { };
     ReadJackMsgHeader(&wire, got);
 
     // Reading more than the header's length is an error, even though the bytes are there.
     JackPayloadReader body(&wire, got.length, { });
-    char big[sizeof(payload) + 1] = { };
-    CHECK(body.Read(big, sizeof(big)) < 0);
+    std::array<char, sizeof(payload) + 1> big = { };
+    CHECK(body.Read(big.data(), sizeof(big)) < 0);
 }
 
 void TestShortReadIsNotDone()
 {
     BufferTransport wire;
-    const char payload[8] = { };
-    SendJackMessage(&wire, MakeJackMsgHeader(1, sizeof(payload), 1), payload, sizeof(payload));
+    std::array<const char, 8> payload = { };
+    SendJackMessage(&wire, MakeJackMsgHeader(1, sizeof(payload), 1), payload.data(), sizeof(payload));
     JackMsgHeader got { };
     ReadJackMsgHeader(&wire, got);
 
     JackPayloadReader body(&wire, got.length, { });
-    char part[4] = { };
-    CHECK(body.Read(part, sizeof(part)) == 0);
+    std::array<char, 4> part = { };
+    CHECK(body.Read(part.data(), sizeof(part)) == 0);
     CHECK(!body.Done());
 }
 
@@ -140,7 +142,7 @@ void TestBadMagicIsRefused()
 void TestReplyWriter()
 {
     JackPayloadWriter writer;
-    const std::uint32_t values[2] = { 7, 9 };
+    std::array<const std::uint32_t, 2> values = { 7, 9 };
     CHECK(writer.Write(const_cast<std::uint32_t*>(&values[0]), sizeof(values[0])) == 0);
     CHECK(writer.Write(const_cast<std::uint32_t*>(&values[1]), sizeof(values[1])) == 0);
     CHECK(writer.fData.size() == 2 * sizeof(std::uint32_t));
@@ -163,12 +165,12 @@ void TestNotificationRoundTrip()
     JackPayloadReader body(&wire, got.length, { });
     CHECK(back.Read(&body) == 0);
     CHECK(body.Done());
-    CHECK(std::strcmp(back.fName, "system") == 0);
+    CHECK(std::strcmp(back.fName.data(), "system") == 0);
     CHECK(back.fRefNum == 3);
     CHECK(back.fNotify == jackmini::kXRunCallback);
     CHECK(back.fSync == 1);
     CHECK(back.fValue1 == 5 && back.fValue2 == 6);
-    CHECK(std::strcmp(back.fMessage, "msg") == 0);
+    CHECK(std::strcmp(back.fMessage.data(), "msg") == 0);
 }
 
 void TestSyncReplyEchoesRequest()

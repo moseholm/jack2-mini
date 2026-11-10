@@ -19,6 +19,7 @@
 #include "JackError.h"
 #include "JackTime.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <poll.h>
@@ -39,7 +40,7 @@ struct FormatEntry {
 constexpr bool kHostLittleEndian = __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__;
 
 // Ordered the way the old driver tried them: the 32-bit formats first (ascending), the 16-bit ones last.
-constexpr FormatEntry kFormats[] = {
+constexpr std::array<FormatEntry, 9> kFormats = {{
     { SND_PCM_FORMAT_FLOAT_LE, true },
     { SND_PCM_FORMAT_S32_LE, true },
     { SND_PCM_FORMAT_S32_BE, false },
@@ -49,7 +50,7 @@ constexpr FormatEntry kFormats[] = {
     { SND_PCM_FORMAT_S24_BE, false },
     { SND_PCM_FORMAT_S16_LE, true },
     { SND_PCM_FORMAT_S16_BE, false },
-};
+}};
 constexpr std::size_t kFormatCount = sizeof(kFormats) / sizeof(kFormats[0]);
 
 // The format index for an explicit request.

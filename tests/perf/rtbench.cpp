@@ -7,6 +7,7 @@
 #include "jackmini/jackmini.hpp"
 #include "../jackmini_wait.hpp"
 
+#include <array>
 #include <cstdint>
 #include <atomic>
 #include <cstdio>
@@ -19,7 +20,8 @@
 using namespace jackmini;
 
 #define MAXS 400000
-static std::int64_t starts[MAXS], ends[MAXS];
+static std::array<std::int64_t, MAXS> starts;
+static std::array<std::int64_t, MAXS> ends;
 static std::atomic<std::uint64_t> nsamples { 0 }, nxruns { 0 };
 static Port in, out;
 static Client* jack_handle;

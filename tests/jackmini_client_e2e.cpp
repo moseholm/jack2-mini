@@ -21,6 +21,7 @@
 #include "jackmini/jackmini.hpp"
 #include "jackmini_wait.hpp"
 
+#include <array>
 #include <cstdint>
 #include <atomic>
 #include <chrono>
@@ -203,7 +204,7 @@ int main(std::int32_t argc, char** argv)
                                                 }
                                                 auto midi = src.midi_buffer(mout);
                                                 midi.clear();
-                                                const std::byte note[3] = { std::byte { 0x90 }, std::byte { 0x40 }, std::byte { 0x7f } };
+                                                std::array<const std::byte, 3> note = { std::byte { 0x90 }, std::byte { 0x40 }, std::byte { 0x7f } };
                                                 midi.write(5, note);
                                                 return true;
                                             })

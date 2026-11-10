@@ -16,6 +16,7 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+#include <array>
 #include <cstdint>
 #include <getopt.h>
 #include <cctype>
@@ -137,7 +138,7 @@ int main(std::int32_t argc, char** argv)
 
     const char* options = "-d:P:vshrRSTFt:n:p:a:c:";
 
-    struct option long_options[] = {
+    std::array<struct option, 16> long_options = {{
         { "clock-source", 1, 0, 'c' },
         { "audio-driver", 1, 0, 'd' },
         { "verbose", 0, 0, 'v' },
@@ -154,7 +155,7 @@ int main(std::int32_t argc, char** argv)
         { "sync", 0, 0, 'S' },
         { "autoconnect", 1, 0, 'a' },
         { 0, 0, 0, 0 }
-    };
+    }};
 
     char* master_driver_name = nullptr;
 
@@ -169,7 +170,7 @@ int main(std::int32_t argc, char** argv)
     opterr = 0;
     std::int32_t opt = 0;
     std::int32_t option_index = 0;
-    while (!master_driver_name && (opt = getopt_long(argc, argv, options, long_options, &option_index)) != EOF) {
+    while (!master_driver_name && (opt = getopt_long(argc, argv, options, long_options.data(), &option_index)) != EOF) {
         switch (opt) {
 
         case 'c':

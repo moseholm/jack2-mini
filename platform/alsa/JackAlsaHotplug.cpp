@@ -17,6 +17,7 @@
 #include "JackAlsaHotplug.h"
 #include "JackError.h"
 
+#include <array>
 #include <cstdint>
 #include <errno.h>
 #include <libudev.h>
@@ -76,7 +77,7 @@ bool JackAlsaHotplug::Init()
 
 bool JackAlsaHotplug::Execute()
 {
-    struct pollfd fds[2];
+    std::array<struct pollfd, 2> fds;
     fds[0].fd = udev_monitor_get_fd(fMonitor);
     fds[0].events = POLLIN;
     fds[0].revents = 0;
@@ -87,7 +88,7 @@ bool JackAlsaHotplug::Execute()
     // Waits forever for the first event.  After an event, waits only as long as
     // the burst is still coming in.
     bool pending = false;
-    std::int32_t ret = poll(fds, 2, -1);
+    std::int32_t ret = poll(fds.data(), 2, -1);
     for (;;) {
         if (ret < 0) {
             if (errno == EINTR) {
@@ -115,7 +116,7 @@ bool JackAlsaHotplug::Execute()
         // Keep draining while events arrive; report once they stop.
         fds[0].revents = 0;
         fds[1].revents = 0;
-        ret = poll(fds, 2, kSettleMs);
+        ret = poll(fds.data(), 2, kSettleMs);
         if (ret == 0) {
             fListener->OnSoundChanged();
             return true;

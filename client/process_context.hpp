@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <atomic>
 #include <csignal>
@@ -50,7 +51,7 @@ public:
 
     JackShmReadWritePtr<JackEngineControl> engine;
     JackShmReadWritePtr<JackGraphManager> graph;
-    JackSynchro synchro[CLIENT_NUM];
+    std::array<JackSynchro, CLIENT_NUM> synchro;
     std::mutex synchro_mutex; // guards the connection of the synchro entries
 
 private:

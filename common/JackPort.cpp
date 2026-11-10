@@ -194,14 +194,14 @@ std::int32_t JackPort::EnsureMonitor(bool onoff)
 
 const char* JackPort::GetName() const
 {
-    return fName;
+    return fName.data();
 }
 
 const char* JackPort::GetShortName() const
 {
     // we know there is always a colon, because we put
     // it there ...
-    return strchr(fName, ':') + 1;
+    return strchr(fName.data(), ':') + 1;
 }
 
 std::int32_t JackPort::GetFlags() const
@@ -217,8 +217,8 @@ const char* JackPort::GetType() const
 
 void JackPort::SetName(const char* new_name)
 {
-    char* colon = strchr(fName, ':');
-    std::int32_t len = sizeof(fName) - ((std::int32_t)(colon - fName)) - 2;
+    char* colon = strchr(fName.data(), ':');
+    std::int32_t len = sizeof(fName) - ((std::int32_t)(colon - fName.data())) - 2;
     CopyCString(std::span<char>(colon + 1, len), new_name);
 }
 
@@ -247,12 +247,12 @@ std::int32_t JackPort::GetAliases(char* const aliases[2])
     std::int32_t cnt = 0;
 
     if (fAlias1[0] != '\0') {
-        CopyCString(std::span<char>(aliases[0], REAL_JACK_PORT_NAME_SIZE), fAlias1);
+        CopyCString(std::span<char>(aliases[0], REAL_JACK_PORT_NAME_SIZE), fAlias1.data());
         cnt++;
     }
 
     if (fAlias2[0] != '\0') {
-        CopyCString(std::span<char>(aliases[1], REAL_JACK_PORT_NAME_SIZE), fAlias2);
+        CopyCString(std::span<char>(aliases[1], REAL_JACK_PORT_NAME_SIZE), fAlias2.data());
         cnt++;
     }
 
@@ -274,9 +274,9 @@ std::int32_t JackPort::SetAlias(const char* alias)
 
 std::int32_t JackPort::UnsetAlias(const char* alias)
 {
-    if (strcmp(fAlias1, alias) == 0) {
+    if (strcmp(fAlias1.data(), alias) == 0) {
         fAlias1[0] = '\0';
-    } else if (strcmp(fAlias2, alias) == 0) {
+    } else if (strcmp(fAlias2.data(), alias) == 0) {
         fAlias2[0] = '\0';
     } else {
         return -1;

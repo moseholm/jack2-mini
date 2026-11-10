@@ -28,6 +28,7 @@
 #include "types.h"
 #include "pcm_session.hpp"
 
+#include <array>
 #include <cstdint>
 #include <atomic>
 #include <string>
@@ -94,8 +95,8 @@ private:
 
     snd_ctl_t* fCtl;
     std::string fCtlName;
-    JackAlsaRateElement fRateElem[2];
-    bool fRateValid[2];
+    std::array<JackAlsaRateElement, 2> fRateElem;
+    std::array<bool, 2> fRateValid;
 
     float** fCaptureTemp;
     float** fPlaybackTemp;

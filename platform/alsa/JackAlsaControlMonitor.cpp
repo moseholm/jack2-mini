@@ -17,6 +17,7 @@
 #include "JackAlsaControlMonitor.h"
 #include "JackError.h"
 
+#include <array>
 #include <cstdint>
 #include <errno.h>
 #include <poll.h>
@@ -268,9 +269,9 @@ bool JackAlsaControlMonitor::Execute()
         if (device->dead) {
             continue;
         }
-        struct pollfd pfd[8];
+        std::array<struct pollfd, 8> pfd;
         std::int32_t count = snd_ctl_poll_descriptors_count(device->ctl);
-        if (count <= 0 || count > 8 || snd_ctl_poll_descriptors(device->ctl, pfd, count) < 0) {
+        if (count <= 0 || count > 8 || snd_ctl_poll_descriptors(device->ctl, pfd.data(), count) < 0) {
             MarkDead(device);
             continue;
         }

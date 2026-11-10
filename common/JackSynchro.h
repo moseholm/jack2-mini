@@ -17,6 +17,7 @@
 #pragma once
 
 #include "JackConstants.h"
+#include <array>
 #include <cstdint>
 #include <atomic>
 
@@ -29,7 +30,7 @@ namespace detail {
 class JackSynchro {
 
 protected:
-    char fName[SYNC_MAX_NAME_SIZE];
+    std::array<char, SYNC_MAX_NAME_SIZE> fName;
     std::atomic<bool> fFlush; // If true, signal are "flushed" : used for drivers that do no consume the signal
 
 public:

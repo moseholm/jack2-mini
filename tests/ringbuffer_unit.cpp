@@ -15,6 +15,8 @@
 // kept empty, so a buffer of size n holds n - 1 bytes. The test checks the sizes, the wrap-around, the two-segment
 // vectors, and a transfer between two threads.
 
+#include <array>
+#include <string_view>
 #include <cstddef>
 #include <cstdint>
 #include <jack/ringbuffer.h>
@@ -64,23 +66,23 @@ void check_round_trip_and_wrap()
     CHECK(rb != nullptr);
 
     // Fill 5 of the 7 usable bytes, read 3, then write 6: the write wraps past the end.
-    const char first[] = "abcde";
-    CHECK(jack_ringbuffer_write(rb, first, 5) == 5);
-    char out[16] = { };
-    CHECK(jack_ringbuffer_read(rb, out, 3) == 3);
-    CHECK(std::memcmp(out, "abc", 3) == 0);
+    const std::string_view first = "abcde";
+    CHECK(jack_ringbuffer_write(rb, first.data(), 5) == 5);
+    std::array<char, 16> out = { };
+    CHECK(jack_ringbuffer_read(rb, out.data(), 3) == 3);
+    CHECK(std::memcmp(out.data(), "abc", 3) == 0);
     CHECK(jack_ringbuffer_read_space(rb) == 2);
 
     // Five bytes are free, so the write stops there and wraps past the end of the buffer.
-    const char second[] = "fghijk";
-    CHECK(jack_ringbuffer_write(rb, second, 6) == 5);
+    const std::string_view second = "fghijk";
+    CHECK(jack_ringbuffer_write(rb, second.data(), 6) == 5);
     CHECK(jack_ringbuffer_read_space(rb) == 7);
 
-    std::memset(out, 0, sizeof out);
-    CHECK(jack_ringbuffer_read(rb, out, 16) == 7);
-    CHECK(std::memcmp(out, "defghij", 7) == 0);
+    std::memset(out.data(), 0, sizeof out);
+    CHECK(jack_ringbuffer_read(rb, out.data(), 16) == 7);
+    CHECK(std::memcmp(out.data(), "defghij", 7) == 0);
     CHECK(jack_ringbuffer_read_space(rb) == 0);
-    CHECK(jack_ringbuffer_read(rb, out, 1) == 0);
+    CHECK(jack_ringbuffer_read(rb, out.data(), 1) == 0);
 
     jack_ringbuffer_free(rb);
 }
@@ -90,15 +92,15 @@ void check_peek_and_advance()
     jack_ringbuffer_t* rb = jack_ringbuffer_create(16);
     CHECK(jack_ringbuffer_write(rb, "0123456789", 10) == 10);
 
-    char out[16] = { };
-    CHECK(jack_ringbuffer_peek(rb, out, 4) == 4);
-    CHECK(std::memcmp(out, "0123", 4) == 0);
+    std::array<char, 16> out = { };
+    CHECK(jack_ringbuffer_peek(rb, out.data(), 4) == 4);
+    CHECK(std::memcmp(out.data(), "0123", 4) == 0);
     CHECK(jack_ringbuffer_read_space(rb) == 10);
 
     jack_ringbuffer_read_advance(rb, 4);
     CHECK(jack_ringbuffer_read_space(rb) == 6);
-    CHECK(jack_ringbuffer_peek(rb, out, 2) == 2);
-    CHECK(std::memcmp(out, "45", 2) == 0);
+    CHECK(jack_ringbuffer_peek(rb, out.data(), 2) == 2);
+    CHECK(std::memcmp(out.data(), "45", 2) == 0);
 
     jack_ringbuffer_write_advance(rb, 0);
     jack_ringbuffer_reset(rb);
@@ -110,21 +112,21 @@ void check_peek_and_advance()
 void check_vectors()
 {
     jack_ringbuffer_t* rb = jack_ringbuffer_create(8);
-    jack_ringbuffer_data_t vec[2];
+    std::array<jack_ringbuffer_data_t, 2> vec;
 
     // Write 6 bytes and read 5. The free space now starts at index 6, so the writer's vector wraps: 2 bytes at the
     // end of the buffer and 4 at the start.
-    jack_ringbuffer_get_write_vector(rb, vec);
+    jack_ringbuffer_get_write_vector(rb, vec.data());
     CHECK(vec[0].len == 7);
     CHECK(jack_ringbuffer_write(rb, "uvwxyz", 6) == 6);
-    char out[8] = { };
-    CHECK(jack_ringbuffer_read(rb, out, 5) == 5);
+    std::array<char, 8> out = { };
+    CHECK(jack_ringbuffer_read(rb, out.data(), 5) == 5);
 
-    jack_ringbuffer_get_write_vector(rb, vec);
+    jack_ringbuffer_get_write_vector(rb, vec.data());
     CHECK(vec[0].len == 2);
     CHECK(vec[1].len == 4);
 
-    jack_ringbuffer_get_read_vector(rb, vec);
+    jack_ringbuffer_get_read_vector(rb, vec.data());
     CHECK(vec[0].len == 1);
     CHECK(vec[0].buf[0] == 'z');
     CHECK(vec[1].len == 0);
@@ -134,7 +136,7 @@ void check_vectors()
     CHECK(jack_ringbuffer_write(rb, "1234567", 7) == 7);
     jack_ringbuffer_read_advance(rb, 6);
     CHECK(jack_ringbuffer_write(rb, "89", 2) == 2);
-    jack_ringbuffer_get_read_vector(rb, vec);
+    jack_ringbuffer_get_read_vector(rb, vec.data());
     CHECK(vec[0].len == 2);
     CHECK(std::memcmp(vec[0].buf, "78", 2) == 0);
     CHECK(vec[1].len == 1);

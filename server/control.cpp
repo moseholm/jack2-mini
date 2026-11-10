@@ -29,6 +29,7 @@
 #include "jslist.h"
 #include "driver_interface.h"
 
+#include <array>
 #include <cstdint>
 #include <getopt.h>
 #include <pthread.h>
@@ -51,13 +52,13 @@ struct SelfConnectChoice {
     const char* description;
 };
 
-static constexpr SelfConnectChoice kSelfConnectChoices[] = {
+static constexpr std::array<SelfConnectChoice, 5> kSelfConnectChoices = {{
     { ' ', "Don't restrict self connect requests" },
     { 'E', "Fail self connect requests to external ports only" },
     { 'e', "Ignore self connect requests to external ports only" },
     { 'A', "Fail all self connect requests" },
     { 'a', "Ignore all self connect requests" },
-};
+}};
 
 const char* jack_get_self_connect_mode_description(char mode)
 {
@@ -113,7 +114,7 @@ Value value_from_c(std::size_t kind, const jack_driver_param_value_t& value)
     case kChar:
         return value.c;
     default:
-        return std::string(value.str);
+        return std::string(value.str.data());
     }
 }
 
@@ -135,7 +136,7 @@ jack_driver_param_value_t value_to_c(const Value& value)
         break;
     default: {
         const std::string& text = std::get<std::string>(value);
-        strncpy(out.str, text.c_str(), JACK_DRIVER_PARAM_STRING_MAX);
+        strncpy(out.str.data(), text.c_str(), JACK_DRIVER_PARAM_STRING_MAX);
         break;
     }
     }
@@ -235,8 +236,8 @@ std::optional<DriverEntry> make_driver(DescriptorPtr descriptor)
     entry.descriptor = std::move(descriptor);
     jack_driver_desc_t& desc = *entry.descriptor;
 
-    entry.view.name = desc.name;
-    entry.view.description = desc.desc;
+    entry.view.name = desc.name.data();
+    entry.view.description = desc.desc.data();
     entry.view.master = desc.type == JackDriverMaster;
 
     for (std::uint32_t i = 0; i < desc.nparams; i++) {
@@ -244,9 +245,9 @@ std::optional<DriverEntry> make_driver(DescriptorPtr descriptor)
         const std::size_t kind = kind_of(descriptor_param.type);
 
         Parameter parameter;
-        parameter.name = descriptor_param.name;
+        parameter.name = descriptor_param.name.data();
         parameter.short_name = descriptor_param.character;
-        parameter.description = descriptor_param.short_desc;
+        parameter.description = descriptor_param.short_desc.data();
         parameter.value = value_from_c(kind, descriptor_param.value);
         parameter.default_value = parameter.value;
 
@@ -258,7 +259,7 @@ std::optional<DriverEntry> make_driver(DescriptorPtr descriptor)
                 for (std::uint32_t c = 0; c < constraint->constraint.enumeration.count; c++) {
                     const jack_driver_param_value_enum_t& possible = constraint->constraint.enumeration.possible_values_array[c];
                     parameter.choices.push_back(Choice { value_from_c(kind, possible.value),
-                        possible.short_desc ? possible.short_desc : "" });
+                        possible.short_desc.data() });
                 }
             }
         }
@@ -483,7 +484,7 @@ Result<void> Server::parse_driver_arguments(std::int32_t argc, char* argv[])
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         if (argc > 2) {
             for (std::uint32_t i = 0; i < desc.nparams; i++) {
-                if (strcmp(desc.params[i].name, argv[2]) == 0) {
+                if (strcmp(desc.params[i].name.data(), argv[2]) == 0) {
                     jack_print_driver_param_usage(&desc, i, stdout);
                     return std::unexpected(Error::InvalidArgument);
                 }
@@ -502,7 +503,7 @@ Result<void> Server::parse_driver_arguments(std::int32_t argc, char* argv[])
     for (std::size_t i = 0; i < parameters.size(); i++) {
         jackmini::FormatCString(std::span<char>(options_ptr, 4), "{}::", parameters[i].short_name);
         options_ptr += 3;
-        long_options[i].name = desc.params[i].name;
+        long_options[i].name = desc.params[i].name.data();
         long_options[i].flag = nullptr;
         long_options[i].val = parameters[i].short_name;
         long_options[i].has_arg = optional_argument;

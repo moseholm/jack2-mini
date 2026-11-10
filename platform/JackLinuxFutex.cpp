@@ -142,10 +142,10 @@ bool JackLinuxFutex::TimedWait(std::int64_t usec)
 // Server side : publish the futex in the global namespace
 bool JackLinuxFutex::Allocate(const char* name, const char* server_name, std::int32_t value, bool internal)
 {
-    BuildName(name, server_name, fName, sizeof(fName));
+    BuildName(name, server_name, fName.data(), sizeof(fName));
     jack_log("JackLinuxFutex::Allocate name = %s val = %ld", fName, value);
 
-    if ((fSharedMem = shm_open(fName, O_CREAT | O_RDWR, 0777)) < 0) {
+    if ((fSharedMem = shm_open(fName.data(), O_CREAT | O_RDWR, 0777)) < 0) {
         jack_error("Allocate: can't check in named futex name = %s err = %s", fName, strerror(errno));
         return false;
     }
@@ -155,10 +155,10 @@ bool JackLinuxFutex::Allocate(const char* name, const char* server_name, std::in
         return false;
     }
 
-    if (fPromiscuous && (jackmini::set_promiscuous_perms(fSharedMem, fName, fPromiscuousGid) < 0)) {
+    if (fPromiscuous && (jackmini::set_promiscuous_perms(fSharedMem, fName.data(), fPromiscuousGid) < 0)) {
         close(fSharedMem);
         fSharedMem = -1;
-        shm_unlink(fName);
+        shm_unlink(fName.data());
         return false;
     }
 
@@ -173,7 +173,7 @@ bool JackLinuxFutex::Allocate(const char* name, const char* server_name, std::in
         jack_error("Allocate: can't check in named futex name = %s err = %s", fName, strerror(errno));
         close(fSharedMem);
         fSharedMem = -1;
-        shm_unlink(fName);
+        shm_unlink(fName.data());
         return false;
     }
 
@@ -191,7 +191,7 @@ bool JackLinuxFutex::Allocate(const char* name, const char* server_name, std::in
 // Client side : get the published futex from server
 bool JackLinuxFutex::Connect(const char* name, const char* server_name)
 {
-    BuildName(name, server_name, fName, sizeof(fName));
+    BuildName(name, server_name, fName.data(), sizeof(fName));
     jack_log("JackLinuxFutex::Connect name = %s", fName);
 
     // Temporary...
@@ -200,7 +200,7 @@ bool JackLinuxFutex::Connect(const char* name, const char* server_name)
         return true;
     }
 
-    if ((fSharedMem = shm_open(fName, O_RDWR, 0)) < 0) {
+    if ((fSharedMem = shm_open(fName.data(), O_RDWR, 0)) < 0) {
         jack_error("Connect: can't connect named futex name = %s err = %s", fName, strerror(errno));
         return false;
     }
@@ -222,7 +222,7 @@ bool JackLinuxFutex::Connect(const char* name, const char* server_name)
     if (!fPrivate && futex->wasInternal) {
         const char* externalSync = getenv("JACK_INTERNAL_CLIENT_SYNC");
 
-        if (externalSync != nullptr && strstr(fName, externalSync) != nullptr && ++futex->externalCount == 1) {
+        if (externalSync != nullptr && strstr(fName.data(), externalSync) != nullptr && ++futex->externalCount == 1) {
             jack_error("Note: client %s running as external client temporarily", fName);
             futex->needsChange = true;
         }
@@ -251,7 +251,7 @@ bool JackLinuxFutex::Disconnect()
     if (!fPrivate && fFutex->wasInternal) {
         const char* externalSync = getenv("JACK_INTERNAL_CLIENT_SYNC");
 
-        if (externalSync != nullptr && strstr(fName, externalSync) != nullptr && --fFutex->externalCount == 0) {
+        if (externalSync != nullptr && strstr(fName.data(), externalSync) != nullptr && --fFutex->externalCount == 0) {
             jack_error("Note: client %s now running as internal client again", fName);
             fFutex->needsChange = true;
         }
@@ -278,7 +278,7 @@ void JackLinuxFutex::Destroy()
     close(fSharedMem);
     fSharedMem = -1;
 
-    shm_unlink(fName);
+    shm_unlink(fName.data());
 }
 
 } // namespace jackmini

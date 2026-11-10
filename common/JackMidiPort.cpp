@@ -62,7 +62,7 @@ LIB_EXPORT jack_midi_data_t* JackMidiBuffer::ReserveEvent(jack_nframes_t time, j
     event->size = size;
 
     if (size <= JackMidiEvent::INLINE_SIZE_MAX) {
-        return event->data;
+        return event->data.data();
     }
 
     write_pos += size;

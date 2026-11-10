@@ -122,7 +122,7 @@ std::int32_t JackSocketServerChannel::GetFd(JackClientSocket* socket_aux)
 void JackSocketServerChannel::ClientAdd(detail::JackChannelTransactionInterface* socket_aux, JackClientOpenRequest* req, JackClientOpenResult* res)
 {
     std::int32_t refnum = -1;
-    res->fResult = ReplyCode(fServer->GetEngine()->ClientExternalOpen(req->fName, req->fPID, req->fUUID, &refnum, &res->fSharedEngine, &res->fSharedClient, &res->fSharedGraph));
+    res->fResult = ReplyCode(fServer->GetEngine()->ClientExternalOpen(req->fName.data(), req->fPID, req->fUUID, &refnum, &res->fSharedEngine, &res->fSharedClient, &res->fSharedGraph));
     if (res->fResult == 0) {
         JackClientSocket* socket = dynamic_cast<JackClientSocket*>(socket_aux);
         assert(socket);

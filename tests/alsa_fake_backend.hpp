@@ -18,6 +18,7 @@
 
 #include "pcm_cycle.hpp"
 
+#include <array>
 #include <cstddef>
 #include <poll.h>
 #include <algorithm>
@@ -222,7 +223,7 @@ private:
     std::deque<std::int32_t> poll_script_;
     std::int32_t poll_result_ = 1;
     std::int32_t last_poll_ = 1;
-    nfds_t revents_nfds_[2] = { 0, 0 };
+    std::array<nfds_t, 2> revents_nfds_ = { 0, 0 };
     XrunStatus status_;
     std::int32_t status_result_ = 0;
     std::uint64_t now_ = 0;

@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <jack/systemdeps.h>
 
@@ -502,7 +503,7 @@ struct _jack_position {
     // For binary compatibility, new fields should be allocated from
     // this padding area with new valid bits controlling access, so
     // the existing structure size and offsets are preserved.
-    std::int32_t padding[5];
+    std::array<std::int32_t, 5> padding;
 
     // When (unique_1 == unique_2) the contents are consistent.
     jack_unique_t unique_2;  // < unique ID
