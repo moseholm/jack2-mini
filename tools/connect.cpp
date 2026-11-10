@@ -18,6 +18,7 @@
 
 #include "tool_common.hpp"
 
+#include <array>
 #include <cstdint>
 #include <getopt.h>
 
@@ -82,17 +83,17 @@ int main(std::int32_t argc, char** argv)
 {
     std::string server;
     bool use_uuid = false;
-    static const char kShortOptions[] = "s:uhv";
-    static const struct option kLongOptions[] = {
+    static constexpr std::string_view kShortOptions = "s:uhv";
+    static std::array<const struct option, 5> kLongOptions = {{
         { "server", required_argument, nullptr, 's' },
         { "uuid", no_argument, nullptr, 'u' },
         { "help", no_argument, nullptr, 'h' },
         { "version", no_argument, nullptr, 'v' },
         { nullptr, 0, nullptr, 0 },
-    };
+    }};
 
     std::int32_t c;
-    while ((c = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
+    while ((c = getopt_long(argc, argv, kShortOptions.data(), kLongOptions.data(), nullptr)) != -1) {
         switch (c) {
         case 's':
             server = optarg;

@@ -147,9 +147,9 @@ protected:
 
     // Static tables since the actual number of ports may be changed by the real driver
     // thus dynamic allocation is more difficult to handle
-    jack_port_id_t fCapturePortList[DRIVER_PORT_NUM];
-    jack_port_id_t fPlaybackPortList[DRIVER_PORT_NUM];
-    jack_port_id_t fMonitorPortList[DRIVER_PORT_NUM];
+    std::array<jack_port_id_t, DRIVER_PORT_NUM> fCapturePortList;
+    std::array<jack_port_id_t, DRIVER_PORT_NUM> fPlaybackPortList;
+    std::array<jack_port_id_t, DRIVER_PORT_NUM> fMonitorPortList;
 
     driver_connections_list_t fConnections; // Connections list
 

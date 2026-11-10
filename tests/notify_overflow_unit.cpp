@@ -23,6 +23,7 @@
 #include "JackSocket.h"
 #include "JackSocketNotifyChannel.h"
 
+#include <array>
 #include <cstdint>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -82,8 +83,8 @@ Received ReadAll(JackClientSocket& socket, std::int32_t last)
 // Sends sent notifications while the client does not read, then reads them all.  Returns what came through.
 Received Run(std::int32_t sent)
 {
-    std::int32_t fd[2];
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd) != 0) {
+    std::array<std::int32_t, 2> fd;
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd.data()) != 0) {
         std::printf("socketpair failed\n");
         return { };
     }

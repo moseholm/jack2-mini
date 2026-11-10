@@ -101,7 +101,7 @@ Result<void> JackServer::Open(jack_driver_desc_t* driver_desc, JSList* driver_pa
         return std::unexpected(Error::ServerFailure);
     }
 
-    if (!fRequestChannel.Open(fEngineControl->fServerName, this)) {
+    if (!fRequestChannel.Open(fEngineControl->fServerName.data(), this)) {
         jack_error("Server channel open error");
         fAudioDriver->Close();
         JackMessageBuffer::Destroy();
@@ -333,7 +333,7 @@ JackLockedEngine* JackServer::GetEngine()
 
 JackSynchro* JackServer::GetSynchroTable()
 {
-    return fSynchroTable;
+    return fSynchroTable.data();
 }
 
 JackEngineControl* JackServer::GetEngineControl()

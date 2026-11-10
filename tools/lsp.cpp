@@ -16,6 +16,7 @@
 
 #include "tool_common.hpp"
 
+#include <array>
 #include <cstdint>
 #include <getopt.h>
 
@@ -118,8 +119,8 @@ void print_properties(jackmini::PortFlags flags)
 int main(std::int32_t argc, char** argv)
 {
     Options options;
-    static const char kShortOptions[] = "s:AclLpthvtuU";
-    static const struct option kLongOptions[] = {
+    static constexpr std::string_view kShortOptions = "s:AclLpthvtuU";
+    static std::array<const struct option, 12> kLongOptions = {{
         { "server", required_argument, nullptr, 's' },
         { "aliases", no_argument, nullptr, 'A' },
         { "connections", no_argument, nullptr, 'c' },
@@ -132,10 +133,10 @@ int main(std::int32_t argc, char** argv)
         { "help", no_argument, nullptr, 'h' },
         { "version", no_argument, nullptr, 'v' },
         { nullptr, 0, nullptr, 0 },
-    };
+    }};
 
     std::int32_t c;
-    while ((c = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
+    while ((c = getopt_long(argc, argv, kShortOptions.data(), kLongOptions.data(), nullptr)) != -1) {
         switch (c) {
         case 's':
             options.server = optarg;

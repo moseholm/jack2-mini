@@ -18,6 +18,7 @@
 
 #include "tool_common.hpp"
 
+#include <array>
 #include <cstdint>
 #include <getopt.h>
 
@@ -56,8 +57,8 @@ int main(std::int32_t argc, char** argv)
     bool wait_for_quit = false;
     std::int64_t timeout = 0;
 
-    static const char kShortOptions[] = "s:n:wqct:hv";
-    static const struct option kLongOptions[] = {
+    static constexpr std::string_view kShortOptions = "s:n:wqct:hv";
+    static std::array<const struct option, 9> kLongOptions = {{
         { "server", required_argument, nullptr, 's' },
         { "name", required_argument, nullptr, 'n' },
         { "wait", no_argument, nullptr, 'w' },
@@ -67,10 +68,10 @@ int main(std::int32_t argc, char** argv)
         { "help", no_argument, nullptr, 'h' },
         { "version", no_argument, nullptr, 'v' },
         { nullptr, 0, nullptr, 0 },
-    };
+    }};
 
     std::int32_t c;
-    while ((c = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
+    while ((c = getopt_long(argc, argv, kShortOptions.data(), kLongOptions.data(), nullptr)) != -1) {
         switch (c) {
         case 's':
             server = optarg;

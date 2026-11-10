@@ -18,6 +18,7 @@
 #pragma once
 
 #include "jslist.h"
+#include <array>
 #include <cstdint>
 #include <limits.h>
 
@@ -59,12 +60,12 @@ typedef union {
     std::uint32_t ui;
     std::int32_t i;
     char c;
-    char str[JACK_DRIVER_PARAM_STRING_MAX + 1];
+    std::array<char, JACK_DRIVER_PARAM_STRING_MAX + 1> str;
 } jack_driver_param_value_t;
 
 typedef struct {
     jack_driver_param_value_t value;
-    char short_desc[64];  // < A short (~30 chars) description for the user
+    std::array<char, 64> short_desc;  // < A short (~30 chars) description for the user
 } jack_driver_param_value_enum_t;
 
 struct jack_constraint_enum_uint32_descriptor {
@@ -104,13 +105,13 @@ typedef struct {
 
 // A driver parameter descriptor
 typedef struct {
-    char name[JACK_DRIVER_NAME_MAX + 1];  // < The parameter's name
+    std::array<char, JACK_DRIVER_NAME_MAX + 1> name;  // < The parameter's name
     char character;  // < The parameter's character (for getopt, etc)
     jack_driver_param_type_t type;  // < The parameter's type
     jack_driver_param_value_t value;  // < The parameter's (default) value
     jack_driver_param_constraint_desc_t* constraint;  // < Pointer to parameter constraint descriptor. nullptr if there is no constraint
-    char short_desc[64];  // < A short (~30 chars) description for the user
-    char long_desc[1024];  // < A longer description for the user
+    std::array<char, 64> short_desc;  // < A short (~30 chars) description for the user
+    std::array<char, 1024> long_desc;  // < A longer description for the user
 } jack_driver_param_desc_t;
 
 // A driver parameter
@@ -121,10 +122,10 @@ typedef struct {
 
 // A struct for describing a jack driver
 typedef struct {
-    char name[JACK_DRIVER_NAME_MAX + 1];  // < The driver's canonical name
+    std::array<char, JACK_DRIVER_NAME_MAX + 1> name;  // < The driver's canonical name
     jack_driver_type_t type;  // < The driver's type
-    char desc[JACK_DRIVER_PARAM_DESC + 1];  // < The driver's extended description
-    char file[JACK_PATH_MAX + 1];  // < The filename of the driver's shared object file
+    std::array<char, JACK_DRIVER_PARAM_DESC + 1> desc;  // < The driver's extended description
+    std::array<char, JACK_PATH_MAX + 1> file;  // < The filename of the driver's shared object file
     std::uint32_t nparams;  // < The number of parameters the driver has
     jack_driver_param_desc_t* params;  // < An array of parameter descriptors
 } jack_driver_desc_t;

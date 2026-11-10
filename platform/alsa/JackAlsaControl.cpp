@@ -19,6 +19,7 @@
 
 #include "JackPlatformPlug.h"
 
+#include <array>
 #include <cstdint>
 #include <ctype.h>
 #include <errno.h>
@@ -167,11 +168,11 @@ static void Fill(JackAlsaRateElement* out, const ElementMatch& match, const std:
     out->writable = writable;
 }
 
-static const char* const kCaptureProbe[] = {
+static std::array<const char* const, 7> kCaptureProbe = {
     "Capture Rate", "Sample Rate", "Rate", "Clock Rate", "Sample Clock Rate", "IEC958 Sample Rate", nullptr
 };
 
-static const char* const kPlaybackProbe[] = {
+static std::array<const char* const, 7> kPlaybackProbe = {
     "Playback Rate", "Sample Rate", "Rate", "Clock Rate", "Sample Clock Rate", "IEC958 Sample Rate", nullptr
 };
 
@@ -195,7 +196,7 @@ std::int32_t JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection di
         return 0;
     }
 
-    const char* const* probe = (dir == RateCapture) ? kCaptureProbe : kPlaybackProbe;
+    const char* const* probe = (dir == RateCapture) ? kCaptureProbe.data() : kPlaybackProbe.data();
     for (std::int32_t i = 0; probe[i] != nullptr; i++) {
         if (FindElement(ctl, probe[i], &match) && Usable(ctl, match, dir, &writable)) {
             Fill(out, match, probe[i], writable);

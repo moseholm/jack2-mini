@@ -99,7 +99,7 @@ SERVER_EXPORT JackEngineControl* GetEngineControl()
 SERVER_EXPORT JackSynchro* GetSynchroTable()
 {
     auto* context = jackmini::client::ProcessContext::current();
-    return context ? context->synchro : nullptr;
+    return context ? context->synchro.data() : nullptr;
 }
 
 } // end of namespace jackmini

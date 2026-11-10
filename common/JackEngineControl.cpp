@@ -88,7 +88,7 @@ void JackEngineControl::CalcCPULoad(std::atomic<JackClientInterface*>* table,
 
 void JackEngineControl::ResetRollingUsecs()
 {
-    memset(fRollingClientUsecs, 0, sizeof(fRollingClientUsecs));
+    memset(fRollingClientUsecs.data(), 0, sizeof(fRollingClientUsecs));
     fRollingClientUsecsIndex = 0;
     fRollingClientUsecsCnt = 0;
     fSpareUsecs = 0;

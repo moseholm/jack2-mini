@@ -100,16 +100,16 @@ int main(std::int32_t argc, char** argv)
 {
     std::string server;
     std::int32_t time_format = 0; // 0: frame in the cycle, 1: absolute, 2: relative
-    static const char kShortOptions[] = "arhs:v";
-    static const struct option kLongOptions[] = {
+    static constexpr std::string_view kShortOptions = "arhs:v";
+    static std::array<const struct option, 4> kLongOptions = {{
         { "server", required_argument, nullptr, 's' },
         { "help", no_argument, nullptr, 'h' },
         { "version", no_argument, nullptr, 'v' },
         { nullptr, 0, nullptr, 0 },
-    };
+    }};
 
     std::int32_t c;
-    while ((c = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
+    while ((c = getopt_long(argc, argv, kShortOptions.data(), kLongOptions.data(), nullptr)) != -1) {
         switch (c) {
         case 'a':
             time_format = 1;

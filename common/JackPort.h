@@ -20,6 +20,7 @@
 #include "JackCompilerDeps.h"
 #include "JackConstants.h"
 #include "types.h"
+#include <array>
 #include <cstdint>
 #include <string_view>
 
@@ -38,9 +39,9 @@ class SERVER_EXPORT JackPort {
 private:
     std::int32_t fTypeId;
     enum JackPortFlags fFlags;
-    char fName[REAL_JACK_PORT_NAME_SIZE + 1];
-    char fAlias1[REAL_JACK_PORT_NAME_SIZE + 1];
-    char fAlias2[REAL_JACK_PORT_NAME_SIZE + 1];
+    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> fName;
+    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> fAlias1;
+    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> fAlias2;
     std::int32_t fRefNum;
     jack_uuid_t fUUID; // set when the port is allocated; the UUID is reported by the client tools
 
@@ -52,7 +53,7 @@ private:
 
     bool fInUse;
     jack_port_id_t fTied; // Locally tied source port
-    jack_default_audio_sample_t fBuffer[BUFFER_SIZE_MAX + 8];
+    std::array<jack_default_audio_sample_t, BUFFER_SIZE_MAX + 8> fBuffer;
 
     bool IsUsed() const
     {
@@ -101,7 +102,7 @@ public:
     // Since we are in shared memory, the resulting pointer cannot be cached, so align it here...
     jack_default_audio_sample_t* GetBuffer()
     {
-        return (jack_default_audio_sample_t*)((std::uintptr_t)fBuffer & ~31L) + 8;
+        return (jack_default_audio_sample_t*)((std::uintptr_t)fBuffer.data() & ~31L) + 8;
     }
 
     std::int32_t GetRefNum() const;

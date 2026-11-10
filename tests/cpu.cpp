@@ -25,6 +25,7 @@
 #include "jackmini/jackmini.hpp"
 #include "jackmini_wait.hpp"
 
+#include <array>
 #include <cstdint>
 #include <getopt.h>
 #include <algorithm>
@@ -85,15 +86,15 @@ int main(std::int32_t argc, char* argv[])
     std::int32_t opt;
     const char* options = "t:t:d:c:";
     const char* client_name = "jack-cpu";
-    struct option long_options[] = {
+    std::array<struct option, 5> long_options = {{
         { "time", 1, nullptr, 't' },
         { "name", 1, nullptr, 'n' },
         { "delay", 1, nullptr, 'd' },
         { "cpu", 1, nullptr, 'c' },
         { nullptr, 0, nullptr, 0 },
-    };
+    }};
 
-    while ((opt = getopt_long(argc, argv, options, long_options, nullptr)) != -1) {
+    while ((opt = getopt_long(argc, argv, options, long_options.data(), nullptr)) != -1) {
         switch (opt) {
         case 'n':
             client_name = optarg;

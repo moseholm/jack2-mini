@@ -22,6 +22,7 @@
 #include "JackShmMem.h"
 #include "JackTransportEngine.h"
 #include "types.h"
+#include <array>
 #include <cstdint>
 #include <stdio.h>
 #include <atomic>
@@ -54,7 +55,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem {
     std::int32_t fServerPriority;
     std::int32_t fClientPriority;
     std::int32_t fMaxClientPriority;
-    char fServerName[JACK_SERVER_NAME_SIZE + 1];
+    std::array<char, JACK_SERVER_NAME_SIZE + 1> fServerName;
     alignas(UInt32) alignas(JackTransportEngine) JackTransportEngine fTransport;
     jack_timer_type_t fClockSource;
     std::int32_t fDriverNum;
@@ -65,7 +66,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem {
     jack_time_t fCurCycleTime;
     jack_time_t fSpareUsecs;
     jack_time_t fMaxUsecs;
-    jack_time_t fRollingClientUsecs[JACK_ENGINE_ROLLING_COUNT];
+    std::array<jack_time_t, JACK_ENGINE_ROLLING_COUNT> fRollingClientUsecs;
     std::uint32_t fRollingClientUsecsCnt;
     std::uint32_t fRollingClientUsecsIndex;
     std::uint32_t fRollingInterval;
@@ -106,7 +107,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem {
         fSpareUsecs = 0;
         fMaxUsecs = 0;
         ResetRollingUsecs();
-        strncpy(fServerName, server_name, sizeof(fServerName));
+        strncpy(fServerName.data(), server_name, sizeof(fServerName));
         fServerName[sizeof(fServerName) - 1] = 0;
         fCPULoad = 0.f;
         fMaxCPULoad = 0.f;

@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string.h>
@@ -37,7 +38,7 @@ typedef struct {
     std::uint32_t depth;
     float rm1;
     std::uint32_t idx;
-    float e[DITHER_BUF_SIZE];
+    std::array<float, DITHER_BUF_SIZE> e;
 } dither_state_t;
 
 // float functions

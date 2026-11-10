@@ -62,7 +62,7 @@ std::int32_t JackDriver::Open()
 {
     std::int32_t refnum = -1;
 
-    if (!fEngine->RegisterDriver(fClientControl.fName, &refnum, &fEngineControl, &fGraphManager, this, false)) {
+    if (!fEngine->RegisterDriver(fClientControl.fName.data(), &refnum, &fEngineControl, &fGraphManager, this, false)) {
         jack_error("Cannot allocate internal client for driver");
         return -1;
     }
@@ -94,13 +94,13 @@ std::int32_t JackDriver::Open(jack_nframes_t buffer_size,
     std::int32_t status;
 
     // Check name and possibly rename
-    if (!fEngine->ClientCheck(fClientControl.fName, -1, name_res.data(), JACK_PROTOCOL_VERSION, (std::int32_t)JackNullOption, (std::int32_t*)&status)) {
+    if (!fEngine->ClientCheck(fClientControl.fName.data(), -1, name_res.data(), JACK_PROTOCOL_VERSION, (std::int32_t)JackNullOption, (std::int32_t*)&status)) {
         jack_error("Client name = %s conflits with another running client", fClientControl.fName);
         return -1;
     }
-    strcpy(fClientControl.fName, name_res.data());
+    strcpy(fClientControl.fName.data(), name_res.data());
 
-    if (!fEngine->RegisterDriver(fClientControl.fName, &refnum, &fEngineControl, &fGraphManager, this, false)) {
+    if (!fEngine->RegisterDriver(fClientControl.fName.data(), &refnum, &fEngineControl, &fGraphManager, this, false)) {
         jack_error("Cannot allocate internal client for driver");
         return -1;
     }
@@ -160,7 +160,7 @@ void JackDriver::SetupDriverSync(std::int32_t ref, bool freewheel)
 
 std::int32_t JackDriver::ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2)
 {
-    jack_log("JackDriver::ClientNotify ref = %ld driver = %s name = %s notify = %ld", refnum, fClientControl.fName, name, notify);
+    jack_log("JackDriver::ClientNotify ref = %ld driver = %s name = %s notify = %ld", refnum, fClientControl.fName.data(), name, notify);
 
     switch (notify) {
 
@@ -429,8 +429,8 @@ void JackDriver::SaveConnections(std::int32_t alias)
     std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias2 { };
     std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> system_alias1 { };
     std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> system_alias2 { };
-    char* aliases[2];
-    char* system_aliases[2];
+    std::array<char*, 2> aliases;
+    std::array<char*, 2> system_aliases;
 
     aliases[0] = alias1.data();
     aliases[1] = alias2.data();
@@ -449,7 +449,7 @@ void JackDriver::SaveConnections(std::int32_t alias)
                     jack_info("Save connection: %s %s", fGraphManager->GetPort(fCapturePortList[i])->GetName(), connections[j]);
                 }
             } else {
-                std::int32_t res1 = fGraphManager->GetPort(fCapturePortList[i])->GetAliases(aliases);
+                std::int32_t res1 = fGraphManager->GetPort(fCapturePortList[i])->GetAliases(aliases.data());
                 string sub_system_name;
                 if (res1 >= alias) {
                     sub_system_name = aliases[alias - 1];
@@ -458,7 +458,7 @@ void JackDriver::SaveConnections(std::int32_t alias)
                 }
                 for (std::int32_t j = 0; connections[j]; j++) {
                     JackPort* port_id = fGraphManager->GetPort(fGraphManager->GetPort(connections[j]));
-                    std::int32_t res2 = port_id->GetAliases(system_aliases);
+                    std::int32_t res2 = port_id->GetAliases(system_aliases.data());
                     string sub_system;
                     if (res2 >= alias) {
                         sub_system = system_aliases[alias - 1];
@@ -482,7 +482,7 @@ void JackDriver::SaveConnections(std::int32_t alias)
                     jack_info("Save connection: %s %s", connections[j], fGraphManager->GetPort(fPlaybackPortList[i])->GetName());
                 }
             } else {
-                std::int32_t res1 = fGraphManager->GetPort(fPlaybackPortList[i])->GetAliases(aliases);
+                std::int32_t res1 = fGraphManager->GetPort(fPlaybackPortList[i])->GetAliases(aliases.data());
                 string sub_system_name;
                 if (res1 >= alias) {
                     sub_system_name = aliases[alias - 1];
@@ -491,7 +491,7 @@ void JackDriver::SaveConnections(std::int32_t alias)
                 }
                 for (std::int32_t j = 0; connections[j]; j++) {
                     JackPort* port_id = fGraphManager->GetPort(fGraphManager->GetPort(connections[j]));
-                    std::int32_t res2 = port_id->GetAliases(system_aliases);
+                    std::int32_t res2 = port_id->GetAliases(system_aliases.data());
                     string sub_name;
                     if (res2 >= alias) {
                         sub_name = system_aliases[alias - 1];
@@ -511,7 +511,7 @@ string JackDriver::MatchPortName(const char* name, const char** ports, std::int3
 {
     std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias1 { };
     std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias2 { };
-    char* aliases[2];
+    std::array<char*, 2> aliases;
 
     aliases[0] = alias1.data();
     aliases[1] = alias2.data();
@@ -522,7 +522,7 @@ string JackDriver::MatchPortName(const char* name, const char** ports, std::int3
         JackPort* port2 = (port_id2 != NO_PORT) ? fGraphManager->GetPort(port_id2) : nullptr;
 
         if (port2) {
-            std::int32_t res = port2->GetAliases(aliases);
+            std::int32_t res = port2->GetAliases(aliases.data());
             string name_str;
             if (res >= alias) {
                 name_str = string(aliases[alias - 1]);

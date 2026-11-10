@@ -25,6 +25,7 @@
 #include "JackRequestDecoder.h"
 #include "JackSocket.h"
 
+#include <array>
 #include <cstdint>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -49,11 +50,11 @@ std::int32_t gFailures = 0;
 
 // A connected pair of stream sockets, closed on destruction.
 struct SocketPair {
-    std::int32_t fd[2] = { -1, -1 };
+    std::array<std::int32_t, 2> fd = { -1, -1 };
 
     SocketPair()
     {
-        if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd) != 0) {
+        if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd.data()) != 0) {
             std::printf("socketpair failed\n");
             gFailures++;
         }
@@ -143,7 +144,7 @@ private:
                     return;
                 }
                 fRenamedPort = req.fPort;
-                fRenamedTo = req.fName;
+                fRenamedTo = req.fName.data();
                 JackResult res(0);
                 SendJackReply(&fSocket, res, header);
                 break;
@@ -153,9 +154,9 @@ private:
                 if (!Decode(header, req)) {
                     return;
                 }
-                fUUIDFor = req.fName;
+                fUUIDFor = req.fName.data();
                 JackUUIDResult res;
-                std::snprintf(res.fUUID, sizeof(res.fUUID), "%s", "00000000-0000-0000-0000-000000000042");
+                std::snprintf(res.fUUID.data(), sizeof(res.fUUID), "%s", "00000000-0000-0000-0000-000000000042");
                 res.fResult = 0;
                 SendJackReply(&fSocket, res, header);
                 break;
@@ -204,7 +205,7 @@ void TestRequestsGetTheirReplies()
     CHECK(uuid.Write(&client) == 0);
     JackUUIDResult res4;
     CHECK(ReadJackReply(&client, uuid.fType, uuid.fRequestId, res4) == 0);
-    CHECK(std::strcmp(res4.fUUID, "00000000-0000-0000-0000-000000000042") == 0);
+    CHECK(std::strcmp(res4.fUUID.data(), "00000000-0000-0000-0000-000000000042") == 0);
 
     JackComputeTotalLatenciesRequest latencies;
     CHECK(latencies.Write(&client) == 0);
@@ -230,9 +231,9 @@ void TestMalformedRequestIsRefused()
     JackClientSocket client(pair.fd[0]);
 
     // ClientClose takes four bytes; this one claims seven.
-    const char payload[7] = { };
+    std::array<const char, 7> payload = { };
     JackMsgHeader header = MakeJackMsgHeader(JackRequest::kClientClose, 7, 9);
-    CHECK(SendJackMessage(&client, header, payload, sizeof(payload)) == 0);
+    CHECK(SendJackMessage(&client, header, payload.data(), sizeof(payload)) == 0);
 
     JackMsgHeader got { };
     CHECK(ReadJackMsgHeader(&server, got) == 0);
@@ -333,7 +334,7 @@ void TestSynchronousNotification()
     JackClientNotification got;
     JackPayloadReader payload(&client, header.length, { });
     CHECK(got.Read(&payload) == 0 && payload.Done());
-    CHECK(std::strcmp(got.fName, "system") == 0);
+    CHECK(std::strcmp(got.fName.data(), "system") == 0);
 
     JackResult res(0);
     CHECK(SendJackReply(&client, res, header) == 0);

@@ -19,6 +19,7 @@
 #include "JackEngineControl.h"
 #include "JackError.h"
 #include "JackGlobals.h"
+#include <array>
 #include <cstdint>
 #include <assert.h>
 #include <iostream>
@@ -63,10 +64,10 @@ bool JackConnectionManager::IsLoopPathAux(std::int32_t ref1, std::int32_t ref2) 
     } else if (ref1 == ref2) { // Same refnum
         return true;
     } else {
-        jack_int_t output[CLIENT_NUM];
-        fConnectionRef.GetOutputTable(ref1, output);
+        std::array<jack_int_t, CLIENT_NUM> output;
+        fConnectionRef.GetOutputTable(ref1, output.data());
 
-        if (fConnectionRef.IsInsideTable(ref2, output)) { // If ref2 is contained in the outputs of ref1
+        if (fConnectionRef.IsInsideTable(ref2, output.data())) { // If ref2 is contained in the outputs of ref1
             return true;
         } else {
             for (std::int32_t i = 0; i < CLIENT_NUM && output[i] != EMPTY; i++) { // Otherwise recurse for all ref1 outputs

@@ -43,9 +43,9 @@ std::int32_t g_checks = 0;
 
 using namespace jackmini;
 
-void SocketPair(std::int32_t (&pair)[2])
+void SocketPair(std::array<std::int32_t, 2>& pair)
 {
-    const std::int32_t rc = socketpair(AF_UNIX, SOCK_SEQPACKET, 0, pair);
+    const std::int32_t rc = socketpair(AF_UNIX, SOCK_SEQPACKET, 0, pair.data());
     if (rc != 0) {
         std::perror("socketpair");
         std::exit(1);
@@ -92,7 +92,7 @@ void TestDescriptorArrivesAndMapsToSameMemory()
         words[i] = 0x1000 + i;
     }
 
-    std::int32_t pair[2];
+    std::array<std::int32_t, 2> pair;
     SocketPair(pair);
 
     const std::array<std::byte, 5> message { std::byte { 'h' }, std::byte { 'e' }, std::byte { 'l' }, std::byte { 'l' }, std::byte { 'o' } };
@@ -127,7 +127,7 @@ void TestDescriptorArrivesAndMapsToSameMemory()
 
 void TestClosedPeerReadsZero()
 {
-    std::int32_t pair[2];
+    std::array<std::int32_t, 2> pair;
     SocketPair(pair);
     close(pair[0]);
     std::array<std::byte, 8> buf { };
@@ -139,7 +139,7 @@ void TestClosedPeerReadsZero()
 
 void TestTooManyDescriptorsRejected()
 {
-    std::int32_t pair[2];
+    std::array<std::int32_t, 2> pair;
     SocketPair(pair);
     std::array<std::int32_t, 9> fds { };
     for (auto& fd : fds)
@@ -153,7 +153,7 @@ void TestTooManyDescriptorsRejected()
 
 void TestUniqueFdClosesOnDestruction()
 {
-    std::int32_t pair[2];
+    std::array<std::int32_t, 2> pair;
     SocketPair(pair);
     std::int32_t raw = pair[0];
     {

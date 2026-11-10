@@ -251,7 +251,7 @@ inline std::int32_t ReadJackReply(detail::JackClientRequestInterface* socket, st
 
 struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 + 3 * sizeof(std::int32_t) + sizeof(jack_uuid_t)> {
 
-    char fName[JACK_CLIENT_NAME_SIZE_1];
+    std::array<char, JACK_CLIENT_NAME_SIZE_1> fName;
     std::int32_t fProtocol;
     std::int32_t fOptions;
     std::int32_t fOpen;
@@ -264,7 +264,7 @@ struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 +
         , fOpen(0)
         , fUUID(JACK_UUID_EMPTY_INITIALIZER)
     {
-        memset(fName, 0, sizeof(fName));
+        memset(fName.data(), 0, sizeof(fName));
     }
 
     JackClientCheckRequest(const char* name, std::int32_t protocol, std::int32_t options, jack_uuid_t uuid, std::int32_t open = false)
@@ -274,7 +274,7 @@ struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 +
         , fOpen(open)
         , fUUID(uuid)
     {
-        memset(fName, 0, sizeof(fName));
+        memset(fName.data(), 0, sizeof(fName));
         CopyCString(fName, name);
     }
 
@@ -305,20 +305,20 @@ struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 +
 
 struct JackClientCheckResult : public JackResult {
 
-    char fName[JACK_CLIENT_NAME_SIZE + 1];
+    std::array<char, JACK_CLIENT_NAME_SIZE + 1> fName;
     std::int32_t fStatus;
 
     JackClientCheckResult()
         : JackResult()
         , fStatus(0)
     {
-        memset(fName, 0, sizeof(fName));
+        memset(fName.data(), 0, sizeof(fName));
     }
     JackClientCheckResult(std::int32_t result, const char* name, std::int32_t status)
         : JackResult(result)
         , fStatus(status)
     {
-        memset(fName, 0, sizeof(fName));
+        memset(fName.data(), 0, sizeof(fName));
         CopyCString(fName, name);
     }
 
@@ -345,20 +345,20 @@ struct JackClientOpenRequest : public JackRequestImpl<sizeof(std::int32_t) + siz
 
     std::int32_t fPID;
     jack_uuid_t fUUID;
-    char fName[JACK_CLIENT_NAME_SIZE_1];
+    std::array<char, JACK_CLIENT_NAME_SIZE_1> fName;
 
     JackClientOpenRequest()
         : JackRequestImpl(kClientOpen)
         , fPID(0)
         , fUUID(JACK_UUID_EMPTY_INITIALIZER)
     {
-        memset(fName, 0, sizeof(fName));
+        memset(fName.data(), 0, sizeof(fName));
     }
 
     JackClientOpenRequest(const char* name, std::int32_t pid, jack_uuid_t uuid)
         : JackRequestImpl(kClientOpen)
     {
-        memset(fName, 0, sizeof(fName));
+        memset(fName.data(), 0, sizeof(fName));
         CopyCString(fName, name);
         fPID = pid;
         fUUID = uuid;
@@ -537,8 +537,8 @@ struct JackDeactivateRequest : public JackRequestImpl<sizeof(std::int32_t)> {
 struct JackPortRegisterRequest : public JackRequestImpl<sizeof(std::int32_t) + JACK_PORT_NAME_SIZE_1 + JACK_PORT_TYPE_SIZE_1 + 2 * sizeof(std::uint32_t)> {
 
     std::int32_t fRefNum;
-    char fName[JACK_PORT_NAME_SIZE_1]; // port short name
-    char fPortType[JACK_PORT_TYPE_SIZE_1];
+    std::array<char, JACK_PORT_NAME_SIZE_1> fName; // port short name
+    std::array<char, JACK_PORT_TYPE_SIZE_1> fPortType;
     std::uint32_t fFlags;
     std::uint32_t fBufferSize;
 
@@ -548,8 +548,8 @@ struct JackPortRegisterRequest : public JackRequestImpl<sizeof(std::int32_t) + J
         , fFlags(0)
         , fBufferSize(0)
     {
-        memset(fName, 0, sizeof(fName));
-        memset(fPortType, 0, sizeof(fPortType));
+        memset(fName.data(), 0, sizeof(fName));
+        memset(fPortType.data(), 0, sizeof(fPortType));
     }
 
     JackPortRegisterRequest(std::int32_t refnum, const char* name, const char* port_type, std::uint32_t flags, std::uint32_t buffer_size)
@@ -558,10 +558,10 @@ struct JackPortRegisterRequest : public JackRequestImpl<sizeof(std::int32_t) + J
         , fFlags(flags)
         , fBufferSize(buffer_size)
     {
-        memset(fName, 0, sizeof(fName));
-        memset(fPortType, 0, sizeof(fPortType));
-        strncpy(fName, name, sizeof(fName) - 1);
-        strncpy(fPortType, port_type, sizeof(fPortType) - 1);
+        memset(fName.data(), 0, sizeof(fName));
+        memset(fPortType.data(), 0, sizeof(fPortType));
+        strncpy(fName.data(), name, sizeof(fName) - 1);
+        strncpy(fPortType.data(), port_type, sizeof(fPortType) - 1);
     }
 
     std::int32_t Read(detail::JackChannelTransactionInterface* trans) override
@@ -653,25 +653,25 @@ struct JackPortUnRegisterRequest : public JackRequestImpl<sizeof(std::int32_t) +
 struct JackPortConnectNameRequest : public JackRequestImpl<sizeof(std::int32_t) + 2 * REAL_JACK_PORT_NAME_SIZE_1> {
 
     std::int32_t fRefNum;
-    char fSrc[REAL_JACK_PORT_NAME_SIZE_1]; // port full name
-    char fDst[REAL_JACK_PORT_NAME_SIZE_1]; // port full name
+    std::array<char, REAL_JACK_PORT_NAME_SIZE_1> fSrc; // port full name
+    std::array<char, REAL_JACK_PORT_NAME_SIZE_1> fDst; // port full name
 
     JackPortConnectNameRequest()
         : JackRequestImpl(kConnectNamePorts)
         , fRefNum(0)
     {
-        memset(fSrc, 0, sizeof(fSrc));
-        memset(fDst, 0, sizeof(fDst));
+        memset(fSrc.data(), 0, sizeof(fSrc));
+        memset(fDst.data(), 0, sizeof(fDst));
     }
 
     JackPortConnectNameRequest(std::int32_t refnum, const char* src_name, const char* dst_name)
         : JackRequestImpl(kConnectNamePorts)
         , fRefNum(refnum)
     {
-        memset(fSrc, 0, sizeof(fSrc));
-        memset(fDst, 0, sizeof(fDst));
-        strncpy(fSrc, src_name, sizeof(fSrc) - 1);
-        strncpy(fDst, dst_name, sizeof(fDst) - 1);
+        memset(fSrc.data(), 0, sizeof(fSrc));
+        memset(fDst.data(), 0, sizeof(fDst));
+        strncpy(fSrc.data(), src_name, sizeof(fSrc) - 1);
+        strncpy(fDst.data(), dst_name, sizeof(fDst) - 1);
     }
 
     std::int32_t Read(detail::JackChannelTransactionInterface* trans) override
@@ -697,25 +697,25 @@ struct JackPortConnectNameRequest : public JackRequestImpl<sizeof(std::int32_t) 
 struct JackPortDisconnectNameRequest : public JackRequestImpl<sizeof(std::int32_t) + 2 * REAL_JACK_PORT_NAME_SIZE_1> {
 
     std::int32_t fRefNum;
-    char fSrc[REAL_JACK_PORT_NAME_SIZE_1]; // port full name
-    char fDst[REAL_JACK_PORT_NAME_SIZE_1]; // port full name
+    std::array<char, REAL_JACK_PORT_NAME_SIZE_1> fSrc; // port full name
+    std::array<char, REAL_JACK_PORT_NAME_SIZE_1> fDst; // port full name
 
     JackPortDisconnectNameRequest()
         : JackRequestImpl(kDisconnectNamePorts)
         , fRefNum(0)
     {
-        memset(fSrc, 0, sizeof(fSrc));
-        memset(fDst, 0, sizeof(fDst));
+        memset(fSrc.data(), 0, sizeof(fSrc));
+        memset(fDst.data(), 0, sizeof(fDst));
     }
 
     JackPortDisconnectNameRequest(std::int32_t refnum, const char* src_name, const char* dst_name)
         : JackRequestImpl(kDisconnectNamePorts)
         , fRefNum(refnum)
     {
-        memset(fSrc, 0, sizeof(fSrc));
-        memset(fDst, 0, sizeof(fDst));
-        strncpy(fSrc, src_name, sizeof(fSrc) - 1);
-        strncpy(fDst, dst_name, sizeof(fDst) - 1);
+        memset(fSrc.data(), 0, sizeof(fSrc));
+        memset(fDst.data(), 0, sizeof(fDst));
+        strncpy(fSrc.data(), src_name, sizeof(fSrc) - 1);
+        strncpy(fDst.data(), dst_name, sizeof(fDst) - 1);
     }
 
     std::int32_t Read(detail::JackChannelTransactionInterface* trans) override
@@ -826,14 +826,14 @@ struct JackPortRenameRequest : public JackRequestImpl<sizeof(std::int32_t) + siz
 
     std::int32_t fRefNum;
     jack_port_id_t fPort;
-    char fName[JACK_PORT_NAME_SIZE_1]; // port short name
+    std::array<char, JACK_PORT_NAME_SIZE_1> fName; // port short name
 
     JackPortRenameRequest()
         : JackRequestImpl(kPortRename)
         , fRefNum(0)
         , fPort(0)
     {
-        memset(fName, 0, sizeof(fName));
+        memset(fName.data(), 0, sizeof(fName));
     }
 
     JackPortRenameRequest(std::int32_t refnum, jack_port_id_t port, const char* name)
@@ -841,8 +841,8 @@ struct JackPortRenameRequest : public JackRequestImpl<sizeof(std::int32_t) + siz
         , fRefNum(refnum)
         , fPort(port)
     {
-        memset(fName, 0, sizeof(fName));
-        strncpy(fName, name, sizeof(fName) - 1);
+        memset(fName.data(), 0, sizeof(fName));
+        strncpy(fName.data(), name, sizeof(fName) - 1);
     }
 
     std::int32_t Read(detail::JackChannelTransactionInterface* trans) override
@@ -1079,18 +1079,18 @@ struct JackClientNotificationRequest : public JackRequestImpl<3 * sizeof(std::in
 // \brief SessionNotify request.
 
 struct JackClientNameResult : public JackResult {
-    char fName[JACK_CLIENT_NAME_SIZE + 1];
+    std::array<char, JACK_CLIENT_NAME_SIZE + 1> fName;
 
     JackClientNameResult()
         : JackResult()
     {
-        memset(fName, 0, sizeof(fName));
+        memset(fName.data(), 0, sizeof(fName));
     }
     JackClientNameResult(std::int32_t result, const char* name)
         : JackResult(result)
     {
-        memset(fName, 0, sizeof(fName));
-        strncpy(fName, name, sizeof(fName) - 1);
+        memset(fName.data(), 0, sizeof(fName));
+        strncpy(fName.data(), name, sizeof(fName) - 1);
     }
 
     std::int32_t Read(detail::JackChannelTransactionInterface* trans) override
@@ -1109,18 +1109,18 @@ struct JackClientNameResult : public JackResult {
 };
 
 struct JackUUIDResult : public JackResult {
-    char fUUID[JACK_UUID_STRING_SIZE];
+    std::array<char, JACK_UUID_STRING_SIZE> fUUID;
 
     JackUUIDResult()
         : JackResult()
     {
-        memset(fUUID, 0, sizeof(fUUID));
+        memset(fUUID.data(), 0, sizeof(fUUID));
     }
     JackUUIDResult(std::int32_t result, const char* uuid)
         : JackResult(result)
     {
-        memset(fUUID, 0, sizeof(fUUID));
-        strncpy(fUUID, uuid, sizeof(fUUID) - 1);
+        memset(fUUID.data(), 0, sizeof(fUUID));
+        strncpy(fUUID.data(), uuid, sizeof(fUUID) - 1);
     }
 
     std::int32_t Read(detail::JackChannelTransactionInterface* trans) override
@@ -1139,19 +1139,19 @@ struct JackUUIDResult : public JackResult {
 };
 
 struct JackGetUUIDRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1> {
-    char fName[JACK_CLIENT_NAME_SIZE_1];
+    std::array<char, JACK_CLIENT_NAME_SIZE_1> fName;
 
     JackGetUUIDRequest()
         : JackRequestImpl(kGetUUIDByClient)
     {
-        memset(fName, 0, sizeof(fName));
+        memset(fName.data(), 0, sizeof(fName));
     }
 
     JackGetUUIDRequest(const char* client_name)
         : JackRequestImpl(kGetUUIDByClient)
     {
-        memset(fName, 0, sizeof(fName));
-        strncpy(fName, client_name, sizeof(fName) - 1);
+        memset(fName.data(), 0, sizeof(fName));
+        strncpy(fName.data(), client_name, sizeof(fName) - 1);
     }
 
     std::int32_t Read(detail::JackChannelTransactionInterface* trans) override
@@ -1169,19 +1169,19 @@ struct JackGetUUIDRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1> {
 };
 
 struct JackGetClientNameRequest : public JackRequestImpl<JACK_UUID_STRING_SIZE> {
-    char fUUID[JACK_UUID_STRING_SIZE];
+    std::array<char, JACK_UUID_STRING_SIZE> fUUID;
 
     JackGetClientNameRequest()
         : JackRequestImpl(kGetClientByUUID)
     {
-        memset(fUUID, 0, sizeof(fUUID));
+        memset(fUUID.data(), 0, sizeof(fUUID));
     }
 
     JackGetClientNameRequest(const char* uuid)
         : JackRequestImpl(kGetClientByUUID)
     {
-        memset(fUUID, 0, sizeof(fUUID));
-        strncpy(fUUID, uuid, sizeof(fUUID) - 1);
+        memset(fUUID.data(), 0, sizeof(fUUID));
+        strncpy(fUUID.data(), uuid, sizeof(fUUID) - 1);
     }
 
     std::int32_t Read(detail::JackChannelTransactionInterface* trans) override
@@ -1200,25 +1200,25 @@ struct JackGetClientNameRequest : public JackRequestImpl<JACK_UUID_STRING_SIZE> 
 
 struct JackReserveNameRequest : public JackRequestImpl<sizeof(std::int32_t) + JACK_CLIENT_NAME_SIZE_1 + JACK_UUID_STRING_SIZE> {
     std::int32_t fRefNum;
-    char fName[JACK_CLIENT_NAME_SIZE_1];
-    char fUUID[JACK_UUID_STRING_SIZE];
+    std::array<char, JACK_CLIENT_NAME_SIZE_1> fName;
+    std::array<char, JACK_UUID_STRING_SIZE> fUUID;
 
     JackReserveNameRequest()
         : JackRequestImpl(kReserveClientName)
         , fRefNum(0)
     {
-        memset(fName, 0, sizeof(fName));
-        memset(fUUID, 0, sizeof(fUUID));
+        memset(fName.data(), 0, sizeof(fName));
+        memset(fUUID.data(), 0, sizeof(fUUID));
     }
 
     JackReserveNameRequest(std::int32_t refnum, const char* name, const char* uuid)
         : JackRequestImpl(kReserveClientName)
         , fRefNum(refnum)
     {
-        memset(fName, 0, sizeof(fName));
-        memset(fUUID, 0, sizeof(fUUID));
-        strncpy(fName, name, sizeof(fName) - 1);
-        strncpy(fUUID, uuid, sizeof(fUUID) - 1);
+        memset(fName.data(), 0, sizeof(fName));
+        memset(fUUID.data(), 0, sizeof(fUUID));
+        strncpy(fName.data(), name, sizeof(fName) - 1);
+        strncpy(fUUID.data(), uuid, sizeof(fUUID) - 1);
     }
 
     std::int32_t Read(detail::JackChannelTransactionInterface* trans) override
@@ -1245,13 +1245,13 @@ struct JackReserveNameRequest : public JackRequestImpl<sizeof(std::int32_t) + JA
 struct JackClientNotification {
     static constexpr std::int32_t PayloadSize = (JACK_CLIENT_NAME_SIZE + 1) + 5 * sizeof(std::int32_t) + (JACK_MESSAGE_SIZE + 1);
 
-    char fName[JACK_CLIENT_NAME_SIZE + 1];
+    std::array<char, JACK_CLIENT_NAME_SIZE + 1> fName;
     std::int32_t fRefNum;
     std::int32_t fNotify;
     std::int32_t fValue1;
     std::int32_t fValue2;
     std::int32_t fSync;
-    char fMessage[JACK_MESSAGE_SIZE + 1];
+    std::array<char, JACK_MESSAGE_SIZE + 1> fMessage;
 
     JackClientNotification()
         : fRefNum(0)
@@ -1260,8 +1260,8 @@ struct JackClientNotification {
         , fValue2(-1)
         , fSync(0)
     {
-        memset(fName, 0, sizeof(fName));
-        memset(fMessage, 0, sizeof(fMessage));
+        memset(fName.data(), 0, sizeof(fName));
+        memset(fMessage.data(), 0, sizeof(fMessage));
     }
     JackClientNotification(const char* name, std::int32_t refnum, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2)
         : fRefNum(refnum)
@@ -1270,11 +1270,11 @@ struct JackClientNotification {
         , fValue2(value2)
         , fSync(sync)
     {
-        memset(fName, 0, sizeof(fName));
-        memset(fMessage, 0, sizeof(fMessage));
-        strncpy(fName, name, sizeof(fName) - 1);
+        memset(fName.data(), 0, sizeof(fName));
+        memset(fMessage.data(), 0, sizeof(fMessage));
+        strncpy(fName.data(), name, sizeof(fName) - 1);
         if (message) {
-            strncpy(fMessage, message, sizeof(fMessage) - 1);
+            strncpy(fMessage.data(), message, sizeof(fMessage) - 1);
         }
     }
 
@@ -1300,13 +1300,13 @@ struct JackClientNotification {
             memcpy(out, data, size);
             out += size;
         };
-        put(fName, sizeof(fName));
+        put(fName.data(), sizeof(fName));
         put(&fRefNum, sizeof(std::int32_t));
         put(&fNotify, sizeof(std::int32_t));
         put(&fValue1, sizeof(std::int32_t));
         put(&fValue2, sizeof(std::int32_t));
         put(&fSync, sizeof(std::int32_t));
-        put(fMessage, sizeof(fMessage));
+        put(fMessage.data(), sizeof(fMessage));
         return SendJackMessage(trans, MakeJackMsgHeader(static_cast<std::uint16_t>(fNotify), PayloadSize, request), payload.data(), PayloadSize);
     }
 };

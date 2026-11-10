@@ -134,8 +134,8 @@ std::expected<std::size_t, std::error_code> RecvWithFds(std::int32_t socket,
     for (cmsghdr* header = CMSG_FIRSTHDR(&msg); header != nullptr; header = CMSG_NXTHDR(&msg, header)) {
         if (header->cmsg_level == SOL_SOCKET && header->cmsg_type == SCM_RIGHTS) {
             const std::size_t count = (header->cmsg_len - CMSG_LEN(0)) / sizeof(std::int32_t);
-            std::int32_t received[kMaxFds];
-            std::memcpy(received, CMSG_DATA(header), count * sizeof(std::int32_t));
+            std::array<std::int32_t, kMaxFds> received;
+            std::memcpy(received.data(), CMSG_DATA(header), count * sizeof(std::int32_t));
             for (std::size_t i = 0; i < count; i++) {
                 fds.emplace_back(received[i]);
             }

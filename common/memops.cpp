@@ -21,6 +21,7 @@
 #define __USE_ISOC99 1
 
 #include "memops.h"
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <endian.h>
@@ -980,7 +981,7 @@ void sample_move_d24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::u
     _MM_SET_ROUNDING_MODE(_MM_ROUND_NEAREST);
     while (nsamples >= 4) {
         std::int32_t i;
-        std::int32_t z[4];
+        std::array<std::int32_t, 4> z;
         __m128 samples = _mm_loadu_ps(src);
         __m128i converted = float_24_sse(samples);
 
@@ -994,14 +995,14 @@ void sample_move_d24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::u
         __m128i shuffled2 = _mm_shuffle_epi32(converted, _MM_SHUFFLE(1, 0, 3, 2));
         __m128i shuffled3 = _mm_shuffle_epi32(converted, _MM_SHUFFLE(2, 1, 0, 3));
 
-        _mm_store_ss((float*)z, (__m128)converted);
-        _mm_store_ss((float*)z + 1, (__m128)shuffled1);
-        _mm_store_ss((float*)z + 2, (__m128)shuffled2);
-        _mm_store_ss((float*)z + 3, (__m128)shuffled3);
+        _mm_store_ss((float*)z.data(), (__m128)converted);
+        _mm_store_ss((float*)z.data() + 1, (__m128)shuffled1);
+        _mm_store_ss((float*)z.data() + 2, (__m128)shuffled2);
+        _mm_store_ss((float*)z.data() + 3, (__m128)shuffled3);
 #endif
 
         for (i = 0; i != 4; ++i) {
-            memcpy(dst, z + i, 3);
+            memcpy(dst, z.data() + i, 3);
             dst += dst_skip;
         }
 

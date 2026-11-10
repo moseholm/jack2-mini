@@ -19,6 +19,7 @@
 #include "JackConstants.h"
 #include "jack/uuid.h"
 #include "JackError.h"
+#include <array>
 #include <cstdint>
 #include <assert.h>
 #include <regex.h>
@@ -111,7 +112,7 @@ void JackGraphManager::InitRefNum(std::int32_t refnum)
 void JackGraphManager::RunCurrentGraph()
 {
     JackConnectionManager* manager = ReadCurrentState();
-    manager->ResetGraph(fClientTiming, fActivation);
+    manager->ResetGraph(fClientTiming.data(), fActivation.data());
 }
 
 // RT
@@ -119,7 +120,7 @@ bool JackGraphManager::RunNextGraph()
 {
     bool res;
     JackConnectionManager* manager = TrySwitchState(&res);
-    manager->ResetGraph(fClientTiming, fActivation);
+    manager->ResetGraph(fClientTiming.data(), fActivation.data());
     return res;
 }
 
@@ -133,14 +134,14 @@ bool JackGraphManager::IsFinishedGraph()
 Result<void> JackGraphManager::ResumeRefNum(JackClientControl* control, JackSynchro* table)
 {
     JackConnectionManager* manager = ReadCurrentState();
-    return manager->ResumeRefNum(control, table, fClientTiming, fActivation);
+    return manager->ResumeRefNum(control, table, fClientTiming.data(), fActivation.data());
 }
 
 // RT
 Result<void> JackGraphManager::SuspendRefNum(JackClientControl* control, JackSynchro* table, std::int64_t usec)
 {
     JackConnectionManager* manager = ReadCurrentState();
-    return manager->SuspendRefNum(control, table, fClientTiming, usec);
+    return manager->SuspendRefNum(control, table, fClientTiming.data(), usec);
 }
 
 void JackGraphManager::TopologicalSort(std::vector<jack_int_t>& sorted)
@@ -202,7 +203,7 @@ void* JackGraphManager::GetBuffer(jack_port_id_t port_index, jack_nframes_t buff
     }
 
     // The input of a deactivated client is silent; the outputs of deactivated clients are not mixed in.
-    jack_port_id_t active[CONNECTION_NUM_FOR_PORT];
+    std::array<jack_port_id_t, CONNECTION_NUM_FOR_PORT> active;
     jack_int_t len = 0;
     if (!manager->IsInactive(port->GetRefNum())) {
         const jack_int_t connections = manager->Connections(port_index);
@@ -225,9 +226,9 @@ void* JackGraphManager::GetBuffer(jack_port_id_t port_index, jack_nframes_t buff
 
         // Ports in same client : copy the buffer
         if (GetPort(src_index)->GetRefNum() == port->GetRefNum()) {
-            void* buffers[1];
+            std::array<void*, 1> buffers;
             buffers[0] = GetBuffer(src_index, buffer_size);
-            port->MixBuffers(buffers, 1, buffer_size);
+            port->MixBuffers(buffers.data(), 1, buffer_size);
             return port->GetBuffer();
             // Otherwise, use zero-copy mode, just pass the buffer of the connected (output) port.
         } else {
@@ -236,11 +237,11 @@ void* JackGraphManager::GetBuffer(jack_port_id_t port_index, jack_nframes_t buff
 
         // Multiple connections : mix all buffers
     } else {
-        void* buffers[CONNECTION_NUM_FOR_PORT];
+        std::array<void*, CONNECTION_NUM_FOR_PORT> buffers;
         for (jack_int_t i = 0; i < len; i++) {
             buffers[i] = GetBuffer(active[i], buffer_size);
         }
-        port->MixBuffers(buffers, len, buffer_size);
+        port->MixBuffers(buffers.data(), len, buffer_size);
         return port->GetBuffer();
     }
 }
@@ -783,7 +784,7 @@ void JackGraphManager::GetConnectionsAux(JackConnectionManager* manager, const c
 
     for (i = 0; (i < CONNECTION_NUM_FOR_PORT) && ((index = connections[i]) != EMPTY); i++) {
         JackPort* port = GetPort(index);
-        res[i] = port->fName;
+        res[i] = port->fName.data();
     }
 
     res[i] = nullptr;
@@ -862,7 +863,7 @@ void JackGraphManager::GetPortsAux(const char** matching_ports, const char* port
             }
 
             if (matching) {
-                matching_ports[match_cnt++] = port->fName;
+                matching_ports[match_cnt++] = port->fName.data();
             }
         }
     }

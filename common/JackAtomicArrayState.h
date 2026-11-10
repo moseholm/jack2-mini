@@ -18,6 +18,7 @@
 
 #include "JackAtomic.h"
 #include "JackCompilerDeps.h"
+#include <array>
 #include <string.h> // for memcpy
 #include <atomic>
 #include <cassert>
@@ -31,7 +32,7 @@ namespace jackmini {
 struct AtomicArrayCounter {
     union {
         struct {
-            std::uint8_t fByteVal[4];
+            std::array<std::uint8_t, 4> fByteVal;
         } scounter;
         UInt32 fLongVal;
     } info;
@@ -126,7 +127,7 @@ protected:
     // fState[1] ==> pending
     // fState[2] ==> request
 
-    T fState[3];
+    std::array<T, 3> fState;
     alignas(UInt32) alignas(AtomicArrayCounter) AtomicArrayCounter fCounter;
 
     UInt32 WriteNextStateStartAux(std::int32_t state, bool* result)
