@@ -274,8 +274,8 @@ void testBadHeadersAreRefused()
         SocketPair pair;
         ClientSocket server(pair.m_fd[1]);
         ClientSocket client(pair.m_fd[0]);
-        const char garbage[sizeof(MsgHeader)] = { 'x', 'y', 'z', 'w' };
-        CHECK(client.write(const_cast<char*>(garbage), sizeof(garbage)) == 0);
+        const std::array<std::byte, sizeof(MsgHeader)> garbage { std::byte { 'x' }, std::byte { 'y' }, std::byte { 'z' }, std::byte { 'w' } };
+        CHECK(client.write(const_cast<std::byte*>(garbage.data()), sizeof(garbage)) == 0);
         MsgHeader got { };
         CHECK(readJackMsgHeader(&server, got) < 0);
     }
