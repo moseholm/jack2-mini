@@ -70,7 +70,7 @@ JackServer::JackServer(bool sync, bool temporary, int timeout, bool rt, int prio
 
     fFreewheelDriver = freewheelDriver;
     fDriverInfo = std::make_unique<JackDriverInfo>();
-    fAudioDriver = NULL;
+    fAudioDriver = nullptr;
     fFreewheel = false;
     JackServerGlobals::fInstance = this; // Unique instance
     JackGlobals::fVerbose = verbose;
@@ -93,7 +93,7 @@ Result<void> JackServer::Open(jack_driver_desc_t* driver_desc, JSList* driver_pa
         jack_error("Cannot create message buffer");
     }
 
-    if ((fAudioDriver = fDriverInfo->Open(driver_desc, fEngine.get(), GetSynchroTable(), driver_params)) == NULL) {
+    if ((fAudioDriver = fDriverInfo->Open(driver_desc, fEngine.get(), GetSynchroTable(), driver_params)) == nullptr) {
         jack_error("Cannot initialize driver");
         JackMessageBuffer::Destroy();
         return std::unexpected(Error::ServerFailure);

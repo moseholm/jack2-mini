@@ -48,7 +48,7 @@ JackEngine::JackEngine(JackGraphManager* manager,
     fEngineControl = control;
     fSelfConnectMode = self_connect_mode;
     for (int i = 0; i < CLIENT_NUM; i++) {
-        fClientTable[i] = NULL;
+        fClientTable[i] = nullptr;
     }
     fRollingResetPending = false;
     fLastSwitchUsecs = 0;
@@ -78,7 +78,7 @@ Result<void> JackEngine::Close()
         if (JackExternalClient* external_client = dynamic_cast<JackExternalClient*>(client)) {
             jack_log("JackEngine::Close external client = %s", external_client->GetClientControl()->fName);
             external_client->Close();
-            fClientTable[i] = NULL;
+            fClientTable[i] = nullptr;
             delete external_client;
         }
     }
@@ -109,7 +109,7 @@ Result<int> JackEngine::AllocateRefnum()
 
 void JackEngine::ReleaseRefnum(int refnum)
 {
-    fClientTable[refnum] = NULL;
+    fClientTable[refnum] = nullptr;
 
     if (fEngineControl->fTemporary) {
         int i;

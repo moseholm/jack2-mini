@@ -59,7 +59,7 @@ public:
     explicit JackAlsaHotplug(JackAlsaHotplugListener* listener);
     virtual ~JackAlsaHotplug();
 
-    bool Available() const { return fMonitor != NULL; }
+    bool Available() const { return fMonitor != nullptr; }
 
     int Start();
     int Stop();

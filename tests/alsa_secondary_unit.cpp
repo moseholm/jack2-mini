@@ -237,21 +237,21 @@ static void TestConverterDI()
 static void TestResamplerFactories()
 {
     printf("resampler: only pipewire is built in\n");
-    CHECK(JackResamplerFactory::Find("pipewire") != NULL);
+    CHECK(JackResamplerFactory::Find("pipewire") != nullptr);
     CHECK(JackResamplerFactory::Default() == JackResamplerFactory::Find("pipewire"));
-    CHECK(JackResamplerFactory::Find("linear") == NULL);
-    CHECK(JackResamplerFactory::Find("speex") == NULL);
+    CHECK(JackResamplerFactory::Find("linear") == nullptr);
+    CHECK(JackResamplerFactory::Find("speex") == nullptr);
 
     JackResamplerParams p = { 2, 44100, 48000, -1 };
     JackResampler* r = JackResamplerFactory::Default()->Create(p);
-    CHECK(r != NULL);
+    CHECK(r != nullptr);
     delete r;
 
     // The bridge picks the widest kernel the running CPU supports.  This is
     // informational on a given machine, but it must always be a known name.
     struct jack_pw_resampler* pw = jack_pw_resampler_new(2, 44100, 48000, -1);
-    CHECK(pw != NULL);
-    if (pw != NULL) {
+    CHECK(pw != nullptr);
+    if (pw != nullptr) {
         const char* kernel = jack_pw_resampler_kernel_name(pw);
         printf("resampler: selected '%s' kernel\n", kernel);
         bool known = strcmp(kernel, "full_c") == 0 || strcmp(kernel, "inter_c") == 0 || strcmp(kernel, "full_sse") == 0 || strcmp(kernel, "inter_sse") == 0 || strcmp(kernel, "full_avx2") == 0 || strcmp(kernel, "inter_avx2") == 0 || strcmp(kernel, "full_neon") == 0 || strcmp(kernel, "inter_neon") == 0;
@@ -275,7 +275,7 @@ static void TestSlotTable()
     CHECK(table.Count() == 3);
     CHECK(table.Get(1) == &b);
     CHECK(table.Remove(&b) == 1);
-    CHECK(table.Get(1) == NULL);
+    CHECK(table.Get(1) == nullptr);
     CHECK(table.Count() == 2);
     CHECK(table.Remove(&b) == 0); // already gone
     CHECK(table.Assign(&d) == 1); // the freed slot is reused

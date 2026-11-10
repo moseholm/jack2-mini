@@ -37,7 +37,7 @@ void* JackPosixThread::ThreadHandler(void* arg)
     JackRunnableInterface* runnable = obj->fRunnable;
     int err;
 
-    if ((err = pthread_setcanceltype(obj->fCancellation, NULL)) != 0) {
+    if ((err = pthread_setcanceltype(obj->fCancellation, nullptr)) != 0) {
         jack_error("pthread_setcanceltype err = %s", strerror(err));
     }
 
@@ -155,13 +155,13 @@ int JackPosixThread::StartImp(jack_native_thread_t* thread, int priority, int re
 
 int JackPosixThread::Kill()
 {
-    if (fThread != (jack_native_thread_t)NULL) { // If thread has been started
+    if (fThread != (jack_native_thread_t)nullptr) { // If thread has been started
         jack_log("JackPosixThread::Kill");
         void* status;
         pthread_cancel(fThread);
         pthread_join(fThread, &status);
         fStatus = kIdle;
-        fThread = (jack_native_thread_t)NULL;
+        fThread = (jack_native_thread_t)nullptr;
         return 0;
     } else {
         return -1;
@@ -170,12 +170,12 @@ int JackPosixThread::Kill()
 
 int JackPosixThread::Stop()
 {
-    if (fThread != (jack_native_thread_t)NULL) { // If thread has been started
+    if (fThread != (jack_native_thread_t)nullptr) { // If thread has been started
         jack_log("JackPosixThread::Stop");
         void* status;
         fStatus = kIdle; // Request for the thread to stop
         pthread_join(fThread, &status);
-        fThread = (jack_native_thread_t)NULL;
+        fThread = (jack_native_thread_t)nullptr;
         return 0;
     } else {
         return -1;
@@ -184,7 +184,7 @@ int JackPosixThread::Stop()
 
 int JackPosixThread::KillImp(jack_native_thread_t thread)
 {
-    if (thread != (jack_native_thread_t)NULL) { // If thread has been started
+    if (thread != (jack_native_thread_t)nullptr) { // If thread has been started
         jack_log("JackPosixThread::Kill");
         void* status;
         pthread_cancel(thread);
@@ -197,7 +197,7 @@ int JackPosixThread::KillImp(jack_native_thread_t thread)
 
 int JackPosixThread::StopImp(jack_native_thread_t thread)
 {
-    if (thread != (jack_native_thread_t)NULL) { // If thread has been started
+    if (thread != (jack_native_thread_t)nullptr) { // If thread has been started
         jack_log("JackPosixThread::Stop");
         void* status;
         pthread_join(thread, &status);
@@ -209,7 +209,7 @@ int JackPosixThread::StopImp(jack_native_thread_t thread)
 
 int JackPosixThread::AcquireRealTime()
 {
-    return (fThread != (jack_native_thread_t)NULL) ? AcquireRealTimeImp(fThread, fPriority) : -1;
+    return (fThread != (jack_native_thread_t)nullptr) ? AcquireRealTimeImp(fThread, fPriority) : -1;
 }
 
 int JackPosixThread::AcquireSelfRealTime()
@@ -255,7 +255,7 @@ int JackPosixThread::AcquireRealTimeImp(jack_native_thread_t thread, int priorit
 
 int JackPosixThread::DropRealTime()
 {
-    return (fThread != (jack_native_thread_t)NULL) ? DropRealTimeImp(fThread) : -1;
+    return (fThread != (jack_native_thread_t)nullptr) ? DropRealTimeImp(fThread) : -1;
 }
 
 int JackPosixThread::DropSelfRealTime()
@@ -331,7 +331,7 @@ bool jack_tls_allocate_key(jack_tls_key* key_ptr)
 {
     int ret;
 
-    ret = pthread_key_create(key_ptr, NULL);
+    ret = pthread_key_create(key_ptr, nullptr);
     if (ret != 0) {
         jack_error("pthread_key_create() failed with error %d", ret);
         return false;

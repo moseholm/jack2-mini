@@ -27,7 +27,7 @@ static void jack_format_and_log(int level, const char* prefix, const char* fmt, 
     std::array<char, 256> buffer { };
     size_t len;
 
-    if (prefix != NULL) {
+    if (prefix != nullptr) {
         len = strlen(prefix);
         assert(len < 256);
         memcpy(buffer.data(), prefix, len);
@@ -48,7 +48,7 @@ void jack_error(const char* fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    jack_format_and_log(LOG_LEVEL_ERROR, NULL, fmt, ap);
+    jack_format_and_log(LOG_LEVEL_ERROR, nullptr, fmt, ap);
     va_end(ap);
 }
 
@@ -56,7 +56,7 @@ void jack_info(const char* fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    jack_format_and_log(LOG_LEVEL_INFO, NULL, fmt, ap);
+    jack_format_and_log(LOG_LEVEL_INFO, nullptr, fmt, ap);
     va_end(ap);
 }
 

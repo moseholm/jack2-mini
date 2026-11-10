@@ -49,7 +49,7 @@ public:
     JackAlsaRateConverter(JackResampler* resampler, int channels, unsigned int capacity);
     ~JackAlsaRateConverter();
 
-    bool IsValid() const { return fIn != NULL && fOut != NULL; }
+    bool IsValid() const { return fIn != nullptr && fOut != nullptr; }
 
     void Reset();
 

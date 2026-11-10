@@ -28,7 +28,7 @@ JackAlsaRingBuffer::JackAlsaRingBuffer(int channels, jack_nframes_t capacity)
     : fChannels(0)
     , fCapacity(0)
     , fMask(0)
-    , fData(NULL)
+    , fData(nullptr)
     , fReadPos(0)
     , fWritePos(0)
 {
@@ -47,7 +47,7 @@ void JackAlsaRingBuffer::Free()
             delete[] fData[i];
         }
         delete[] fData;
-        fData = NULL;
+        fData = nullptr;
     }
     fChannels = 0;
     fCapacity = 0;
@@ -93,7 +93,7 @@ bool JackAlsaRingBuffer::LockMemory() const noexcept
 
     bool locked = mlock(fData, sizeof(float*) * fChannels) == 0;
     for (int i = 0; i < fChannels; i++) {
-        if (fData[i] != NULL) {
+        if (fData[i] != nullptr) {
             locked = (mlock(fData[i], sizeof(float) * fCapacity) == 0) && locked;
         }
     }

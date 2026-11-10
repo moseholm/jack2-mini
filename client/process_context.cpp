@@ -81,7 +81,7 @@ void ProcessContext::release() noexcept
 namespace jackmini {
 
 // The accessors of the shared state for the code that is common to the server and the client library. The server
-// defines them over its own state; here they are the state of the process's clients, and NULL when there is none.
+// defines them over its own state; here they are the state of the process's clients, and nullptr when there is none.
 SERVER_EXPORT JackGraphManager* GetGraphManager()
 {
     auto* context = jackmini::client::ProcessContext::current();

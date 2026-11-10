@@ -38,11 +38,11 @@ namespace jackmini {
 JackLinuxFutex::JackLinuxFutex()
     : JackSynchro()
     , fSharedMem(-1)
-    , fFutex(NULL)
+    , fFutex(nullptr)
     , fPrivate(false)
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
-    fPromiscuous = (promiscuous != NULL);
+    fPromiscuous = (promiscuous != nullptr);
     fPromiscuousGid = jackmini::group_to_gid(promiscuous);
 }
 
@@ -74,7 +74,7 @@ bool JackLinuxFutex::Signal()
             return true;
     }
 
-    ::syscall(SYS_futex, fFutex, fFutex->internal ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE, 1, NULL, NULL, 0);
+    ::syscall(SYS_futex, fFutex, fFutex->internal ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE, 1, nullptr, nullptr, 0);
     return true;
 }
 
@@ -101,7 +101,7 @@ bool JackLinuxFutex::Wait()
         if (__sync_bool_compare_and_swap(&fFutex->futex, 1, 0))
             return true;
 
-        if (::syscall(SYS_futex, fFutex, wait_mode, 0, NULL, NULL, 0) != 0)
+        if (::syscall(SYS_futex, fFutex, wait_mode, 0, nullptr, nullptr, 0) != 0)
             if (errno != EAGAIN && errno != EINTR)
                 return false;
     }
@@ -132,7 +132,7 @@ bool JackLinuxFutex::TimedWait(long usec)
         if (__sync_bool_compare_and_swap(&fFutex->futex, 1, 0))
             return true;
 
-        if (::syscall(SYS_futex, fFutex, wait_mode, 0, &timeout, NULL, 0) != 0)
+        if (::syscall(SYS_futex, fFutex, wait_mode, 0, &timeout, nullptr, 0) != 0)
             if (errno != EAGAIN && errno != EINTR)
                 return false;
     }
@@ -161,14 +161,14 @@ bool JackLinuxFutex::Allocate(const char* name, const char* server_name, int val
         return false;
     }
 
-    FutexData* futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, fSharedMem, 0);
+    FutexData* futex = (FutexData*)mmap(nullptr, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, fSharedMem, 0);
 
     // try without MAP_LOCKED
-    if (futex == NULL || futex == MAP_FAILED) {
-        futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED, fSharedMem, 0);
+    if (futex == nullptr || futex == MAP_FAILED) {
+        futex = (FutexData*)mmap(nullptr, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED, fSharedMem, 0);
     }
 
-    if (futex == NULL || futex == MAP_FAILED) {
+    if (futex == nullptr || futex == MAP_FAILED) {
         jack_error("Allocate: can't check in named futex name = %s err = %s", fName, strerror(errno));
         close(fSharedMem);
         fSharedMem = -1;
@@ -204,14 +204,14 @@ bool JackLinuxFutex::Connect(const char* name, const char* server_name)
         return false;
     }
 
-    FutexData* futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, fSharedMem, 0);
+    FutexData* futex = (FutexData*)mmap(nullptr, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, fSharedMem, 0);
 
     // try without MAP_LOCKED
-    if (futex == NULL || futex == MAP_FAILED) {
-        futex = (FutexData*)mmap(NULL, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED, fSharedMem, 0);
+    if (futex == nullptr || futex == MAP_FAILED) {
+        futex = (FutexData*)mmap(nullptr, sizeof(FutexData), PROT_READ | PROT_WRITE, MAP_SHARED, fSharedMem, 0);
     }
 
-    if (futex == NULL || futex == MAP_FAILED) {
+    if (futex == nullptr || futex == MAP_FAILED) {
         jack_error("Connect: can't connect named futex name = %s err = %s", fName, strerror(errno));
         close(fSharedMem);
         fSharedMem = -1;
@@ -221,7 +221,7 @@ bool JackLinuxFutex::Connect(const char* name, const char* server_name)
     if (!fPrivate && futex->wasInternal) {
         const char* externalSync = getenv("JACK_INTERNAL_CLIENT_SYNC");
 
-        if (externalSync != NULL && strstr(fName, externalSync) != NULL && ++futex->externalCount == 1) {
+        if (externalSync != nullptr && strstr(fName, externalSync) != nullptr && ++futex->externalCount == 1) {
             jack_error("Note: client %s running as external client temporarily", fName);
             futex->needsChange = true;
         }
@@ -250,14 +250,14 @@ bool JackLinuxFutex::Disconnect()
     if (!fPrivate && fFutex->wasInternal) {
         const char* externalSync = getenv("JACK_INTERNAL_CLIENT_SYNC");
 
-        if (externalSync != NULL && strstr(fName, externalSync) != NULL && --fFutex->externalCount == 0) {
+        if (externalSync != nullptr && strstr(fName, externalSync) != nullptr && --fFutex->externalCount == 0) {
             jack_error("Note: client %s now running as internal client again", fName);
             fFutex->needsChange = true;
         }
     }
 
     munmap(fFutex, sizeof(FutexData));
-    fFutex = NULL;
+    fFutex = nullptr;
 
     close(fSharedMem);
     fSharedMem = -1;
@@ -272,7 +272,7 @@ void JackLinuxFutex::Destroy()
     }
 
     munmap(fFutex, sizeof(FutexData));
-    fFutex = NULL;
+    fFutex = nullptr;
 
     close(fSharedMem);
     fSharedMem = -1;

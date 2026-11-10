@@ -40,8 +40,8 @@ jack_slist_alloc(void)
     JSList* new_list;
 
     new_list = (JSList*)malloc(sizeof(JSList));
-    new_list->data = NULL;
-    new_list->next = NULL;
+    new_list->data = nullptr;
+    new_list->next = nullptr;
 
     return new_list;
 }
@@ -59,7 +59,7 @@ jack_slist_prepend(JSList* list,
     return new_list;
 }
 
-#define jack_slist_next(slist) ((slist) ? (((JSList*)(slist))->next) : NULL)
+#define jack_slist_next(slist) ((slist) ? (((JSList*)(slist))->next) : nullptr)
 static __inline__ JSList*
 jack_slist_last(JSList* list)
 {
@@ -78,7 +78,7 @@ jack_slist_remove_link(JSList* list,
     JSList* tmp;
     JSList* prev;
 
-    prev = NULL;
+    prev = nullptr;
     tmp = list;
 
     while (tmp) {
@@ -88,7 +88,7 @@ jack_slist_remove_link(JSList* list,
             if (list == tmp)
                 list = list->next;
 
-            tmp->next = NULL;
+            tmp->next = nullptr;
             break;
         }
 
@@ -124,7 +124,7 @@ jack_slist_remove(JSList* list,
     JSList* tmp;
     JSList* prev;
 
-    prev = NULL;
+    prev = nullptr;
     tmp = list;
 
     while (tmp) {
@@ -134,7 +134,7 @@ jack_slist_remove(JSList* list,
             if (list == tmp)
                 list = list->next;
 
-            tmp->next = NULL;
+            tmp->next = nullptr;
             jack_slist_free(tmp);
 
             break;
@@ -177,7 +177,7 @@ jack_slist_find(JSList* list,
 static __inline__ JSList*
 jack_slist_copy(JSList* list)
 {
-    JSList* new_list = NULL;
+    JSList* new_list = nullptr;
 
     if (list) {
         JSList* last;
@@ -246,20 +246,20 @@ jack_slist_sort(JSList* list,
     JSList *l1, *l2;
 
     if (!list)
-        return NULL;
+        return nullptr;
     if (!list->next)
         return list;
 
     l1 = list;
     l2 = list->next;
 
-    while ((l2 = l2->next) != NULL) {
-        if ((l2 = l2->next) == NULL)
+    while ((l2 = l2->next) != nullptr) {
+        if ((l2 = l2->next) == nullptr)
             break;
         l1 = l1->next;
     }
     l2 = l1->next;
-    l1->next = NULL;
+    l1->next = nullptr;
 
     return jack_slist_sort_merge(jack_slist_sort(list, compare_func),
         jack_slist_sort(l2, compare_func),

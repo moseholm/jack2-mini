@@ -26,7 +26,7 @@ using namespace jackmini;
 
 static bool change_thread_log_function(jack_log_function_t log_function)
 {
-    return (jack_tls_get(JackGlobals::fKeyLogFunction) == NULL
+    return (jack_tls_get(JackGlobals::fKeyLogFunction) == nullptr
         && jack_tls_set(JackGlobals::fKeyLogFunction, (void*)log_function));
 }
 
@@ -40,7 +40,7 @@ void jack_log_thread_route(int level, const char* message)
     jack_log_function_t log_function = (jack_log_function_t)jack_tls_get(JackGlobals::fKeyLogFunction);
 
     // if log function is not overridden for thread, use the default one
-    (log_function != NULL ? log_function : jack_log_direct)(level, message);
+    (log_function != nullptr ? log_function : jack_log_direct)(level, message);
 }
 
 // The messages of this library go through the thread routing.

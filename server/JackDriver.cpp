@@ -44,7 +44,7 @@ JackDriver::JackDriver(const char* name, const char* alias, JackLockedEngine* en
     fSynchroTable = table;
     strcpy(fAliasName.data(), alias);
     fEngine = engine;
-    fGraphManager = NULL;
+    fGraphManager = nullptr;
     fBeginDateUst = 0;
     fEndDateUst = 0;
     fDelayedUsecs = 0.f;
@@ -518,7 +518,7 @@ string JackDriver::MatchPortName(const char* name, const char** ports, int alias
     for (int i = 0; ports && ports[i]; ++i) {
 
         jack_port_id_t port_id2 = fGraphManager->GetPort(ports[i]);
-        JackPort* port2 = (port_id2 != NO_PORT) ? fGraphManager->GetPort(port_id2) : NULL;
+        JackPort* port2 = (port_id2 != NO_PORT) ? fGraphManager->GetPort(port_id2) : nullptr;
 
         if (port2) {
             int res = port2->GetAliases(aliases);
@@ -549,8 +549,8 @@ void JackDriver::LoadConnections(int alias, bool full_name)
             fEngine->PortConnect(fClientControl.fRefNum, connection.first.c_str(), connection.second.c_str());
         }
     } else {
-        const char** inputs = fGraphManager->GetPorts(NULL, NULL, JackPortIsInput);
-        const char** outputs = fGraphManager->GetPorts(NULL, NULL, JackPortIsOutput);
+        const char** inputs = fGraphManager->GetPorts(nullptr, nullptr, JackPortIsInput);
+        const char** outputs = fGraphManager->GetPorts(nullptr, nullptr, JackPortIsOutput);
 
         for (it = fConnections.begin(); it != fConnections.end(); it++) {
             pair<string, string> connection = (*it).second;

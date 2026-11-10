@@ -34,7 +34,7 @@ static float** AllocChannels(int channels, unsigned int frames)
 
 static void FreeChannels(float** buffers, int channels)
 {
-    if (buffers == NULL) {
+    if (buffers == nullptr) {
         return;
     }
     for (int i = 0; i < channels; i++) {
@@ -47,13 +47,13 @@ JackAlsaRateConverter::JackAlsaRateConverter(JackResampler* resampler, int chann
     : fResampler(resampler)
     , fChannels(channels)
     , fCapacity(capacity)
-    , fIn(NULL)
-    , fOut(NULL)
-    , fOutPtr(NULL)
+    , fIn(nullptr)
+    , fOut(nullptr)
+    , fOutPtr(nullptr)
     , fInCount(0)
     , fOutCount(0)
 {
-    if (fResampler == NULL) {
+    if (fResampler == nullptr) {
         return;
     }
     fIn = AllocChannels(channels, capacity);

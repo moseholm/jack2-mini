@@ -32,7 +32,7 @@ class JackLockAble {
 protected:
     JackMutex fMutex;
 
-    JackLockAble(const char* name = NULL)
+    JackLockAble(const char* name = nullptr)
         : fMutex(name)
     {
     }

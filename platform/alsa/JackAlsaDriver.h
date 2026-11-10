@@ -107,9 +107,9 @@ public:
         , fDither(None)
         , fCaptureFrameLatency(0)
         , fPlaybackFrameLatency(0)
-        , fControlMonitor(NULL)
-        , fReconfigWorker(NULL)
-        , fHotplug(NULL)
+        , fControlMonitor(nullptr)
+        , fReconfigWorker(nullptr)
+        , fHotplug(nullptr)
     {
         fRTRunning.store(false);
         fRestarting.store(false);

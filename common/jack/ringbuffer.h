@@ -50,7 +50,7 @@ typedef struct jack_ringbuffer_t jack_ringbuffer_t;
 //
 // @param sz the ringbuffer size in bytes.
 //
-// @return a pointer to a new jack_ringbuffer_t, if successful; NULL
+// @return a pointer to a new jack_ringbuffer_t, if successful; nullptr
 // otherwise.
 jack_ringbuffer_t* jack_ringbuffer_create(size_t sz);
 

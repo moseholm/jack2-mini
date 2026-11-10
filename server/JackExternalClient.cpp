@@ -24,7 +24,7 @@
 namespace jackmini {
 
 JackExternalClient::JackExternalClient()
-    : fClientControl(NULL)
+    : fClientControl(nullptr)
 {
 }
 

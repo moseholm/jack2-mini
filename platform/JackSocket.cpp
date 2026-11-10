@@ -47,7 +47,7 @@ JackClientSocket::JackClientSocket()
     , fNonBlocking(false)
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
-    fPromiscuous = (promiscuous != NULL);
+    fPromiscuous = (promiscuous != nullptr);
     fPromiscuousGid = jackmini::group_to_gid(promiscuous);
 }
 
@@ -228,7 +228,7 @@ JackServerSocket::JackServerSocket()
     : fSocket(-1)
 {
     const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
-    fPromiscuous = (promiscuous != NULL);
+    fPromiscuous = (promiscuous != nullptr);
     fPromiscuousGid = jackmini::group_to_gid(promiscuous);
 }
 

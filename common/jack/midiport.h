@@ -122,7 +122,7 @@ jack_midi_max_event_size(void* port_buffer) JACK_OPTIONAL_WEAK_EXPORT;
 // @param time Sample offset of event.
 // @param data_size Length of event's raw data in bytes.
 // @return Pointer to the beginning of the reserved event's data buffer, or
-// NULL on error (ie not enough space).
+// nullptr on error (ie not enough space).
 jack_midi_data_t*
 jack_midi_event_reserve(void* port_buffer,
     jack_nframes_t time,

@@ -86,8 +86,8 @@ public:
         int quality = (params.quality < 0) ? RESAMPLE_DEFAULT_QUALITY : params.quality;
         jack_pw_resampler* handle = jack_pw_resampler_new(params.channels, params.in_rate,
             params.out_rate, quality);
-        if (handle == NULL) {
-            return NULL;
+        if (handle == nullptr) {
+            return nullptr;
         }
         return new JackPipeWireResampler(handle);
     }
@@ -96,13 +96,13 @@ public:
 JackResamplerFactory* JackResamplerFactory::Find(const char* name)
 {
     static JackPipeWireResamplerFactory pipewire;
-    if (name == NULL) {
-        return NULL;
+    if (name == nullptr) {
+        return nullptr;
     }
     if (strcmp(name, pipewire.Name()) == 0) {
         return &pipewire;
     }
-    return NULL;
+    return nullptr;
 }
 
 JackResamplerFactory* JackResamplerFactory::Default()

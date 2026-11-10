@@ -167,11 +167,11 @@ static void Fill(JackAlsaRateElement* out, const ElementMatch& match, const std:
 }
 
 static const char* const kCaptureProbe[] = {
-    "Capture Rate", "Sample Rate", "Rate", "Clock Rate", "Sample Clock Rate", "IEC958 Sample Rate", NULL
+    "Capture Rate", "Sample Rate", "Rate", "Clock Rate", "Sample Clock Rate", "IEC958 Sample Rate", nullptr
 };
 
 static const char* const kPlaybackProbe[] = {
-    "Playback Rate", "Sample Rate", "Rate", "Clock Rate", "Sample Clock Rate", "IEC958 Sample Rate", NULL
+    "Playback Rate", "Sample Rate", "Rate", "Clock Rate", "Sample Clock Rate", "IEC958 Sample Rate", nullptr
 };
 
 int JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection dir,
@@ -195,7 +195,7 @@ int JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection dir,
     }
 
     const char* const* probe = (dir == RateCapture) ? kCaptureProbe : kPlaybackProbe;
-    for (int i = 0; probe[i] != NULL; i++) {
+    for (int i = 0; probe[i] != nullptr; i++) {
         if (FindElement(ctl, probe[i], &match) && Usable(ctl, match, dir, &writable)) {
             Fill(out, match, probe[i], writable);
             return 0;

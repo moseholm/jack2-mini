@@ -268,13 +268,13 @@ std::optional<DriverEntry> make_driver(DescriptorPtr descriptor)
 
 bool load_drivers(std::vector<DriverEntry>& drivers)
 {
-    JSList* list = jack_drivers_load(NULL);
-    if (list == NULL) {
+    JSList* list = jack_drivers_load(nullptr);
+    if (list == nullptr) {
         jack_error("Could not find any drivers in driver directory!");
         return false;
     }
 
-    while (list != NULL) {
+    while (list != nullptr) {
         JSList* node = list;
         list = list->next;
 
@@ -292,15 +292,15 @@ bool load_drivers(std::vector<DriverEntry>& drivers)
 // The options the engine receives for a driver: the ones that were set.
 Result<JSList*> create_param_list(const std::vector<Parameter>& parameters)
 {
-    JSList* list = NULL;
+    JSList* list = nullptr;
     for (const Parameter& parameter : parameters) {
         if (!parameter.is_set) {
             continue;
         }
         auto* param = static_cast<jack_driver_param_t*>(malloc(sizeof(jack_driver_param_t)));
-        if (param == NULL) {
+        if (param == nullptr) {
             jack_error("Allocation of jack_driver_param_t structure failed");
-            for (JSList* node = list; node != NULL;) {
+            for (JSList* node = list; node != nullptr;) {
                 JSList* next = node->next;
                 free(node->data);
                 free(node);
@@ -317,7 +317,7 @@ Result<JSList*> create_param_list(const std::vector<Parameter>& parameters)
 
 void destroy_param_list(JSList* list)
 {
-    while (list != NULL) {
+    while (list != nullptr) {
         JSList* next = list->next;
         free(list->data);
         free(list);
@@ -502,7 +502,7 @@ Result<void> Server::parse_driver_arguments(int argc, char* argv[])
         jackmini::FormatCString(std::span<char>(options_ptr, 4), "{}::", parameters[i].short_name);
         options_ptr += 3;
         long_options[i].name = desc.params[i].name;
-        long_options[i].flag = NULL;
+        long_options[i].flag = nullptr;
         long_options[i].val = parameters[i].short_name;
         long_options[i].has_arg = optional_argument;
     }
@@ -510,7 +510,7 @@ Result<void> Server::parse_driver_arguments(int argc, char* argv[])
     optind = 0;
     opterr = 0;
     int opt = 0;
-    while ((opt = getopt_long(argc, argv, options.data(), long_options.data(), NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, options.data(), long_options.data(), nullptr)) != -1) {
         if (opt == ':' || opt == '?') {
             if (opt == ':') {
                 fprintf(stderr, "Missing option to argument '%c'\n", optopt);
@@ -673,7 +673,7 @@ SignalSet setup_signals()
     // Ensure that this process has its own process group, so that kill(SIG, -pgrp) reaches it.
     setsid();
 
-    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, nullptr);
 
     // The signals are blocked here, and every thread created later inherits the mask.  The thread that waits in
     // wait_for_signal() is the one that receives them, so the shutdown can use any function.

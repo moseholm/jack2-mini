@@ -89,7 +89,7 @@ private:
 
     bool CheckClient(int refnum)
     {
-        return (refnum >= 0 && refnum < CLIENT_NUM && fClientTable[refnum] != NULL);
+        return (refnum >= 0 && refnum < CLIENT_NUM && fClientTable[refnum] != nullptr);
     }
 
     Result<bool> CheckPortsConnect(int refnum, jack_port_id_t src, jack_port_id_t dst);

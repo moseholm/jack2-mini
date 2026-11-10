@@ -347,21 +347,21 @@ jack_default_audio_sample_t* JackAudioDriver::GetInputBuffer(int port_index)
 {
     return fCapturePortList[port_index]
         ? (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fCapturePortList[port_index], fEngineControl->fBufferSize)
-        : NULL;
+        : nullptr;
 }
 
 jack_default_audio_sample_t* JackAudioDriver::GetOutputBuffer(int port_index)
 {
     return fPlaybackPortList[port_index]
         ? (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fPlaybackPortList[port_index], fEngineControl->fBufferSize)
-        : NULL;
+        : nullptr;
 }
 
 jack_default_audio_sample_t* JackAudioDriver::GetMonitorBuffer(int port_index)
 {
     return fMonitorPortList[port_index]
         ? (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fMonitorPortList[port_index], fEngineControl->fBufferSize)
-        : NULL;
+        : nullptr;
 }
 
 int JackAudioDriver::ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2)

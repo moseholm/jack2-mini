@@ -40,7 +40,7 @@ public:
     // Drops a reference. The last one destroys the context.
     static void release() noexcept;
 
-    // The context of the process, or NULL when no client is open. Readable from any thread.
+    // The context of the process, or nullptr when no client is open. Readable from any thread.
     static ProcessContext* current() noexcept;
 
     ~ProcessContext();

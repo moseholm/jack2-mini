@@ -31,10 +31,10 @@ private:
     pthread_cond_t fCond; // Condition variable
 
 public:
-    JackPosixProcessSync(const char* name = NULL)
+    JackPosixProcessSync(const char* name = nullptr)
         : JackBasePosixMutex()
     {
-        int res = pthread_cond_init(&fCond, NULL);
+        int res = pthread_cond_init(&fCond, nullptr);
         ThrowIf(res != 0, JackException("JackBasePosixMutex: could not init the cond variable"));
     }
 

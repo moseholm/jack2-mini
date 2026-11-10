@@ -33,21 +33,21 @@ static const int kSettleMs = 250;
 JackAlsaHotplug::JackAlsaHotplug(JackAlsaHotplugListener* listener)
     : fListener(listener)
     , fThread(this)
-    , fUdev(NULL)
-    , fMonitor(NULL)
+    , fUdev(nullptr)
+    , fMonitor(nullptr)
     , fWakeFd(-1)
 {
     fUdev = udev_new();
-    if (fUdev == NULL) {
+    if (fUdev == nullptr) {
         jack_error("hot-plug is disabled: udev is not available");
         return;
     }
     fMonitor = udev_monitor_new_from_netlink(fUdev, "udev");
-    if (fMonitor == NULL || udev_monitor_filter_add_match_subsystem_devtype(fMonitor, "sound", NULL) < 0 || udev_monitor_enable_receiving(fMonitor) < 0) {
+    if (fMonitor == nullptr || udev_monitor_filter_add_match_subsystem_devtype(fMonitor, "sound", nullptr) < 0 || udev_monitor_enable_receiving(fMonitor) < 0) {
         jack_error("hot-plug is disabled: cannot listen to udev");
-        if (fMonitor != NULL) {
+        if (fMonitor != nullptr) {
             udev_monitor_unref(fMonitor);
-            fMonitor = NULL;
+            fMonitor = nullptr;
         }
         return;
     }
@@ -57,10 +57,10 @@ JackAlsaHotplug::JackAlsaHotplug(JackAlsaHotplugListener* listener)
 JackAlsaHotplug::~JackAlsaHotplug()
 {
     Stop();
-    if (fMonitor != NULL) {
+    if (fMonitor != nullptr) {
         udev_monitor_unref(fMonitor);
     }
-    if (fUdev != NULL) {
+    if (fUdev != nullptr) {
         udev_unref(fUdev);
     }
     if (fWakeFd >= 0) {
@@ -100,9 +100,9 @@ bool JackAlsaHotplug::Execute()
         }
         if (fds[0].revents & POLLIN) {
             struct udev_device* device;
-            while ((device = udev_monitor_receive_device(fMonitor)) != NULL) {
+            while ((device = udev_monitor_receive_device(fMonitor)) != nullptr) {
                 const char* action = udev_device_get_action(device);
-                if (action != NULL && (strcmp(action, "add") == 0 || strcmp(action, "remove") == 0 || strcmp(action, "change") == 0)) {
+                if (action != nullptr && (strcmp(action, "add") == 0 || strcmp(action, "remove") == 0 || strcmp(action, "change") == 0)) {
                     pending = true;
                 }
                 udev_device_unref(device);
@@ -124,7 +124,7 @@ bool JackAlsaHotplug::Execute()
 
 int JackAlsaHotplug::Start()
 {
-    if (fMonitor == NULL) {
+    if (fMonitor == nullptr) {
         return 0;
     }
     uint64_t dummy;
@@ -139,7 +139,7 @@ int JackAlsaHotplug::Start()
 
 int JackAlsaHotplug::Stop()
 {
-    if (fMonitor == NULL || fWakeFd < 0) {
+    if (fMonitor == nullptr || fWakeFd < 0) {
         return 0;
     }
     uint64_t one = 1;
