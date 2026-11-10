@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <jack/types.h>
 #include <jack/weakmacros.h>
@@ -27,7 +28,7 @@ extern "C" {
 #endif
 
 // Type for raw event data contained in @ref jack_midi_event_t.
-typedef unsigned char jack_midi_data_t;
+typedef std::byte jack_midi_data_t;
 
 
 // A Jack MIDI event.

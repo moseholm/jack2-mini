@@ -27,6 +27,7 @@
 #include "JackShmMem.h"
 #include "JackTime.h"
 #include "types.h"
+#include <cstddef>
 #include <cstdint>
 #include <stdio.h>
 #include <stdlib.h>

@@ -25,6 +25,7 @@
 #include "JackMidiPort.h"
 #include "jack/transport.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <array>
 #include <atomic>

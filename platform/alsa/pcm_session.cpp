@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <cstdint>
 
 // Copyright (C) 2026 JACK contributors
@@ -185,13 +186,13 @@ void Session::set_callbacks(const PcmCycle::Callbacks& callbacks)
 
 void Session::read_channel(const ChannelArea& area, jack_default_audio_sample_t* buf, std::size_t frames)
 {
-    read_copy_(buf, reinterpret_cast<char*>(area.data), frames, area.stride);
+    read_copy_(buf, reinterpret_cast<std::byte*>(area.data), frames, area.stride);
 }
 
 void Session::write_channel(std::size_t channel, const ChannelArea& area, jack_default_audio_sample_t* buf,
     std::size_t frames)
 {
-    write_copy_(reinterpret_cast<char*>(area.data), buf, frames, area.stride, &dither_[channel]);
+    write_copy_(reinterpret_cast<std::byte*>(area.data), buf, frames, area.stride, &dither_[channel]);
     cycle_->mark_channel_done(channel);
 }
 

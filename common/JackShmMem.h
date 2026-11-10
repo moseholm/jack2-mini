@@ -71,9 +71,9 @@ public:
         return fSize;
     }
 
-    char* GetShmAddress()
+    std::byte* GetShmAddress()
     {
-        return (char*)fAddress;
+        return static_cast<std::byte*>(fAddress);
     }
 
     void LockMemory()

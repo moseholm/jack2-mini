@@ -16,6 +16,7 @@
 
 #include "memops.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -34,7 +35,7 @@ std::int32_t failures = 0;
     } while (0)
 
 template <std::size_t N>
-void check_bytes(const char* what, const void* got, const unsigned char (&want)[N])
+void check_bytes(const char* what, const void* got, const std::byte (&want)[N])
 {
     if (std::memcmp(got, want, N) != 0) {
         std::fprintf(stderr, "FAILED %s: bytes differ\n", what);
@@ -42,239 +43,239 @@ void check_bytes(const char* what, const void* got, const unsigned char (&want)[
     }
 }
 
-const unsigned char kD16[] = {
-    0x00,
-    0x00,
-    0xff,
-    0x7f,
-    0x01,
-    0x80,
-    0x00,
-    0x40,
-    0x00,
-    0xe0,
-    0xff,
-    0x7f,
-    0x01,
-    0x80,
-    0xaa,
-    0x2a,
+const std::byte kD16[] = {
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0xff},
+    std::byte{0x7f},
+    std::byte{0x01},
+    std::byte{0x80},
+    std::byte{0x00},
+    std::byte{0x40},
+    std::byte{0x00},
+    std::byte{0xe0},
+    std::byte{0xff},
+    std::byte{0x7f},
+    std::byte{0x01},
+    std::byte{0x80},
+    std::byte{0xaa},
+    std::byte{0x2a},
 };
 
-const unsigned char kD24[] = {
-    0x00,
-    0x00,
-    0x00,
-    0xff,
-    0xff,
-    0x7f,
-    0x01,
-    0x00,
-    0x80,
-    0x00,
-    0x00,
-    0x40,
-    0x00,
-    0x00,
-    0xe0,
-    0xff,
-    0xff,
-    0x7f,
-    0x01,
-    0x00,
-    0x80,
-    0xaa,
-    0xaa,
-    0x2a,
+const std::byte kD24[] = {
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0xff},
+    std::byte{0xff},
+    std::byte{0x7f},
+    std::byte{0x01},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x40},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0xe0},
+    std::byte{0xff},
+    std::byte{0xff},
+    std::byte{0x7f},
+    std::byte{0x01},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0xaa},
+    std::byte{0xaa},
+    std::byte{0x2a},
 };
 
-const unsigned char kD32[] = {
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0xff,
-    0xff,
-    0xff,
-    0x7f,
-    0x01,
-    0x00,
-    0x00,
-    0x80,
-    0x00,
-    0x00,
-    0x00,
-    0x40,
-    0x00,
-    0x00,
-    0x00,
-    0xe0,
-    0xff,
-    0xff,
-    0xff,
-    0x7f,
-    0x01,
-    0x00,
-    0x00,
-    0x80,
-    0x80,
-    0xaa,
-    0xaa,
-    0x2a,
+const std::byte kD32[] = {
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0xff},
+    std::byte{0xff},
+    std::byte{0xff},
+    std::byte{0x7f},
+    std::byte{0x01},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x40},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0xe0},
+    std::byte{0xff},
+    std::byte{0xff},
+    std::byte{0xff},
+    std::byte{0x7f},
+    std::byte{0x01},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0x80},
+    std::byte{0xaa},
+    std::byte{0xaa},
+    std::byte{0x2a},
 };
 
-const unsigned char kD32u24[] = {
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0xff,
-    0xff,
-    0x7f,
-    0x00,
-    0x01,
-    0x00,
-    0x80,
-    0x00,
-    0xff,
-    0xff,
-    0x3f,
-    0x00,
-    0x01,
-    0x00,
-    0xe0,
-    0x00,
-    0xff,
-    0xff,
-    0x7f,
-    0x00,
-    0x01,
-    0x00,
-    0x80,
-    0x00,
-    0xaa,
-    0xaa,
-    0x2a,
+const std::byte kD32u24[] = {
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0xff},
+    std::byte{0xff},
+    std::byte{0x7f},
+    std::byte{0x00},
+    std::byte{0x01},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0x00},
+    std::byte{0xff},
+    std::byte{0xff},
+    std::byte{0x3f},
+    std::byte{0x00},
+    std::byte{0x01},
+    std::byte{0x00},
+    std::byte{0xe0},
+    std::byte{0x00},
+    std::byte{0xff},
+    std::byte{0xff},
+    std::byte{0x7f},
+    std::byte{0x00},
+    std::byte{0x01},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0x00},
+    std::byte{0xaa},
+    std::byte{0xaa},
+    std::byte{0x2a},
 };
 
-const unsigned char kS16Float[] = {
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x80,
-    0x3f,
-    0x00,
-    0x00,
-    0x80,
-    0xbf,
-    0x00,
-    0x01,
-    0x00,
-    0x3f,
-    0x00,
-    0x01,
-    0x80,
-    0xbe,
-    0x00,
-    0x01,
-    0x00,
-    0x38,
+const std::byte kS16Float[] = {
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0x3f},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0xbf},
+    std::byte{0x00},
+    std::byte{0x01},
+    std::byte{0x00},
+    std::byte{0x3f},
+    std::byte{0x00},
+    std::byte{0x01},
+    std::byte{0x80},
+    std::byte{0xbe},
+    std::byte{0x00},
+    std::byte{0x01},
+    std::byte{0x00},
+    std::byte{0x38},
 };
 
-const unsigned char kS32Float[] = {
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x80,
-    0x3f,
-    0x00,
-    0x00,
-    0x80,
-    0xbf,
-    0x00,
-    0x00,
-    0x00,
-    0x3f,
-    0x00,
-    0x00,
-    0x80,
-    0xbe,
+const std::byte kS32Float[] = {
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0x3f},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0xbf},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x3f},
+    std::byte{0x00},
+    std::byte{0x00},
+    std::byte{0x80},
+    std::byte{0xbe},
 };
 
-const unsigned char kInterleave16[] = {
-    0x01,
-    0x02,
-    0x55,
-    0x55,
-    0x03,
-    0x04,
-    0x55,
-    0x55,
-    0x05,
-    0x06,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
+const std::byte kInterleave16[] = {
+    std::byte{0x01},
+    std::byte{0x02},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x03},
+    std::byte{0x04},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x05},
+    std::byte{0x06},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
 };
 
-const unsigned char kMemsetUnit2[] = {
-    0x7f,
-    0x00,
-    0x55,
-    0x55,
-    0x7f,
-    0x00,
-    0x55,
-    0x55,
-    0x7f,
-    0x00,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
-    0x55,
+const std::byte kMemsetUnit2[] = {
+    std::byte{0x7f},
+    std::byte{0x00},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x7f},
+    std::byte{0x00},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x7f},
+    std::byte{0x00},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
+    std::byte{0x55},
 };
 
-const unsigned char kMemcpyFake[] = {
-    0x01,
-    0x02,
-    0x03,
-    0x04,
-    0x05,
-    0x06,
-    0x07,
-    0x08,
-    0x09,
-    0x0a,
-    0x0b,
-    0x0c,
+const std::byte kMemcpyFake[] = {
+    std::byte{0x01},
+    std::byte{0x02},
+    std::byte{0x03},
+    std::byte{0x04},
+    std::byte{0x05},
+    std::byte{0x06},
+    std::byte{0x07},
+    std::byte{0x08},
+    std::byte{0x09},
+    std::byte{0x0a},
+    std::byte{0x0b},
+    std::byte{0x0c},
 };
 
 void check_floats_to_samples()
@@ -283,19 +284,19 @@ void check_floats_to_samples()
     const std::uint64_t n = sizeof in / sizeof in[0];
     dither_state_t st { };
 
-    char d16[n * 2] = { };
+    std::byte d16[n * 2] = { };
     sample_move_d16_sS(d16, const_cast<float*>(in), n, 2, &st);
     check_bytes("d16", d16, kD16);
 
-    char d24[n * 3] = { };
+    std::byte d24[n * 3] = { };
     sample_move_d24_sS(d24, const_cast<float*>(in), n, 3, &st);
     check_bytes("d24", d24, kD24);
 
-    char d32[n * 4] = { };
+    std::byte d32[n * 4] = { };
     sample_move_d32_sS(d32, const_cast<float*>(in), n, 4, &st);
     check_bytes("d32", d32, kD32);
 
-    char d32u24[n * 4] = { };
+    std::byte d32u24[n * 4] = { };
     sample_move_d32u24_sS(d32u24, const_cast<float*>(in), n, 4, &st);
     check_bytes("d32u24", d32u24, kD32u24);
 }
@@ -304,26 +305,26 @@ void check_samples_to_floats()
 {
     const std::int16_t s16[] = { 0, 32767, -32767, 16384, -8192, 1 };
     float back[6] = { };
-    sample_move_dS_s16(back, reinterpret_cast<char*>(const_cast<std::int16_t*>(s16)), 6, 2);
+    sample_move_dS_s16(back, reinterpret_cast<std::byte*>(const_cast<std::int16_t*>(s16)), 6, 2);
     check_bytes("s16 to float", back, kS16Float);
 
     const std::int32_t s32[] = { 0, 2147483647, -2147483647, 1073741824, -536870912 };
     float backs[5] = { };
-    sample_move_dS_s32(backs, reinterpret_cast<char*>(const_cast<std::int32_t*>(s32)), 5, 4);
+    sample_move_dS_s32(backs, reinterpret_cast<std::byte*>(const_cast<std::int32_t*>(s32)), 5, 4);
     check_bytes("s32 to float", backs, kS32Float);
 }
 
 void check_copies()
 {
-    char src[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
-    char dst[24];
+    std::byte src[] = { std::byte { 1 }, std::byte { 2 }, std::byte { 3 }, std::byte { 4 }, std::byte { 5 }, std::byte { 6 }, std::byte { 7 }, std::byte { 8 }, std::byte { 9 }, std::byte { 10 }, std::byte { 11 }, std::byte { 12 } };
+    std::byte dst[24];
 
     std::memset(dst, 0x55, sizeof dst);
     memcpy_interleave_d16_s16(dst, src, 6, 4, 2);
     check_bytes("interleave 16", dst, kInterleave16);
 
     std::memset(dst, 0x55, sizeof dst);
-    memset_interleave(dst, 0x7f, 6, 2, 4);
+    memset_interleave(dst, std::byte { 0x7f }, 6, 2, 4);
     check_bytes("memset interleave", dst, kMemsetUnit2);
 
     std::memset(dst, 0x55, sizeof dst);

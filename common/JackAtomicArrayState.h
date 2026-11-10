@@ -31,7 +31,7 @@ namespace jackmini {
 struct AtomicArrayCounter {
     union {
         struct {
-            unsigned char fByteVal[4];
+            std::uint8_t fByteVal[4];
         } scounter;
         UInt32 fLongVal;
     } info;

@@ -19,6 +19,7 @@
 #include "JackChannel.h"
 #include "JackConstants.h"
 
+#include <cstddef>
 #include <array>
 #include <atomic>
 #include <cstdint>

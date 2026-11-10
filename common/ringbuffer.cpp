@@ -22,6 +22,7 @@
 // one the MIDI code and the clients use; the logic lives in RingBuffer.
 
 #include "JackCompilerDeps.h"
+#include <cstddef>
 #include <cstdint>
 #include <jack/ringbuffer.h>
 
@@ -43,7 +44,7 @@ public:
         while (power_of_two < sz) {
             power_of_two <<= 1;
         }
-        fBuf.reset(new (std::nothrow) char[power_of_two]);
+        fBuf.reset(new (std::nothrow) std::byte[power_of_two]);
         if (!fBuf) {
             return false;
         }
@@ -88,7 +89,7 @@ public:
         return (r - w - 1) & fSizeMask;
     }
 
-    std::size_t read(char* dest, std::size_t cnt) noexcept
+    std::size_t read(std::byte* dest, std::size_t cnt) noexcept
     {
         const std::size_t free_cnt = read_space();
         if (free_cnt == 0) {
@@ -110,7 +111,7 @@ public:
         return to_read;
     }
 
-    std::size_t peek(char* dest, std::size_t cnt) const noexcept
+    std::size_t peek(std::byte* dest, std::size_t cnt) const noexcept
     {
         const std::size_t free_cnt = read_space();
         if (free_cnt == 0) {
@@ -128,7 +129,7 @@ public:
         return to_read;
     }
 
-    std::size_t write(const char* src, std::size_t cnt) noexcept
+    std::size_t write(const std::byte* src, std::size_t cnt) noexcept
     {
         const std::size_t free_cnt = write_space();
         if (free_cnt == 0) {
@@ -181,10 +182,10 @@ private:
     void describe(std::size_t pos, std::size_t cnt, jack_ringbuffer_data_t* vec) const noexcept
     {
         const std::size_t end = pos + cnt;
-        vec[0].buf = fBuf.get() + pos;
+        vec[0].buf = reinterpret_cast<char*>(fBuf.get() + pos);
         if (end > fSize) {
             vec[0].len = fSize - pos;
-            vec[1].buf = fBuf.get();
+            vec[1].buf = reinterpret_cast<char*>(fBuf.get());
             vec[1].len = end & fSizeMask;
         } else {
             vec[0].len = cnt;
@@ -192,7 +193,7 @@ private:
         }
     }
 
-    std::unique_ptr<char[]> fBuf;
+    std::unique_ptr<std::byte[]> fBuf;
     std::atomic<std::size_t> fWritePtr { 0 };
     std::atomic<std::size_t> fReadPtr { 0 };
     std::size_t fSize = 0;
@@ -248,17 +249,17 @@ LIB_EXPORT size_t jack_ringbuffer_write_space(const jack_ringbuffer_t* rb)
 
 LIB_EXPORT size_t jack_ringbuffer_read(jack_ringbuffer_t* rb, char* dest, size_t cnt)
 {
-    return rb->read(dest, cnt);
+    return rb->read(reinterpret_cast<std::byte*>(dest), cnt);
 }
 
 LIB_EXPORT size_t jack_ringbuffer_peek(jack_ringbuffer_t* rb, char* dest, size_t cnt)
 {
-    return rb->peek(dest, cnt);
+    return rb->peek(reinterpret_cast<std::byte*>(dest), cnt);
 }
 
 LIB_EXPORT size_t jack_ringbuffer_write(jack_ringbuffer_t* rb, const char* src, size_t cnt)
 {
-    return rb->write(src, cnt);
+    return rb->write(reinterpret_cast<const std::byte*>(src), cnt);
 }
 
 LIB_EXPORT void jack_ringbuffer_read_advance(jack_ringbuffer_t* rb, size_t cnt)

@@ -18,6 +18,7 @@
 
 #include "pcm_cycle.hpp"
 
+#include <cstddef>
 #include <poll.h>
 #include <algorithm>
 #include <cstdint>

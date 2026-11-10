@@ -16,6 +16,7 @@
 
 #include "JackFdSegment.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <sys/mman.h>
 #include <sys/socket.h>
@@ -81,7 +82,7 @@ std::expected<void, std::error_code> SendWithFds(std::int32_t socket,
         iov.iov_base = const_cast<std::byte*>(data.data() + done);
         iov.iov_len = data.size() - done;
 
-        alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(std::int32_t))> control { };
+        alignas(cmsghdr) std::array<std::byte, CMSG_SPACE(kMaxFds * sizeof(std::int32_t))> control { };
         msghdr msg { };
         msg.msg_iov = &iov;
         msg.msg_iovlen = 1;
@@ -115,7 +116,7 @@ std::expected<std::size_t, std::error_code> RecvWithFds(std::int32_t socket,
     iov.iov_base = data.data();
     iov.iov_len = data.size();
 
-    alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(std::int32_t))> control { };
+    alignas(cmsghdr) std::array<std::byte, CMSG_SPACE(kMaxFds * sizeof(std::int32_t))> control { };
     msghdr msg { };
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;

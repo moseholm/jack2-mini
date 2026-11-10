@@ -50,7 +50,7 @@ public:
     // allowed.  The constructor checks that the address is aligned.
     SInt32* CountPtr()
     {
-        return reinterpret_cast<SInt32*>(reinterpret_cast<char*>(this) + offsetof(JackActivationCount, fCount));
+        return reinterpret_cast<SInt32*>(reinterpret_cast<std::byte*>(this) + offsetof(JackActivationCount, fCount));
     }
 
     // Decrements the live counter; signals the client when it reaches zero.

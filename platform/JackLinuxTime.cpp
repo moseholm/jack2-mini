@@ -21,6 +21,7 @@
 #include "JackTime.h"
 #include "JackTypes.h"
 
+#include <cstddef>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -87,7 +88,7 @@ public:
             fFd = -1;
             return false;
         }
-        fPtr = static_cast<unsigned char*>(map);
+        fPtr = static_cast<std::byte*>(map);
 
         // The period is read once. It is assumed to be constant.
         fPeriod = read_register<std::uint32_t>(kHpetPeriod);
@@ -116,7 +117,7 @@ private:
     }
 
     std::int32_t fFd = -1;
-    unsigned char* fPtr = nullptr;
+    std::byte* fPtr = nullptr;
     std::uint32_t fPeriod = 0; // femtoseconds
     std::uint64_t fOffset = 0;
     std::uint64_t fWrap = 0;
