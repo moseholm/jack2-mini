@@ -2,12 +2,12 @@
 
 #include <cstdint>
 
-#define HAVE_ALSA 1
+inline constexpr bool kHaveAlsa = true;
 
 inline constexpr std::int32_t kClientNum = @JACK_MAX_CLIENTS@;
 inline constexpr std::int32_t kPortNumForClient = @JACK_PORTS_PER_APPLICATION@;
-#define ADDON_DIR "@JACK_ADDON_DIR@"
-#define JACK_LOCATION "@JACK_LOCATION@"
-#define JACKMP 1
+inline constexpr const char* kAddonDir = "@JACK_ADDON_DIR@";
+inline constexpr const char* kLocation = "@JACK_LOCATION@";
+inline constexpr bool kJackmp = true;
 #define JACK_VERSION "@JACK_VERSION@"
 

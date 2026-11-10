@@ -202,7 +202,7 @@ void buildClientPath(char* pathToSo, std::int32_t pathLen, const char* soName)
     const char* internalDir;
     if ((internalDir = getenv("JACK_INTERNAL_DIR")) == 0) {
         if ((internalDir = getenv("JACK_DRIVER_DIR")) == 0) {
-            internalDir = ADDON_DIR;
+            internalDir = kAddonDir;
         }
     }
 

@@ -204,7 +204,7 @@ JSListC* driversLoad(JSListC* drivers)
 
     const char* driverDir;
     if ((driverDir = getenv("JACK_DRIVER_DIR")) == 0) {
-        driverDir = ADDON_DIR;
+        driverDir = kAddonDir;
     }
 
     // search through the driver_dir and add get descriptors
