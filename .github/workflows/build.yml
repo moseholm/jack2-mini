@@ -18,6 +18,10 @@ jobs:
             cxx: g++
           - cc: clang
             cxx: clang++
+          # The SSE4.1 and AVX2 kernels are compiled only with these flags, so this entry keeps them building.
+          - cc: gcc
+            cxx: g++
+            extra_flags: "-msse4.1 -mavx2"
     steps:
     - uses: actions/checkout@v4
     - name: Install dependencies
@@ -28,11 +32,14 @@ jobs:
       env:
         CC: ${{ matrix.cc }}
         CXX: ${{ matrix.cxx }}
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON
+        EXTRA_FLAGS: ${{ matrix.extra_flags }}
+      run: scripts/ci.sh configure
     - name: Build
-      run: cmake --build build --parallel "$(nproc)"
+      run: scripts/ci.sh build
+    - name: Test
+      run: scripts/ci.sh test
     - name: Install
-      run: DESTDIR=$(pwd)/destdir cmake --install build
+      run: scripts/ci.sh install
 
   linux-aarch64:
     # Native AArch64 build and test on GitHub's arm64 runner.  Matches the
@@ -47,8 +54,10 @@ jobs:
         sudo apt-get update -qq
         sudo apt-get install -y build-essential cmake ninja-build pkg-config libasound2-dev libudev-dev
     - name: Configure
-      run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON
+      env:
+        GENERATOR: Ninja
+      run: scripts/ci.sh configure
     - name: Build
-      run: cmake --build build --parallel "$(nproc)"
+      run: scripts/ci.sh build
     - name: Test
-      run: ctest --test-dir build --output-on-failure
+      run: scripts/ci.sh test
