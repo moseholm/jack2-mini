@@ -50,7 +50,7 @@ Rules that follow from this:
 - Port handles stay valid across deactivate. Ports are not unregistered on
   deactivate.
 - Connections are kept across deactivate. The current server disconnects every
-  port of a deactivated client (`JackEngine::ClientDeactivate`). Keeping them
+  port of a deactivated client (`Engine::ClientDeactivate`). Keeping them
   means changing the server, which is part of P2. The engine must treat an
   inactive client's ports as silent, so no audio goes through them.
 
@@ -117,7 +117,7 @@ The command-line tools are built on this (`tools/README.md`).
 
 ## Implementation
 
-The client is `client/client_session.*` (one connection to the server) and
+The client is `client/ClientSession.*` (one connection to the server) and
 `client/process_context.*` (the state that the clients of a process share), under the public
 headers in `client/jackmini/`. The C client library and its copied wrappers are gone (Plan A).
 

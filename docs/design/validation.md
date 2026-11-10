@@ -23,7 +23,7 @@ Findings, all fixed in `f38b6e2c`:
 |---|---|---|---|
 | ASan (leak) | `tests/AlsaSecondaryUnit.cpp` | converter test buffers with `new[]`, never freed | `std::vector` |
 | ASan (leak) | `tests/CounterTsanUnit.cpp` | the graph and the synchro table not released | `Destroy` and `delete[]` at the end |
-| UBSan | `platform/Socket.h` | `JackClientSocket(int)` left `fNonBlocking` unset; reading it is undefined | in-class initializers |
+| UBSan | `platform/Socket.h` | `ClientSocket(int)` left `fNonBlocking` unset; reading it is undefined | in-class initializers |
 | UBSan | `common/ConnectionManager.h` | the RT thread indexed the activation table with `-1`: a port released by the server is still in the connections of the current state until the next switch, and its owner is `-1` | `IsInactive(-1)` is true (the port is silent) |
 
 After the fixes: the 15 unit suites pass under all three sanitizers, and the server e2e tests are clean under ASan
@@ -34,9 +34,9 @@ and UBSan (no sanitizer report, no leak report from the server).
 The TSAN reports of the server e2e runs (the client processes; the server is clean) fall in the known groups:
 
 - `ResumeRefNum` and `SuspendRefNum` timing fields (the graph's client timing), the largest group;
-- the port latency range written from two threads (`JackPort::SetLatencyRange`);
+- the port latency range written from two threads (`ServerPort::SetLatencyRange`);
 - `set_clock_source` called from `connect_and_register`;
-- the MIDI test buffers (`JackMidiBuffer::Reset`, `ReserveEvent`);
+- the MIDI test buffers (`MidiBuffer::Reset`, `ReserveEvent`);
 - the `memcpy` of shared audio buffers;
 - the futex `Signal` against `Connect`/`Disconnect` on the notification thread, which predates S6 (4 of 5 runs on the
   tree before S6, too);

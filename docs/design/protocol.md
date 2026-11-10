@@ -64,7 +64,7 @@ Each request is answered by exactly one reply, which has the same request id.
 The reply carries a status (`0` for success, otherwise an error code that maps
 to `jackmini::Error`) and the reply payload.
 
-Requests (`JackRequest::RequestType`, 26 types) and what happens to each:
+Requests (`Request::RequestType`, 26 types) and what happens to each:
 
 | Current | New | Notes |
 |---|---|---|
@@ -175,19 +175,19 @@ name.
 
 | Current | Contents | New |
 |---|---|---|
-| `JackClientControl` | name, callback flags, transport state, activation | keep, aligned; callback flags as `std::uint8_t[]` |
-| `JackEngineControl` | period, sample rate, CPU statistics, rolling usecs | keep, aligned; statistics as `std::atomic<std::uint64_t>` and `std::atomic<float>` |
-| `JackGraphManager` | port array, client timing, connection state | keep, see 4.4 |
-| `JackConnectionManager` | connection matrix, activation counts | keep, see 4.5 |
-| `JackPort` | name, aliases, type, flags, buffer offset | keep, aligned |
-| `JackTransportEngine` | transport state and position | keep, aligned |
-| `JackClientTiming` | signaled, awake, finished times and status | keep, times as `std::uint64_t` at aligned offsets |
-| `JackActivationCount` | activation value and count | keep, see 4.5 |
-| `JackAtomicState`, `JackAtomicArrayState` | two- and three-buffer switching protocols | keep the protocol, see 4.5 |
+| `ClientControl` | name, callback flags, transport state, activation | keep, aligned; callback flags as `std::uint8_t[]` |
+| `EngineControl` | period, sample rate, CPU statistics, rolling usecs | keep, aligned; statistics as `std::atomic<std::uint64_t>` and `std::atomic<float>` |
+| `GraphManager` | port array, client timing, connection state | keep, see 4.4 |
+| `ConnectionManager` | connection matrix, activation counts | keep, see 4.5 |
+| `ServerPort` | name, aliases, type, flags, buffer offset | keep, aligned |
+| `TransportEngine` | transport state and position | keep, aligned |
+| `ClientTiming` | signaled, awake, finished times and status | keep, times as `std::uint64_t` at aligned offsets |
+| `ActivationCount` | activation value and count | keep, see 4.5 |
+| `AtomicState`, `AtomicArrayState` | two- and three-buffer switching protocols | keep the protocol, see 4.5 |
 
 ### 4.4 Graph segment
 
-Audio buffers are part of the port array: each `JackPort` holds its own buffer
+Audio buffers are part of the port array: each `ServerPort` holds its own buffer
 of `BUFFER_SIZE_MAX` (8192) samples. So audio already travels through shared
 memory, and the realtime thread reads and writes the buffers in place. The new
 layout keeps this. At `PORT_NUM` (2048) ports that is about 67 MB of buffer
@@ -202,7 +202,7 @@ the cost does not change; only the reallocation path is removed.
 
 ### 4.5 The copy-on-write counters, redesigned
 
-The current `JackAtomicState` copies the whole connection state into the next
+The current `AtomicState` copies the whole connection state into the next
 buffer while the realtime thread is still decrementing activation counts in
 the current one. The copy can capture a counter mid-decrement, and TSAN reports
 it. The copy is not safe, and making each read atomic does not fix it.
@@ -223,7 +223,7 @@ atomic and TSAN sees them.
 
 ### 4.6 CPU statistics
 
-`JackEngineControl`'s statistics are misaligned in the current packed layout.
+`EngineControl`'s statistics are misaligned in the current packed layout.
 In the new layout they are aligned atomics, so the statistics can be read from
 any process without a lock. Readers get a consistent value per field, not a
 consistent set of fields.
@@ -292,7 +292,7 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
 
 1. **Registry removal (section 4.1).** Decided: remove it.
 2. **Port count (section 4.4).** Decided: fixed maximum, `PORT_NUM`.
-3. **Notification queue size.** Chosen: 256 per client (`JackSocketNotifyChannel::kQueueSize`).
+3. **Notification queue size.** Chosen: 256 per client (`SocketNotifyChannel::kQueueSize`).
    Measured with a client that stops reading for two seconds while another registers ports:
    bursts of 100 and 250 registrations lose nothing; 500 lose 75; 1000 lose 575. So the queue
    and the socket buffer together hold about 425 notifications. A startup burst of a typical

@@ -12,9 +12,9 @@ Status: done. The cycle core, the libasound backend, the session and the adapter
   JACK driver base calls.
 - The MIDI backends are removed, not ported. jackmini sends MIDI between clients only: `alsa_rawmidi.c`, the C glue,
   the `platform/alsarawmidi` driver, the server's MIDI driver and queues, and the `midi-driver` option.
-- The C++ parts are already in place: `JackAlsaDriver` (the JACK driver), `JackAlsaSecondaryCard` and
-  `JackAlsaSecondaryConfig` (more cards), `JackAlsaRingBuffer`, `JackAlsaRateConverter`,
-  `JackAlsaDriftController`, `JackAlsaControl*`, `JackAlsaHotplug`, `JackAlsaReconfigWorker`,
+- The C++ parts are already in place: `AlsaDriver` (the JACK driver), `AlsaSecondaryCard` and
+  `AlsaSecondaryConfig` (more cards), `AlsaRingBuffer`, `AlsaRateConverter`,
+  `AlsaDriftController`, `JackAlsaControl*`, `AlsaHotplug`, `AlsaReconfigWorker`,
   `JackAlsaEnumerate`. Those are the adapter around the C core.
 
 ## The target
@@ -26,7 +26,7 @@ Status: done. The cycle core, the libasound backend, the session and the adapter
 - `libasound` backend: the only one that calls `snd_pcm_*`.
 - Fake backend: for the unit tests. It replays the sequence of avail, the delays, and the xruns, and it
   records the calls, so the cycle logic can be tested without a card.
-- `jack_alsa.so` (`JackAlsaDriver`): a thin adapter. It owns the JACK driver base and the threads, and it
+- `jack_alsa.so` (`AlsaDriver`): a thin adapter. It owns the JACK driver base and the threads, and it
   calls the core.
 - MIDI: none. The server has no hardware MIDI (see decision 2 of the master plan).
 - The public C names that stay: `jack_midi_*` and `jack_ringbuffer_*` (decision 4).
@@ -41,7 +41,7 @@ Status: done. The cycle core, the libasound backend, the session and the adapter
 ## Found in this session, to look at first
 
 - **Thread churn when the device cannot run.** A server whose ALSA device kept returning no frames looped in
-  `JackAlsaDriver::Read()`: each xrun recovery called `Stop()` and `Start()`, and those stopped and re-created the
+  `AlsaDriver::Read()`: each xrun recovery called `Stop()` and `Start()`, and those stopped and re-created the
   control monitor, the hot-plug listener, and the reconfig worker. The RT thread never completed a cycle, so
   `WaitForSwitches` refused every client, and the server churned about 4,400 threads per second (44,182 `clone3`
   in 10 s under `strace`). An idle but healthy server under `strace` showed 7,604 `clone3` in 10 s, all from the
@@ -75,7 +75,7 @@ Status: done. The cycle core, the libasound backend, the session and the adapter
    The session is `platform/alsa/pcm_session.{hpp,cpp}` (`jackmini::alsa::Session`, `3cf04a5a`): the device, the cycle
    on it, the copy functions chosen once at open (ported from `alsa_driver_setup_io_function_pointers`), and
    `read_channel`/`write_channel` for the callbacks. Checked on the card at 64, 128, 256 frames.
-   The adapters now run on the session: `JackAlsaDriver` and `JackAlsaSecondaryCard` (this commit). `alsa_driver.c`
+   The adapters now run on the session: `AlsaDriver` and `AlsaSecondaryCard` (this commit). `alsa_driver.c`
    and `alsa_driver.h` are deleted in the same commit. Checked on the card (see step 6 for the numbers): the cycle
    matches the baseline at 64, 128 and 256 frames with no xrun. The secondary cards at 64 frames are a separate
    matter (below).

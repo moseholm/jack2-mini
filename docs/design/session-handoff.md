@@ -86,11 +86,11 @@ Hardware and measurement:
   `types.h`, `weakmacros.h`, `transport.h`, `uuid.h`).
 - `client/`: the client library. `client/jackmini/` is the API (`client.hpp`, `port.hpp`, `midi.hpp`,
   `ringbuffer.hpp`, `transport.hpp`, `options.hpp`, `error.hpp`, `control.hpp`, `jackmini.hpp`).
-- `server/`: the engine (`JackEngine`, `JackLockedEngine`), the server (`JackServer`), the control API
-  (`control.cpp`), `jackd` (`Jackdmp.cpp`), the drivers (`JackDummyDriver`, `JackFreewheelDriver`,
-  `JackAudioDriver`, `JackDriver`, `JackDriverLoader`), the socket channels, the request decoder.
+- `server/`: the engine (`Engine`, `LockedEngine`), the server (`ServerCore`), the control API
+  (`control.cpp`), `jackd` (`Jackdmp.cpp`), the drivers (`DummyDriver`, `FreewheelDriver`,
+  `AudioDriver`, `Driver`, `JackDriverLoader`), the socket channels, the request decoder.
 - `platform/`: POSIX and Linux code (threads, mutexes, sockets, futex, clock, the server lock).
-  `platform/alsa/`: the ALSA driver (`JackAlsaDriver`, `JackAlsaSecondaryCard`, the cycle core and session,
+  `platform/alsa/`: the ALSA driver (`AlsaDriver`, `AlsaSecondaryCard`, the cycle core and session,
   the card control, hot-plug, the resampler and its bridge).
 - `tests/`: unit and end-to-end tests (`jackmini_*`, `*_unit.cpp`), the benchmark tools (`cpu`, `iodelay`,
   `external_metro`), `tests/perf/` (`rtbench.cpp`, `alloccount.cpp`, `run-baseline.sh`).
@@ -166,13 +166,13 @@ Open issues found while porting (not fixed):
 
 S6 is done. Its stages (each: build, `check.sh`, commit, push) are listed for the record.
 
-1. **Done (`a9a1be6c`): `JackLockedEngine` returns `Result`.** The macros are gone. `ReplyCode` (in
-   `JackRequestDecoder.h`) is the one wire mapping. The engine internals still return `int`, which stage 3 converts.
-   `JackTemporaryException` (last client of a temporary server) is caught on the two close calls.
+1. **Done (`a9a1be6c`): `LockedEngine` returns `Result`.** The macros are gone. `ReplyCode` (in
+   `RequestDecoder.h`) is the one wire mapping. The engine internals still return `int`, which stage 3 converts.
+   `TemporaryException` (last client of a temporary server) is caught on the two close calls.
 2. **Done (`a9a1be6c`): the call sites** in the server, the drivers and the socket channel.
-3. **Done (`8653ede5`): `JackEngine` internals return `Result`.** The error kind says what failed. The graph
+3. **Done (`8653ede5`): `Engine` internals return `Result`.** The error kind says what failed. The graph
    manager and the client's `int` returns are unchanged (stage 4 and the client side).
-4. **Done (`e2124e88`): `JackGraphManager`, `JackConnectionManager`.** Gate: a thread-sanitizer run with no new
+4. **Done (`e2124e88`): `GraphManager`, `ConnectionManager`.** Gate: a thread-sanitizer run with no new
    report, checked against the tree before the change (procedure below). A duplicate connect is now an error
    (`InvalidState`); it was a silent success.
 
@@ -187,11 +187,11 @@ baseline. The RT hardware runs are the user's.
 The plan's steps are all done. Remaining work is the user's: the RT hardware runs, and the ARM boards. The next
 the tools are done (see "Tools"). Open decisions: the server's monitor request, and the UUID text format.
 
-S7 is done (gate: the protocol conformance and notify overflow suites pass). Left on purpose: `JackRequestDecoder::HandleRequest`
-and the framing returns (the protocol loop's `int`); `JackExternalClient::ClientNotify` and `Close` (the client interface's `int`);
-`JackServerGlobals` (the singletons the free functions and the ALSA hooks use).
+S7 is done (gate: the protocol conformance and notify overflow suites pass). Left on purpose: `RequestDecoder::HandleRequest`
+and the framing returns (the protocol loop's `int`); `ExternalClient::ClientNotify` and `Close` (the client interface's `int`);
+`ServerGlobals` (the singletons the free functions and the ALSA hooks use).
 Still `int` on purpose: the graph's sentinel lookups (`GetInputRefNum`, `GetOutputRefNum`), the driver's
-`Open`, `Close` and `Process` (module ABI and RT), `JackEngine::Process` (RT, `bool`), and `JackPort::RequestMonitor`.
+`Open`, `Close` and `Process` (module ABI and RT), `Engine::Process` (RT, `bool`), and `ServerPort::RequestMonitor`.
 
 ## Measurements
 
@@ -240,7 +240,7 @@ Build a separate tree (`/tmp/opencode/build-tsan`) with `-fsanitize=thread` in t
 targets (a partial build leaves stale drivers). Clear `/dev/shm/jack_*`, start `jackd`, and wait a few seconds before
 the client. Known reports from earlier (in the graph and platform code): `ResumeRefNum` timing fields, a port's latency
 range written from two threads, shared audio buffers, `set_clock_source`, and the MIDI test buffers. The futex race
-(`JackLinuxFutex::Connect` and `Disconnect` written from the notification thread, read unlocked in `Signal` on the RT
+(`LinuxFutex::Connect` and `Disconnect` written from the notification thread, read unlocked in `Signal` on the RT
 thread) is in 4 of 5 client runs on both the tree before and after `e2124e88`; it predates S6.
 
 ## Open issues (recorded, not fixed)
