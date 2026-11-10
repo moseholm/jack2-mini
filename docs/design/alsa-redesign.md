@@ -65,8 +65,8 @@ Status: done. The cycle core, the libasound backend, the session and the adapter
 
 1. ~~Find and fix the thread churn when the device cannot run.~~ Done: the control threads are not restarted by an
    xrun recovery, the recovery loop is bounded, and the notification channel opens after the driver runs.
-2. Done (`96fdde5e`). The backend concept, the fake backend, and the cycle core `platform/alsa/pcm_cycle.hpp`, with
-   `tests/pcm_cycle_unit.cpp` (807 checks in ctest): the avail, the xrun recovery, the poll retries, the sync, the
+2. Done (`96fdde5e`). The backend concept, the fake backend, and the cycle core `platform/alsa/PcmCycle.hpp`, with
+   `tests/PcmCycleUnit.cpp` (807 checks in ctest): the avail, the xrun recovery, the poll retries, the sync, the
    read and write through the mapped areas, and the silencing of untouched channels.
 3. Partly done. The libasound backend is `platform/alsa/pcm_alsa.{hpp,cpp}` (`jackmini::alsa::Device`, the
    `PcmBackend` for the core, in `jack_alsa`). It configures the streams with the old negotiation, links them, and

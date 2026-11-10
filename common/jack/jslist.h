@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include <cstdint>
 #include <jack/systemdeps.h>
 #include <stdlib.h>
+#include <cstdint>
 
 typedef struct _JSListC JSListC;
 

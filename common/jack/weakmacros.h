@@ -56,7 +56,7 @@
 #define JACK_OPTIONAL_WEAK_DEPRECATED_EXPORT __attribute__((__deprecated__))
 #else
 // Add other things here for non-gcc platforms
-#endif  // __GNUC__
+#endif // __GNUC__
 
 #ifndef JACK_OPTIONAL_WEAK_DEPRECATED_EXPORT
 #define JACK_OPTIONAL_WEAK_DEPRECATED_EXPORT

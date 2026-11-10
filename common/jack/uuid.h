@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include <cstdint>
 #include <jack/types.h>
+#include <cstdint>
 
 
 inline constexpr std::int32_t kUuidSize = 36;

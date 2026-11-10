@@ -8,8 +8,8 @@ replacement is named against the current code.
 
 This specifies the messages between a `jackmini` client and the server, and
 the shared-memory structures they use. It replaces the wire format in
-`common/JackRequest.h`, `common/JackNotification.h`, and the channels in
-`common/JackChannel.h`, and the shared structures listed in section 4. The
+`common/Request.h`, `common/Notification.h`, and the channels in
+`common/Channel.h`, and the shared structures listed in section 4. The
 architecture does not change: a server process, clients on a Unix socket,
 a shared-memory graph, and futex synchronization.
 
@@ -102,7 +102,7 @@ Server → client, on the notification socket. Current kinds (`NotificationType`
 | kSecondarySampleRateCallback | keep | |
 | kSessionCallback, kPropertyChangeCallback | **drop** (done) | |
 
-Notifications are sent with a bounded per-client queue (checked by `tests/notify_overflow_unit.cpp`: over the queue,
+Notifications are sent with a bounded per-client queue (checked by `tests/NotifyOverflowUnit.cpp`: over the queue,
 every notification is delivered or counted as dropped, the newest is delivered, the order is kept; under it, nothing is
 dropped). If a client does not
 read them, the server drops the oldest one and counts the drop. A client
@@ -301,7 +301,7 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
 ## 10. Order of work
 
 1. Done: the packed attributes are removed from the shared-memory classes, and
-   `tests/shm_layout_unit.cpp` checks their size, alignment, and the offsets of the
+   `tests/ShmLayoutUnit.cpp` checks their size, alignment, and the offsets of the
    8-byte fields. The probe shows every field and the per-client timing array
    at natural offsets. ALSA startup is still intermittent (see the baseline
    notes); it is not caused by this change.
@@ -310,12 +310,12 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
    the per-user lock (step 3), and the registry removed (step 4).
 3. Message framing and the handshake. Done on the control socket: the 16-byte
    header on every request and reply, the request id echoed, the exact payload length,
-   and the version check (`common/JackMessage.h`, `tests/message_frame_unit.cpp`).
+   and the version check (`common/Message.h`, `tests/MessageFrameUnit.cpp`).
    Notifications keep their own format until item 4.
 4. Requests, then notifications.
 5. Counter redesign (section 4.5), with its TSAN test.
 6. Deactivate with connections (section 6), with the graph tests. Done: the graph
    and the buffer path skip a deactivated client; the connections are kept.
-7. The fake server and the conformance tests. Done: `tests/protocol_conformance_unit.cpp`
+7. The fake server and the conformance tests. Done: `tests/ProtocolConformanceUnit.cpp`
    (requests and replies, malformed, version mismatch, bad headers, mismatched replies, a
    synchronous notification), with the TSAN run; the layout checks cover the new fields.

@@ -1,0 +1,52 @@
+// Copyright (C) 2007 Dmitry Baikov
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+#include "PortType.h"
+#include <assert.h>
+#include <string.h>
+#include <array>
+
+namespace jackmini {
+
+static std::array<const PortType*, 2> gPortTypes = {
+    &gAudioPortType,
+    &gMidiPortType,
+};
+
+const PortTypeIdC gPORTTYPESMAX = sizeof(gPortTypes) / sizeof(gPortTypes[0]);
+
+PortTypeIdC getPortTypeId(const char* portType)
+{
+    for (PortTypeIdC i = 0; i < gPORTTYPESMAX; ++i) {
+        const PortType* type = gPortTypes[i];
+        assert(type != nullptr);
+        if (strcmp(portType, type->m_name) == 0) {
+            return i;
+        }
+    }
+    return gPORTTYPESMAX;
+}
+
+const PortType* getPortType(PortTypeIdC typeId)
+{
+    if (typeId >= gPORTTYPESMAX)
+        return nullptr;
+    const PortType* type = gPortTypes[typeId];
+    assert(type != nullptr);
+    return type;
+}
+
+} // namespace jackmini

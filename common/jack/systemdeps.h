@@ -39,7 +39,7 @@ typedef pthread_t NativeThreadC;
 #if defined(__arm__) || defined(__aarch64__) || defined(__mips__) || defined(__ppc__) || defined(__powerpc__)
 #undef POST_PACKED_STRUCTURE
 #define POST_PACKED_STRUCTURE
-#endif  // __arm__ || __aarch64__ || __mips__ || __ppc__ || __powerpc__
+#endif // __arm__ || __aarch64__ || __mips__ || __ppc__ || __powerpc__
 
 // define JACK_LIB_EXPORT, useful for internal clients
 #define JACK_LIB_EXPORT __attribute__((visibility("default")))

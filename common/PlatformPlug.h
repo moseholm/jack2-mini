@@ -1,0 +1,75 @@
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+#pragma once
+
+inline constexpr const char* kServerDir = "/dev/shm";
+inline constexpr const char* kClientDir = "/dev/shm";
+inline constexpr const char* kDefaultDriver = "alsa";
+
+namespace jackmini {
+struct Request;
+struct Reply;
+
+class PosixMutex;
+class PosixThread;
+class SocketServerChannel;
+class SocketServerNotifyChannel;
+class SocketNotifyChannel;
+class ClientSocket;
+} // namespace jackmini
+
+// __JackPlatformMutex__
+#include "PosixMutex.h"
+namespace jackmini {
+typedef PosixMutex Mutex;
+}
+
+// __JackPlatformThread__
+#include "PosixThread.h"
+namespace jackmini {
+typedef PosixThread Thread;
+}
+
+// __JackPlatformSynchro__  client activation
+#include "LinuxFutex.h"
+namespace jackmini {
+typedef LinuxFutex Synchro;
+}
+
+// __JackPlatformProcessSync__
+#include "PosixProcessSync.h"
+namespace jackmini {
+typedef PosixProcessSync ProcessSync;
+}
+
+// __JackPlatformServerChannel__
+#include "SocketServerChannel.h"
+namespace jackmini {
+typedef SocketServerChannel ServerChannel;
+}
+
+// __JackPlatformServerNotifyChannel__
+#include "SocketServerNotifyChannel.h"
+namespace jackmini {
+typedef SocketServerNotifyChannel ServerNotifyChannel;
+}
+
+// __JackPlatformNotifyChannel__
+#include "SocketNotifyChannel.h"
+namespace jackmini {
+typedef SocketNotifyChannel NotifyChannel;
+}

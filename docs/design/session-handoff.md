@@ -38,7 +38,7 @@ Architecture and scope:
 - Class-compliant ALSA PCM only. Hardware quirk drivers (hammerfall, hdsp, ice1712, usx2y, generic_hw) are removed.
 - MIDI is client-to-client only. The server never reads or writes MIDI on hardware. The ALSA RawMIDI and
   sequencer backends, the `platform/alsarawmidi` module, the server's MIDI driver and its queues, and the
-  `midi-driver` option are removed. The client MIDI transport (`libjackmidi`, `jack_midi_*`, `client/jackmini/midi.hpp`) stays.
+  `midi-driver` option are removed. The client MIDI transport (`libjackmidi`, `jack_midi_*`, `client/jackmini/Midi.hpp`) stays.
 - Resampler kernels stay in C (`platform/alsa/resample/*.c`, `dbesi0.c`, and the PipeWire bridge), behind a C++ wrapper.
   The resampler is PipeWire only: the plugin ABI is gone.
 - Driver modules stay loadable (`dlopen`), with one `extern "C"` entry point. The driver descriptor
@@ -49,7 +49,7 @@ Client API and control:
 
 - Namespace `jackmini`. Headers in `client/jackmini/`. Style per `docs/design/style.md`: CamelCase types,
   snake_case methods, `Result<T>` (std::expected with the client `Error` enum), RAII, typed callbacks.
-- Control API: `jackmini::control` (`client/jackmini/control.hpp`), implemented in `server/control.cpp`
+- Control API: `jackmini::control` (`client/jackmini/Control.hpp`), implemented in `server/Control.cpp`
   in the server library. Signal handling is in the library (`setup_signals`, `wait_for_signal`).
   The symbols are exported with `JACKMINI_CONTROL_API` (default visibility).
 - Lifecycle: opened, active, inactive. Callbacks are set only while inactive (`Error::InvalidState` otherwise).
@@ -67,7 +67,7 @@ Engine and protocol:
 
 ALSA (S8):
 
-- The cycle core is `jackmini::alsa::Cycle<Backend>` (`platform/alsa/pcm_cycle.hpp`), a template over the
+- The cycle core is `jackmini::alsa::Cycle<Backend>` (`platform/alsa/PcmCycle.hpp`), a template over the
   `PcmBackend` concept, so the cycle has no virtual calls. The libasound backend is `Device` (`pcm_alsa.{hpp,cpp}`).
   `Session` (`pcm_session.{hpp,cpp}`) owns a device and the cycle and does the sample conversion.
 - Secondary cards and the primary card both run on `Session`. `alsa_driver.c` is gone.
@@ -128,17 +128,17 @@ T4 description is superseded (see the monitor note below). The user-facing list 
 Steps (commit, what it did):
 
 - T0: `fc5a3a80` the port and client UUIDs in the shared graph, and the protocol version 13; `e03a492e` `Client::ports()`,
-  `Client::total_latency`, and `tests/jackmini_ports_e2e.cpp`; `65ccb54d` the skeleton (`JACK_TOOLS`, `tools/`,
+  `Client::total_latency`, and `tests/JackminiPortsE2e.cpp`; `65ccb54d` the skeleton (`JACK_TOOLS`, `tools/`,
   `tool_common.hpp`, `tests/tools_e2e.sh`); `3972eca5` `jackd -n` sets the server name (it was ignored, see below).
 - T1 `jackmini_lsp`: `eb5d8f80`. The options and output of `jack_lsp`, minus nothing: `-A` prints nothing yet.
-- T2 `jackmini_connect`, `jackmini_disconnect`: `ea87ce84`. One source (`tools/connect.cpp`), two programs.
+- T2 `jackmini_connect`, `jackmini_disconnect`: `ea87ce84`. One source (`tools/Connect.cpp`), two programs.
 - T3 `jackmini_samplerate`, `jackmini_wait`: `50db4334`, with `44080e43` (the client library returns a failed connection
   to the server instead of logging it, so the probes of `jackmini_wait` are quiet).
 - T4 `jackmini_monitor_client`: `cc6da20a`. See the monitor note.
-- T5 `jackmini_midi_dump`, with the test source `tests/midi_writer.cpp`: `2a84c745`.
+- T5 `jackmini_midi_dump`, with the test source `tests/MidiWriter.cpp`: `2a84c745`.
 
 `tests/tools_e2e.sh` has 51 checks against a `jackd -d dummy` server it starts and stops; `check.sh` runs it in both
-modes. `tests/jackmini_ports_e2e.cpp` covers the listing API.
+modes. `tests/JackminiPortsE2e.cpp` covers the listing API.
 
 Decisions (answered by the user): all tools use the `jackmini_` names; `jackmini_lsp` keeps `-A` and adds `-U`;
 the listing and the total latency are API additions; the protocol goes to 13; the tools are installed with the other
@@ -229,7 +229,7 @@ The baseline (before S8) is in `docs/design/perf-baseline/README.md`. The dummy-
 - `bash /tmp/opencode/check.sh`: configure, build, ctest, the e2e, graph and session tests in freewheel and
   realtime, and `jack_cpu`. Prints one line per check.
 - Baseline script: `tests/perf/run-baseline.sh <build-dir> U192k <frames> <seconds> <label> "PCH,NVidia"`.
-- `alloccount.so` (allocation counter, LD_PRELOAD, SIGURG for the counts): `g++ -std=c++23 -shared -fPIC -o /tmp/opencode/alloccount.so tests/perf/alloccount.cpp`.
+- `alloccount.so` (allocation counter, LD_PRELOAD, SIGURG for the counts): `g++ -std=c++23 -shared -fPIC -o /tmp/opencode/alloccount.so tests/perf/Alloccount.cpp`.
   The counter reports cumulative totals; take two signals and subtract for a window.
 - Before an ALSA run: `pkill -KILL -x jackd; rm -f /dev/shm/jack_*`, and check that
   `/proc/asound/card2/pcm0p/sub0/status` and `pcm0c` say `closed`.

@@ -1,0 +1,164 @@
+// Copyright (C) 2026 JACK contributors
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+// Unit tests for the parts of jackmini that do not need a server: the
+// ring buffer, Uuid, and the error text.
+
+#include "jackmini/Jackmini.hpp"
+
+#include <array>
+#include <cstdint>
+#include <cstdio>
+#include <thread>
+#include <vector>
+
+namespace {
+
+std::int32_t gFailures = 0;
+std::int32_t gChecks = 0;
+
+#define CHECK(cond)                                                                       \
+    do {                                                                                  \
+        gChecks++;                                                                        \
+        if (!(cond)) {                                                                    \
+            std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
+            gFailures++;                                                                  \
+        }                                                                                 \
+    } while (0)
+
+using jackmini::RingBuffer;
+
+void testRingCapacity()
+{
+    CHECK(RingBuffer<std::int32_t>(0).capacity() == 2);
+    CHECK(RingBuffer<std::int32_t>(5).capacity() == 8);
+    CHECK(RingBuffer<std::int32_t>(8).capacity() == 8);
+}
+
+void testRingSingleThread()
+{
+    RingBuffer<std::int32_t> ring(4);
+    CHECK(ring.readSpace() == 0);
+    CHECK(ring.writeSpace() == 4);
+
+    const std::array<std::int32_t, 3> in { 1, 2, 3 };
+    CHECK(ring.write(in) == 3);
+    CHECK(ring.readSpace() == 3);
+
+    // Only one slot is left, so a write of three moves one item.
+    CHECK(ring.write(in) == 1);
+    CHECK(ring.writeSpace() == 0);
+
+    std::array<std::int32_t, 8> out { };
+    CHECK(ring.read(out) == 4);
+    CHECK(out[0] == 1 && out[1] == 2 && out[2] == 3 && out[3] == 1);
+    CHECK(ring.read(out) == 0);
+
+    // Indices wrap around the storage many times.
+    for (std::int32_t round = 0; round < 1000; round++) {
+        const std::array<std::int32_t, 2> pair { round, round + 1 };
+        CHECK(ring.write(pair) == 2);
+        std::array<std::int32_t, 2> got { };
+        CHECK(ring.read(got) == 2);
+        CHECK(got == pair);
+    }
+
+    ring.reset();
+    CHECK(ring.readSpace() == 0 && ring.writeSpace() == 4);
+}
+
+// One producer and one consumer, each on its own thread.  Every value must
+// arrive once and in order, and a full ring must not lose data.
+void testRingProducerConsumer()
+{
+    constexpr std::uint32_t kTotal = 2000000;
+    RingBuffer<std::uint32_t> ring(256);
+    bool ordered = true;
+
+    std::thread producer([&] {
+        std::uint32_t next = 0;
+        std::array<std::uint32_t, 17> chunk { };
+        while (next < kTotal) {
+            const std::size_t n = std::min<std::size_t>(chunk.size(), kTotal - next);
+            for (std::size_t i = 0; i < n; i++) {
+                chunk[i] = next + static_cast<std::uint32_t>(i);
+            }
+            std::span<const std::uint32_t> pending(chunk.data(), n);
+            while (!pending.empty()) {
+                const std::size_t moved = ring.write(pending);
+                pending = pending.subspan(moved);
+                if (moved == 0) {
+                    std::this_thread::yield();
+                }
+            }
+            next += static_cast<std::uint32_t>(n);
+        }
+    });
+
+    std::thread consumer([&] {
+        std::uint32_t expected = 0;
+        std::array<std::uint32_t, 13> chunk { };
+        while (expected < kTotal) {
+            const std::size_t n = ring.read(chunk);
+            for (std::size_t i = 0; i < n; i++) {
+                if (chunk[i] != expected) {
+                    ordered = false;
+                }
+                expected++;
+            }
+            if (n == 0) {
+                std::this_thread::yield();
+            }
+        }
+    });
+
+    producer.join();
+    consumer.join();
+    CHECK(ordered);
+    CHECK(ring.readSpace() == 0);
+}
+
+void testUuid()
+{
+    const jackmini::Uuid id { 0x0123456789abcdefULL };
+    CHECK(id.toString() == "0123456789abcdef");
+    const auto parsed = jackmini::Uuid::parse(id.toString());
+    CHECK(parsed.has_value() && *parsed == id);
+    CHECK(!jackmini::Uuid::parse("0123").has_value());
+    CHECK(!jackmini::Uuid::parse("0123456789abcdeg").has_value());
+    CHECK(jackmini::Uuid { }.empty());
+    CHECK(jackmini::Uuid { 1 } < jackmini::Uuid { 2 });
+}
+
+void testErrorText()
+{
+    CHECK(!jackmini::toString(jackmini::Error::kInvalidState).empty());
+    CHECK(jackmini::toString(jackmini::Error::kNoServer) != jackmini::toString(jackmini::Error::kIo));
+}
+
+} // namespace
+
+int main()
+{
+    testRingCapacity();
+    testRingSingleThread();
+    testRingProducerConsumer();
+    testUuid();
+    testErrorText();
+
+    std::printf("%d checks, %d failed\n", gChecks, gFailures);
+    return gFailures == 0 ? 0 : 1;
+}

@@ -17,9 +17,9 @@
 
 #pragma once
 
+#include <jack/systemdeps.h>
 #include <array>
 #include <cstdint>
-#include <jack/systemdeps.h>
 
 typedef std::uint64_t UuidC;
 
@@ -277,8 +277,9 @@ typedef std::int32_t (*SecondarySampleRateCallbackC)(NframesC rate, const char* 
 // @param arg pointer to a client supplied data
 // @param register non-zero if the port is being registered,
 //                     zero if the port is being unregistered
-typedef void (*PortRegistrationCallbackC)(PortIdC port, std::int32_t  // register
-, void* arg);
+typedef void (*PortRegistrationCallbackC)(PortIdC port, std::int32_t // register
+    ,
+    void* arg);
 
 // Prototype for the client supplied function that is called
 // whenever a client is registered or unregistered.
@@ -287,8 +288,9 @@ typedef void (*PortRegistrationCallbackC)(PortIdC port, std::int32_t  // registe
 // @param register non-zero if the client is being registered,
 //                     zero if the client is being unregistered
 // @param arg pointer to a client supplied structure
-typedef void (*ClientRegistrationCallbackC)(const char* name, std::int32_t  // register
-, void* arg);
+typedef void (*ClientRegistrationCallbackC)(const char* name, std::int32_t // register
+    ,
+    void* arg);
 
 // Prototype for the client supplied function that is called
 // whenever a port is connected or disconnected.
@@ -401,25 +403,25 @@ enum PortFlagsC {
 typedef enum {
 
     // the order matters for binary compatibility
-    kTransportStopped = 0,  // < Transport halted
-    kTransportRolling = 1,  // < Transport playing
-    kTransportLooping = 2,  // < For OLD_TRANSPORT, now ignored
-    kTransportStarting = 3,  // < Waiting for sync ready
-    kTransportNetStarting = 4,  // < Waiting for sync ready on the network
+    kTransportStopped = 0, // < Transport halted
+    kTransportRolling = 1, // < Transport playing
+    kTransportLooping = 2, // < For OLD_TRANSPORT, now ignored
+    kTransportStarting = 3, // < Waiting for sync ready
+    kTransportNetStarting = 4, // < Waiting for sync ready on the network
 
 } TransportStateC;
 
-typedef std::uint64_t UniqueC;  // < Unique ID (opaque)
+typedef std::uint64_t UniqueC; // < Unique ID (opaque)
 
 // Optional struct jack_position_t fields.
 typedef enum {
 
-    kPositionBBT = 0x10,  // < Bar, Beat, Tick
-    kPositionTimecode = 0x20,  // < External timecode
-    kBBTFrameOffset = 0x40,  // < Frame offset of BBT information
-    kAudioVideoRatio = 0x80,  // < audio frames per video frame
-    kVideoFrameOffset = 0x100,  // < frame offset of first video frame
-    kTickDouble = 0x200,  // < double-resolution tick
+    kPositionBBT = 0x10, // < Bar, Beat, Tick
+    kPositionTimecode = 0x20, // < External timecode
+    kBBTFrameOffset = 0x40, // < Frame offset of BBT information
+    kAudioVideoRatio = 0x80, // < audio frames per video frame
+    kVideoFrameOffset = 0x100, // < frame offset of first video frame
+    kTickDouble = 0x200, // < double-resolution tick
 
 } PositionBitsC;
 
@@ -434,31 +436,31 @@ PRE_PACKED_STRUCTURE
 struct JackPositionC {
 
     // these four cannot be set from clients: the server sets them
-    UniqueC m_unique1;  // < unique ID
-    TimeC m_usecs;  // < monotonic, free-rolling
-    NframesC m_frameRate;  // < current frame rate (per second)
-    NframesC m_frame;  // < frame number, always present
+    UniqueC m_unique1; // < unique ID
+    TimeC m_usecs; // < monotonic, free-rolling
+    NframesC m_frameRate; // < current frame rate (per second)
+    NframesC m_frame; // < frame number, always present
 
-    PositionBitsC m_valid;  // < which other fields are valid
+    PositionBitsC m_valid; // < which other fields are valid
 
     // JackPositionBBT fields:
-    std::int32_t m_bar;  // < current bar
-    std::int32_t m_beat;  // < current beat-within-bar
-    std::int32_t m_tick;  // < current tick-within-beat
+    std::int32_t m_bar; // < current bar
+    std::int32_t m_beat; // < current beat-within-bar
+    std::int32_t m_tick; // < current tick-within-beat
     double m_barStartTick;
 
-    float m_beatsPerBar;  // < time signature "numerator"
-    float m_beatType;  // < time signature "denominator"
+    float m_beatsPerBar; // < time signature "numerator"
+    float m_beatType; // < time signature "denominator"
     double m_ticksPerBeat;
     double m_beatsPerMinute;
 
     // JackPositionTimecode fields:     (EXPERIMENTAL: could change)
-    double m_frameTime;  // < current time in seconds
-    double m_nextTime;  // < next sequential frame_time
+    double m_frameTime; // < current time in seconds
+    double m_nextTime; // < next sequential frame_time
     // (unless repositioned)
 
     // JackBBTFrameOffset fields:
-    NframesC m_bbtOffset;  // < frame offset for the BBT fields
+    NframesC m_bbtOffset; // < frame offset for the BBT fields
     // (the given bar, beat, and tick
     // values actually refer to a time
     // frame_offset frames before the
@@ -475,14 +477,14 @@ struct JackPositionC {
 
     // JACK video positional data (experimental)
 
-    float m_audioFramesPerVideoFrame;  // < number of audio frames
+    float m_audioFramesPerVideoFrame; // < number of audio frames
     // per video frame. Should be assumed
     // zero if JackAudioVideoRatio is not
     // set. If JackAudioVideoRatio is set
     // and the value is zero, no video
     // data exists within the JACK graph
 
-    NframesC m_videoOffset;  // < audio frame at which the first video
+    NframesC m_videoOffset; // < audio frame at which the first video
     // frame in this cycle occurs. Should
     // be assumed to be 0 if JackVideoFrameOffset
     // is not set. If JackVideoFrameOffset is
@@ -491,7 +493,7 @@ struct JackPositionC {
 
     // JACK extra transport fields
 
-    double m_tickDouble;  // < current tick-within-beat in double resolution.
+    double m_tickDouble; // < current tick-within-beat in double resolution.
     // Should be assumed zero if JackTickDouble is not set.
     // Since older versions of JACK do not expose this variable,
     // the macro JACK_TICK_DOUBLE is provided,
@@ -503,7 +505,7 @@ struct JackPositionC {
     std::array<std::int32_t, 5> m_padding;
 
     // When (unique_1 == unique_2) the contents are consistent.
-    UniqueC m_unique2;  // < unique ID
+    UniqueC m_unique2; // < unique ID
 
 } POST_PACKED_STRUCTURE;
 
@@ -576,11 +578,11 @@ typedef void (*TimebaseCallbackC)(TransportStateC state,
 // @see jack_position_bits_t.
 typedef enum {
 
-    kTransportState = 0x1,  // < Transport state
-    kTransportPosition = 0x2,  // < Frame number
-    kTransportLoop = 0x4,  // < Loop boundaries (ignored)
-    kTransportSMPTE = 0x8,  // < SMPTE (ignored)
-    kTransportBBT = 0x10  // < Bar, Beat, Tick
+    kTransportState = 0x1, // < Transport state
+    kTransportPosition = 0x2, // < Frame number
+    kTransportLoop = 0x4, // < Loop boundaries (ignored)
+    kTransportSMPTE = 0x8, // < SMPTE (ignored)
+    kTransportBBT = 0x10 // < Bar, Beat, Tick
 
 } TransportBitsC;
 
@@ -592,17 +594,17 @@ typedef struct {
 
     // these two cannot be set from clients: the server sets them
 
-    NframesC m_frameRate;  // < current frame rate (per second)
-    TimeC m_usecs;  // < monotonic, free-rolling
+    NframesC m_frameRate; // < current frame rate (per second)
+    TimeC m_usecs; // < monotonic, free-rolling
 
-    TransportBitsC m_valid;  // < which fields are legal to read
+    TransportBitsC m_valid; // < which fields are legal to read
     TransportStateC m_transportState;
     NframesC m_frame;
     NframesC m_loopStart;
     NframesC m_loopEnd;
 
-    std::int64_t m_smpteOffset;  // < SMPTE offset (from frame 0)
-    float m_smpteFrameRate;  // < 29.97, 30, 24 etc.
+    std::int64_t m_smpteOffset; // < SMPTE offset (from frame 0)
+    float m_smpteFrameRate; // < 29.97, 30, 24 etc.
 
     std::int32_t m_bar;
     std::int32_t m_beat;

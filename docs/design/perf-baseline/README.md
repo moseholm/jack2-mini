@@ -15,7 +15,7 @@ The redesign of the ALSA driver (Plan B, S8) must perform at least as well as th
 ## Method
 
 - `jackd -R -P 70 -d alsa -d hw:CARD=U192k -r 48000 -p N` (or `-d dummy` for the dummy rows), and
-  `jack_rtbench` in the same run (`tests/perf/rtbench.cpp`, `tests/perf/run-baseline.sh`).
+  `jack_rtbench` in the same run (`tests/perf/Rtbench.cpp`, `tests/perf/run-baseline.sh`).
 - Intervals are start to start of the process callback. The callback duration is measured inside it.
 - Allocations: the server runs with `alloccount.so` (LD_PRELOAD); the count is taken at two SIGURG signals, 
   around the run. This is process-wide, not per thread. The ALSA steady-state numbers use a second pair of
