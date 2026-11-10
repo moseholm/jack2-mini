@@ -1,30 +1,26 @@
-/*
-    Copyright (C) 2005 Samuel TRACOL
-    Copyright (C) 2008 Grame
+// Copyright (C) 2005 Samuel TRACOL
+// Copyright (C) 2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-*/
-
-/** @file jack_cpu.cpp
- *
- * @brief This client test the capacity for jackd to kick out a to heavy cpu client.
- *
- * The times given on the command line are converted to cycles of the server, so the run is the same with the server in
- * freewheel mode (jackd -F) as in real time.
- */
+// @file jack_cpu.cpp
+//
+// @brief This client test the capacity for jackd to kick out a to heavy cpu client.
+//
+// The times given on the command line are converted to cycles of the server, so the run is the same with the server in
+// freewheel mode (jackd -F) as in real time.
 
 #include "jackmini/jackmini.hpp"
 #include "jackmini_wait.hpp"
@@ -61,10 +57,8 @@ void usage()
                          "                --cpu OR -c percent_cpu_load (1-99)\n");
 }
 
-/**
- * The process callback runs once for each audio cycle.  The load spins for a share of the buffer period, the share
- * being percent_cpu of the buffer.
- */
+// The process callback runs once for each audio cycle.  The load spins for a share of the buffer period, the share
+// being percent_cpu of the buffer.
 bool process(const Cycle& cycle)
 {
     const FrameCount nframes = cycle.frames;

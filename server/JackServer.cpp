@@ -1,22 +1,19 @@
-/*
-Copyright (C) 2001 Paul Davis
-Copyright (C) 2004-2008 Grame
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-*/
+// Copyright (C) 2001 Paul Davis
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackServer.h"
 #include "JackAudioDriver.h"
@@ -240,17 +237,15 @@ Result<void> JackServer::SetBufferSize(jack_nframes_t buffer_size)
     }
 }
 
-/*
-Freewheel mode is implemented by switching from the (audio [slaves] + freewheel) driver to the freewheel driver only:
-
-    - "global" connection state is saved
-    - all audio driver and slaves ports are deconnected, thus there is no more dependencies with the audio driver and slaves
-    - the freewheel driver will be synchronized with the end of graph execution : all clients are connected to the freewheel driver
-    - the freewheel driver becomes the "master"
-
-Normal mode is restored with the connections state valid before freewheel mode was done. Thus one consider that
-no graph state change can be done during freewheel mode.
-*/
+// Freewheel mode is implemented by switching from the (audio [slaves] + freewheel) driver to the freewheel driver only:
+//
+// - "global" connection state is saved
+// - all audio driver and slaves ports are deconnected, thus there is no more dependencies with the audio driver and slaves
+// - the freewheel driver will be synchronized with the end of graph execution : all clients are connected to the freewheel driver
+// - the freewheel driver becomes the "master"
+//
+// Normal mode is restored with the connections state valid before freewheel mode was done. Thus one consider that
+// no graph state change can be done during freewheel mode.
 
 Result<void> JackServer::SetFreewheel(bool onoff)
 {

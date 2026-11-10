@@ -1,22 +1,19 @@
-/*
-Copyright (C) 2001 Paul Davis
-Copyright (C) 2004-2008 Grame
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation; either version 2.1 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-*/
+// Copyright (C) 2001 Paul Davis
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackGraphManager.h"
 #include "JackConstants.h"
@@ -253,14 +250,12 @@ void JackGraphManager::RequestMonitor(jack_port_id_t port_index, bool onoff) // 
     AssertPort(port_index);
     JackPort* port = GetPort(port_index);
 
-    /**
-    jackd.h
-        * If @ref JackPortCanMonitor is set for this @a port, turn input
-        * monitoring on or off. Otherwise, do nothing.
-
-     if (!(fFlags & JackPortCanMonitor))
-        return -1;
-    */
+    // jackd.h
+    // * If @ref JackPortCanMonitor is set for this @a port, turn input
+    // * monitoring on or off. Otherwise, do nothing.
+    //
+    // if (!(fFlags & JackPortCanMonitor))
+    // return -1;
 
     port->RequestMonitor(onoff);
 
@@ -579,10 +574,8 @@ void JackGraphManager::Activate(int refnum)
     WriteNextStateStop();
 }
 
-/*
-        Disconnection from the FW must be done in last otherwise an intermediate "unconnected"
-        (thus unactivated) state may happen where the client is still checked for its end.
-*/
+// Disconnection from the FW must be done in last otherwise an intermediate "unconnected"
+// (thus unactivated) state may happen where the client is still checked for its end.
 
 // Server
 void JackGraphManager::Deactivate(int refnum)
@@ -775,9 +768,7 @@ jack_port_id_t JackGraphManager::GetPort(const char* name)
     return NO_PORT;
 }
 
-/*!
-\brief Get the connection port name array.
-*/
+// \brief Get the connection port name array.
 
 // Client
 void JackGraphManager::GetConnectionsAux(JackConnectionManager* manager, const char** res, jack_port_id_t port_index)
@@ -797,11 +788,9 @@ void JackGraphManager::GetConnectionsAux(JackConnectionManager* manager, const c
     res[i] = NULL;
 }
 
-/*
-        Use the state returned by ReadCurrentState and check that the state was not changed during the read operation.
-        The operation is lock-free since there is no intermediate state in the write operation that could cause the
-        read to loop forever.
-*/
+// Use the state returned by ReadCurrentState and check that the state was not changed during the read operation.
+// The operation is lock-free since there is no intermediate state in the write operation that could cause the
+// read to loop forever.
 
 // Client
 const char** JackGraphManager::GetConnections(jack_port_id_t port_index)
@@ -888,11 +877,9 @@ void JackGraphManager::GetPortsAux(const char** matching_ports, const char* port
 }
 
 // Client
-/*
-        Check that the state was not changed during the read operation.
-        The operation is lock-free since there is no intermediate state in the write operation that could cause the
-        read to loop forever.
-*/
+// Check that the state was not changed during the read operation.
+// The operation is lock-free since there is no intermediate state in the write operation that could cause the
+// read to loop forever.
 const char** JackGraphManager::GetPorts(const char* port_name_pattern, const char* type_name_pattern, unsigned long flags)
 {
     const char** res = (const char**)malloc(sizeof(char*) * fPortMax);

@@ -1,21 +1,18 @@
-/*
-Copyright (C) 2004-2008 Grame
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-*/
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include <assert.h>
 #include <ctype.h>
@@ -199,10 +196,8 @@ bool JackEngine::Process(jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end
     return res;
 }
 
-/*
-Client that finish *after* the callback date are considered late even if their output buffers may have been
-correctly mixed in the time window: callbackUsecs <==> Read <==> Write.
-*/
+// Client that finish *after* the callback date are considered late even if their output buffers may have been
+// correctly mixed in the time window: callbackUsecs <==> Read <==> Write.
 
 static const char* State2String(jack_client_state_t state)
 {
@@ -250,16 +245,14 @@ Result<void> JackEngine::ComputeTotalLatencies()
 
     fGraphManager->TopologicalSort(sorted);
 
-    /* iterate over all clients in graph order, and emit
-     * capture latency callback.
-     */
+    // iterate over all clients in graph order, and emit
+    // capture latency callback.
 
     for (it = sorted.begin(); it != sorted.end(); it++) {
         NotifyClient(*it, kLatencyCallback, true, "", 0, 0);
     }
 
-    /* now issue playback latency callbacks in reverse graph order.
-     */
+    // now issue playback latency callbacks in reverse graph order.
     for (rit = sorted.rbegin(); rit != sorted.rend(); rit++) {
         NotifyClient(*rit, kLatencyCallback, true, "", 1, 0);
     }
@@ -478,10 +471,10 @@ bool JackEngine::GenerateUniqueName(char* name)
 
     if (length > JACK_CLIENT_NAME_SIZE - 4) {
         jack_error("%s exists and is too long to make unique", name);
-        return true; /* failure */
+        return true;  // failure
     }
 
-    /*  generate a unique name by appending "-01".."-99" */
+    // generate a unique name by appending "-01".."-99"
     name[length++] = '-';
     tens = length++;
     ones = length++;
@@ -493,7 +486,7 @@ bool JackEngine::GenerateUniqueName(char* name)
         if (name[ones] == '9') {
             if (name[tens] == '9') {
                 jack_error("client %s has 99 extra instances already", name);
-                return true; /* give up */
+                return true;  // give up
             }
             name[tens]++;
             name[ones] = '0';

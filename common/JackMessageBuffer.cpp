@@ -1,23 +1,20 @@
-/*
- *  Copyright (C) 2004 Rui Nuno Capela, Steve Harris
- *  Copyright (C) 2008 Nedko Arnaudov
- *  Copyright (C) 2008 Grame
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU Lesser General Public License as published by
- *  the Free Software Foundation; either version 2.1 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- *
- */
+//  Copyright (C) 2004 Rui Nuno Capela, Steve Harris
+//  Copyright (C) 2008 Nedko Arnaudov
+//  Copyright (C) 2008 Grame
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU Lesser General Public License as published by
+//  the Free Software Foundation; either version 2.1 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU Lesser General Public License for more details.
+//
+//  You should have received a copy of the GNU Lesser General Public License
+//  along with this program; if not, write to the Free Software
+//  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackMessageBuffer.h"
 #include "JackError.h"
@@ -143,9 +140,8 @@ std::uint32_t JackMessageBuffer::Overruns() const
 bool JackMessageBuffer::Execute()
 {
     if (JackThreadInitCallback init = fInit.load(std::memory_order_acquire)) {
-        /* the client asked for all threads to run a thread
-        initialization callback, which includes us.
-        */
+        // the client asked for all threads to run a thread
+        // initialization callback, which includes us.
         init(fInitArg);
         fInit.store(nullptr, std::memory_order_release);
     }
@@ -185,10 +181,10 @@ bool JackMessageBuffer::Destroy()
 void JackMessageBufferAdd(int level, const char* message)
 {
     if (jackmini::JackMessageBuffer::fInstance == nullptr) {
-        /* Unable to print message with realtime safety. Complain and print it anyway. */
+        // Unable to print message with realtime safety. Complain and print it anyway.
         jack_log_direct(LOG_LEVEL_ERROR, "messagebuffer not initialized, skip message");
     } else {
-        /* scan at most one buffer's worth, so an unterminated input cannot run away */
+        // scan at most one buffer's worth, so an unterminated input cannot run away
         const char* end = std::char_traits<char>::find(message, jackmini::MB_BUFFERSIZE, '\0');
         const std::size_t length = end ? static_cast<std::size_t>(end - message) : jackmini::MB_BUFFERSIZE;
         jackmini::JackMessageBuffer::fInstance->AddMessage(level, std::string_view(message, length));
@@ -199,10 +195,10 @@ int JackMessageBuffer::SetInitCallback(JackThreadInitCallback callback, void* ar
 {
     if (fInstance && callback && fRunning.load(std::memory_order_acquire)) {
         std::lock_guard<std::mutex> guard(fInitLock);
-        /* set up the callback */
+        // set up the callback
         fInitArg = arg;
         fInit.store(callback, std::memory_order_release);
-        /* wait for the flush thread to run it, or for shutdown */
+        // wait for the flush thread to run it, or for shutdown
         while (fInit.load(std::memory_order_acquire) != nullptr && fRunning.load(std::memory_order_acquire)) {
             std::this_thread::sleep_for(kPollInterval);
         }

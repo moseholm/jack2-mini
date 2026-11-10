@@ -1,22 +1,19 @@
-/*
-Copyright (C) 2001 Paul Davis
-Copyright (C) 2004 Grame
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-*/
+// Copyright (C) 2001 Paul Davis
+// Copyright (C) 2004 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #define __STDC_FORMAT_MACROS // For inttypes.h to work in C++
 
@@ -76,11 +73,9 @@ static void* on_device_reservation_loop(void*)
     return NULL;
 }
 
-/*
- * Per-instance thunks installed in the PCM cycle.  Each callback gets the
- * driver it belongs to, so the primary card and the secondary cards each reach
- * their own object.
- */
+// Per-instance thunks installed in the PCM cycle.  Each callback gets the
+// driver it belongs to, so the primary card and the secondary cards each reach
+// their own object.
 
 static void AlsaReadInputThunk(void* arg, jackmini::alsa::PcmCycle&, const jackmini::alsa::MappedFrames& mapped,
     std::uint32_t orig_frames, std::ptrdiff_t nread)
@@ -451,12 +446,12 @@ char* get_control_device_name(const char* device_name)
     char* ctl_name;
     const char* comma;
 
-    /* the user wants a hw or plughw device, the ctl name
-     * should be hw:x where x is the card identification.
-     * We skip the subdevice suffix that starts with comma */
+    // the user wants a hw or plughw device, the ctl name
+    // should be hw:x where x is the card identification.
+    // We skip the subdevice suffix that starts with comma
 
     if (strncasecmp(device_name, "plughw:", 7) == 0) {
-        /* skip the "plug" prefix" */
+        // skip the "plug" prefix"
         device_name += 4;
     }
 
@@ -1146,7 +1141,7 @@ int JackAlsaDriver::Stop()
 
 int JackAlsaDriver::Read()
 {
-    /* Taken from alsa_driver_run_cycle */
+    // Taken from alsa_driver_run_cycle
     int wait_status;
     jack_nframes_t nframes;
     fDelayedUsecs = 0.f;
@@ -1165,13 +1160,12 @@ retry:
 
     if (wait_status < 0) {
         PrimaryFailed(wait_status);
-        return -1; /* driver failed */
+        return -1;  // driver failed
     }
 
     if (nframes == 0) {
-        /* we detected an xrun and restarted: notify
-         * clients about the delay.
-         */
+        // we detected an xrun and restarted: notify
+        // clients about the delay.
         jack_log("ALSA XRun wait_status = %d", wait_status);
         NotifyXRun(fBeginDateUst, fDelayedUsecs);
         for (size_t i = 0; i < fSlots.Capacity(); i++) {
@@ -1184,7 +1178,7 @@ retry:
             PrimaryFailed(-5);
             return -1;
         }
-        goto retry; /* recoverable error*/
+        goto retry;  // recoverable error
     }
 
     if (nframes != fEngineControl->fBufferSize)
@@ -1539,7 +1533,7 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
 
         case 'n':
             user_nperiods = param->value.ui;
-            if (user_nperiods < 2) { /* enforce minimum value */
+            if (user_nperiods < 2) {  // enforce minimum value
                 user_nperiods = 2;
             }
             break;
@@ -1616,7 +1610,7 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
         }
     }
 
-    /* duplex is the default */
+    // duplex is the default
     if (!capture && !playback) {
         capture = true;
         playback = true;

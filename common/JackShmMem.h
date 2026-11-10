@@ -1,21 +1,18 @@
-/*
- Copyright (C) 2004-2008 Grame
-
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU Lesser General Public License as published by
- the Free Software Foundation; either version 2.1 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU Lesser General Public License for more details.
-
- You should have received a copy of the GNU Lesser General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
- */
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #pragma once
 
@@ -44,20 +41,16 @@ void UnlockMemoryImp(void* ptr, size_t size);
 void LockAllMemory();
 void UnlockAllMemory();
 
-/*!
-\brief A shared segment as it is passed between the server and a client: its descriptor and its size.
-
-The server keeps the descriptor of each segment it owns. A client receives its own descriptors with the open reply, maps them, and closes them.
-*/
+// \brief A shared segment as it is passed between the server and a client: its descriptor and its size.
+//
+// The server keeps the descriptor of each segment it owns. A client receives its own descriptors with the open reply, maps them, and closes them.
 
 struct JackShmSegment {
     int fFd = -1;
     std::uint32_t fSize = 0;
 };
 
-/*!
-\brief A class which objects possibly want to be allocated in shared memory derives from this class.
-*/
+// \brief A class which objects possibly want to be allocated in shared memory derives from this class.
 
 class JackShmMemAble {
 protected:
@@ -94,11 +87,9 @@ public:
     }
 };
 
-/*!
-\brief The base class for shared memory management.
-
-A class which objects need to be allocated in shared memory derives from this class.
-*/
+// \brief The base class for shared memory management.
+//
+// A class which objects need to be allocated in shared memory derives from this class.
 
 class SERVER_EXPORT JackShmMem : public JackShmMemAble {
 
@@ -114,11 +105,9 @@ public:
     void operator delete(void* p);
 };
 
-/*!
-\brief Pointer on a shared memory segment, in the client side.
-
-The segment is mapped from the descriptor the server sent. The mapping is removed when the pointer is destroyed.
-*/
+// \brief Pointer on a shared memory segment, in the client side.
+//
+// The segment is mapped from the descriptor the server sent. The mapping is removed when the pointer is destroyed.
 
 template <class T>
 class JackShmReadWritePtr {

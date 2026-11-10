@@ -1,22 +1,19 @@
-/*
-Copyright (C) 2001 Paul Davis
-Copyright (C) 2004-2008 Grame.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-(at your option) any later version.
-
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-*/
+// Copyright (C) 2001 Paul Davis
+// Copyright (C) 2004-2008 Grame.
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// (at your option) any later version.
+//
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackAudioDriver.h"
 #include "JackCString.h"
@@ -205,10 +202,8 @@ int JackAudioDriver::Process()
     return (fEngineControl->fSyncMode) ? ProcessSync() : ProcessAsync();
 }
 
-/*
-The driver "asynchronous" mode: output buffers computed at the *previous cycle* are used, the server does not
-synchronize to the end of client graph execution.
-*/
+// The driver "asynchronous" mode: output buffers computed at the *previous cycle* are used, the server does not
+// synchronize to the end of client graph execution.
 
 int JackAudioDriver::ProcessAsync()
 {
@@ -242,9 +237,7 @@ void JackAudioDriver::ProcessGraphAsync()
     }
 }
 
-/*
-Used when the driver works in master mode.
-*/
+// Used when the driver works in master mode.
 
 void JackAudioDriver::ProcessGraphAsyncMaster()
 {
@@ -268,9 +261,7 @@ void JackAudioDriver::ProcessGraphAsyncMaster()
     // Does not wait on graph execution end
 }
 
-/*
-Used when the driver works in slave mode.
-*/
+// Used when the driver works in slave mode.
 
 void JackAudioDriver::ProcessGraphAsyncSlave()
 {
@@ -279,10 +270,8 @@ void JackAudioDriver::ProcessGraphAsyncSlave()
     }
 }
 
-/*
-The driver "synchronous" mode: the server does synchronize to the end of client graph execution,
-if graph process succeed, output buffers computed at the *current cycle* are used.
-*/
+// The driver "synchronous" mode: the server does synchronize to the end of client graph execution,
+// if graph process succeed, output buffers computed at the *current cycle* are used.
 
 int JackAudioDriver::ProcessSync()
 {
@@ -316,9 +305,7 @@ void JackAudioDriver::ProcessGraphSync()
     }
 }
 
-/*
-Used when the driver works in master mode.
-*/
+// Used when the driver works in master mode.
 
 void JackAudioDriver::ProcessGraphSyncMaster()
 {
@@ -347,9 +334,7 @@ void JackAudioDriver::ProcessGraphSyncMaster()
     }
 }
 
-/*
-Used when the driver works in slave mode.
-*/
+// Used when the driver works in slave mode.
 
 void JackAudioDriver::ProcessGraphSyncSlave()
 {

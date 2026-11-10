@@ -1,22 +1,19 @@
-/*
-Copyright (C) 2001 Paul Davis
-Copyright (C) 2004-2008 Grame
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation; either version 2.1 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-*/
+// Copyright (C) 2001 Paul Davis
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackTransportEngine.h"
 #include "JackClientControl.h"
@@ -40,7 +37,7 @@ JackTransportEngine::JackTransportEngine()
         "fWriteCounter must be first member of JackTransportEngine to ensure its alignment");
     fTransportState = JackTransportStopped;
     fTransportCmd = fPreviousCmd = TransportCommandStop;
-    fSyncTimeout = 10000000; /* 10 seconds default */
+    fSyncTimeout = 10000000;  // 10 seconds default
     fSyncTimeLeft = 0;
     fTimeBaseMaster = -1;
     fWriteCounter = 0;
@@ -164,7 +161,7 @@ void JackTransportEngine::CycleEnd(std::atomic<JackClientInterface*>* table, jac
 {
     TrySwitchState(1); // Switch from "pending" to "current", it always works since there is always a pending state
 
-    /* Handle any new transport command from the last cycle. */
+    // Handle any new transport command from the last cycle.
     transport_command_t cmd = fTransportCmd;
     if (cmd != fPreviousCmd) {
         fPreviousCmd = cmd;
@@ -173,7 +170,7 @@ void JackTransportEngine::CycleEnd(std::atomic<JackClientInterface*>* table, jac
         cmd = TransportCommandNone;
     }
 
-    /* state transition switch */
+    // state transition switch
     switch (fTransportState) {
 
     case JackTransportStopped:
@@ -230,14 +227,14 @@ void JackTransportEngine::CycleEnd(std::atomic<JackClientInterface*>* table, jac
         jack_error("Invalid JACK transport state: %d", fTransportState);
     }
 
-    /* Update timebase, if needed. */
+    // Update timebase, if needed.
     if (fTransportState == JackTransportRolling) {
         jack_position_t* pending = WriteNextStateStart(1); // Update "pending" state
         pending->frame += buffer_size;
         WriteNextStateStop(1);
     }
 
-    /* See if an asynchronous position request arrived during the last cycle. */
+    // See if an asynchronous position request arrived during the last cycle.
     jack_position_t* request = WriteNextStateStart(2, &fPendingPos);
     if (fPendingPos) {
         jack_log("New pos = %ld", request->frame);
@@ -296,15 +293,14 @@ void JackTransportEngine::CopyPosition(jack_position_t* from, jack_position_t* t
     long timeout = 1000;
 
     do {
-        /* throttle the busy wait if we don't get the answer
-         * very quickly. See comment above about this
-         * design.
-         */
+        // throttle the busy wait if we don't get the answer
+        // very quickly. See comment above about this
+        // design.
         if (tries > 10) {
             sleep_microseconds(20);
             tries = 0;
 
-            /* debug code to avoid system hangs... */
+            // debug code to avoid system hangs...
             if (--timeout == 0) {
                 jack_error("hung in loop copying position B");
                 abort();

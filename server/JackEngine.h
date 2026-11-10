@@ -1,21 +1,18 @@
-/*
-Copyright (C) 2004-2008 Grame
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-*/
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #pragma once
 
@@ -37,9 +34,7 @@ class JackClientInterface;
 struct JackEngineControl;
 class JackExternalClient;
 
-/*!
-\brief Engine description.
-*/
+// \brief Engine description.
 
 class SERVER_EXPORT JackEngine : public JackLockAble {
     friend class JackLockedEngine;
@@ -52,7 +47,7 @@ private:
     // Set by client open and close, cleared by the engine thread, which owns the rolling CPU statistics
     std::atomic<bool> fRollingResetPending;
     JackSynchro* fSynchroTable;
-    JackServerNotifyChannel fChannel; /*! To communicate between the RT thread and server */
+    JackServerNotifyChannel fChannel;  // To communicate between the RT thread and server
     JackProcessSync fSignal;
     // Number of graph switches so far.  Changed by the RT thread (ProcessNext) only.
     std::atomic<unsigned long> fSwitchCount;

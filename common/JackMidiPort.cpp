@@ -1,23 +1,20 @@
-/*
-Copyright (C) 2007 Dmitry Baikov
-Copyright (C) 2018 Filipe Coelho
-Original JACK MIDI implementation Copyright (C) 2004 Ian Esten
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation; either version 2.1 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-*/
+// Copyright (C) 2007 Dmitry Baikov
+// Copyright (C) 2018 Filipe Coelho
+// Original JACK MIDI implementation Copyright (C) 2004 Ian Esten
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackMidiPort.h"
 #include "JackError.h"
@@ -29,7 +26,7 @@ namespace jackmini {
 
 LIB_EXPORT void JackMidiBuffer::Reset(jack_nframes_t nframes)
 {
-    /* This line ate 1 hour of my life... dsbaikov */
+    // This line ate 1 hour of my life... dsbaikov
     this->nframes = nframes;
     write_pos = 0;
     event_count = 0;
@@ -76,21 +73,19 @@ void MidiBufferInit(void* buffer, size_t buffer_size, jack_nframes_t nframes)
 {
     JackMidiBuffer* midi = (JackMidiBuffer*)buffer;
     midi->magic = JackMidiBuffer::MAGIC;
-    /* Since port buffer has actually always BUFFER_SIZE_MAX frames, we can safely use all the size */
+    // Since port buffer has actually always BUFFER_SIZE_MAX frames, we can safely use all the size
     midi->buffer_size = BUFFER_SIZE_MAX * sizeof(jack_default_audio_sample_t);
     midi->Reset(nframes);
 }
 
-/*
- * The mixdown function below, is a simplest (read slowest) implementation possible.
- * But, since it is unlikely that it will mix many buffers with many events,
- * it should perform quite good.
- * More efficient (and possibly, fastest possible) implementation (it exists),
- * using calendar queue algorithm is about 3 times bigger, and uses alloca().
- * So, let's listen to D.Knuth about premature optimisation, a leave the current
- * implementation as is, until it is proved to be a bottleneck.
- * Dmitry Baikov.
- */
+// The mixdown function below, is a simplest (read slowest) implementation possible.
+// But, since it is unlikely that it will mix many buffers with many events,
+// it should perform quite good.
+// More efficient (and possibly, fastest possible) implementation (it exists),
+// using calendar queue algorithm is about 3 times bigger, and uses alloca().
+// So, let's listen to D.Knuth about premature optimisation, a leave the current
+// implementation as is, until it is proved to be a bottleneck.
+// Dmitry Baikov.
 static void MidiBufferMixdown(void* mixbuffer, void** src_buffers, int src_count, jack_nframes_t nframes)
 {
     JackMidiBuffer* mix = static_cast<JackMidiBuffer*>(mixbuffer);

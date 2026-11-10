@@ -1,21 +1,18 @@
-/*
-    Copyright (C) 2000 Paul Davis
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-*/
+// Copyright (C) 2000 Paul Davis
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #define _ISOC9X_SOURCE 1
 #define _ISOC99_SOURCE 1
@@ -44,41 +41,39 @@
 #include <arm_neon.h>
 #endif
 
-/* Notes about these *_SCALING values.
-
-   the MAX_<N>BIT values are floating point. when multiplied by
-   a full-scale normalized floating point sample value (-1.0..+1.0)
-   they should give the maximum value representable with an integer
-   sample type of N bits. Note that this is asymmetric. Sample ranges
-   for signed integer, 2's complement values are -(2^(N-1) to +(2^(N-1)-1)
-
-   Complications
-   -------------
-   If we use +2^(N-1) for the scaling factors, we run into a problem:
-
-   if we start with a normalized float value of -1.0, scaling
-   to 24 bits would give -8388608 (-2^23), which is ideal.
-   But with +1.0, we get +8388608, which is technically out of range.
-
-   We never multiply a full range normalized value by this constant,
-   but we could multiply it by a positive value that is close enough to +1.0
-   to produce a value > +(2^(N-1)-1.
-
-   There is no way around this paradox without wasting CPU cycles to determine
-   which scaling factor to use (i.e. determine if its negative or not,
-   use the right factor).
-
-   So, for now (October 2008) we use 2^(N-1)-1 as the scaling factor.
-*/
+// Notes about these *_SCALING values.
+//
+// the MAX_<N>BIT values are floating point. when multiplied by
+// a full-scale normalized floating point sample value (-1.0..+1.0)
+// they should give the maximum value representable with an integer
+// sample type of N bits. Note that this is asymmetric. Sample ranges
+// for signed integer, 2's complement values are -(2^(N-1) to +(2^(N-1)-1)
+//
+// Complications
+// -------------
+// If we use +2^(N-1) for the scaling factors, we run into a problem:
+//
+// if we start with a normalized float value of -1.0, scaling
+// to 24 bits would give -8388608 (-2^23), which is ideal.
+// But with +1.0, we get +8388608, which is technically out of range.
+//
+// We never multiply a full range normalized value by this constant,
+// but we could multiply it by a positive value that is close enough to +1.0
+// to produce a value > +(2^(N-1)-1.
+//
+// There is no way around this paradox without wasting CPU cycles to determine
+// which scaling factor to use (i.e. determine if its negative or not,
+// use the right factor).
+//
+// So, for now (October 2008) we use 2^(N-1)-1 as the scaling factor.
 
 #define SAMPLE_32BIT_SCALING 2147483647.0
 #define SAMPLE_24BIT_SCALING 8388607.0f
 #define SAMPLE_16BIT_SCALING 32767.0f
 
-/* these are just values to use if the floating point value was out of range
-
-   advice from Fons Adriaensen: make the limits symmetrical
- */
+// these are just values to use if the floating point value was out of range
+//
+// advice from Fons Adriaensen: make the limits symmetrical
 
 #define SAMPLE_32BIT_MAX 2147483647
 #define SAMPLE_32BIT_MIN -2147483647
@@ -95,19 +90,17 @@
 #define SAMPLE_16BIT_MAX_F 32767.0f
 #define SAMPLE_16BIT_MIN_F -32767.0f
 
-/* these mark the outer edges of the range considered "within" range
-   for a floating point sample value. values outside (and on the boundaries)
-   of this range will be clipped before conversion; values within this
-   range will be scaled to appropriate values for the target sample
-   type.
-*/
+// these mark the outer edges of the range considered "within" range
+// for a floating point sample value. values outside (and on the boundaries)
+// of this range will be clipped before conversion; values within this
+// range will be scaled to appropriate values for the target sample
+// type.
 
 #define NORMALIZED_FLOAT_MIN -1.0f
 #define NORMALIZED_FLOAT_MAX 1.0f
 
-/* define this in case we end up on a platform that is missing
-   the real lrintf functions
-*/
+// define this in case we end up on a platform that is missing
+// the real lrintf functions
 
 #define f_round(f) lrintf(f)
 #define d_round(f) lrint(f)
@@ -121,8 +114,7 @@
         (d) = f_round((s) * SAMPLE_16BIT_SCALING); \
     }
 
-/* call this when "s" has already been scaled (e.g. when dithering)
- */
+// call this when "s" has already been scaled (e.g. when dithering)
 
 #define float_16_scaled(s, d)               \
     if ((s) <= SAMPLE_16BIT_MIN_F) {        \
@@ -159,8 +151,7 @@
         (d) = d_round(scaled);                        \
     } while (0)
 
-/* call this when "s" has already been scaled (e.g. when dithering)
- */
+// call this when "s" has already been scaled (e.g. when dithering)
 
 #define float_24u32_scaled(s, d)            \
     if ((s) <= SAMPLE_24BIT_MIN_F) {        \
@@ -180,8 +171,7 @@
         (d) = f_round((s) * SAMPLE_24BIT_SCALING); \
     }
 
-/* call this when "s" has already been scaled (e.g. when dithering)
- */
+// call this when "s" has already been scaled (e.g. when dithering)
 
 #define float_24_scaled(s, d)               \
     if ((s) <= SAMPLE_24BIT_MIN_F) {        \
@@ -195,10 +185,10 @@
 
 #if defined(__SSE2__)
 
-/* generates same as _mm_set_ps(1.f, 1.f, 1f., 1f) but faster  */
+// generates same as _mm_set_ps(1.f, 1.f, 1f., 1f) but faster
 static inline __m128 gen_one(void)
 {
-    volatile __m128i x = { 0 }; /* shut up, GCC */
+    volatile __m128i x = { 0 };  // shut up, GCC
     __m128i ones = _mm_cmpeq_epi32(x, x);
     return (__m128)_mm_slli_epi32(_mm_srli_epi32(ones, 25), 23);
 }
@@ -215,7 +205,7 @@ static inline __m128d clip_double(__m128d s, __m128d min, __m128d max)
 
 static inline __m128i float_24_sse(__m128 s)
 {
-    const __m128 upper_bound = gen_one(); /* NORMALIZED_FLOAT_MAX */
+    const __m128 upper_bound = gen_one();  // NORMALIZED_FLOAT_MAX
     const __m128 lower_bound = _mm_sub_ps(_mm_setzero_ps(), upper_bound);
 
     __m128 clipped = clip(s, lower_bound, upper_bound);
@@ -276,9 +266,8 @@ static inline int16x4_t float_16_neon(float32x4_t s)
 }
 #endif
 
-/* Linear Congruential noise generator. From the music-dsp list
- * less random than rand(), but good enough and 10x faster
- */
+// Linear Congruential noise generator. From the music-dsp list
+// less random than rand(), but good enough and 10x faster
 static unsigned int seed = 22222;
 
 static inline unsigned int fast_rand()
@@ -287,7 +276,7 @@ static inline unsigned int fast_rand()
     return seed;
 }
 
-/* functions for native float sample data */
+// functions for native float sample data
 
 void sample_move_floatLE_sSs(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip)
 {
@@ -307,33 +296,32 @@ void sample_move_dS_floatLE(char* dst, jack_default_audio_sample_t* src, unsigne
     }
 }
 
-/* NOTES on function naming:
+// NOTES on function naming:
+//
+// foo_bar_d<TYPE>_s<TYPE>
+//
+// the "d<TYPE>" component defines the destination type for the operation
+// the "s<TYPE>" component defines the source type for the operation
+//
+// TYPE can be one of:
+//
+// S      - sample is a jack_default_audio_sample_t, currently (October 2008) a 32 bit floating point value
+// Ss     - like S but reverse endian from the host CPU
+// 32     - sample is a signed 32 bit integer value
+// 32u24  - sample is a signed 32 bit integer value, but data is in upper 24 bits only
+// 32u24s - like 32u24 but reverse endian from the host CPU
+// 32l24  - sample is a signed 32 bit integer value, but data is in lower 24 bits only
+// 32l24s - like 32l24 but reverse endian from the host CPU
+// 24     - sample is a signed 24 bit integer value
+// 24s    - like 24 but reverse endian from the host CPU
+// 16     - sample is a signed 16 bit integer value
+// 16s    - like 16 but reverse endian from the host CPU
+//
+// For obvious reasons, the reverse endian versions only show as source types.
+//
+// This covers all known sample formats at 16 bits or larger.
 
-   foo_bar_d<TYPE>_s<TYPE>
-
-   the "d<TYPE>" component defines the destination type for the operation
-   the "s<TYPE>" component defines the source type for the operation
-
-   TYPE can be one of:
-
-   S      - sample is a jack_default_audio_sample_t, currently (October 2008) a 32 bit floating point value
-   Ss     - like S but reverse endian from the host CPU
-   32     - sample is a signed 32 bit integer value
-   32u24  - sample is a signed 32 bit integer value, but data is in upper 24 bits only
-   32u24s - like 32u24 but reverse endian from the host CPU
-   32l24  - sample is a signed 32 bit integer value, but data is in lower 24 bits only
-   32l24s - like 32l24 but reverse endian from the host CPU
-   24     - sample is a signed 24 bit integer value
-   24s    - like 24 but reverse endian from the host CPU
-   16     - sample is a signed 16 bit integer value
-   16s    - like 16 but reverse endian from the host CPU
-
-   For obvious reasons, the reverse endian versions only show as source types.
-
-   This covers all known sample formats at 16 bits or larger.
-*/
-
-/* functions for native integer sample data */
+// functions for native integer sample data
 
 void sample_move_d32_sSs(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state)
 {
@@ -542,7 +530,7 @@ void sample_move_dS_s32u24s(jack_default_audio_sample_t* dst, char* src, unsigne
     nsamples = nsamples & 3;
 #endif
 
-    /* ALERT: signed sign-extension portability !!! */
+    // ALERT: signed sign-extension portability !!!
 
     const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_24BIT_SCALING;
 
@@ -628,7 +616,7 @@ void sample_move_dS_s32u24(jack_default_audio_sample_t* dst, char* src, unsigned
     nsamples = nsamples & 3;
 #endif
 
-    /* ALERT: signed sign-extension portability !!! */
+    // ALERT: signed sign-extension portability !!!
 
     const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_24BIT_SCALING;
     while (nsamples--) {
@@ -833,7 +821,7 @@ void sample_move_dS_s32l24s(jack_default_audio_sample_t* dst, char* src, unsigne
     nsamples = nsamples & 3;
 #endif
 
-    /* ALERT: signed sign-extension portability !!! */
+    // ALERT: signed sign-extension portability !!!
 
     const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_24BIT_SCALING;
 
@@ -932,7 +920,7 @@ void sample_move_dS_s32l24(jack_default_audio_sample_t* dst, char* src, unsigned
     nsamples = nsamples & 3;
 #endif
 
-    /* ALERT: signed sign-extension portability !!! */
+    // ALERT: signed sign-extension portability !!!
 
     const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_24BIT_SCALING;
     while (nsamples--) {
@@ -1061,7 +1049,7 @@ void sample_move_dS_s24s(jack_default_audio_sample_t* dst, char* src, unsigned l
     memset(x, 0, sizeof(x));
     unsigned long unrolled = nsamples / 4;
     while (unrolled--) {
-#if __BYTE_ORDER == __BIG_ENDIAN /* ARM big endian?? */
+#if __BYTE_ORDER == __BIG_ENDIAN  // ARM big endian??
         // right aligned / inverse sequence below -> *256
         memcpy(((char*)&x[0]) + 1, src, 3);
         memcpy(((char*)&x[1]) + 1, src + src_skip, 3);
@@ -1085,7 +1073,7 @@ void sample_move_dS_s24s(jack_default_audio_sample_t* dst, char* src, unsigned l
     nsamples = nsamples & 3;
 #endif
 
-    /* ALERT: signed sign-extension portability !!! */
+    // ALERT: signed sign-extension portability !!!
 
     while (nsamples--) {
         int x;
@@ -1095,7 +1083,7 @@ void sample_move_dS_s24s(jack_default_audio_sample_t* dst, char* src, unsigned l
         x |= (unsigned char)(src[1]);
         x <<= 8;
         x |= (unsigned char)(src[2]);
-        /* correct sign bit and the rest of the top byte */
+        // correct sign bit and the rest of the top byte
         if (src[0] & 0x80) {
             x |= 0xff << 24;
         }
@@ -1105,7 +1093,7 @@ void sample_move_dS_s24s(jack_default_audio_sample_t* dst, char* src, unsigned l
         x |= (unsigned char)(src[1]);
         x <<= 8;
         x |= (unsigned char)(src[0]);
-        /* correct sign bit and the rest of the top byte */
+        // correct sign bit and the rest of the top byte
         if (src[2] & 0x80) {
             x |= 0xff << 24;
         }
@@ -1146,7 +1134,7 @@ void sample_move_dS_s24(jack_default_audio_sample_t* dst, char* src, unsigned lo
     memset(x, 0, sizeof(x));
     unsigned long unrolled = nsamples / 4;
     while (unrolled--) {
-#if __BYTE_ORDER == __BIG_ENDIAN /* ARM big endian?? */
+#if __BYTE_ORDER == __BIG_ENDIAN  // ARM big endian??
         // left aligned -> *256
         memcpy(&x[0], src, 3);
         memcpy(&x[1], src + src_skip, 3);
@@ -1335,8 +1323,8 @@ void sample_move_dither_tri_d16_sS(char* dst, jack_default_audio_sample_t* src, 
 void sample_move_dither_shaped_d16_sSs(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state)
 {
     jack_default_audio_sample_t x;
-    jack_default_audio_sample_t xe; /* the innput sample - filtered error */
-    jack_default_audio_sample_t xp; /* x' */
+    jack_default_audio_sample_t xe;  // the innput sample - filtered error
+    jack_default_audio_sample_t xp;  // x'
     float r;
     float rm1 = state->rm1;
     unsigned int idx = state->idx;
@@ -1345,8 +1333,8 @@ void sample_move_dither_shaped_d16_sSs(char* dst, jack_default_audio_sample_t* s
     while (nsamples--) {
         x = *src * SAMPLE_16BIT_SCALING;
         r = ((float)fast_rand() + (float)fast_rand()) / (float)UINT_MAX - 1.0f;
-        /* Filter the error with Lipshitz's minimally audible FIR:
-           [2.033 -2.165 1.959 -1.590 0.6149] */
+        // Filter the error with Lipshitz's minimally audible FIR:
+        // [2.033 -2.165 1.959 -1.590 0.6149]
         xe = x
             - state->e[idx] * 2.033f
             + state->e[(idx - 1) & DITHER_BUF_MASK] * 2.165f
@@ -1358,7 +1346,7 @@ void sample_move_dither_shaped_d16_sSs(char* dst, jack_default_audio_sample_t* s
 
         float_16_scaled(xp, tmp);
 
-        /* Intrinsic z^-1 delay */
+        // Intrinsic z^-1 delay
         idx = (idx + 1) & DITHER_BUF_MASK;
         state->e[idx] = xp - xe;
 
@@ -1379,8 +1367,8 @@ void sample_move_dither_shaped_d16_sSs(char* dst, jack_default_audio_sample_t* s
 void sample_move_dither_shaped_d16_sS(char* dst, jack_default_audio_sample_t* src, unsigned long nsamples, unsigned long dst_skip, dither_state_t* state)
 {
     jack_default_audio_sample_t x;
-    jack_default_audio_sample_t xe; /* the innput sample - filtered error */
-    jack_default_audio_sample_t xp; /* x' */
+    jack_default_audio_sample_t xe;  // the innput sample - filtered error
+    jack_default_audio_sample_t xp;  // x'
     float r;
     float rm1 = state->rm1;
     unsigned int idx = state->idx;
@@ -1388,8 +1376,8 @@ void sample_move_dither_shaped_d16_sS(char* dst, jack_default_audio_sample_t* sr
     while (nsamples--) {
         x = *src * SAMPLE_16BIT_SCALING;
         r = ((float)fast_rand() + (float)fast_rand()) / (float)UINT_MAX - 1.0f;
-        /* Filter the error with Lipshitz's minimally audible FIR:
-           [2.033 -2.165 1.959 -1.590 0.6149] */
+        // Filter the error with Lipshitz's minimally audible FIR:
+        // [2.033 -2.165 1.959 -1.590 0.6149]
         xe = x
             - state->e[idx] * 2.033f
             + state->e[(idx - 1) & DITHER_BUF_MASK] * 2.165f
@@ -1401,7 +1389,7 @@ void sample_move_dither_shaped_d16_sS(char* dst, jack_default_audio_sample_t* sr
 
         float_16_scaled(xp, *((int16_t*)dst));
 
-        /* Intrinsic z^-1 delay */
+        // Intrinsic z^-1 delay
         idx = (idx + 1) & DITHER_BUF_MASK;
         state->e[idx] = *((int16_t*)dst) - xe;
 
@@ -1447,7 +1435,7 @@ void sample_move_dS_s16s(jack_default_audio_sample_t* dst, char* src, unsigned l
     nsamples = nsamples & 3;
 #endif
 
-    /* ALERT: signed sign-extension portability !!! */
+    // ALERT: signed sign-extension portability !!!
     while (nsamples--) {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         z = (unsigned char)(src[0]);
@@ -1466,7 +1454,7 @@ void sample_move_dS_s16s(jack_default_audio_sample_t* dst, char* src, unsigned l
 
 void sample_move_dS_s16(jack_default_audio_sample_t* dst, char* src, unsigned long nsamples, unsigned long src_skip)
 {
-    /* ALERT: signed sign-extension portability !!! */
+    // ALERT: signed sign-extension portability !!!
     const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_16BIT_SCALING;
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     const float32x4_t vscaling = vdupq_n_f32(scaling);
@@ -1540,12 +1528,11 @@ void memset_interleave(char* dst, char val, unsigned long bytes,
     }
 }
 
-/* COPY FUNCTIONS: used to move data from an input channel to an
-   output channel. Note that we assume that the skip distance
-   is the same for both channels. This is completely fine
-   unless the input and output were on different audio interfaces that
-   were interleaved differently. We don't try to handle that.
-*/
+// COPY FUNCTIONS: used to move data from an input channel to an
+// output channel. Note that we assume that the skip distance
+// is the same for both channels. This is completely fine
+// unless the input and output were on different audio interfaces that
+// were interleaved differently. We don't try to handle that.
 
 void memcpy_fake(char* dst, char* src, unsigned long src_bytes, unsigned long foo, unsigned long bar)
 {

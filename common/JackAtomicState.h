@@ -1,21 +1,18 @@
-/*
-Copyright (C) 2004-2008 Grame
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation; either version 2.1 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-*/
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #pragma once
 
@@ -29,9 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 namespace jackmini {
 
-/*!
-\brief Counter for CAS
-*/
+// \brief Counter for CAS
 
 
 struct AtomicCounter {
@@ -87,9 +82,7 @@ struct AtomicCounter {
 #define CurArrayIndex(e) (CurIndex(e) & 0x0001)
 #define NextArrayIndex(e) ((CurIndex(e) + 1) & 0x0001)
 
-/*!
-\brief Loads a shared counter atomically.  Every read of the counter goes through this, so the 16-bit fields are never read separately from the 32-bit update.
-*/
+// \brief Loads a shared counter atomically.  Every read of the counter goes through this, so the 16-bit fields are never read separately from the 32-bit update.
 static inline AtomicCounter LoadCounter(const AtomicCounter& counter)
 {
     AtomicCounter result;
@@ -97,9 +90,7 @@ static inline AtomicCounter LoadCounter(const AtomicCounter& counter)
     return result;
 }
 
-/*!
-\brief A class to handle two states (switching from one to the other) in a lock-free manner
-*/
+// \brief A class to handle two states (switching from one to the other) in a lock-free manner
 
 // CHECK livelock
 
@@ -157,25 +148,19 @@ public:
     {
     }
 
-    /*!
-    \brief Returns the current state : only valid in the RT reader thread
-    */
+    // \brief Returns the current state : only valid in the RT reader thread
     T* ReadCurrentState()
     {
         return &fState[CurArrayIndex(LoadCounter(fCounter))];
     }
 
-    /*!
-    \brief Returns the current state index
-    */
+    // \brief Returns the current state index
     UInt16 GetCurrentIndex()
     {
         return CurIndex(LoadCounter(fCounter));
     }
 
-    /*!
-    \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
-    */
+    // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
     T* TrySwitchState()
     {
         AtomicCounter old_val;
@@ -188,9 +173,7 @@ public:
         return &fState[CurArrayIndex(LoadCounter(fCounter))]; // Read the counter again
     }
 
-    /*!
-    \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
-    */
+    // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
     T* TrySwitchState(bool* result)
     {
         AtomicCounter old_val;
@@ -204,9 +187,7 @@ public:
         return &fState[CurArrayIndex(LoadCounter(fCounter))]; // Read the counter again
     }
 
-    /*!
-    \brief Start write operation : setup and returns the next state to update, check for recursive write calls.
-    */
+    // \brief Start write operation : setup and returns the next state to update, check for recursive write calls.
     T* WriteNextStateStart()
     {
         UInt32 next_index = (fCallWriteCounter++ == 0)
@@ -215,9 +196,7 @@ public:
         return &fState[next_index];
     }
 
-    /*!
-    \brief Stop write operation : make the next state ready to be used by the RT thread
-    */
+    // \brief Stop write operation : make the next state ready to be used by the RT thread
     void WriteNextStateStop()
     {
         if (--fCallWriteCounter == 0)
@@ -230,49 +209,47 @@ public:
         return CurIndex(counter) != NextIndex(counter);
     }
 
-    /*
-          // Single writer : write methods get the *next* state to be updated
-    void TestWriteMethod()
-    {
-            T* state = WriteNextStateStart();
-            ......
-            ......
-            WriteNextStateStop();
-    }
-
-          // First RT call possibly switch state
-    void TestReadRTMethod1()
-    {
-            T* state = TrySwitchState();
-            ......
-            ......
-    }
-
-          // Other RT methods can safely use the current state during the *same* RT cycle
-    void TestReadRTMethod2()
-    {
-            T* state = ReadCurrentState();
-            ......
-            ......
-    }
-
-          // Non RT read methods : must check state coherency
-    void TestReadMethod()
-    {
-            T* state;
-            UInt16 cur_index;
-        UInt16 next_index = GetCurrentIndex();
-            do {
-            cur_index = next_index;
-                    state = ReadCurrentState();
-
-                    ......
-                    ......
-
-            next_index = GetCurrentIndex();
-            } while (cur_index != next_index);
-    }
-    */
+    // // Single writer : write methods get the *next* state to be updated
+    // void TestWriteMethod()
+    // {
+    // T* state = WriteNextStateStart();
+    // ......
+    // ......
+    // WriteNextStateStop();
+    // }
+    //
+    // // First RT call possibly switch state
+    // void TestReadRTMethod1()
+    // {
+    // T* state = TrySwitchState();
+    // ......
+    // ......
+    // }
+    //
+    // // Other RT methods can safely use the current state during the *same* RT cycle
+    // void TestReadRTMethod2()
+    // {
+    // T* state = ReadCurrentState();
+    // ......
+    // ......
+    // }
+    //
+    // // Non RT read methods : must check state coherency
+    // void TestReadMethod()
+    // {
+    // T* state;
+    // UInt16 cur_index;
+    // UInt16 next_index = GetCurrentIndex();
+    // do {
+    // cur_index = next_index;
+    // state = ReadCurrentState();
+    //
+    // ......
+    // ......
+    //
+    // next_index = GetCurrentIndex();
+    // } while (cur_index != next_index);
+    // }
 };
 
 } // namespace jackmini
