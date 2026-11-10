@@ -25,25 +25,25 @@ namespace jackmini {
 
 // \brief The dummy driver.
 
-class JackDummyDriver : public JackTimedDriver {
+class DummyDriver : public TimedDriver {
 
 public:
-    JackDummyDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
-        : JackTimedDriver(name, alias, engine, table)
+    DummyDriver(const char* name, const char* alias, LockedEngine* engine, Synchro* table)
+        : TimedDriver(name, alias, engine, table)
     {
     }
-    virtual ~JackDummyDriver()
+    virtual ~DummyDriver()
     {
     }
 
-    virtual std::int32_t Process()
+    virtual std::int32_t process()
     {
-        JackDriver::CycleTakeBeginTime();
+        Driver::cycleTakeBeginTime();
 
-        if (JackAudioDriver::Process() < 0) {
+        if (AudioDriver::process() < 0) {
             return -1;
         } else {
-            ProcessWait();
+            processWait();
             return 0;
         }
     }

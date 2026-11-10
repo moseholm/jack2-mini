@@ -23,28 +23,28 @@
 
 namespace jackmini {
 
-enum JackAlsaSecondaryMode {
-    SecondaryModeDuplex = 0,
-    SecondaryModeCapture,
-    SecondaryModePlayback
+enum AlsaSecondaryMode {
+    kSecondaryModeDuplex = 0,
+    kSecondaryModeCapture,
+    kSecondaryModePlayback
 };
 
 // Sample format for a secondary card.  Auto lets the ALSA core choose, which
 // prefers 32-bit float.
-enum JackAlsaSampleFormat {
-    SampleFormatAuto = 0,
-    SampleFormatFloat = 1,
-    SampleFormatS32 = 2,
-    SampleFormatS16 = 3
+enum AlsaSampleFormat {
+    kSampleFormatAuto = 0,
+    kSampleFormatFloat = 1,
+    kSampleFormatS32 = 2,
+    kSampleFormatS16 = 3
 };
 
 // Clock handling for a secondary card.  Async (default) runs a drift
 // controller that keeps the card's ring near its target fill.  Sync holds a
 // fixed ratio, which is only correct when the card's clock is locked to the
 // primary.
-enum JackAlsaSecondaryClock {
-    SecondaryClockAsync = 0,
-    SecondaryClockSync
+enum AlsaSecondaryClock {
+    kSecondaryClockAsync = 0,
+    kSecondaryClockSync
 };
 
 // \brief Description of one secondary ALSA card.
@@ -52,40 +52,40 @@ enum JackAlsaSecondaryClock {
 // A card may be capture-only, playback-only or duplex.  The name is used as
 // the card component of the JACK port names (system:capture_<name>_<n>).
 
-struct JackAlsaSecondaryConfig {
+struct AlsaSecondaryConfig {
 
-    std::string name;
-    std::string capture_device;
-    std::string playback_device;
-    JackAlsaSecondaryMode mode;
+    std::string m_name;
+    std::string m_captureDevice;
+    std::string m_playbackDevice;
+    AlsaSecondaryMode m_mode;
 
-    std::int32_t capture_channels;
-    std::int32_t playback_channels;
+    std::int32_t m_captureChannels;
+    std::int32_t m_playbackChannels;
 
     // 0 means "use the primary value".
-    std::int32_t rate;
-    std::int32_t nperiods;
+    std::int32_t m_rate;
+    std::int32_t m_nperiods;
 
-    bool optional;
-    bool follow_hw_rate;
-    JackAlsaSecondaryClock clock;
-    JackAlsaSampleFormat sample_format;
+    bool m_optional;
+    bool m_followHwRate;
+    AlsaSecondaryClock m_clock;
+    AlsaSampleFormat m_sampleFormat;
 
     // Resampler by name. "pipewire" is the only one.
-    std::string resampler;
+    std::string m_resampler;
 
     // Added by discovery rather than configured.  A failure to open such a card is
     // logged and the card skipped, instead of failing the server.
-    bool automatic;
+    bool m_automatic;
 
     // Optional native ALSA control element names.  Empty means auto-probe.
-    std::string capture_rate_ctl;
-    std::string playback_rate_ctl;
+    std::string m_captureRateCtl;
+    std::string m_playbackRateCtl;
 
     // Optional mapping for enumerated native controls: "44100:0,48000:1".
-    std::string rate_map;
+    std::string m_rateMap;
 
-    JackAlsaSecondaryConfig();
+    AlsaSecondaryConfig();
 };
 
 // \brief Parse one --secondary specification.
@@ -96,29 +96,29 @@ struct JackAlsaSecondaryConfig {
 //
 // A bare value without '=' is treated as device=<value>.  Values may be quoted.
 // Returns false and fills error on failure.
-bool JackAlsaSecondaryConfigParse(std::string_view spec,
-    JackAlsaSecondaryConfig* config,
+bool alsaSecondaryConfigParse(std::string_view spec,
+    AlsaSecondaryConfig* config,
     std::string* error);
 
 // \brief Load a list of secondary cards from a file.
 //
 // One card per line, using the same key=value syntax.  Blank lines and lines
 // whose first non-space character is '#' are ignored.
-bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
-    std::vector<JackAlsaSecondaryConfig>* configs,
+bool alsaSecondaryConfigLoadFile(const std::string& path,
+    std::vector<AlsaSecondaryConfig>* configs,
     std::string* error);
 
 // \brief Turn an arbitrary string into a valid JACK port name component.
 // Device number of a PCM name: "hw:2,3" -> 3, "hw:CARD=X,DEV=7" -> 7, "hw:X" -> 0.
-std::int32_t JackAlsaPcmDeviceNumber(std::string_view pcm);
+std::int32_t alsaPcmDeviceNumber(std::string_view pcm);
 
 // True if a PCM name names the card by its ALSA id: "hw:CARD=PCH", "hw:PCH,0",
 // "plughw:CARD=PCH,DEV=0".  Numeric forms ("hw:0", "hw:2,0") are false.
-bool JackAlsaPcmNameIsById(std::string_view pcm);
+bool alsaPcmNameIsById(std::string_view pcm);
 
 // True if an ALSA card id is in the --exclude-card list.  Ids are compared without case.
-bool JackAlsaCardExcluded(std::string_view card_id, const std::vector<std::string>& excluded);
+bool alsaCardExcluded(std::string_view cardId, const std::vector<std::string>& excluded);
 
-std::string JackAlsaSecondarySanitizeName(std::string_view name);
+std::string alsaSecondarySanitizeName(std::string_view name);
 
 } // namespace jackmini

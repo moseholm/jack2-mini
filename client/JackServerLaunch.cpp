@@ -32,7 +32,7 @@ using namespace jackmini;
 
 // Split a command line into words.  Words are separated by spaces, and a word
 // that starts with a double quote runs to the closing quote.
-static std::vector<std::string> SplitCommandLine(std::string_view text)
+static std::vector<std::string> splitCommandLine(std::string_view text)
 {
     std::vector<std::string> words;
     size_t pos = 0;
@@ -65,7 +65,7 @@ static std::vector<std::string> SplitCommandLine(std::string_view text)
 }
 
 // The words of the first .jackdrc that exists, joined by single spaces.
-static std::string ReadJackdrc()
+static std::string readJackdrc()
 {
     std::vector<std::string> candidates;
     if (const char* home = getenv("HOME")) {
@@ -91,24 +91,24 @@ static std::string ReadJackdrc()
 }
 
 // Exec the JACK server in this process.  Does not return.
-static void start_server_classic_aux(const char* server_name)
+static void startServerClassicAux(const char* serverName)
 {
-    std::vector<std::string> words = SplitCommandLine(ReadJackdrc());
+    std::vector<std::string> words = splitCommandLine(readJackdrc());
     if (words.empty()) {
-        words = SplitCommandLine(std::format("{}/jackd -T -d {}", JACK_LOCATION, kDefaultDriver));
+        words = splitCommandLine(std::format("{}/jackd -T -d {}", JACK_LOCATION, kDefaultDriver));
     }
 
     // insert -T and -nserver_name in front of arguments
-    std::vector<std::string> argv_words;
-    argv_words.push_back(words[0]);
-    argv_words.emplace_back("-T");
-    if (server_name) {
-        argv_words.push_back(std::format("-n{}", server_name));
+    std::vector<std::string> argvWords;
+    argvWords.push_back(words[0]);
+    argvWords.emplace_back("-T");
+    if (serverName) {
+        argvWords.push_back(std::format("-n{}", serverName));
     }
-    argv_words.insert(argv_words.end(), words.begin() + 1, words.end());
+    argvWords.insert(argvWords.end(), words.begin() + 1, words.end());
 
     std::vector<char*> argv;
-    for (std::string& word : argv_words) {
+    for (std::string& word : argvWords) {
         argv.push_back(word.data());
     }
     argv.push_back(nullptr);
@@ -120,7 +120,7 @@ static void start_server_classic_aux(const char* server_name)
     fprintf(stderr, "exec of JACK server (command = \"%s\") failed: %s\n", argv[0], strerror(errno));
 }
 
-static std::int32_t start_server_classic(const char* server_name)
+static std::int32_t startServerClassic(const char* serverName)
 {
     // The double fork() forces the server to become a child of
     // init, which will always clean up zombie process state on
@@ -132,14 +132,14 @@ static std::int32_t start_server_classic(const char* server_name)
     // probably relatively small.
 
     std::int32_t status;
-    pid_t first_child_pid;
+    pid_t firstChildPid;
 
-    first_child_pid = fork();
-    switch (first_child_pid) {
+    firstChildPid = fork();
+    switch (firstChildPid) {
     case 0:  // child process
         switch (fork()) {
         case 0:  // grandchild process
-            start_server_classic_aux(server_name);
+            startServerClassicAux(serverName);
             _exit(99);  // exec failed
         case -1:
             _exit(98);
@@ -149,51 +149,51 @@ static std::int32_t start_server_classic(const char* server_name)
     case -1:  // fork() error
         return 1;  // failed to start server
     }
-    waitpid(first_child_pid, &status, 0);
+    waitpid(firstChildPid, &status, 0);
 
     // only the original parent process goes here
     return 0;  // (probably) successful
 }
 
-static std::int32_t start_server(const char* server_name, jack_options_t options)
+static std::int32_t startServer(const char* serverName, OptionsC options)
 {
-    if ((options & JackNoStartServer) || getenv("JACK_NO_START_SERVER")) {
+    if ((options & kNoStartServer) || getenv("JACK_NO_START_SERVER")) {
         return 1;
     }
 
-    return start_server_classic(server_name);
+    return startServerClassic(serverName);
 }
 
-static std::int32_t server_connect(const char* server_name)
+static std::int32_t serverConnect(const char* serverName)
 {
-    JackClientSocket socket;
-    std::int32_t res = socket.Connect(kServerDir, server_name, 0);
-    socket.Close();
-    sleep_microseconds(2000); // Added by JE - 02-01-2009 (gives
+    ClientSocket socket;
+    std::int32_t res = socket.connect(kServerDir, serverName, 0);
+    socket.close();
+    sleepMicroseconds(2000); // Added by JE - 02-01-2009 (gives
                               // the channel some time to close)
     return res;
 }
 
-std::int32_t try_start_server(const char* server_name, jack_options_t options, jack_status_t* status)
+std::int32_t tryStartServer(const char* serverName, OptionsC options, StatusC* status)
 {
-    if (server_connect(server_name) < 0) {
+    if (serverConnect(serverName) < 0) {
         std::int32_t trys;
-        if (start_server(server_name, options)) {
-            std::int32_t my_status1 = *status | JackFailure | JackServerFailed;
-            *status = (jack_status_t)my_status1;
+        if (startServer(serverName, options)) {
+            std::int32_t myStatus1 = *status | kFailure | kServerFailed;
+            *status = (StatusC)myStatus1;
             return -1;
         }
         trys = 5;
         do {
             sleep(1);
             if (--trys < 0) {
-                std::int32_t my_status1 = *status | JackFailure | JackServerFailed;
-                *status = (jack_status_t)my_status1;
+                std::int32_t myStatus1 = *status | kFailure | kServerFailed;
+                *status = (StatusC)myStatus1;
                 return -1;
             }
-        } while (server_connect(server_name) < 0);
-        std::int32_t my_status1 = *status | JackServerStarted;
-        *status = (jack_status_t)my_status1;
+        } while (serverConnect(serverName) < 0);
+        std::int32_t myStatus1 = *status | kServerStarted;
+        *status = (StatusC)myStatus1;
     }
 
     return 0;

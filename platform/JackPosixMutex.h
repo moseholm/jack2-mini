@@ -29,32 +29,32 @@
 namespace jackmini {
 // \brief Mutex abstraction.
 
-class SERVER_EXPORT JackBasePosixMutex {
+class SERVER_EXPORT BasePosixMutex {
 
 protected:
-    pthread_mutex_t fMutex;
-    pthread_t fOwner;
+    pthread_mutex_t m_mutex;
+    pthread_t m_owner;
 
 public:
-    JackBasePosixMutex(const char* name = nullptr);
-    virtual ~JackBasePosixMutex();
+    BasePosixMutex(const char* name = nullptr);
+    virtual ~BasePosixMutex();
 
-    bool Lock();
-    bool Trylock();
-    bool Unlock();
+    bool lock();
+    bool trylock();
+    bool unlock();
 };
 
-class SERVER_EXPORT JackPosixMutex {
+class SERVER_EXPORT PosixMutex {
 protected:
-    pthread_mutex_t fMutex;
+    pthread_mutex_t m_mutex;
 
 public:
-    JackPosixMutex(const char* name = nullptr);
-    virtual ~JackPosixMutex();
+    PosixMutex(const char* name = nullptr);
+    virtual ~PosixMutex();
 
-    bool Lock();
-    bool Trylock();
-    bool Unlock();
+    bool lock();
+    bool trylock();
+    bool unlock();
 };
 
 } // namespace jackmini

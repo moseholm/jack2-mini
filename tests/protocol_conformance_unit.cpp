@@ -50,19 +50,19 @@ std::int32_t gFailures = 0;
 
 // A connected pair of stream sockets, closed on destruction.
 struct SocketPair {
-    std::array<std::int32_t, 2> fd = { -1, -1 };
+    std::array<std::int32_t, 2> m_fd = { -1, -1 };
 
     SocketPair()
     {
-        if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd.data()) != 0) {
+        if (socketpair(AF_UNIX, SOCK_STREAM, 0, m_fd.data()) != 0) {
             std::printf("socketpair failed\n");
             gFailures++;
         }
     }
     ~SocketPair()
     {
-        ::close(fd[0]);
-        ::close(fd[1]);
+        ::close(m_fd[0]);
+        ::close(m_fd[1]);
     }
 };
 
@@ -71,103 +71,103 @@ struct SocketPair {
 class FakeServer {
 public:
     explicit FakeServer(std::int32_t fd)
-        : fSocket(fd)
+        : m_socket(fd)
     {
     }
 
-    void Start()
+    void start()
     {
-        fThread = std::thread([this] { Run(); });
+        m_thread = std::thread([this] { run(); });
     }
 
-    void Join()
+    void join()
     {
-        if (fThread.joinable()) {
-            fThread.join();
+        if (m_thread.joinable()) {
+            m_thread.join();
         }
     }
 
-    jack_nframes_t fBufferSize = 0;
-    std::int32_t fClosedRefNum = -1;
-    jack_port_id_t fRenamedPort = kNoPort;
-    std::string fRenamedTo;
-    std::string fUUIDFor;
-    std::int32_t fRequestsServed = 0;
+    NframesC m_bufferSize = 0;
+    std::int32_t m_closedRefNum = -1;
+    PortIdC m_renamedPort = kNoPort;
+    std::string m_renamedTo;
+    std::string m_uUIDFor;
+    std::int32_t m_requestsServed = 0;
 
 private:
-    JackClientSocket fSocket;
-    std::thread fThread;
+    ClientSocket m_socket;
+    std::thread m_thread;
 
     // Decodes a request payload: the length is the request's own, and it must be read in full.
     template <class Req>
-    bool Decode(const JackMsgHeader& header, Req& req)
+    bool decode(const MsgHeader& header, Req& req)
     {
-        if (header.length != Req::Size()) {
+        if (header.m_length != Req::size()) {
             return false;
         }
-        JackPayloadReader payload(&fSocket, header.length, { });
-        return req.Read(&payload) == 0 && payload.Done();
+        PayloadReader payload(&m_socket, header.m_length, { });
+        return req.read(&payload) == 0 && payload.done();
     }
 
-    void Run()
+    void run()
     {
         for (;;) {
-            JackMsgHeader header { };
-            if (ReadJackMsgHeader(&fSocket, header) < 0) {
+            MsgHeader header { };
+            if (readJackMsgHeader(&m_socket, header) < 0) {
                 return; // the client closed the connection
             }
-            fRequestsServed++;
-            switch (header.type) {
-            case JackRequest::kSetBufferSize: {
-                JackSetBufferSizeRequest req;
-                if (!Decode(header, req)) {
+            m_requestsServed++;
+            switch (header.m_type) {
+            case Request::kSetBufferSize: {
+                SetBufferSizeRequest req;
+                if (!decode(header, req)) {
                     return;
                 }
-                fBufferSize = req.fBufferSize;
-                JackResult res(0);
-                SendJackReply(&fSocket, res, header);
+                m_bufferSize = req.m_bufferSize;
+                Reply res(0);
+                sendJackReply(&m_socket, res, header);
                 break;
             }
-            case JackRequest::kClientClose: {
-                JackClientCloseRequest req;
-                if (!Decode(header, req)) {
+            case Request::kClientClose: {
+                ClientCloseRequest req;
+                if (!decode(header, req)) {
                     return;
                 }
-                fClosedRefNum = req.fRefNum;
-                JackResult res(0);
-                SendJackReply(&fSocket, res, header);
+                m_closedRefNum = req.m_refNum;
+                Reply res(0);
+                sendJackReply(&m_socket, res, header);
                 break;
             }
-            case JackRequest::kPortRename: {
-                JackPortRenameRequest req;
-                if (!Decode(header, req)) {
+            case Request::kPortRename: {
+                PortRenameRequest req;
+                if (!decode(header, req)) {
                     return;
                 }
-                fRenamedPort = req.fPort;
-                fRenamedTo = req.fName.data();
-                JackResult res(0);
-                SendJackReply(&fSocket, res, header);
+                m_renamedPort = req.m_port;
+                m_renamedTo = req.m_name.data();
+                Reply res(0);
+                sendJackReply(&m_socket, res, header);
                 break;
             }
-            case JackRequest::kGetUUIDByClient: {
-                JackGetUUIDRequest req;
-                if (!Decode(header, req)) {
+            case Request::kGetUUIDByClient: {
+                GetUUIDRequest req;
+                if (!decode(header, req)) {
                     return;
                 }
-                fUUIDFor = req.fName.data();
-                JackUUIDResult res;
-                std::snprintf(res.fUUID.data(), sizeof(res.fUUID), "%s", "00000000-0000-0000-0000-000000000042");
-                res.fResult = 0;
-                SendJackReply(&fSocket, res, header);
+                m_uUIDFor = req.m_name.data();
+                UUIDResult res;
+                std::snprintf(res.m_uUID.data(), sizeof(res.m_uUID), "%s", "00000000-0000-0000-0000-000000000042");
+                res.m_result = 0;
+                sendJackReply(&m_socket, res, header);
                 break;
             }
-            case JackRequest::kComputeTotalLatencies: {
-                JackComputeTotalLatenciesRequest req;
-                if (!Decode(header, req)) {
+            case Request::kComputeTotalLatencies: {
+                ComputeTotalLatenciesRequest req;
+                if (!decode(header, req)) {
                     return;
                 }
-                JackResult res(0);
-                SendJackReply(&fSocket, res, header);
+                Reply res(0);
+                sendJackReply(&m_socket, res, header);
                 break;
             }
             default:
@@ -178,181 +178,181 @@ private:
 };
 
 // A well-formed request is answered by its reply, with the request's type and id echoed.
-void TestRequestsGetTheirReplies()
+void testRequestsGetTheirReplies()
 {
     SocketPair pair;
-    FakeServer server(pair.fd[1]);
-    server.Start();
-    JackClientSocket client(pair.fd[0]);
+    FakeServer server(pair.m_fd[1]);
+    server.start();
+    ClientSocket client(pair.m_fd[0]);
 
-    JackSetBufferSizeRequest setBuffer(1024);
-    CHECK(setBuffer.Write(&client) == 0);
-    JackResult res1;
-    CHECK(ReadJackReply(&client, setBuffer.fType, setBuffer.fRequestId, res1) == 0);
-    CHECK(res1.fResult == 0);
+    SetBufferSizeRequest setBuffer(1024);
+    CHECK(setBuffer.write(&client) == 0);
+    Reply res1;
+    CHECK(readJackReply(&client, setBuffer.m_type, setBuffer.m_requestId, res1) == 0);
+    CHECK(res1.m_result == 0);
 
-    JackClientCloseRequest close(7);
-    CHECK(close.Write(&client) == 0);
-    JackResult res2;
-    CHECK(ReadJackReply(&client, close.fType, close.fRequestId, res2) == 0);
+    ClientCloseRequest close(7);
+    CHECK(close.write(&client) == 0);
+    Reply res2;
+    CHECK(readJackReply(&client, close.m_type, close.m_requestId, res2) == 0);
 
-    JackPortRenameRequest rename(3, 5, "renamed:port");
-    CHECK(rename.Write(&client) == 0);
-    JackResult res3;
-    CHECK(ReadJackReply(&client, rename.fType, rename.fRequestId, res3) == 0);
+    PortRenameRequest rename(3, 5, "renamed:port");
+    CHECK(rename.write(&client) == 0);
+    Reply res3;
+    CHECK(readJackReply(&client, rename.m_type, rename.m_requestId, res3) == 0);
 
-    JackGetUUIDRequest uuid("some client");
-    CHECK(uuid.Write(&client) == 0);
-    JackUUIDResult res4;
-    CHECK(ReadJackReply(&client, uuid.fType, uuid.fRequestId, res4) == 0);
-    CHECK(std::strcmp(res4.fUUID.data(), "00000000-0000-0000-0000-000000000042") == 0);
+    GetUUIDRequest uuid("some client");
+    CHECK(uuid.write(&client) == 0);
+    UUIDResult res4;
+    CHECK(readJackReply(&client, uuid.m_type, uuid.m_requestId, res4) == 0);
+    CHECK(std::strcmp(res4.m_uUID.data(), "00000000-0000-0000-0000-000000000042") == 0);
 
-    JackComputeTotalLatenciesRequest latencies;
-    CHECK(latencies.Write(&client) == 0);
-    JackResult res5;
-    CHECK(ReadJackReply(&client, latencies.fType, latencies.fRequestId, res5) == 0);
+    ComputeTotalLatenciesRequest latencies;
+    CHECK(latencies.write(&client) == 0);
+    Reply res5;
+    CHECK(readJackReply(&client, latencies.m_type, latencies.m_requestId, res5) == 0);
 
-    ::shutdown(pair.fd[0], SHUT_WR);
-    server.Join();
+    ::shutdown(pair.m_fd[0], SHUT_WR);
+    server.join();
 
-    CHECK(server.fBufferSize == 1024);
-    CHECK(server.fClosedRefNum == 7);
-    CHECK(server.fRenamedPort == 5);
-    CHECK(server.fRenamedTo == "renamed:port");
-    CHECK(server.fUUIDFor == "some client");
-    CHECK(server.fRequestsServed == 5);
+    CHECK(server.m_bufferSize == 1024);
+    CHECK(server.m_closedRefNum == 7);
+    CHECK(server.m_renamedPort == 5);
+    CHECK(server.m_renamedTo == "renamed:port");
+    CHECK(server.m_uUIDFor == "some client");
+    CHECK(server.m_requestsServed == 5);
 }
 
 // A request whose length is not its own is refused by the decoder, which sends no reply.
-void TestMalformedRequestIsRefused()
+void testMalformedRequestIsRefused()
 {
     SocketPair pair;
-    JackClientSocket server(pair.fd[1]);
-    JackClientSocket client(pair.fd[0]);
+    ClientSocket server(pair.m_fd[1]);
+    ClientSocket client(pair.m_fd[0]);
 
     // ClientClose takes four bytes; this one claims seven.
     std::array<const char, 7> payload = { };
-    JackMsgHeader header = MakeJackMsgHeader(JackRequest::kClientClose, 7, 9);
-    CHECK(SendJackMessage(&client, header, payload.data(), sizeof(payload)) == 0);
+    MsgHeader header = makeJackMsgHeader(Request::kClientClose, 7, 9);
+    CHECK(sendJackMessage(&client, header, payload.data(), sizeof(payload)) == 0);
 
-    JackMsgHeader got { };
-    CHECK(ReadJackMsgHeader(&server, got) == 0);
-    JackRequestDecoder decoder(nullptr, nullptr);
-    CHECK(decoder.HandleRequest(&server, got) < 0);
+    MsgHeader got { };
+    CHECK(readJackMsgHeader(&server, got) == 0);
+    RequestDecoder decoder(nullptr, nullptr);
+    CHECK(decoder.handleRequest(&server, got) < 0);
 
     char byte;
-    CHECK(::recv(pair.fd[0], &byte, 1, MSG_DONTWAIT) < 0); // nothing came back
+    CHECK(::recv(pair.m_fd[0], &byte, 1, MSG_DONTWAIT) < 0); // nothing came back
 }
 
 // A client of another protocol version is refused: the reply carries the Protocol error, with the server's version.
-void TestVersionMismatchIsRefused()
+void testVersionMismatchIsRefused()
 {
     SocketPair pair;
-    JackClientSocket server(pair.fd[1]);
-    JackClientSocket client(pair.fd[0]);
+    ClientSocket server(pair.m_fd[1]);
+    ClientSocket client(pair.m_fd[0]);
 
-    JackMsgHeader old = MakeJackMsgHeader(JackRequest::kClientCheck, 0, 77);
-    old.version = 9;
-    CHECK(client.Write(&old, sizeof(old)) == 0);
+    MsgHeader old = makeJackMsgHeader(Request::kClientCheck, 0, 77);
+    old.m_version = 9;
+    CHECK(client.write(&old, sizeof(old)) == 0);
 
-    JackMsgHeader got { };
-    CHECK(ReadJackMsgHeader(&server, got) == 0);
-    CHECK(got.version == 9);
-    JackRequestDecoder decoder(nullptr, nullptr);
-    CHECK(decoder.HandleRequest(&server, got) < 0);
+    MsgHeader got { };
+    CHECK(readJackMsgHeader(&server, got) == 0);
+    CHECK(got.m_version == 9);
+    RequestDecoder decoder(nullptr, nullptr);
+    CHECK(decoder.handleRequest(&server, got) < 0);
 
     // The client, of the current version, reads the refusal as a reply to its request.
-    JackResult res;
-    CHECK(ReadJackReply(&client, JackRequest::kClientCheck, 77, res) == 0);
-    CHECK(res.fResult == kJackMsgProtocolError);
+    Reply res;
+    CHECK(readJackReply(&client, Request::kClientCheck, 77, res) == 0);
+    CHECK(res.m_result == kJackMsgProtocolError);
 }
 
 // The client refuses a reply of another version, and one with no magic number.
-void TestBadHeadersAreRefused()
+void testBadHeadersAreRefused()
 {
     {
         SocketPair pair;
-        JackClientSocket server(pair.fd[1]);
-        JackClientSocket client(pair.fd[0]);
-        const char garbage[sizeof(JackMsgHeader)] = { 'x', 'y', 'z', 'w' };
-        CHECK(client.Write(const_cast<char*>(garbage), sizeof(garbage)) == 0);
-        JackMsgHeader got { };
-        CHECK(ReadJackMsgHeader(&server, got) < 0);
+        ClientSocket server(pair.m_fd[1]);
+        ClientSocket client(pair.m_fd[0]);
+        const char garbage[sizeof(MsgHeader)] = { 'x', 'y', 'z', 'w' };
+        CHECK(client.write(const_cast<char*>(garbage), sizeof(garbage)) == 0);
+        MsgHeader got { };
+        CHECK(readJackMsgHeader(&server, got) < 0);
     }
     {
         SocketPair pair;
-        JackClientSocket server(pair.fd[1]);
-        JackClientSocket client(pair.fd[0]);
-        JackResult res(0);
-        JackMsgHeader reply = MakeJackMsgHeader(JackRequest::kSetBufferSize, 4, 11);
-        reply.version = 9;
-        SendJackMessage(&server, reply, &res.fResult, sizeof(res.fResult));
-        JackResult back;
-        CHECK(ReadJackReply(&client, JackRequest::kSetBufferSize, 11, back) < 0);
+        ClientSocket server(pair.m_fd[1]);
+        ClientSocket client(pair.m_fd[0]);
+        Reply res(0);
+        MsgHeader reply = makeJackMsgHeader(Request::kSetBufferSize, 4, 11);
+        reply.m_version = 9;
+        sendJackMessage(&server, reply, &res.m_result, sizeof(res.m_result));
+        Reply back;
+        CHECK(readJackReply(&client, Request::kSetBufferSize, 11, back) < 0);
     }
 }
 
 // A reply that does not answer the request, or whose payload is not the reply's length, is refused.
-void TestMismatchedRepliesAreRefused()
+void testMismatchedRepliesAreRefused()
 {
     {
         SocketPair pair;
-        JackClientSocket server(pair.fd[1]);
-        JackClientSocket client(pair.fd[0]);
-        JackResult res(0);
-        SendJackReply(&server, res, MakeJackMsgHeader(JackRequest::kSetBufferSize, 0, 12));
-        JackResult back;
-        CHECK(ReadJackReply(&client, JackRequest::kSetBufferSize, 13, back) < 0); // another id
+        ClientSocket server(pair.m_fd[1]);
+        ClientSocket client(pair.m_fd[0]);
+        Reply res(0);
+        sendJackReply(&server, res, makeJackMsgHeader(Request::kSetBufferSize, 0, 12));
+        Reply back;
+        CHECK(readJackReply(&client, Request::kSetBufferSize, 13, back) < 0); // another id
     }
     {
         SocketPair pair;
-        JackClientSocket server(pair.fd[1]);
-        JackClientSocket client(pair.fd[0]);
+        ClientSocket server(pair.m_fd[1]);
+        ClientSocket client(pair.m_fd[0]);
         const std::uint16_t two = 0;
-        SendJackMessage(&server, MakeJackMsgHeader(JackRequest::kSetBufferSize, sizeof(two), 14), &two, sizeof(two));
-        JackResult back;
-        CHECK(ReadJackReply(&client, JackRequest::kSetBufferSize, 14, back) < 0); // a result is four bytes
+        sendJackMessage(&server, makeJackMsgHeader(Request::kSetBufferSize, sizeof(two), 14), &two, sizeof(two));
+        Reply back;
+        CHECK(readJackReply(&client, Request::kSetBufferSize, 14, back) < 0); // a result is four bytes
     }
 }
 
 // A synchronous notification gets the client's reply, which echoes the notification's id.
-void TestSynchronousNotification()
+void testSynchronousNotification()
 {
     SocketPair pair;
-    JackClientSocket server(pair.fd[0]);
-    JackClientSocket client(pair.fd[1]);
+    ClientSocket server(pair.m_fd[0]);
+    ClientSocket client(pair.m_fd[1]);
 
-    const std::uint32_t request = NextJackRequestId();
-    JackClientNotification notice("system", 3, kAddClient, 1, "", 0, 0);
-    CHECK(notice.Write(&server, request) == 0);
+    const std::uint32_t request = nextJackRequestId();
+    ClientNotification notice("system", 3, kAddClient, 1, "", 0, 0);
+    CHECK(notice.write(&server, request) == 0);
 
-    JackMsgHeader header { };
-    CHECK(ReadJackMsgHeader(&client, header) == 0);
-    CHECK(header.type == kAddClient);
-    CHECK(header.request == request);
-    CHECK(header.length == JackClientNotification::PayloadSize);
-    JackClientNotification got;
-    JackPayloadReader payload(&client, header.length, { });
-    CHECK(got.Read(&payload) == 0 && payload.Done());
-    CHECK(std::strcmp(got.fName.data(), "system") == 0);
+    MsgHeader header { };
+    CHECK(readJackMsgHeader(&client, header) == 0);
+    CHECK(header.m_type == kAddClient);
+    CHECK(header.m_request == request);
+    CHECK(header.m_length == ClientNotification::kPayloadSize);
+    ClientNotification got;
+    PayloadReader payload(&client, header.m_length, { });
+    CHECK(got.read(&payload) == 0 && payload.done());
+    CHECK(std::strcmp(got.m_name.data(), "system") == 0);
 
-    JackResult res(0);
-    CHECK(SendJackReply(&client, res, header) == 0);
-    JackResult back;
-    CHECK(ReadJackReply(&server, kAddClient, request, back) == 0);
-    CHECK(back.fResult == 0);
+    Reply res(0);
+    CHECK(sendJackReply(&client, res, header) == 0);
+    Reply back;
+    CHECK(readJackReply(&server, kAddClient, request, back) == 0);
+    CHECK(back.m_result == 0);
 }
 
 } // namespace
 
 int main()
 {
-    TestRequestsGetTheirReplies();
-    TestMalformedRequestIsRefused();
-    TestVersionMismatchIsRefused();
-    TestBadHeadersAreRefused();
-    TestMismatchedRepliesAreRefused();
-    TestSynchronousNotification();
+    testRequestsGetTheirReplies();
+    testMalformedRequestIsRefused();
+    testVersionMismatchIsRefused();
+    testBadHeadersAreRefused();
+    testMismatchedRepliesAreRefused();
+    testSynchronousNotification();
 
     if (gFailures == 0) {
         std::printf("protocol conformance checks passed\n");

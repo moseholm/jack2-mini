@@ -23,4 +23,4 @@
 
 // Connects to the server named server_name. When it is not running, starts it if the options allow that, and waits for
 // it. Returns 0 when the server answers, and -1 otherwise, with the failure bits set in status.
-std::int32_t try_start_server(const char* server_name, jack_options_t options, jack_status_t* status);
+std::int32_t tryStartServer(const char* serverName, OptionsC options, StatusC* status);

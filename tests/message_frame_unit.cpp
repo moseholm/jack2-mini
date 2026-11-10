@@ -43,170 +43,170 @@ std::int32_t gFailures = 0;
     } while (0)
 
 // A transport over a byte buffer: writes append, reads consume.
-class BufferTransport : public detail::JackChannelTransactionInterface {
+class BufferTransport : public detail::ChannelTransactionInterface {
 public:
-    std::vector<std::byte> fBytes;
-    std::size_t fPos = 0;
+    std::vector<std::byte> m_bytes;
+    std::size_t m_pos = 0;
 
-    std::int32_t Read(void* data, std::int32_t len) override
+    std::int32_t read(void* data, std::int32_t len) override
     {
-        if (fPos + len > fBytes.size()) {
+        if (m_pos + len > m_bytes.size()) {
             return -1;
         }
-        std::memcpy(data, fBytes.data() + fPos, len);
-        fPos += len;
+        std::memcpy(data, m_bytes.data() + m_pos, len);
+        m_pos += len;
         return 0;
     }
 
-    std::int32_t Write(void* data, std::int32_t len) override
+    std::int32_t write(void* data, std::int32_t len) override
     {
         const auto* bytes = static_cast<const std::byte*>(data);
-        fBytes.insert(fBytes.end(), bytes, bytes + len);
+        m_bytes.insert(m_bytes.end(), bytes, bytes + len);
         return 0;
     }
 
-    std::int32_t WriteWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) override
+    std::int32_t writeWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) override
     {
-        return Write(data, len);
+        return write(data, len);
     }
 };
 
-void TestHeaderLayout()
+void testHeaderLayout()
 {
-    CHECK(sizeof(JackMsgHeader) == 16);
+    CHECK(sizeof(MsgHeader) == 16);
     CHECK(kJackMsgMagic == 0x4a4d4e53);
     CHECK(kJackMsgVersion == kProtocolVersion);
 }
 
-void TestRoundTrip()
+void testRoundTrip()
 {
     BufferTransport wire;
-    constexpr std::string_view payload = "jackmini";
-    constexpr std::size_t kPayloadSize = payload.size() + 1;
-    const JackMsgHeader sent = MakeJackMsgHeader(23, kPayloadSize, 42);
-    CHECK(SendJackMessage(&wire, sent, payload.data(), kPayloadSize) == 0);
-    CHECK(wire.fBytes.size() == 16 + kPayloadSize);
+    constexpr std::string_view kPayload = "jackmini";
+    constexpr std::size_t kPayloadSize = kPayload.size() + 1;
+    const MsgHeader sent = makeJackMsgHeader(23, kPayloadSize, 42);
+    CHECK(sendJackMessage(&wire, sent, kPayload.data(), kPayloadSize) == 0);
+    CHECK(wire.m_bytes.size() == 16 + kPayloadSize);
 
-    JackMsgHeader got { };
-    CHECK(ReadJackMsgHeader(&wire, got) == 0);
-    CHECK(got.type == 23);
-    CHECK(got.length == kPayloadSize);
-    CHECK(got.request == 42);
-    CHECK(got.version == kJackMsgVersion);
+    MsgHeader got { };
+    CHECK(readJackMsgHeader(&wire, got) == 0);
+    CHECK(got.m_type == 23);
+    CHECK(got.m_length == kPayloadSize);
+    CHECK(got.m_request == 42);
+    CHECK(got.m_version == kJackMsgVersion);
 
-    JackPayloadReader body(&wire, got.length, { });
+    PayloadReader body(&wire, got.m_length, { });
     std::array<char, kPayloadSize> back = { };
-    CHECK(body.Read(back.data(), sizeof(back)) == 0);
-    CHECK(std::strcmp(back.data(), payload.data()) == 0);
-    CHECK(body.Done());
+    CHECK(body.read(back.data(), sizeof(back)) == 0);
+    CHECK(std::strcmp(back.data(), kPayload.data()) == 0);
+    CHECK(body.done());
 }
 
-void TestOverrunIsRefused()
+void testOverrunIsRefused()
 {
     BufferTransport wire;
     std::array<const char, 8> payload = { };
-    SendJackMessage(&wire, MakeJackMsgHeader(1, sizeof(payload), 1), payload.data(), sizeof(payload));
-    JackMsgHeader got { };
-    ReadJackMsgHeader(&wire, got);
+    sendJackMessage(&wire, makeJackMsgHeader(1, sizeof(payload), 1), payload.data(), sizeof(payload));
+    MsgHeader got { };
+    readJackMsgHeader(&wire, got);
 
     // Reading more than the header's length is an error, even though the bytes are there.
-    JackPayloadReader body(&wire, got.length, { });
+    PayloadReader body(&wire, got.m_length, { });
     std::array<char, sizeof(payload) + 1> big = { };
-    CHECK(body.Read(big.data(), sizeof(big)) < 0);
+    CHECK(body.read(big.data(), sizeof(big)) < 0);
 }
 
-void TestShortReadIsNotDone()
+void testShortReadIsNotDone()
 {
     BufferTransport wire;
     std::array<const char, 8> payload = { };
-    SendJackMessage(&wire, MakeJackMsgHeader(1, sizeof(payload), 1), payload.data(), sizeof(payload));
-    JackMsgHeader got { };
-    ReadJackMsgHeader(&wire, got);
+    sendJackMessage(&wire, makeJackMsgHeader(1, sizeof(payload), 1), payload.data(), sizeof(payload));
+    MsgHeader got { };
+    readJackMsgHeader(&wire, got);
 
-    JackPayloadReader body(&wire, got.length, { });
+    PayloadReader body(&wire, got.m_length, { });
     std::array<char, 4> part = { };
-    CHECK(body.Read(part.data(), sizeof(part)) == 0);
-    CHECK(!body.Done());
+    CHECK(body.read(part.data(), sizeof(part)) == 0);
+    CHECK(!body.done());
 }
 
-void TestBadMagicIsRefused()
+void testBadMagicIsRefused()
 {
     BufferTransport wire;
-    JackMsgHeader bad = MakeJackMsgHeader(1, 0, 1);
-    bad.magic = 0x12345678;
-    SendJackMessage(&wire, bad, nullptr, 0);
-    JackMsgHeader got { };
-    CHECK(ReadJackMsgHeader(&wire, got) < 0);
+    MsgHeader bad = makeJackMsgHeader(1, 0, 1);
+    bad.m_magic = 0x12345678;
+    sendJackMessage(&wire, bad, nullptr, 0);
+    MsgHeader got { };
+    CHECK(readJackMsgHeader(&wire, got) < 0);
 }
 
-void TestReplyWriter()
+void testReplyWriter()
 {
-    JackPayloadWriter writer;
+    PayloadWriter writer;
     std::array<const std::uint32_t, 2> values = { 7, 9 };
-    CHECK(writer.Write(const_cast<std::uint32_t*>(&values[0]), sizeof(values[0])) == 0);
-    CHECK(writer.Write(const_cast<std::uint32_t*>(&values[1]), sizeof(values[1])) == 0);
-    CHECK(writer.fData.size() == 2 * sizeof(std::uint32_t));
-    CHECK(writer.fFds.empty());
+    CHECK(writer.write(const_cast<std::uint32_t*>(&values[0]), sizeof(values[0])) == 0);
+    CHECK(writer.write(const_cast<std::uint32_t*>(&values[1]), sizeof(values[1])) == 0);
+    CHECK(writer.m_data.size() == 2 * sizeof(std::uint32_t));
+    CHECK(writer.m_fds.empty());
 }
 
-void TestNotificationRoundTrip()
+void testNotificationRoundTrip()
 {
     BufferTransport wire;
-    JackClientNotification sent("system", 3, jackmini::kXRunCallback, 1, "msg", 5, 6);
-    CHECK(sent.Write(&wire, 91) == 0);
+    ClientNotification sent("system", 3, jackmini::kXRunCallback, 1, "msg", 5, 6);
+    CHECK(sent.write(&wire, 91) == 0);
 
-    JackMsgHeader got { };
-    CHECK(ReadJackMsgHeader(&wire, got) == 0);
-    CHECK(got.type == jackmini::kXRunCallback);
-    CHECK(got.request == 91);
-    CHECK(got.length == JackClientNotification::PayloadSize);
+    MsgHeader got { };
+    CHECK(readJackMsgHeader(&wire, got) == 0);
+    CHECK(got.m_type == jackmini::kXRunCallback);
+    CHECK(got.m_request == 91);
+    CHECK(got.m_length == ClientNotification::kPayloadSize);
 
-    JackClientNotification back;
-    JackPayloadReader body(&wire, got.length, { });
-    CHECK(back.Read(&body) == 0);
-    CHECK(body.Done());
-    CHECK(std::strcmp(back.fName.data(), "system") == 0);
-    CHECK(back.fRefNum == 3);
-    CHECK(back.fNotify == jackmini::kXRunCallback);
-    CHECK(back.fSync == 1);
-    CHECK(back.fValue1 == 5 && back.fValue2 == 6);
-    CHECK(std::strcmp(back.fMessage.data(), "msg") == 0);
+    ClientNotification back;
+    PayloadReader body(&wire, got.m_length, { });
+    CHECK(back.read(&body) == 0);
+    CHECK(body.done());
+    CHECK(std::strcmp(back.m_name.data(), "system") == 0);
+    CHECK(back.m_refNum == 3);
+    CHECK(back.m_notify == jackmini::kXRunCallback);
+    CHECK(back.m_sync == 1);
+    CHECK(back.m_value1 == 5 && back.m_value2 == 6);
+    CHECK(std::strcmp(back.m_message.data(), "msg") == 0);
 }
 
-void TestSyncReplyEchoesRequest()
+void testSyncReplyEchoesRequest()
 {
     BufferTransport wire;
-    JackResult res(42);
-    CHECK(SendJackReply(&wire, res, MakeJackMsgHeader(jackmini::kXRunCallback, 0, 91)) == 0);
+    Reply res(42);
+    CHECK(sendJackReply(&wire, res, makeJackMsgHeader(jackmini::kXRunCallback, 0, 91)) == 0);
 
-    class ReplySocket : public detail::JackClientRequestInterface {
+    class ReplySocket : public detail::ClientRequestInterface {
     public:
-        BufferTransport& fWire;
+        BufferTransport& m_wire;
         explicit ReplySocket(BufferTransport& wire)
-            : fWire(wire)
+            : m_wire(wire)
         {
         }
-        std::int32_t Read(void* data, std::int32_t len) override { return fWire.Read(data, len); }
-        std::int32_t Write(void* data, std::int32_t len) override { return fWire.Write(data, len); }
-        std::int32_t ReadWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) override { return fWire.Read(data, len); }
+        std::int32_t read(void* data, std::int32_t len) override { return m_wire.read(data, len); }
+        std::int32_t write(void* data, std::int32_t len) override { return m_wire.write(data, len); }
+        std::int32_t readWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) override { return m_wire.read(data, len); }
     } socket(wire);
 
-    JackResult back;
-    CHECK(ReadJackReply(&socket, jackmini::kXRunCallback, 91, back) == 0);
-    CHECK(back.fResult == 42);
+    Reply back;
+    CHECK(readJackReply(&socket, jackmini::kXRunCallback, 91, back) == 0);
+    CHECK(back.m_result == 42);
 
     BufferTransport again;
-    JackResult other(1);
-    SendJackReply(&again, other, MakeJackMsgHeader(jackmini::kXRunCallback, 0, 91));
+    Reply other(1);
+    sendJackReply(&again, other, makeJackMsgHeader(jackmini::kXRunCallback, 0, 91));
     ReplySocket socket2(again);
-    JackResult wrong;
-    CHECK(ReadJackReply(&socket2, jackmini::kXRunCallback, 92, wrong) < 0);
+    Reply wrong;
+    CHECK(readJackReply(&socket2, jackmini::kXRunCallback, 92, wrong) < 0);
 }
 
-void TestRequestIdsAreDistinct()
+void testRequestIdsAreDistinct()
 {
-    const std::uint32_t first = NextJackRequestId();
-    const std::uint32_t second = NextJackRequestId();
+    const std::uint32_t first = nextJackRequestId();
+    const std::uint32_t second = nextJackRequestId();
     CHECK(second != first);
 }
 
@@ -214,15 +214,15 @@ void TestRequestIdsAreDistinct()
 
 int main()
 {
-    TestHeaderLayout();
-    TestRoundTrip();
-    TestOverrunIsRefused();
-    TestShortReadIsNotDone();
-    TestBadMagicIsRefused();
-    TestReplyWriter();
-    TestNotificationRoundTrip();
-    TestSyncReplyEchoesRequest();
-    TestRequestIdsAreDistinct();
+    testHeaderLayout();
+    testRoundTrip();
+    testOverrunIsRefused();
+    testShortReadIsNotDone();
+    testBadMagicIsRefused();
+    testReplyWriter();
+    testNotificationRoundTrip();
+    testSyncReplyEchoesRequest();
+    testRequestIdsAreDistinct();
 
     if (gFailures == 0) {
         std::printf("message frame checks passed\n");

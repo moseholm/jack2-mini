@@ -32,128 +32,128 @@ using namespace std;
 
 namespace jackmini {
 
-JackSocketServerChannel::JackSocketServerChannel()
-    : fThread(this)
+SocketServerChannel::SocketServerChannel()
+    : m_thread(this)
 {
-    fRebuild = true;
+    m_rebuild = true;
 }
 
-JackSocketServerChannel::~JackSocketServerChannel()
+SocketServerChannel::~SocketServerChannel()
 {
 }
 
-Result<void> JackSocketServerChannel::Open(const char* server_name, JackServer* server)
+Result<void> SocketServerChannel::open(const char* serverName, ServerCore* server)
 {
     jack_log("JackSocketServerChannel::Open");
 
     // Prepare request socket
-    if (fRequestListenSocket.Bind(kServerDir, server_name, 0) < 0) {
+    if (m_requestListenSocket.bind(kServerDir, serverName, 0) < 0) {
         jack_log("JackSocketServerChannel::Open : cannot create result listen socket");
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     }
 
     // Prepare for poll
-    BuildPoolTable();
+    buildPoolTable();
 
-    fDecoder = std::make_unique<JackRequestDecoder>(server, this);
-    fServer = server;
+    m_decoder = std::make_unique<RequestDecoder>(server, this);
+    m_server = server;
     return { };
 }
 
-void JackSocketServerChannel::Close()
+void SocketServerChannel::close()
 {
-    fRequestListenSocket.Close();
+    m_requestListenSocket.close();
 
     // Close remaining client sockets
-    std::map<std::int32_t, std::pair<std::int32_t, JackClientSocket*>>::iterator it;
+    std::map<std::int32_t, std::pair<std::int32_t, ClientSocket*>>::iterator it;
 
-    for (it = fSocketTable.begin(); it != fSocketTable.end(); it++) {
-        pair<std::int32_t, JackClientSocket*> elem = (*it).second;
-        JackClientSocket* socket = elem.second;
+    for (it = m_socketTable.begin(); it != m_socketTable.end(); it++) {
+        pair<std::int32_t, ClientSocket*> elem = (*it).second;
+        ClientSocket* socket = elem.second;
         assert(socket);
-        socket->Close();
+        socket->close();
         delete socket;
     }
 
-    fDecoder.reset();
+    m_decoder.reset();
 }
 
-Result<void> JackSocketServerChannel::Start()
+Result<void> SocketServerChannel::start()
 {
-    if (fThread.Start() != 0) {
+    if (m_thread.start() != 0) {
         jack_error("Cannot start Jack server listener");
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     } else {
         return { };
     }
 }
 
-void JackSocketServerChannel::Stop()
+void SocketServerChannel::stop()
 {
-    fThread.Stop();
+    m_thread.stop();
 }
 
-void JackSocketServerChannel::ClientCreate()
+void SocketServerChannel::clientCreate()
 {
     jack_log("JackSocketServerChannel::ClientCreate socket");
-    JackClientSocket* socket = fRequestListenSocket.Accept();
+    ClientSocket* socket = m_requestListenSocket.accept();
     if (socket) {
-        fSocketTable[socket->GetFd()] = make_pair(-1, socket);
-        fRebuild = true;
+        m_socketTable[socket->getFd()] = make_pair(-1, socket);
+        m_rebuild = true;
     } else {
         jack_error("Client socket cannot be created");
     }
 }
 
-std::int32_t JackSocketServerChannel::GetFd(JackClientSocket* socket_aux)
+std::int32_t SocketServerChannel::getFd(ClientSocket* socketAux)
 {
-    std::map<std::int32_t, std::pair<std::int32_t, JackClientSocket*>>::iterator it;
+    std::map<std::int32_t, std::pair<std::int32_t, ClientSocket*>>::iterator it;
 
-    for (it = fSocketTable.begin(); it != fSocketTable.end(); it++) {
-        pair<std::int32_t, JackClientSocket*> elem = (*it).second;
-        JackClientSocket* socket = elem.second;
-        if (socket_aux == socket) {
+    for (it = m_socketTable.begin(); it != m_socketTable.end(); it++) {
+        pair<std::int32_t, ClientSocket*> elem = (*it).second;
+        ClientSocket* socket = elem.second;
+        if (socketAux == socket) {
             return (*it).first;
         }
     }
     return -1;
 }
 
-void JackSocketServerChannel::ClientAdd(detail::JackChannelTransactionInterface* socket_aux, JackClientOpenRequest* req, JackClientOpenResult* res)
+void SocketServerChannel::clientAdd(detail::ChannelTransactionInterface* socketAux, ClientOpenRequest* req, ClientOpenResult* res)
 {
     std::int32_t refnum = -1;
-    res->fResult = ReplyCode(fServer->GetEngine()->ClientExternalOpen(req->fName.data(), req->fPID, req->fUUID, &refnum, &res->fSharedEngine, &res->fSharedClient, &res->fSharedGraph));
-    if (res->fResult == 0) {
-        JackClientSocket* socket = dynamic_cast<JackClientSocket*>(socket_aux);
+    res->m_result = replyCode(m_server->getEngine()->clientExternalOpen(req->m_name.data(), req->m_pID, req->m_uUID, &refnum, &res->m_sharedEngine, &res->m_sharedClient, &res->m_sharedGraph));
+    if (res->m_result == 0) {
+        ClientSocket* socket = dynamic_cast<ClientSocket*>(socketAux);
         assert(socket);
-        std::int32_t fd = GetFd(socket);
+        std::int32_t fd = getFd(socket);
         assert(fd >= 0);
-        fSocketTable[fd].first = refnum;
-        fRebuild = true;
+        m_socketTable[fd].first = refnum;
+        m_rebuild = true;
         jack_log("JackSocketServerChannel::ClientAdd ref = %d fd = %d", refnum, fd);
     } else {
         jack_error("Cannot create new client");
     }
 }
 
-void JackSocketServerChannel::ClientRemove(detail::JackChannelTransactionInterface* socket_aux, std::int32_t refnum)
+void SocketServerChannel::clientRemove(detail::ChannelTransactionInterface* socketAux, std::int32_t refnum)
 {
-    JackClientSocket* socket = dynamic_cast<JackClientSocket*>(socket_aux);
+    ClientSocket* socket = dynamic_cast<ClientSocket*>(socketAux);
     assert(socket);
-    std::int32_t fd = GetFd(socket);
+    std::int32_t fd = getFd(socket);
     assert(fd >= 0);
 
     jack_log("JackSocketServerChannel::ClientRemove ref = %d fd = %d", refnum, fd);
-    fSocketTable.erase(fd);
-    socket->Close();
+    m_socketTable.erase(fd);
+    socket->close();
     delete socket;
-    fRebuild = true;
+    m_rebuild = true;
 }
 
-void JackSocketServerChannel::ClientKill(std::int32_t fd)
+void SocketServerChannel::clientKill(std::int32_t fd)
 {
-    pair<std::int32_t, JackClientSocket*> elem = fSocketTable[fd];
-    JackClientSocket* socket = elem.second;
+    pair<std::int32_t, ClientSocket*> elem = m_socketTable[fd];
+    ClientSocket* socket = elem.second;
     std::int32_t refnum = elem.first;
     assert(socket);
 
@@ -161,40 +161,40 @@ void JackSocketServerChannel::ClientKill(std::int32_t fd)
     if (refnum == -1) { // Should never happen... correspond to a client that started the socket but never opened...
         jack_log("Client was not opened : probably correspond to server_check");
     } else {
-        fServer->GetEngine()->ClientKill(refnum);
+        m_server->getEngine()->clientKill(refnum);
     }
 
-    fSocketTable.erase(fd);
-    socket->Close();
+    m_socketTable.erase(fd);
+    socket->close();
     delete socket;
-    fRebuild = true;
+    m_rebuild = true;
 }
 
-void JackSocketServerChannel::BuildPoolTable()
+void SocketServerChannel::buildPoolTable()
 {
-    if (fRebuild) {
-        fRebuild = false;
-        fPollTable.resize(fSocketTable.size() + 1);
+    if (m_rebuild) {
+        m_rebuild = false;
+        m_pollTable.resize(m_socketTable.size() + 1);
 
-        jack_log("JackSocketServerChannel::BuildPoolTable size = %d", fSocketTable.size() + 1);
+        jack_log("JackSocketServerChannel::BuildPoolTable size = %d", m_socketTable.size() + 1);
 
         // First fd is the server request socket
-        fPollTable[0].fd = fRequestListenSocket.GetFd();
-        fPollTable[0].events = POLLIN | POLLERR;
+        m_pollTable[0].fd = m_requestListenSocket.getFd();
+        m_pollTable[0].events = POLLIN | POLLERR;
 
         // Next fd for clients
-        map<std::int32_t, pair<std::int32_t, JackClientSocket*>>::iterator it;
+        map<std::int32_t, pair<std::int32_t, ClientSocket*>>::iterator it;
         std::int32_t i;
 
-        for (i = 1, it = fSocketTable.begin(); it != fSocketTable.end(); it++, i++) {
+        for (i = 1, it = m_socketTable.begin(); it != m_socketTable.end(); it++, i++) {
             jack_log("JackSocketServerChannel::BuildPoolTable fSocketTable i = %ld fd = %ld", i, it->first);
-            fPollTable[i].fd = it->first;
-            fPollTable[i].events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
+            m_pollTable[i].fd = it->first;
+            m_pollTable[i].events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
         }
     }
 }
 
-bool JackSocketServerChannel::Init()
+bool SocketServerChannel::init()
 {
     sigset_t set;
     sigemptyset(&set);
@@ -203,55 +203,55 @@ bool JackSocketServerChannel::Init()
     return true;
 }
 
-bool JackSocketServerChannel::Execute()
+bool SocketServerChannel::execute()
 {
     try {
 
         // Global poll
-        if ((poll(fPollTable.data(), fSocketTable.size() + 1, 10000) < 0) && (errno != EINTR)) {
+        if ((poll(m_pollTable.data(), m_socketTable.size() + 1, 10000) < 0) && (errno != EINTR)) {
             jack_error("JackSocketServerChannel::Execute : engine poll failed err = %s request thread quits...", strerror(errno));
             return false;
         } else {
 
             // Poll all clients
-            for (std::uint32_t i = 1; i < fSocketTable.size() + 1; i++) {
-                std::int32_t fd = fPollTable[i].fd;
-                if (fPollTable[i].revents & ~POLLIN) {
+            for (std::uint32_t i = 1; i < m_socketTable.size() + 1; i++) {
+                std::int32_t fd = m_pollTable[i].fd;
+                if (m_pollTable[i].revents & ~POLLIN) {
                     jack_log("JackSocketServerChannel::Execute : poll client error err = %s", strerror(errno));
-                    ClientKill(fd);
-                } else if (fPollTable[i].revents & POLLIN) {
-                    JackClientSocket* socket = fSocketTable[fd].second;
+                    clientKill(fd);
+                } else if (m_pollTable[i].revents & POLLIN) {
+                    ClientSocket* socket = m_socketTable[fd].second;
                     // Decode header
-                    JackMsgHeader header;
-                    if (ReadJackMsgHeader(socket, header) < 0) {
+                    MsgHeader header;
+                    if (readJackMsgHeader(socket, header) < 0) {
                         jack_log("JackSocketServerChannel::Execute : cannot decode header");
-                        ClientKill(fd);
+                        clientKill(fd);
                         // A client of another protocol version is refused, and disconnected
-                    } else if (header.version != kJackMsgVersion) {
-                        fDecoder->Refuse(socket, header);
-                        ClientKill(fd);
+                    } else if (header.m_version != kJackMsgVersion) {
+                        m_decoder->refuse(socket, header);
+                        clientKill(fd);
                         // Decode request
                     } else {
                         // Result is not needed here
-                        fDecoder->HandleRequest(socket, header);
+                        m_decoder->handleRequest(socket, header);
                     }
                 }
             }
 
             // Check the server request socket */
-            if (fPollTable[0].revents & POLLERR) {
+            if (m_pollTable[0].revents & POLLERR) {
                 jack_error("Error on server request socket err = %s", strerror(errno));
             }
 
-            if (fPollTable[0].revents & POLLIN) {
-                ClientCreate();
+            if (m_pollTable[0].revents & POLLIN) {
+                clientCreate();
             }
         }
 
-        BuildPoolTable();
+        buildPoolTable();
         return true;
 
-    } catch (JackQuitException& e) {
+    } catch (QuitException& e) {
         jack_log("JackSocketServerChannel::Execute : JackQuitException");
         return false;
     }

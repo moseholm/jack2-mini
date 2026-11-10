@@ -27,27 +27,27 @@
 
 namespace jackmini {
 
-JackConnectionManager::JackConnectionManager()
+ConnectionManager::ConnectionManager()
 {
     std::int32_t i;
-    static_assert(offsetof(JackConnectionManager, fInputCounter) % sizeof(UInt32) == 0,
+    static_assert(offsetof(ConnectionManager, m_inputCounter) % sizeof(UInt32) == 0,
         "fInputCounter must be aligned within JackConnectionManager");
 
-    jack_log("JackConnectionManager::InitConnections size = %ld ", sizeof(JackConnectionManager));
+    jack_log("JackConnectionManager::InitConnections size = %ld ", sizeof(ConnectionManager));
 
     for (i = 0; i < kPortNumMax; i++) {
-        fConnection[i].Init();
+        m_connection[i].init();
     }
 
-    fLoopFeedback.Init();
+    m_loopFeedback.init();
 
     jack_log("JackConnectionManager::InitClients");
     for (i = 0; i < kClientNum; i++) {
-        InitRefNum(i);
+        initRefNum(i);
     }
 }
 
-JackConnectionManager::~JackConnectionManager()
+ConnectionManager::~ConnectionManager()
 {
 }
 
@@ -55,23 +55,23 @@ JackConnectionManager::~JackConnectionManager()
 // Internal API
 //--------------
 
-bool JackConnectionManager::IsLoopPathAux(std::int32_t ref1, std::int32_t ref2) const
+bool ConnectionManager::isLoopPathAux(std::int32_t ref1, std::int32_t ref2) const
 {
     jack_log("JackConnectionManager::IsLoopPathAux ref1 = %ld ref2 = %ld", ref1, ref2);
 
-    if (ref1 < GetEngineControl()->fDriverNum || ref2 < GetEngineControl()->fDriverNum) {
+    if (ref1 < getEngineControl()->m_driverNum || ref2 < getEngineControl()->m_driverNum) {
         return false;
     } else if (ref1 == ref2) { // Same refnum
         return true;
     } else {
-        std::array<jack_int_t, kClientNum> output;
-        fConnectionRef.GetOutputTable(ref1, output.data());
+        std::array<Int, kClientNum> output;
+        m_connectionRef.getOutputTable(ref1, output.data());
 
-        if (fConnectionRef.IsInsideTable(ref2, output.data())) { // If ref2 is contained in the outputs of ref1
+        if (m_connectionRef.isInsideTable(ref2, output.data())) { // If ref2 is contained in the outputs of ref1
             return true;
         } else {
             for (std::int32_t i = 0; i < kClientNum && output[i] != kEmpty; i++) { // Otherwise recurse for all ref1 outputs
-                if (IsLoopPathAux(output[i], ref2)) {
+                if (isLoopPathAux(output[i], ref2)) {
                     return true; // Stop when a path is found
                 }
             }
@@ -85,41 +85,41 @@ bool JackConnectionManager::IsLoopPathAux(std::int32_t ref1, std::int32_t ref2) 
 //--------------
 
 // \brief Connect port_src to port_dst.
-Result<void> JackConnectionManager::Connect(jack_port_id_t port_src, jack_port_id_t port_dst)
+Result<void> ConnectionManager::connect(PortIdC portSrc, PortIdC portDst)
 {
-    jack_log("JackConnectionManager::Connect port_src = %ld port_dst = %ld", port_src, port_dst);
+    jack_log("JackConnectionManager::Connect port_src = %ld port_dst = %ld", portSrc, portDst);
 
-    if (fConnection[port_src].AddItem(port_dst)) {
+    if (m_connection[portSrc].addItem(portDst)) {
         return { };
     } else {
         jack_error("Connection table is full !!");
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     }
 }
 
 // \brief Disconnect port_src from port_dst.
-Result<void> JackConnectionManager::Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst)
+Result<void> ConnectionManager::disconnect(PortIdC portSrc, PortIdC portDst)
 {
-    jack_log("JackConnectionManager::Disconnect port_src = %ld port_dst = %ld", port_src, port_dst);
+    jack_log("JackConnectionManager::Disconnect port_src = %ld port_dst = %ld", portSrc, portDst);
 
-    if (fConnection[port_src].RemoveItem(port_dst)) {
+    if (m_connection[portSrc].removeItem(portDst)) {
         return { };
     } else {
         jack_error("Connection not found !!");
-        return std::unexpected(Error::NotFound);
+        return std::unexpected(Error::kNotFound);
     }
 }
 
 // \brief Check if port_src and port_dst are connected.
-bool JackConnectionManager::IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst) const
+bool ConnectionManager::isConnected(PortIdC portSrc, PortIdC portDst) const
 {
-    return fConnection[port_src].CheckItem(port_dst);
+    return m_connection[portSrc].checkItem(portDst);
 }
 
 // \brief Get the connection port array.
-const jack_int_t* JackConnectionManager::GetConnections(jack_port_id_t port_index) const
+const Int* ConnectionManager::getConnections(PortIdC portIndex) const
 {
-    return fConnection[port_index].GetItems();
+    return m_connection[portIndex].getItems();
 }
 
 //------------------------
@@ -127,124 +127,124 @@ const jack_int_t* JackConnectionManager::GetConnections(jack_port_id_t port_inde
 //------------------------
 
 // \brief Add an input port to a client.
-Result<void> JackConnectionManager::AddInputPort(std::int32_t refnum, jack_port_id_t port_index)
+Result<void> ConnectionManager::addInputPort(std::int32_t refnum, PortIdC portIndex)
 {
-    if (fInputPort[refnum].AddItem(port_index)) {
-        jack_log("JackConnectionManager::AddInputPort ref = %ld port = %ld", refnum, port_index);
+    if (m_inputPort[refnum].addItem(portIndex)) {
+        jack_log("JackConnectionManager::AddInputPort ref = %ld port = %ld", refnum, portIndex);
         return { };
     } else {
         jack_error("Maximum number of input ports is reached for application ref = %ld", refnum);
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     }
 }
 
 // \brief Add an output port to a client.
-Result<void> JackConnectionManager::AddOutputPort(std::int32_t refnum, jack_port_id_t port_index)
+Result<void> ConnectionManager::addOutputPort(std::int32_t refnum, PortIdC portIndex)
 {
-    if (fOutputPort[refnum].AddItem(port_index)) {
-        jack_log("JackConnectionManager::AddOutputPort ref = %ld port = %ld", refnum, port_index);
+    if (m_outputPort[refnum].addItem(portIndex)) {
+        jack_log("JackConnectionManager::AddOutputPort ref = %ld port = %ld", refnum, portIndex);
         return { };
     } else {
         jack_error("Maximum number of output ports is reached for application ref = %ld", refnum);
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     }
 }
 
 // \brief Remove an input port from a client.
-Result<void> JackConnectionManager::RemoveInputPort(std::int32_t refnum, jack_port_id_t port_index)
+Result<void> ConnectionManager::removeInputPort(std::int32_t refnum, PortIdC portIndex)
 {
-    jack_log("JackConnectionManager::RemoveInputPort ref = %ld port_index = %ld ", refnum, port_index);
+    jack_log("JackConnectionManager::RemoveInputPort ref = %ld port_index = %ld ", refnum, portIndex);
 
-    if (fInputPort[refnum].RemoveItem(port_index)) {
+    if (m_inputPort[refnum].removeItem(portIndex)) {
         return { };
     } else {
-        jack_error("Input port index = %ld not found for application ref = %ld", port_index, refnum);
-        return std::unexpected(Error::NotFound);
+        jack_error("Input port index = %ld not found for application ref = %ld", portIndex, refnum);
+        return std::unexpected(Error::kNotFound);
     }
 }
 
 // \brief Remove an output port from a client.
-Result<void> JackConnectionManager::RemoveOutputPort(std::int32_t refnum, jack_port_id_t port_index)
+Result<void> ConnectionManager::removeOutputPort(std::int32_t refnum, PortIdC portIndex)
 {
-    jack_log("JackConnectionManager::RemoveOutputPort ref = %ld port_index = %ld ", refnum, port_index);
+    jack_log("JackConnectionManager::RemoveOutputPort ref = %ld port_index = %ld ", refnum, portIndex);
 
-    if (fOutputPort[refnum].RemoveItem(port_index)) {
+    if (m_outputPort[refnum].removeItem(portIndex)) {
         return { };
     } else {
-        jack_error("Output port index = %ld not found for application ref = %ld", port_index, refnum);
-        return std::unexpected(Error::NotFound);
+        jack_error("Output port index = %ld not found for application ref = %ld", portIndex, refnum);
+        return std::unexpected(Error::kNotFound);
     }
 }
 
 // \brief Get the input port array of a given refnum.
-const jack_int_t* JackConnectionManager::GetInputPorts(std::int32_t refnum)
+const Int* ConnectionManager::getInputPorts(std::int32_t refnum)
 {
-    return fInputPort[refnum].GetItems();
+    return m_inputPort[refnum].getItems();
 }
 
 // \brief Get the output port array of a given refnum.
-const jack_int_t* JackConnectionManager::GetOutputPorts(std::int32_t refnum)
+const Int* ConnectionManager::getOutputPorts(std::int32_t refnum)
 {
-    return fOutputPort[refnum].GetItems();
+    return m_outputPort[refnum].getItems();
 }
 
 // \brief Init the refnum.
-void JackConnectionManager::InitRefNum(std::int32_t refnum)
+void ConnectionManager::initRefNum(std::int32_t refnum)
 {
-    fInputPort[refnum].Init();
-    fOutputPort[refnum].Init();
-    fConnectionRef.Init(refnum);
-    fInputCounter[refnum].SetValue(0);
-    fInactive[refnum] = 0;
+    m_inputPort[refnum].init();
+    m_outputPort[refnum].init();
+    m_connectionRef.init(refnum);
+    m_inputCounter[refnum].setValue(0);
+    m_inactive[refnum] = 0;
 }
 
 // \brief Reset all clients activation.
-void JackConnectionManager::ResetGraph(JackClientTiming* timing, std::atomic<SInt32>* live)
+void ConnectionManager::resetGraph(ClientTiming* timing, std::atomic<SInt32>* live)
 {
     // Reset activation counter : must be done *before* starting to resume clients
     for (std::int32_t i = 0; i < kClientNum; i++) {
-        live[i].store(fInputCounter[i].GetCount());
-        timing[i].fStatus = NotTriggered;
+        live[i].store(m_inputCounter[i].getCount());
+        timing[i].m_status = kNotTriggered;
     }
 }
 
 // \brief Wait on the input synchro.
-Result<void> JackConnectionManager::SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::int64_t time_out_usec)
+Result<void> ConnectionManager::suspendRefNum(ClientControl* control, Synchro* table, ClientTiming* timing, std::int64_t timeOutUsec)
 {
     bool res;
-    if ((res = table[control->fRefNum].TimedWait(time_out_usec))) {
-        timing[control->fRefNum].fStatus = Running;
-        timing[control->fRefNum].fAwakeAt = get_microseconds();
+    if ((res = table[control->m_refNum].timedWait(timeOutUsec))) {
+        timing[control->m_refNum].m_status = kRunning;
+        timing[control->m_refNum].m_awakeAt = getMicroseconds();
     }
     if (!res) {
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     }
     return { };
 }
 
 // \brief Signal clients connected to the given client.
-Result<void> JackConnectionManager::ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live)
+Result<void> ConnectionManager::resumeRefNum(ClientControl* control, Synchro* table, ClientTiming* timing, std::atomic<SInt32>* live)
 {
-    jack_time_t current_date = get_microseconds();
-    const jack_int_t* output_ref = fConnectionRef.GetItems(control->fRefNum);
+    TimeC currentDate = getMicroseconds();
+    const Int* outputRef = m_connectionRef.getItems(control->m_refNum);
     Result<void> res;
 
     // Update state and timestamp of current client
-    timing[control->fRefNum].fStatus = Finished;
-    timing[control->fRefNum].fFinishedAt = current_date;
+    timing[control->m_refNum].m_status = kFinished;
+    timing[control->m_refNum].m_finishedAt = currentDate;
 
     for (std::int32_t i = 0; i < kClientNum; i++) {
 
         // Signal connected clients or drivers
-        if (output_ref[i] > 0) {
+        if (outputRef[i] > 0) {
 
             // Update state and timestamp of destination clients
-            timing[i].fStatus = Triggered;
-            timing[i].fSignaledAt = current_date;
+            timing[i].m_status = kTriggered;
+            timing[i].m_signaledAt = currentDate;
 
-            if (!JackActivationCount::Signal(live[i], table + i, control)) {
-                jack_log("JackConnectionManager::ResumeRefNum error: ref = %ld output = %ld ", control->fRefNum, i);
-                res = std::unexpected(Error::ServerFailure);
+            if (!ActivationCount::signal(live[i], table + i, control)) {
+                jack_log("JackConnectionManager::ResumeRefNum error: ref = %ld output = %ld ", control->m_refNum, i);
+                res = std::unexpected(Error::kServerFailure);
             }
         }
     }
@@ -252,7 +252,7 @@ Result<void> JackConnectionManager::ResumeRefNum(JackClientControl* control, Jac
     return res;
 }
 
-static bool HasNoConnection(jack_int_t* table)
+static bool hasNoConnection(Int* table)
 {
     for (std::int32_t ref = 0; ref < kClientNum; ref++) {
         if (table[ref] > 0)
@@ -263,28 +263,28 @@ static bool HasNoConnection(jack_int_t* table)
 
 // Using http://en.wikipedia.org/wiki/Topological_sorting
 
-void JackConnectionManager::TopologicalSort(std::vector<jack_int_t>& sorted)
+void ConnectionManager::topologicalSort(std::vector<Int>& sorted)
 {
-    JackFixedMatrix<kClientNum>* tmp = new JackFixedMatrix<kClientNum>;
-    std::set<jack_int_t> level;
+    FixedMatrix<kClientNum>* tmp = new FixedMatrix<kClientNum>;
+    std::set<Int> level;
 
-    fConnectionRef.Copy(*tmp);
+    m_connectionRef.copy(*tmp);
 
     // Inputs of the graph
     level.insert(kAudioDriverRefnum);
     level.insert(kFreewheelDriverRefnum);
 
     while (level.size() > 0) {
-        jack_int_t refnum = *level.begin();
+        Int refnum = *level.begin();
         sorted.push_back(refnum);
         level.erase(level.begin());
-        const jack_int_t* output_ref1 = tmp->GetItems(refnum);
+        const Int* outputRef1 = tmp->getItems(refnum);
         for (std::int32_t dst = 0; dst < kClientNum; dst++) {
-            if (output_ref1[dst] > 0) {
-                tmp->ClearItem(refnum, dst);
-                jack_int_t output_ref2[kClientNum];
-                tmp->GetOutputTable1(dst, output_ref2);
-                if (HasNoConnection(output_ref2)) {
+            if (outputRef1[dst] > 0) {
+                tmp->clearItem(refnum, dst);
+                Int outputRef2[kClientNum];
+                tmp->getOutputTable1(dst, outputRef2);
+                if (hasNoConnection(outputRef2)) {
                     level.insert(dst);
                 }
             }
@@ -295,88 +295,88 @@ void JackConnectionManager::TopologicalSort(std::vector<jack_int_t>& sorted)
 }
 
 // \brief Increment the number of ports between 2 clients, if the 2 clients become connected, then the Activation counter is updated.
-void JackConnectionManager::IncDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst)
+void ConnectionManager::incDirectConnection(PortIdC portSrc, PortIdC portDst)
 {
-    std::int32_t ref1 = GetOutputRefNum(port_src);
-    std::int32_t ref2 = GetInputRefNum(port_dst);
+    std::int32_t ref1 = getOutputRefNum(portSrc);
+    std::int32_t ref2 = getInputRefNum(portDst);
 
     assert(ref1 >= 0 && ref2 >= 0);
 
-    DirectConnect(ref1, ref2);
+    directConnect(ref1, ref2);
     jack_log("JackConnectionManager::IncConnectionRef: ref1 = %ld ref2 = %ld", ref1, ref2);
 }
 
 // \brief Decrement the number of ports between 2 clients, if the 2 clients become disconnected, then the Activation counter is updated.
-void JackConnectionManager::DecDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst)
+void ConnectionManager::decDirectConnection(PortIdC portSrc, PortIdC portDst)
 {
-    std::int32_t ref1 = GetOutputRefNum(port_src);
-    std::int32_t ref2 = GetInputRefNum(port_dst);
+    std::int32_t ref1 = getOutputRefNum(portSrc);
+    std::int32_t ref2 = getInputRefNum(portDst);
 
     assert(ref1 >= 0 && ref2 >= 0);
 
-    DirectDisconnect(ref1, ref2);
+    directDisconnect(ref1, ref2);
     jack_log("JackConnectionManager::DecConnectionRef: ref1 = %ld ref2 = %ld", ref1, ref2);
 }
 
 // \brief Directly connect 2 reference numbers.
-void JackConnectionManager::DirectConnect(std::int32_t ref1, std::int32_t ref2)
+void ConnectionManager::directConnect(std::int32_t ref1, std::int32_t ref2)
 {
     assert(ref1 >= 0 && ref2 >= 0);
 
-    if (fConnectionRef.IncItem(ref1, ref2) == 1) { // First connection between client ref1 and client ref2
+    if (m_connectionRef.incItem(ref1, ref2) == 1) { // First connection between client ref1 and client ref2
         jack_log("JackConnectionManager::DirectConnect first: ref1 = %ld ref2 = %ld", ref1, ref2);
-        if (!IsInactive(ref1)) {
-            fInputCounter[ref2].IncValue();
+        if (!isInactive(ref1)) {
+            m_inputCounter[ref2].incValue();
         }
     }
 }
 
 // \brief Directly disconnect 2 reference numbers.
-void JackConnectionManager::DirectDisconnect(std::int32_t ref1, std::int32_t ref2)
+void ConnectionManager::directDisconnect(std::int32_t ref1, std::int32_t ref2)
 {
     assert(ref1 >= 0 && ref2 >= 0);
 
-    if (fConnectionRef.DecItem(ref1, ref2) == 0) { // Last connection between client ref1 and client ref2
+    if (m_connectionRef.decItem(ref1, ref2) == 0) { // Last connection between client ref1 and client ref2
         jack_log("JackConnectionManager::DirectDisconnect last: ref1 = %ld ref2 = %ld", ref1, ref2);
-        if (!IsInactive(ref1)) {
-            fInputCounter[ref2].DecValue();
+        if (!isInactive(ref1)) {
+            m_inputCounter[ref2].decValue();
         }
     }
 }
 
 // \brief Deactivates or activates a client. Its connections are kept; the activation count of each client it feeds
 // follows: they stop counting while the client is inactive.
-void JackConnectionManager::SetInactive(std::int32_t refnum, bool inactive)
+void ConnectionManager::setInactive(std::int32_t refnum, bool inactive)
 {
     assert(refnum >= 0 && refnum < kClientNum);
-    if (IsInactive(refnum) == inactive) {
+    if (isInactive(refnum) == inactive) {
         return;
     }
-    const jack_int_t* outputs = fConnectionRef.GetItems(refnum);
+    const Int* outputs = m_connectionRef.getItems(refnum);
     for (std::int32_t ref = 0; ref < kClientNum; ref++) {
         if (outputs[ref] > 0) {
             if (inactive) {
-                fInputCounter[ref].DecValue();
+                m_inputCounter[ref].decValue();
             } else {
-                fInputCounter[ref].IncValue();
+                m_inputCounter[ref].incValue();
             }
         }
     }
-    fInactive[refnum] = inactive ? 1 : 0;
+    m_inactive[refnum] = inactive ? 1 : 0;
 }
 
 // \brief Returns the connections state between 2 refnum.
-bool JackConnectionManager::IsDirectConnection(std::int32_t ref1, std::int32_t ref2) const
+bool ConnectionManager::isDirectConnection(std::int32_t ref1, std::int32_t ref2) const
 {
     assert(ref1 >= 0 && ref2 >= 0);
-    return (fConnectionRef.GetItemCount(ref1, ref2) > 0);
+    return (m_connectionRef.getItemCount(ref1, ref2) > 0);
 }
 
 // \brief Get the client refnum of a given input port.
-std::int32_t JackConnectionManager::GetInputRefNum(jack_port_id_t port_index) const
+std::int32_t ConnectionManager::getInputRefNum(PortIdC portIndex) const
 {
     for (std::int32_t i = 0; i < kClientNum; i++) {
-        if (fInputPort[i].CheckItem(port_index)) {
+        if (m_inputPort[i].checkItem(portIndex)) {
             return i;
         }
     }
@@ -385,10 +385,10 @@ std::int32_t JackConnectionManager::GetInputRefNum(jack_port_id_t port_index) co
 }
 
 // \brief Get the client refnum of a given output port.
-std::int32_t JackConnectionManager::GetOutputRefNum(jack_port_id_t port_index) const
+std::int32_t ConnectionManager::getOutputRefNum(PortIdC portIndex) const
 {
     for (std::int32_t i = 0; i < kClientNum; i++) {
-        if (fOutputPort[i].CheckItem(port_index)) {
+        if (m_outputPort[i].checkItem(portIndex)) {
             return i;
         }
     }
@@ -397,46 +397,46 @@ std::int32_t JackConnectionManager::GetOutputRefNum(jack_port_id_t port_index) c
 }
 
 // \brief Test is a connection path exists between port_src and port_dst.
-bool JackConnectionManager::IsLoopPath(jack_port_id_t port_src, jack_port_id_t port_dst) const
+bool ConnectionManager::isLoopPath(PortIdC portSrc, PortIdC portDst) const
 {
-    return IsLoopPathAux(GetInputRefNum(port_dst), GetOutputRefNum(port_src));
+    return isLoopPathAux(getInputRefNum(portDst), getOutputRefNum(portSrc));
 }
 
-bool JackConnectionManager::IsFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst) const
+bool ConnectionManager::isFeedbackConnection(PortIdC portSrc, PortIdC portDst) const
 {
-    return (fLoopFeedback.GetConnectionIndex(GetOutputRefNum(port_src), GetInputRefNum(port_dst)) >= 0);
+    return (m_loopFeedback.getConnectionIndex(getOutputRefNum(portSrc), getInputRefNum(portDst)) >= 0);
 }
 
-bool JackConnectionManager::IncFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst)
+bool ConnectionManager::incFeedbackConnection(PortIdC portSrc, PortIdC portDst)
 {
-    std::int32_t ref1 = GetOutputRefNum(port_src);
-    std::int32_t ref2 = GetInputRefNum(port_dst);
+    std::int32_t ref1 = getOutputRefNum(portSrc);
+    std::int32_t ref2 = getInputRefNum(portDst);
 
     // Add an activation connection in the other direction
     jack_log("JackConnectionManager::IncFeedbackConnection ref1 = %ld ref2 = %ld", ref1, ref2);
     assert(ref1 >= 0 && ref2 >= 0);
 
     if (ref1 != ref2) {
-        DirectConnect(ref2, ref1);
+        directConnect(ref2, ref1);
     }
 
-    return fLoopFeedback.IncConnection(ref1, ref2); // Add the feedback connection
+    return m_loopFeedback.incConnection(ref1, ref2); // Add the feedback connection
 }
 
-bool JackConnectionManager::DecFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst)
+bool ConnectionManager::decFeedbackConnection(PortIdC portSrc, PortIdC portDst)
 {
-    std::int32_t ref1 = GetOutputRefNum(port_src);
-    std::int32_t ref2 = GetInputRefNum(port_dst);
+    std::int32_t ref1 = getOutputRefNum(portSrc);
+    std::int32_t ref2 = getInputRefNum(portDst);
 
     // Remove an activation connection in the other direction
     jack_log("JackConnectionManager::DecFeedbackConnection ref1 = %ld ref2 = %ld", ref1, ref2);
     assert(ref1 >= 0 && ref2 >= 0);
 
     if (ref1 != ref2) {
-        DirectDisconnect(ref2, ref1);
+        directDisconnect(ref2, ref1);
     }
 
-    return fLoopFeedback.DecConnection(ref1, ref2); // Remove the feedback connection
+    return m_loopFeedback.decConnection(ref1, ref2); // Remove the feedback connection
 }
 
 } // namespace jackmini

@@ -21,30 +21,30 @@
 
 namespace jackmini {
 
-static std::array<const JackPortType*, 2> gPortTypes = {
+static std::array<const PortType*, 2> gPortTypes = {
     &gAudioPortType,
     &gMidiPortType,
 };
 
-const jack_port_type_id_t PORT_TYPES_MAX = sizeof(gPortTypes) / sizeof(gPortTypes[0]);
+const PortTypeIdC gPORTTYPESMAX = sizeof(gPortTypes) / sizeof(gPortTypes[0]);
 
-jack_port_type_id_t GetPortTypeId(const char* port_type)
+PortTypeIdC getPortTypeId(const char* portType)
 {
-    for (jack_port_type_id_t i = 0; i < PORT_TYPES_MAX; ++i) {
-        const JackPortType* type = gPortTypes[i];
+    for (PortTypeIdC i = 0; i < gPORTTYPESMAX; ++i) {
+        const PortType* type = gPortTypes[i];
         assert(type != nullptr);
-        if (strcmp(port_type, type->fName) == 0) {
+        if (strcmp(portType, type->m_name) == 0) {
             return i;
         }
     }
-    return PORT_TYPES_MAX;
+    return gPORTTYPESMAX;
 }
 
-const JackPortType* GetPortType(jack_port_type_id_t type_id)
+const PortType* getPortType(PortTypeIdC typeId)
 {
-    if (type_id >= PORT_TYPES_MAX)
+    if (typeId >= gPORTTYPESMAX)
         return nullptr;
-    const JackPortType* type = gPortTypes[type_id];
+    const PortType* type = gPortTypes[typeId];
     assert(type != nullptr);
     return type;
 }

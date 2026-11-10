@@ -30,20 +30,20 @@ typedef std::uint32_t UInt32;
 typedef std::int32_t SInt32;
 
 typedef std::uint64_t UInt64;
-typedef pthread_key_t jack_tls_key;
+typedef pthread_key_t TlsKey;
 
-typedef std::int32_t (*jack_thread_creator_t)(pthread_t*, const pthread_attr_t*, void* (*function)(void*), void* arg);
+typedef std::int32_t (*ThreadCreator)(pthread_t*, const pthread_attr_t*, void* (*function)(void*), void* arg);
 
-typedef std::uint16_t jack_int_t; // Internal type for ports and refnum
-
-typedef enum {
-    JACK_TIMER_SYSTEM_CLOCK,
-    JACK_TIMER_HPET,
-} jack_timer_type_t;
+typedef std::uint16_t Int; // Internal type for ports and refnum
 
 typedef enum {
-    NotTriggered,
-    Triggered,
-    Running,
-    Finished,
-} jack_client_state_t;
+    kTimerSystemClock,
+    kTimerHpet,
+} TimerType;
+
+typedef enum {
+    kNotTriggered,
+    kTriggered,
+    kRunning,
+    kFinished,
+} ClientState;

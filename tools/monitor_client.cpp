@@ -40,12 +40,12 @@ constexpr const char* kTool = "jackmini_monitor_client";
 
 std::atomic<bool> gStop { false };
 
-void on_signal(std::int32_t)
+void onSignal(std::int32_t)
 {
     gStop.store(true);
 }
 
-void show_usage(FILE* out)
+void showUsage(FILE* out)
 {
     std::fprintf(out, "\nUsage: %s [options] <client>\n", kTool);
     std::fprintf(out, "Copies the audio inputs of <client> to the outputs monitor_<n> of this client.\n\n");
@@ -77,21 +77,21 @@ int main(std::int32_t argc, char** argv)
             std::printf("%s " JACK_VERSION "\n", kTool);
             return 0;
         case 'h':
-            show_usage(stdout);
+            showUsage(stdout);
             return 0;
         default:
-            show_usage(stderr);
+            showUsage(stderr);
             return 1;
         }
     }
     if (argc - optind != 1) {
-        show_usage(stderr);
+        showUsage(stderr);
         return 1;
     }
     const std::string target = argv[optind];
 
     // The input ports of the target: their handles are looked up through this client, which is how a port is reached.
-    auto opened = jackmini::tools::open_client(kTool, server);
+    auto opened = jackmini::tools::openClient(kTool, server);
     if (!opened) {
         return jackmini::tools::fail(kTool, opened.error());
     }
@@ -99,10 +99,10 @@ int main(std::int32_t argc, char** argv)
 
     std::vector<jackmini::Port> inputs;
     for (const jackmini::PortInfo& port : client.ports()) {
-        if (port.owner != target || port.type != "32 bit float mono audio" || !jackmini::has_flag(port.flags, jackmini::PortFlags::Input)) {
+        if (port.m_owner != target || port.m_type != "32 bit float mono audio" || !jackmini::hasFlag(port.m_flags, jackmini::PortFlags::kInput)) {
             continue;
         }
-        if (auto found = client.find_port(port.name); found) {
+        if (auto found = client.findPort(port.m_name); found) {
             inputs.push_back(*found);
         }
     }
@@ -114,17 +114,17 @@ int main(std::int32_t argc, char** argv)
     // The outputs are registered before the client is activated; the process callback only copies.
     std::vector<jackmini::Port> outputs;
     for (std::size_t i = 0; i < inputs.size(); i++) {
-        auto port = client.register_port("monitor_" + std::to_string(i + 1), jackmini::PortType::Audio, jackmini::PortFlags::Output);
+        auto port = client.registerPort("monitor_" + std::to_string(i + 1), jackmini::PortType::kAudio, jackmini::PortFlags::kOutput);
         if (!port) {
             return jackmini::tools::fail(kTool, port.error());
         }
         outputs.push_back(*port);
     }
 
-    if (auto set = client.on_process([&client, &inputs, &outputs](const jackmini::Cycle&) {
+    if (auto set = client.onProcess([&client, &inputs, &outputs](const jackmini::Cycle&) {
             for (std::size_t i = 0; i < inputs.size(); i++) {
-                const std::span<float> in = client.audio_buffer(inputs[i]);
-                const std::span<float> out = client.audio_buffer(outputs[i]);
+                const std::span<float> in = client.audioBuffer(inputs[i]);
+                const std::span<float> out = client.audioBuffer(outputs[i]);
                 std::copy_n(in.begin(), std::min(in.size(), out.size()), out.begin());
             }
             return true;
@@ -132,8 +132,8 @@ int main(std::int32_t argc, char** argv)
         return jackmini::tools::fail(kTool, set.error());
     }
 
-    std::signal(SIGINT, on_signal);
-    std::signal(SIGTERM, on_signal);
+    std::signal(SIGINT, onSignal);
+    std::signal(SIGTERM, onSignal);
     if (auto activated = client.activate(); !activated) {
         return jackmini::tools::fail(kTool, activated.error());
     }

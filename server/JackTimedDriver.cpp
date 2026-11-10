@@ -26,43 +26,43 @@
 
 namespace jackmini {
 
-std::int32_t JackTimedDriver::FirstCycle(jack_time_t cur_time_usec)
+std::int32_t TimedDriver::firstCycle(TimeC curTimeUsec)
 {
-    fAnchorTimeUsec = cur_time_usec;
-    return std::int32_t((double(fEngineControl->fBufferSize) * 1000000) / double(fEngineControl->fSampleRate));
+    m_anchorTimeUsec = curTimeUsec;
+    return std::int32_t((double(m_engineControl->m_bufferSize) * 1000000) / double(m_engineControl->m_sampleRate));
 }
 
-std::int32_t JackTimedDriver::CurrentCycle(jack_time_t cur_time_usec)
+std::int32_t TimedDriver::currentCycle(TimeC curTimeUsec)
 {
-    return std::int32_t(((double(fCycleCount) * double(fEngineControl->fBufferSize) * 1000000.) / double(fEngineControl->fSampleRate)) - (cur_time_usec - fAnchorTimeUsec));
+    return std::int32_t(((double(m_cycleCount) * double(m_engineControl->m_bufferSize) * 1000000.) / double(m_engineControl->m_sampleRate)) - (curTimeUsec - m_anchorTimeUsec));
 }
 
-std::int32_t JackTimedDriver::Start()
+std::int32_t TimedDriver::start()
 {
-    fCycleCount = 0;
-    return JackAudioDriver::Start();
+    m_cycleCount = 0;
+    return AudioDriver::start();
 }
 
-void JackTimedDriver::ProcessWait()
+void TimedDriver::processWait()
 {
-    jack_time_t cur_time_usec = get_microseconds();
-    std::int32_t wait_time_usec;
+    TimeC curTimeUsec = getMicroseconds();
+    std::int32_t waitTimeUsec;
 
-    if (fCycleCount++ == 0) {
-        wait_time_usec = FirstCycle(cur_time_usec);
+    if (m_cycleCount++ == 0) {
+        waitTimeUsec = firstCycle(curTimeUsec);
     } else {
-        wait_time_usec = CurrentCycle(cur_time_usec);
+        waitTimeUsec = currentCycle(curTimeUsec);
     }
 
-    if (wait_time_usec < 0) {
-        NotifyXRun(cur_time_usec, float(cur_time_usec - fBeginDateUst));
-        fCycleCount = 0;
-        wait_time_usec = 0;
-        jack_error("JackTimedDriver::Process XRun = %ld usec", (cur_time_usec - fBeginDateUst));
+    if (waitTimeUsec < 0) {
+        notifyXRun(curTimeUsec, float(curTimeUsec - m_beginDateUst));
+        m_cycleCount = 0;
+        waitTimeUsec = 0;
+        jack_error("JackTimedDriver::Process XRun = %ld usec", (curTimeUsec - m_beginDateUst));
     }
 
     // jack_log("JackTimedDriver::Process wait_time = %d", wait_time_usec);
-    sleep_microseconds(wait_time_usec);
+    sleepMicroseconds(waitTimeUsec);
 }
 
 } // namespace jackmini

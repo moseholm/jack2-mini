@@ -31,14 +31,14 @@ namespace jackmini {
 
 // Every message on the control socket (requests and replies) starts with this 16-byte header (protocol.md section 2).
 // The payload follows, `length` bytes long.  A reply carries the type and request id of the request it answers.
-struct JackMsgHeader {
-    std::uint32_t magic;
-    std::uint16_t version;
-    std::uint16_t type;
-    std::uint32_t length;
-    std::uint32_t request;
+struct MsgHeader {
+    std::uint32_t m_magic;
+    std::uint16_t m_version;
+    std::uint16_t m_type;
+    std::uint32_t m_length;
+    std::uint32_t m_request;
 };
-static_assert(sizeof(JackMsgHeader) == 16);
+static_assert(sizeof(MsgHeader) == 16);
 
 constexpr std::uint32_t kJackMsgMagic = 0x4a4d4e53; // "JMNS"
 constexpr std::uint16_t kJackMsgVersion = kProtocolVersion;
@@ -48,111 +48,111 @@ constexpr std::int32_t kJackMsgProtocolError = 7; // jackmini::Error::Protocol (
 constexpr std::uint32_t kJackMsgMaxPayload = 4096;
 
 // A new request id for each request sent.  Replies echo it, so a reply can be matched to its request.
-inline std::uint32_t NextJackRequestId()
+inline std::uint32_t nextJackRequestId()
 {
     static std::atomic<std::uint32_t> next { 1 };
     return next++;
 }
 
 // Builds a message from a payload and sends it in one write.
-inline JackMsgHeader MakeJackMsgHeader(std::uint16_t type, std::uint32_t length, std::uint32_t request)
+inline MsgHeader makeJackMsgHeader(std::uint16_t type, std::uint32_t length, std::uint32_t request)
 {
-    return JackMsgHeader { kJackMsgMagic, kJackMsgVersion, type, length, request };
+    return MsgHeader { kJackMsgMagic, kJackMsgVersion, type, length, request };
 }
 
 // Sends a header and its payload together, with the descriptors (if any) in the same message.
-inline std::int32_t SendJackMessage(detail::JackChannelTransactionInterface* trans, const JackMsgHeader& header,
+inline std::int32_t sendJackMessage(detail::ChannelTransactionInterface* trans, const MsgHeader& header,
     const void* payload, std::uint32_t length, std::span<const std::int32_t> fds = { })
 {
     if (length > kJackMsgMaxPayload) {
         return -1;
     }
-    std::array<std::byte, sizeof(JackMsgHeader) + kJackMsgMaxPayload> frame;
-    std::memcpy(frame.data(), &header, sizeof(JackMsgHeader));
+    std::array<std::byte, sizeof(MsgHeader) + kJackMsgMaxPayload> frame;
+    std::memcpy(frame.data(), &header, sizeof(MsgHeader));
     if (length != 0) {
-        std::memcpy(frame.data() + sizeof(JackMsgHeader), payload, length);
+        std::memcpy(frame.data() + sizeof(MsgHeader), payload, length);
     }
-    return trans->WriteWithFds(frame.data(), static_cast<std::int32_t>(sizeof(JackMsgHeader) + length), fds);
+    return trans->writeWithFds(frame.data(), static_cast<std::int32_t>(sizeof(MsgHeader) + length), fds);
 }
 
 // Reads a header.  A header without the magic number is not one of ours, and the read fails.
-inline std::int32_t ReadJackMsgHeader(detail::JackChannelTransactionInterface* trans, JackMsgHeader& header)
+inline std::int32_t readJackMsgHeader(detail::ChannelTransactionInterface* trans, MsgHeader& header)
 {
-    if (trans->Read(&header, sizeof(JackMsgHeader)) < 0) {
+    if (trans->read(&header, sizeof(MsgHeader)) < 0) {
         return -1;
     }
-    return (header.magic == kJackMsgMagic) ? 0 : -1;
+    return (header.m_magic == kJackMsgMagic) ? 0 : -1;
 }
 
 // Collects a reply's payload and descriptors, so that it can be sent as one framed message.
-class JackPayloadWriter : public detail::JackChannelTransactionInterface {
+class PayloadWriter : public detail::ChannelTransactionInterface {
 public:
-    std::vector<std::byte> fData;
-    std::vector<std::int32_t> fFds;
+    std::vector<std::byte> m_data;
+    std::vector<std::int32_t> m_fds;
 
-    std::int32_t Read(void* data, std::int32_t len) override
+    std::int32_t read(void* data, std::int32_t len) override
     {
         return -1;
     }
 
-    std::int32_t Write(void* data, std::int32_t len) override
+    std::int32_t write(void* data, std::int32_t len) override
     {
         const auto* bytes = static_cast<const std::byte*>(data);
-        fData.insert(fData.end(), bytes, bytes + len);
+        m_data.insert(m_data.end(), bytes, bytes + len);
         return 0;
     }
 
-    std::int32_t WriteWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) override
+    std::int32_t writeWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) override
     {
-        fFds.insert(fFds.end(), fds.begin(), fds.end());
-        return Write(data, len);
+        m_fds.insert(m_fds.end(), fds.begin(), fds.end());
+        return write(data, len);
     }
 };
 
 // The payload of a message that has been read, as a transaction.  The payload's length is the header's, and it must be
 // read in full: reading past it, or stopping short, is a protocol error.  Descriptors received with the header are
 // handed to the first read that asks for them.
-class JackPayloadReader : public detail::JackChannelTransactionInterface {
+class PayloadReader : public detail::ChannelTransactionInterface {
 public:
-    JackPayloadReader(detail::JackChannelTransactionInterface* socket, std::uint32_t length, std::vector<UniqueFd>&& fds)
-        : fSocket(socket)
-        , fRemaining(length)
-        , fFds(std::move(fds))
+    PayloadReader(detail::ChannelTransactionInterface* socket, std::uint32_t length, std::vector<UniqueFd>&& fds)
+        : m_socket(socket)
+        , m_remaining(length)
+        , m_fds(std::move(fds))
     {
     }
 
-    std::int32_t Read(void* data, std::int32_t len) override
+    std::int32_t read(void* data, std::int32_t len) override
     {
-        if (static_cast<std::uint32_t>(len) > fRemaining) {
+        if (static_cast<std::uint32_t>(len) > m_remaining) {
             return -1;
         }
-        const std::int32_t res = fSocket->Read(data, len);
-        fRemaining -= static_cast<std::uint32_t>(len);
+        const std::int32_t res = m_socket->read(data, len);
+        m_remaining -= static_cast<std::uint32_t>(len);
         return res;
     }
 
-    std::int32_t Write(void* data, std::int32_t len) override
+    std::int32_t write(void* data, std::int32_t len) override
     {
         return -1;
     }
 
-    std::int32_t ReadWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) override
+    std::int32_t readWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) override
     {
-        fds = std::move(fFds);
-        fFds.clear();
-        return Read(data, len);
+        fds = std::move(m_fds);
+        m_fds.clear();
+        return read(data, len);
     }
 
     // True when the whole payload has been read.
-    bool Done() const
+    bool done() const
     {
-        return fRemaining == 0;
+        return m_remaining == 0;
     }
 
 private:
-    detail::JackChannelTransactionInterface* fSocket;
-    std::uint32_t fRemaining;
-    std::vector<UniqueFd> fFds;
+    detail::ChannelTransactionInterface* m_socket;
+    std::uint32_t m_remaining;
+    std::vector<UniqueFd> m_fds;
 };
 
 } // namespace jackmini

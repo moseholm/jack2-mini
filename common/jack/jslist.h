@@ -25,63 +25,63 @@
 #include <jack/systemdeps.h>
 #include <stdlib.h>
 
-typedef struct _JSList JSList;
+typedef struct _JSListC JSListC;
 
-typedef std::int32_t (*JCompareFunc)(void* a, void* b);
-struct _JSList {
-    void* data;
-    JSList* next;
+typedef std::int32_t (*JCompareFuncC)(void* a, void* b);
+struct _JSListC {
+    void* m_data;
+    JSListC* m_next;
 };
 
-static __inline__ JSList*
+static __inline__ JSListC*
 jack_slist_alloc(void)
 {
-    JSList* new_list;
+    JSListC* newList;
 
-    new_list = (JSList*)malloc(sizeof(JSList));
-    if (new_list) {
-        new_list->data = nullptr;
-        new_list->next = nullptr;
+    newList = (JSListC*)malloc(sizeof(JSListC));
+    if (newList) {
+        newList->m_data = nullptr;
+        newList->m_next = nullptr;
     }
 
-    return new_list;
+    return newList;
 }
 
-static __inline__ JSList*
-jack_slist_prepend(JSList* list, void* data)
+static __inline__ JSListC*
+jack_slist_prepend(JSListC* list, void* data)
 {
-    JSList* new_list;
+    JSListC* newList;
 
-    new_list = (JSList*)malloc(sizeof(JSList));
-    if (new_list) {
-        new_list->data = data;
-        new_list->next = list;
+    newList = (JSListC*)malloc(sizeof(JSListC));
+    if (newList) {
+        newList->m_data = data;
+        newList->m_next = list;
     }
 
-    return new_list;
+    return newList;
 }
 
-inline JSList* jack_slist_next(const JSList* slist)
+inline JSListC* jack_slist_next(const JSListC* slist)
 {
-    return slist ? slist->next : nullptr;
+    return slist ? slist->m_next : nullptr;
 }
-static __inline__ JSList*
-jack_slist_last(JSList* list)
+static __inline__ JSListC*
+jack_slist_last(JSListC* list)
 {
     if (list) {
-        while (list->next)
-            list = list->next;
+        while (list->m_next)
+            list = list->m_next;
     }
 
     return list;
 }
 
-static __inline__ JSList*
-jack_slist_remove_link(JSList* list,
-    JSList* link)
+static __inline__ JSListC*
+jack_slist_remove_link(JSListC* list,
+    JSListC* link)
 {
-    JSList* tmp;
-    JSList* prev;
+    JSListC* tmp;
+    JSListC* prev;
 
     prev = nullptr;
     tmp = list;
@@ -89,184 +89,184 @@ jack_slist_remove_link(JSList* list,
     while (tmp) {
         if (tmp == link) {
             if (prev)
-                prev->next = tmp->next;
+                prev->m_next = tmp->m_next;
             if (list == tmp)
-                list = list->next;
+                list = list->m_next;
 
-            tmp->next = nullptr;
+            tmp->m_next = nullptr;
             break;
         }
 
         prev = tmp;
-        tmp = tmp->next;
+        tmp = tmp->m_next;
     }
 
     return list;
 }
 
 static __inline__ void
-jack_slist_free(JSList* list)
+jack_slist_free(JSListC* list)
 {
     while (list) {
-        JSList* next = list->next;
+        JSListC* next = list->m_next;
         free(list);
         list = next;
     }
 }
 
 static __inline__ void
-jack_slist_free_1(JSList* list)
+jack_slist_free_1(JSListC* list)
 {
     if (list) {
         free(list);
     }
 }
 
-static __inline__ JSList*
-jack_slist_remove(JSList* list,
+static __inline__ JSListC*
+jack_slist_remove(JSListC* list,
     void* data)
 {
-    JSList* tmp;
-    JSList* prev;
+    JSListC* tmp;
+    JSListC* prev;
 
     prev = nullptr;
     tmp = list;
 
     while (tmp) {
-        if (tmp->data == data) {
+        if (tmp->m_data == data) {
             if (prev)
-                prev->next = tmp->next;
+                prev->m_next = tmp->m_next;
             if (list == tmp)
-                list = list->next;
+                list = list->m_next;
 
-            tmp->next = nullptr;
+            tmp->m_next = nullptr;
             jack_slist_free(tmp);
 
             break;
         }
 
         prev = tmp;
-        tmp = tmp->next;
+        tmp = tmp->m_next;
     }
 
     return list;
 }
 
 static __inline__ std::uint32_t
-jack_slist_length(JSList* list)
+jack_slist_length(JSListC* list)
 {
     std::uint32_t length;
 
     length = 0;
     while (list) {
         length++;
-        list = list->next;
+        list = list->m_next;
     }
 
     return length;
 }
 
-static __inline__ JSList*
-jack_slist_find(JSList* list,
+static __inline__ JSListC*
+jack_slist_find(JSListC* list,
     void* data)
 {
     while (list) {
-        if (list->data == data)
+        if (list->m_data == data)
             break;
-        list = list->next;
+        list = list->m_next;
     }
 
     return list;
 }
 
-static __inline__ JSList*
-jack_slist_copy(JSList* list)
+static __inline__ JSListC*
+jack_slist_copy(JSListC* list)
 {
-    JSList* new_list = nullptr;
+    JSListC* newList = nullptr;
 
     if (list) {
-        JSList* last;
+        JSListC* last;
 
-        new_list = jack_slist_alloc();
-        new_list->data = list->data;
-        last = new_list;
-        list = list->next;
+        newList = jack_slist_alloc();
+        newList->m_data = list->m_data;
+        last = newList;
+        list = list->m_next;
         while (list) {
-            last->next = jack_slist_alloc();
-            last = last->next;
-            last->data = list->data;
-            list = list->next;
+            last->m_next = jack_slist_alloc();
+            last = last->m_next;
+            last->m_data = list->m_data;
+            list = list->m_next;
         }
     }
 
-    return new_list;
+    return newList;
 }
 
-static __inline__ JSList*
-jack_slist_append(JSList* list,
+static __inline__ JSListC*
+jack_slist_append(JSListC* list,
     void* data)
 {
-    JSList* new_list;
-    JSList* last;
+    JSListC* newList;
+    JSListC* last;
 
-    new_list = jack_slist_alloc();
-    new_list->data = data;
+    newList = jack_slist_alloc();
+    newList->m_data = data;
 
     if (list) {
         last = jack_slist_last(list);
-        last->next = new_list;
+        last->m_next = newList;
 
         return list;
     } else
-        return new_list;
+        return newList;
 }
 
-static __inline__ JSList*
-jack_slist_sort_merge(JSList* l1,
-    JSList* l2,
-    JCompareFunc compare_func)
+static __inline__ JSListC*
+jack_slist_sort_merge(JSListC* l1,
+    JSListC* l2,
+    JCompareFuncC compareFunc)
 {
-    JSList list, *l;
+    JSListC list, *l;
 
     l = &list;
 
     while (l1 && l2) {
-        if (compare_func(l1->data, l2->data) < 0) {
-            l = l->next = l1;
-            l1 = l1->next;
+        if (compareFunc(l1->m_data, l2->m_data) < 0) {
+            l = l->m_next = l1;
+            l1 = l1->m_next;
         } else {
-            l = l->next = l2;
-            l2 = l2->next;
+            l = l->m_next = l2;
+            l2 = l2->m_next;
         }
     }
-    l->next = l1 ? l1 : l2;
+    l->m_next = l1 ? l1 : l2;
 
-    return list.next;
+    return list.m_next;
 }
 
-static __inline__ JSList*
-jack_slist_sort(JSList* list,
-    JCompareFunc compare_func)
+static __inline__ JSListC*
+jack_slist_sort(JSListC* list,
+    JCompareFuncC compareFunc)
 {
-    JSList *l1, *l2;
+    JSListC *l1, *l2;
 
     if (!list)
         return nullptr;
-    if (!list->next)
+    if (!list->m_next)
         return list;
 
     l1 = list;
-    l2 = list->next;
+    l2 = list->m_next;
 
-    while ((l2 = l2->next) != nullptr) {
-        if ((l2 = l2->next) == nullptr)
+    while ((l2 = l2->m_next) != nullptr) {
+        if ((l2 = l2->m_next) == nullptr)
             break;
-        l1 = l1->next;
+        l1 = l1->m_next;
     }
-    l2 = l1->next;
-    l1->next = nullptr;
+    l2 = l1->m_next;
+    l1->m_next = nullptr;
 
-    return jack_slist_sort_merge(jack_slist_sort(list, compare_func),
-        jack_slist_sort(l2, compare_func),
-        compare_func);
+    return jack_slist_sort_merge(jack_slist_sort(list, compareFunc),
+        jack_slist_sort(l2, compareFunc),
+        compareFunc);
 }

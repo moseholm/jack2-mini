@@ -29,7 +29,7 @@ namespace jackmini {
 
 namespace {
 
-std::error_code LastError()
+std::error_code lastError()
 {
     return std::error_code(errno, std::system_category());
 }
@@ -54,20 +54,20 @@ UniqueFd::~UniqueFd()
 
 std::int32_t UniqueFd::release() noexcept
 {
-    const std::int32_t fd = fFd;
-    fFd = -1;
+    const std::int32_t fd = m_fd;
+    m_fd = -1;
     return fd;
 }
 
 void UniqueFd::reset(std::int32_t fd) noexcept
 {
-    if (fFd >= 0) {
-        ::close(fFd);
+    if (m_fd >= 0) {
+        ::close(m_fd);
     }
-    fFd = fd;
+    m_fd = fd;
 }
 
-std::expected<void, std::error_code> SendWithFds(std::int32_t socket,
+std::expected<void, std::error_code> sendWithFds(std::int32_t socket,
     std::span<const std::byte> data,
     std::span<const std::int32_t> fds)
 {
@@ -101,14 +101,14 @@ std::expected<void, std::error_code> SendWithFds(std::int32_t socket,
             sent = sendmsg(socket, &msg, MSG_NOSIGNAL);
         } while (sent < 0 && errno == EINTR);
         if (sent < 0) {
-            return std::unexpected(LastError());
+            return std::unexpected(lastError());
         }
         done += static_cast<std::size_t>(sent);
     }
     return { };
 }
 
-std::expected<std::size_t, std::error_code> RecvWithFds(std::int32_t socket,
+std::expected<std::size_t, std::error_code> recvWithFds(std::int32_t socket,
     std::span<std::byte> data,
     std::vector<UniqueFd>& fds)
 {
@@ -128,7 +128,7 @@ std::expected<std::size_t, std::error_code> RecvWithFds(std::int32_t socket,
         got = recvmsg(socket, &msg, MSG_CMSG_CLOEXEC);
     } while (got < 0 && errno == EINTR);
     if (got < 0) {
-        return std::unexpected(LastError());
+        return std::unexpected(lastError());
     }
 
     for (cmsghdr* header = CMSG_FIRSTHDR(&msg); header != nullptr; header = CMSG_NXTHDR(&msg, header)) {
@@ -144,29 +144,29 @@ std::expected<std::size_t, std::error_code> RecvWithFds(std::int32_t socket,
     return static_cast<std::size_t>(got);
 }
 
-std::expected<UniqueFd, std::error_code> CreateSegment(std::size_t size, const char* name)
+std::expected<UniqueFd, std::error_code> createSegment(std::size_t size, const char* name)
 {
     const std::int32_t fd = memfd_create(name, MFD_CLOEXEC);
     if (fd < 0) {
-        return std::unexpected(LastError());
+        return std::unexpected(lastError());
     }
     UniqueFd segment(fd);
     if (ftruncate(fd, static_cast<off_t>(size)) != 0) {
-        return std::unexpected(LastError());
+        return std::unexpected(lastError());
     }
     return segment;
 }
 
-std::expected<void*, std::error_code> MapSegment(std::int32_t fd, std::size_t size)
+std::expected<void*, std::error_code> mapSegment(std::int32_t fd, std::size_t size)
 {
     void* address = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (address == MAP_FAILED) {
-        return std::unexpected(LastError());
+        return std::unexpected(lastError());
     }
     return address;
 }
 
-void UnmapSegment(void* address, std::size_t size) noexcept
+void unmapSegment(void* address, std::size_t size) noexcept
 {
     munmap(address, size);
 }

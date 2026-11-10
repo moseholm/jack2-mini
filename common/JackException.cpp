@@ -19,7 +19,7 @@
 
 namespace jackmini {
 
-void JackException::PrintMessage()
+void Exception::printMessage()
 {
     std::string str = what();
     if (str != "") {

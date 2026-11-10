@@ -24,37 +24,37 @@
 
 namespace jackmini {
 
-Result<void> JackSocketServerNotifyChannel::Open(const char* server_name)
+Result<void> SocketServerNotifyChannel::open(const char* serverName)
 {
-    if (fRequestSocket.Connect(kServerDir, server_name, 0) < 0) {
+    if (m_requestSocket.connect(kServerDir, serverName, 0) < 0) {
         jack_error("Cannot connect to server socket");
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     } else {
-        fRequestSocket.SetNonBlocking(true);
+        m_requestSocket.setNonBlocking(true);
         return { };
     }
 }
 
-void JackSocketServerNotifyChannel::Close()
+void SocketServerNotifyChannel::close()
 {
-    fRequestSocket.Close();
+    m_requestSocket.close();
 }
 
 // The requirement is that the Notification from RT thread can be delivered... not sure using a socket is adequate here...
 // Can the write operation block?
 // A non blocking write operation should be used : check if write can succeed, and ignore the notification otherwise
 // (since its mainly used for XRun, ignoring a notification is OK, successive XRun will come...)
-void JackSocketServerNotifyChannel::Notify(std::int32_t refnum, std::int32_t notify, std::int32_t value)
+void SocketServerNotifyChannel::notify(std::int32_t refnum, std::int32_t notify, std::int32_t value)
 {
-    JackClientNotificationRequest req(refnum, notify, value);
-    if (req.Write(&fRequestSocket) < 0) {
+    ClientNotificationRequest req(refnum, notify, value);
+    if (req.write(&m_requestSocket) < 0) {
         jack_error("Could not write notification ref = %d notify = %d", refnum, notify);
     }
 }
 
-void JackSocketServerNotifyChannel::NotifyQuit()
+void SocketServerNotifyChannel::notifyQuit()
 {
-    Notify(-1, kQUIT, 0);
+    notify(-1, kQUIT, 0);
 }
 
 } // namespace jackmini

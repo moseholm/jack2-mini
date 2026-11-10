@@ -36,7 +36,7 @@ namespace jackmini {
 //
 // The text is truncated to fit and the result is always terminated.  The rest of
 // the buffer is zero-filled, as strncpy() does.  An empty buffer is left alone.
-inline void CopyCString(std::span<char> dst, std::string_view src)
+inline void copyCString(std::span<char> dst, std::string_view src)
 {
     if (dst.empty()) {
         return;
@@ -56,7 +56,7 @@ template <typename T, std::size_t N>
 inline constexpr bool IsStdArray<std::array<T, N>> = true;
 
 template <typename... Args>
-void FormatCString(std::span<char> dst, std::format_string<Args...> fmt, Args&&... args)
+void formatCString(std::span<char> dst, std::format_string<Args...> fmt, Args&&... args)
 {
     // A std::array is a range, so it would be formatted as a list, not as text.
     static_assert((!IsStdArray<std::remove_cvref_t<Args>> && ...), "pass .data() for a std::array argument");
@@ -68,7 +68,7 @@ void FormatCString(std::span<char> dst, std::format_string<Args...> fmt, Args&&.
 }
 
 // \brief Skip the prefix that strtol() accepted: leading white space and one '+'.
-inline std::string_view SkipNumericPrefix(std::string_view text)
+inline std::string_view skipNumericPrefix(std::string_view text)
 {
     while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front()))) {
         text.remove_prefix(1);
@@ -85,9 +85,9 @@ inline std::string_view SkipNumericPrefix(std::string_view text)
 // the digits is ignored.  Unlike strtoul(), a minus sign is not accepted for an
 // unsigned type.
 template <std::integral T>
-T ParseLeadingInteger(std::string_view text)
+T parseLeadingInteger(std::string_view text)
 {
-    text = SkipNumericPrefix(text);
+    text = skipNumericPrefix(text);
     T value { };
     const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
     return ec == std::errc() ? value : T { };

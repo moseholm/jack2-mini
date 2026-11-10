@@ -24,14 +24,14 @@ namespace jackmini {
 struct OpenOptions {
     // Start the server if it is not running.  When false, opening fails with
     // Error::NoServer instead.
-    bool start_server = true;
+    bool m_startServer = true;
 
     // Use the name exactly.  When false, the server may append a number if the
     // name is taken.
-    bool exact_name = false;
+    bool m_exactName = false;
 
     // The server to connect to.  Empty means the default server.
-    std::string server_name;
+    std::string m_serverName;
 };
 
 } // namespace jackmini

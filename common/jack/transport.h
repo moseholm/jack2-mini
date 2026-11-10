@@ -39,7 +39,7 @@
 // @param client the JACK client structure.
 //
 // @return 0 on success, otherwise a non-zero error code.
-std::int32_t jack_release_timebase(jack_client_t* client) JACK_OPTIONAL_WEAK_EXPORT;
+std::int32_t jack_release_timebase(ClientHandle* client) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Register (or unregister) as a slow-sync client, one that cannot
 // respond immediately to transport position changes.
@@ -59,8 +59,8 @@ std::int32_t jack_release_timebase(jack_client_t* client) JACK_OPTIONAL_WEAK_EXP
 // @param arg an argument for the @a sync_callback function.
 //
 // @return 0 on success, otherwise a non-zero error code.
-std::int32_t jack_set_sync_callback(jack_client_t* client,
-    JackSyncCallback sync_callback,
+std::int32_t jack_set_sync_callback(ClientHandle* client,
+    SyncCallbackC syncCallback,
     void* arg) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Set the timeout value for slow-sync clients.
@@ -78,8 +78,8 @@ std::int32_t jack_set_sync_callback(jack_client_t* client,
 // @param timeout is delay (in microseconds) before the timeout expires.
 //
 // @return 0 on success, otherwise a non-zero error code.
-std::int32_t jack_set_sync_timeout(jack_client_t* client,
-    jack_time_t timeout) JACK_OPTIONAL_WEAK_EXPORT;
+std::int32_t jack_set_sync_timeout(ClientHandle* client,
+    TimeC timeout) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Register as timebase master for the JACK subsystem.
 //
@@ -104,9 +104,9 @@ std::int32_t jack_set_sync_timeout(jack_client_t* client,
 //   - EBUSY if a conditional request fails because there was already a
 //   timebase master;
 //   - other non-zero error code.
-std::int32_t jack_set_timebase_callback(jack_client_t* client,
+std::int32_t jack_set_timebase_callback(ClientHandle* client,
     std::int32_t conditional,
-    JackTimebaseCallback timebase_callback,
+    TimebaseCallbackC timebaseCallback,
     void* arg) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Reposition the transport to a new frame number.
@@ -123,8 +123,8 @@ std::int32_t jack_set_timebase_callback(jack_client_t* client,
 // @param frame frame number of new transport position.
 //
 // @return 0 if valid request, non-zero otherwise.
-std::int32_t jack_transport_locate(jack_client_t* client,
-    jack_nframes_t frame) JACK_OPTIONAL_WEAK_EXPORT;
+std::int32_t jack_transport_locate(ClientHandle* client,
+    NframesC frame) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Query the current transport state and position.
 //
@@ -139,15 +139,15 @@ std::int32_t jack_transport_locate(jack_client_t* client,
 // If @a pos is nullptr, do not return position information.
 //
 // @return Current transport state.
-jack_transport_state_t jack_transport_query(const jack_client_t* client,
-    jack_position_t* pos) JACK_OPTIONAL_WEAK_EXPORT;
+TransportStateC jack_transport_query(const ClientHandle* client,
+    PositionC* pos) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Return an estimate of the current transport frame,
 // including any time elapsed since the last transport
 // positional update.
 //
 // @param client the JACK client structure
-jack_nframes_t jack_get_current_transport_frame(const jack_client_t* client) JACK_OPTIONAL_WEAK_EXPORT;
+NframesC jack_get_current_transport_frame(const ClientHandle* client) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Request a new transport position.
 //
@@ -163,8 +163,8 @@ jack_nframes_t jack_get_current_transport_frame(const jack_client_t* client) JAC
 // @param pos requested new transport position.
 //
 // @return 0 if valid request, EINVAL if position structure rejected.
-std::int32_t jack_transport_reposition(jack_client_t* client,
-    const jack_position_t* pos) JACK_OPTIONAL_WEAK_EXPORT;
+std::int32_t jack_transport_reposition(ClientHandle* client,
+    const PositionC* pos) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Start the JACK transport rolling.
 //
@@ -175,7 +175,7 @@ std::int32_t jack_transport_reposition(jack_client_t* client,
 // @see jack_set_sync_callback
 //
 // @param client the JACK client structure.
-void jack_transport_start(jack_client_t* client) JACK_OPTIONAL_WEAK_EXPORT;
+void jack_transport_start(ClientHandle* client) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Stop the JACK transport.
 //
@@ -183,7 +183,7 @@ void jack_transport_start(jack_client_t* client) JACK_OPTIONAL_WEAK_EXPORT;
 // the next process cycle.  This function is realtime-safe.
 //
 // @param client the JACK client structure.
-void jack_transport_stop(jack_client_t* client) JACK_OPTIONAL_WEAK_EXPORT;
+void jack_transport_stop(ClientHandle* client) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Gets the current transport info structure (deprecated).
 //
@@ -195,15 +195,15 @@ void jack_transport_stop(jack_client_t* client) JACK_OPTIONAL_WEAK_EXPORT;
 // interface.  Use jack_transport_query(), instead.
 //
 // @pre Must be called from the process thread.
-void jack_get_transport_info(jack_client_t* client,
-    jack_transport_info_t* tinfo) JACK_OPTIONAL_WEAK_EXPORT;
+void jack_get_transport_info(ClientHandle* client,
+    TransportInfoC* tinfo) JACK_OPTIONAL_WEAK_EXPORT;
 
 // Set the transport info structure (deprecated).
 //
 // @deprecated This function still exists for compatibility with the
 // earlier transport interface, but it does nothing.  Instead, define
 // a ::JackTimebaseCallback.
-void jack_set_transport_info(jack_client_t* client,
-    jack_transport_info_t* tinfo) JACK_OPTIONAL_WEAK_EXPORT;
+void jack_set_transport_info(ClientHandle* client,
+    TransportInfoC* tinfo) JACK_OPTIONAL_WEAK_EXPORT;
 
 // @}

@@ -26,51 +26,51 @@
 
 namespace jackmini {
 
-struct JackClientControl;
+struct ClientControl;
 
 // \brief Client activation count.
 //
 // The class holds the configuration only: the number of connected inputs of a client. The state that is copied on write
 // holds it. The live counter, which the realtime thread decrements in a cycle, is not in the copied state: it is an
 // atomic array in the graph manager (protocol.md section 4.5), and it is reset from this count at the start of each cycle.
-class JackActivationCount {
+class ActivationCount {
 private:
-    SInt32 fCount;
+    SInt32 m_count;
 
 public:
-    JackActivationCount()
-        : fCount(0)
+    ActivationCount()
+        : m_count(0)
     {
-        static_assert(offsetof(JackActivationCount, fCount) % sizeof(fCount) == 0,
+        static_assert(offsetof(ActivationCount, m_count) % sizeof(m_count) == 0,
             "fCount must be aligned within JackActivationCount");
         assert(reinterpret_cast<std::uintptr_t>(CountPtr()) % alignof(SInt32) == 0);
     }
 
     // The counter is reached through its offset: the class is packed, and a reference to a packed member is not
     // allowed.  The constructor checks that the address is aligned.
-    SInt32* CountPtr()
+    SInt32* countPtr()
     {
-        return reinterpret_cast<SInt32*>(reinterpret_cast<std::byte*>(this) + offsetof(JackActivationCount, fCount));
+        return reinterpret_cast<SInt32*>(reinterpret_cast<std::byte*>(this) + offsetof(ActivationCount, m_count));
     }
 
     // Decrements the live counter; signals the client when it reaches zero.
-    static bool Signal(std::atomic<SInt32>& live, JackSynchro* synchro, JackClientControl* control);
+    static bool signal(std::atomic<SInt32>& live, Synchro* synchro, ClientControl* control);
 
-    inline void SetValue(std::int32_t val)
+    inline void setValue(std::int32_t val)
     {
-        std::atomic_ref<SInt32>(*CountPtr()).store(val);
+        std::atomic_ref<SInt32>(*countPtr()).store(val);
     }
-    inline void IncValue()
+    inline void incValue()
     {
-        std::atomic_ref<SInt32>(*CountPtr()).fetch_add(1);
+        std::atomic_ref<SInt32>(*countPtr()).fetch_add(1);
     }
-    inline void DecValue()
+    inline void decValue()
     {
-        std::atomic_ref<SInt32>(*CountPtr()).fetch_sub(1);
+        std::atomic_ref<SInt32>(*countPtr()).fetch_sub(1);
     }
-    inline std::int32_t GetCount() const
+    inline std::int32_t getCount() const
     {
-        return std::atomic_ref<SInt32>(*const_cast<JackActivationCount*>(this)->CountPtr()).load();
+        return std::atomic_ref<SInt32>(*const_cast<ActivationCount*>(this)->countPtr()).load();
     }
 };
 

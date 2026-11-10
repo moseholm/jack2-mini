@@ -27,56 +27,56 @@
 namespace jackmini {
 // \brief Base class for "lockable" objects.
 
-class JackLockAble {
+class LockAble {
 
 protected:
-    JackMutex fMutex;
+    Mutex m_mutex;
 
-    JackLockAble(const char* name = nullptr)
-        : fMutex(name)
+    LockAble(const char* name = nullptr)
+        : m_mutex(name)
     {
     }
-    ~JackLockAble()
+    ~LockAble()
     {
     }
 
 public:
-    bool Lock()
+    bool lock()
     {
-        return fMutex.Lock();
+        return m_mutex.lock();
     }
 
-    bool Trylock()
+    bool trylock()
     {
-        return fMutex.Trylock();
+        return m_mutex.trylock();
     }
 
-    bool Unlock()
+    bool unlock()
     {
-        return fMutex.Unlock();
+        return m_mutex.unlock();
     }
 };
 
-class JackLock {
+class Lock {
 private:
-    JackLockAble* fObj;
+    LockAble* m_obj;
 
 public:
-    JackLock(JackLockAble* obj)
-        : fObj(obj)
+    Lock(LockAble* obj)
+        : m_obj(obj)
     {
-        fObj->Lock();
+        m_obj->lock();
     }
 
-    JackLock(const JackLockAble* obj)
-        : fObj((JackLockAble*)obj)
+    Lock(const LockAble* obj)
+        : m_obj((LockAble*)obj)
     {
-        fObj->Lock();
+        m_obj->lock();
     }
 
-    ~JackLock()
+    ~Lock()
     {
-        fObj->Unlock();
+        m_obj->unlock();
     }
 };
 

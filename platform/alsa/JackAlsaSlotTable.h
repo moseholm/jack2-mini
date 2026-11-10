@@ -31,30 +31,30 @@ namespace jackmini {
 // thread has stopped using the object before destroying it.
 
 template <class T, size_t N>
-class JackAlsaSlotTable {
+class AlsaSlotTable {
 
 private:
-    std::atomic<T*> fSlots[N];
+    std::atomic<T*> m_slots[N];
 
-    JackAlsaSlotTable(const JackAlsaSlotTable&);
-    JackAlsaSlotTable& operator=(const JackAlsaSlotTable&);
+    AlsaSlotTable(const AlsaSlotTable&);
+    AlsaSlotTable& operator=(const AlsaSlotTable&);
 
 public:
-    JackAlsaSlotTable()
+    AlsaSlotTable()
     {
         for (size_t i = 0; i < N; i++) {
-            fSlots[i].store(nullptr, std::memory_order_relaxed);
+            m_slots[i].store(nullptr, std::memory_order_relaxed);
         }
     }
 
-    static size_t Capacity() { return N; }
+    static size_t capacity() { return N; }
 
     // Returns the slot index, or -1 if the table is full.  Not for the RT thread.
-    std::int32_t Assign(T* object)
+    std::int32_t assign(T* object)
     {
         for (size_t i = 0; i < N; i++) {
-            if (fSlots[i].load(std::memory_order_relaxed) == nullptr) {
-                fSlots[i].store(object, std::memory_order_release);
+            if (m_slots[i].load(std::memory_order_relaxed) == nullptr) {
+                m_slots[i].store(object, std::memory_order_release);
                 return (std::int32_t)i;
             }
         }
@@ -62,12 +62,12 @@ public:
     }
 
     // Empties every slot holding this object.  Returns how many were emptied.
-    size_t Remove(T* object)
+    size_t remove(T* object)
     {
         size_t removed = 0;
         for (size_t i = 0; i < N; i++) {
             T* expected = object;
-            if (fSlots[i].compare_exchange_strong(expected, nullptr, std::memory_order_release)) {
+            if (m_slots[i].compare_exchange_strong(expected, nullptr, std::memory_order_release)) {
                 removed++;
             }
         }
@@ -75,17 +75,17 @@ public:
     }
 
     // Safe to call from the RT thread.
-    T* Get(size_t index) const
+    T* get(size_t index) const
     {
-        return fSlots[index].load(std::memory_order_acquire);
+        return m_slots[index].load(std::memory_order_acquire);
     }
 
     // Number of occupied slots.
-    size_t Count() const
+    size_t count() const
     {
         size_t count = 0;
         for (size_t i = 0; i < N; i++) {
-            if (fSlots[i].load(std::memory_order_acquire) != nullptr) {
+            if (m_slots[i].load(std::memory_order_acquire) != nullptr) {
                 count++;
             }
         }

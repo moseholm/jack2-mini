@@ -37,12 +37,12 @@
 namespace jackmini {
 
 // The ring index wraps with a mask, so MB_BUFFERS must be a power of two.
-inline constexpr std::size_t MB_BUFFERS = 128;
-inline constexpr std::size_t MB_BUFFERSIZE = 256; // message length limit, including the terminator
+inline constexpr std::size_t kMbBuffers = 128;
+inline constexpr std::size_t kMbBuffersize = 256; // message length limit, including the terminator
 
-struct JackMessage {
-    std::int32_t level;
-    std::array<char, MB_BUFFERSIZE> message;
+struct Message {
+    std::int32_t m_level;
+    std::array<char, kMbBuffersize> m_message;
 };
 
 // \brief Message buffer to be used from RT threads.
@@ -52,49 +52,49 @@ struct JackMessage {
 // polling, so producers never wake it.  A full ring drops the new message and
 // counts it as an overrun.
 
-class JackMessageBuffer : public JackRunnableInterface {
+class MessageBuffer : public RunnableInterface {
 
 private:
     struct Slot {
-        std::atomic<std::size_t> sequence;
-        JackMessage entry;
+        std::atomic<std::size_t> m_sequence;
+        Message m_entry;
     };
 
-    std::atomic<JackThreadInitCallback> fInit;
-    void* fInitArg;
-    std::mutex fInitLock; // serializes SetInitCallback callers, which are not realtime
-    std::array<Slot, MB_BUFFERS> fSlots;
-    alignas(64) std::atomic<std::size_t> fEnqueuePos; // written by producers
-    alignas(64) std::atomic<std::size_t> fDequeuePos; // written by the flush thread only
-    std::atomic<std::uint32_t> fOverruns;
-    JackThread fThread;
-    std::atomic<bool> fRunning;
+    std::atomic<ThreadInitCallbackC> m_init;
+    void* m_initArg;
+    std::mutex m_initLock; // serializes SetInitCallback callers, which are not realtime
+    std::array<Slot, kMbBuffers> m_slots;
+    alignas(64) std::atomic<std::size_t> m_enqueuePos; // written by producers
+    alignas(64) std::atomic<std::size_t> m_dequeuePos; // written by the flush thread only
+    std::atomic<std::uint32_t> m_overruns;
+    Thread m_thread;
+    std::atomic<bool> m_running;
 
-    bool Enqueue(std::int32_t level, std::string_view message);
-    void Flush();
+    bool enqueue(std::int32_t level, std::string_view message);
+    void flush();
 
-    bool Start();
-    bool Stop();
+    bool start();
+    bool stop();
 
 public:
-    JackMessageBuffer();
-    ~JackMessageBuffer();
+    MessageBuffer();
+    ~MessageBuffer();
 
     // JackRunnableInterface interface
-    bool Execute();
+    bool execute();
 
-    bool static Create();
-    bool static Destroy();
+    bool static create();
+    bool static destroy();
 
-    void AddMessage(std::int32_t level, std::string_view message);
-    std::int32_t SetInitCallback(JackThreadInitCallback callback, void* arg);
-    std::uint32_t Overruns() const;
+    void addMessage(std::int32_t level, std::string_view message);
+    std::int32_t setInitCallback(ThreadInitCallbackC callback, void* arg);
+    std::uint32_t overruns() const;
 
-    static JackMessageBuffer* fInstance;
+    static MessageBuffer* s_instance;
 };
 
 
-void JackMessageBufferAdd(std::int32_t level, const char* message);
+void messageBufferAdd(std::int32_t level, const char* message);
 
 
 }; // namespace jackmini

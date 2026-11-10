@@ -25,144 +25,144 @@
 namespace jackmini {
 
 // Server to client
-std::int32_t JackSocketNotifyChannel::Open(const char* name)
+std::int32_t SocketNotifyChannel::open(const char* name)
 {
     jack_log("JackSocketNotifyChannel::Open name = %s", name);
 
     // Connect to client listen socket
-    if (fNotifySocket.Connect(kClientDir, name, 0) < 0) {
+    if (m_notifySocket.connect(kClientDir, name, 0) < 0) {
         jack_error("Cannot connect client socket");
         return -1;
     }
-    return Start();
+    return start();
 }
 
-std::int32_t JackSocketNotifyChannel::Attach(std::int32_t fd)
+std::int32_t SocketNotifyChannel::attach(std::int32_t fd)
 {
-    fNotifySocket = JackClientSocket(fd);
-    return Start();
+    m_notifySocket = ClientSocket(fd);
+    return start();
 }
 
-std::int32_t JackSocketNotifyChannel::Start()
+std::int32_t SocketNotifyChannel::start()
 {
     // Use a time out for notifications
-    fNotifySocket.SetReadTimeOut(kSocketTimeOut);
+    m_notifySocket.setReadTimeOut(kSocketTimeOut);
 
     {
-        std::lock_guard lock(fMutex);
-        fClosing = false;
+        std::lock_guard lock(m_mutex);
+        m_closing = false;
     }
-    fWriter = std::thread([this] { Writer(); });
+    m_writer = std::thread([this] { writer(); });
     return 0;
 }
 
-void JackSocketNotifyChannel::Close()
+void SocketNotifyChannel::close()
 {
     jack_log("JackSocketNotifyChannel::Close");
     {
-        std::lock_guard lock(fMutex);
-        fClosing = true;
+        std::lock_guard lock(m_mutex);
+        m_closing = true;
     }
-    fCondition.notify_all();
-    if (fWriter.joinable()) {
-        fWriter.join();
+    m_condition.notify_all();
+    if (m_writer.joinable()) {
+        m_writer.join();
     }
-    fNotifySocket.Close();
+    m_notifySocket.close();
 }
 
 // Called from the server's threads.  It does not wait for the client, except for a synchronous notification, whose
 // result the client sends back.
-void JackSocketNotifyChannel::ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2, std::int32_t* result)
+void SocketNotifyChannel::clientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2, std::int32_t* result)
 {
     auto pending = std::make_shared<Pending>();
-    pending->event = std::make_shared<JackClientNotification>(name, refnum, notify, sync, message, value1, value2);
-    pending->request = sync ? NextJackRequestId() : 0;
+    pending->m_event = std::make_shared<ClientNotification>(name, refnum, notify, sync, message, value1, value2);
+    pending->m_request = sync ? nextJackRequestId() : 0;
 
-    std::unique_lock lock(fMutex);
-    if (fClosing) {
+    std::unique_lock lock(m_mutex);
+    if (m_closing) {
         *result = -1;
         return;
     }
 
-    if (fQueue.size() >= kQueueSize) {
-        const auto oldest = fQueue.front();
-        fQueue.pop_front();
-        fDropped++;
-        if (oldest->event->fSync) {
-            oldest->result = -1;
-            oldest->done = true;
+    if (m_queue.size() >= kQueueSize) {
+        const auto oldest = m_queue.front();
+        m_queue.pop_front();
+        m_dropped++;
+        if (oldest->m_event->m_sync) {
+            oldest->m_result = -1;
+            oldest->m_done = true;
         }
-        jack_log("JackSocketNotifyChannel::ClientNotify queue full, dropped notification %d", oldest->event->fNotify);
+        jack_log("JackSocketNotifyChannel::ClientNotify queue full, dropped notification %d", oldest->m_event->m_notify);
     }
-    fQueue.push_back(pending);
-    fCondition.notify_all();
+    m_queue.push_back(pending);
+    m_condition.notify_all();
 
     if (!sync) {
         *result = 0;
         return;
     }
-    fCondition.wait(lock, [&] { return pending->done; });
-    *result = pending->result;
+    m_condition.wait(lock, [&] { return pending->m_done; });
+    *result = pending->m_result;
 }
 
 // The only thread that writes to the client's socket, so the notifications arrive in the order they were queued.
-void JackSocketNotifyChannel::Writer()
+void SocketNotifyChannel::writer()
 {
-    std::unique_lock lock(fMutex);
+    std::unique_lock lock(m_mutex);
     while (true) {
-        fCondition.wait(lock, [&] { return fClosing || !fQueue.empty(); });
-        if (fClosing) {
+        m_condition.wait(lock, [&] { return m_closing || !m_queue.empty(); });
+        if (m_closing) {
             break;
         }
 
-        const auto pending = fQueue.front();
-        fQueue.pop_front();
-        const std::uint32_t dropped = std::exchange(fDropped, 0);
+        const auto pending = m_queue.front();
+        m_queue.pop_front();
+        const std::uint32_t dropped = std::exchange(m_dropped, 0);
 
         lock.unlock();
-        const std::int32_t result = Send(*pending, dropped);
+        const std::int32_t result = send(*pending, dropped);
         lock.lock();
 
-        pending->result = result;
-        pending->done = true;
-        fCondition.notify_all();
+        pending->m_result = result;
+        pending->m_done = true;
+        m_condition.notify_all();
     }
 
     // Closing: the callers still waiting for a synchronous notification are released with an error.
-    for (const auto& pending : fQueue) {
-        if (pending->event->fSync) {
-            pending->result = -1;
-            pending->done = true;
+    for (const auto& pending : m_queue) {
+        if (pending->m_event->m_sync) {
+            pending->m_result = -1;
+            pending->m_done = true;
         }
     }
-    fQueue.clear();
-    fCondition.notify_all();
+    m_queue.clear();
+    m_condition.notify_all();
 }
 
-std::int32_t JackSocketNotifyChannel::Send(Pending& pending, std::uint32_t dropped)
+std::int32_t SocketNotifyChannel::send(Pending& pending, std::uint32_t dropped)
 {
     if (dropped != 0) {
-        JackClientNotification notice("", pending.event->fRefNum, kDropped, 0, nullptr, static_cast<std::int32_t>(dropped), 0);
-        if (notice.Write(&fNotifySocket, 0) < 0) {
+        ClientNotification notice("", pending.m_event->m_refNum, kDropped, 0, nullptr, static_cast<std::int32_t>(dropped), 0);
+        if (notice.write(&m_notifySocket, 0) < 0) {
             jack_error("Could not write the dropped notification count");
             return -1;
         }
     }
 
-    if (pending.event->Write(&fNotifySocket, pending.request) < 0) {
+    if (pending.m_event->write(&m_notifySocket, pending.m_request) < 0) {
         jack_error("Could not write notification");
         return -1;
     }
-    if (!pending.event->fSync) {
+    if (!pending.m_event->m_sync) {
         return 0;
     }
 
-    JackResult res;
-    if (ReadJackReply(&fNotifySocket, pending.event->fNotify, pending.request, res) < 0) {
+    Reply res;
+    if (readJackReply(&m_notifySocket, pending.m_event->m_notify, pending.m_request, res) < 0) {
         jack_error("Could not read notification result");
         return -1;
     }
-    return res.fResult;
+    return res.m_result;
 }
 
 } // namespace jackmini

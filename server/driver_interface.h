@@ -41,135 +41,135 @@ inline constexpr std::uint32_t kConstraintFlagFakeValue = ((std::uint32_t)4); //
 
 // Driver parameter types
 typedef enum {
-    JackDriverParamInt = 1,
-    JackDriverParamUInt,
-    JackDriverParamChar,
-    JackDriverParamString,
-    JackDriverParamBool
-} jack_driver_param_type_t;
+    kDriverParamInt = 1,
+    kDriverParamUInt,
+    kDriverParamChar,
+    kDriverParamString,
+    kDriverParamBool
+} DriverParamType;
 
 // Driver types
 typedef enum {
-    JackDriverMaster = 1,
-    JackDriverSlave,
-    JackDriverNone,
-} jack_driver_type_t;
+    kDriverMaster = 1,
+    kDriverSlave,
+    kDriverNone,
+} DriverType;
 
 // Driver parameter value
 typedef union {
-    std::uint32_t ui;
-    std::int32_t i;
-    char c;
-    std::array<char, kDriverParamStringMax + 1> str;
-} jack_driver_param_value_t;
+    std::uint32_t m_ui;
+    std::int32_t m_i;
+    char m_c;
+    std::array<char, kDriverParamStringMax + 1> m_str;
+} DriverParamValue;
 
 typedef struct {
-    jack_driver_param_value_t value;
-    std::array<char, 64> short_desc;  // < A short (~30 chars) description for the user
-} jack_driver_param_value_enum_t;
+    DriverParamValue m_value;
+    std::array<char, 64> m_shortDesc;  // < A short (~30 chars) description for the user
+} DriverParamValueEnum;
 
 struct jack_constraint_enum_uint32_descriptor {
-    std::uint32_t value;
-    const char* short_desc;
+    std::uint32_t m_value;
+    const char* m_shortDesc;
 };
 
 struct jack_constraint_enum_sint32_descriptor {
-    std::int32_t value;
-    const char* short_desc;
+    std::int32_t m_value;
+    const char* m_shortDesc;
 };
 
 struct jack_constraint_enum_char_descriptor {
-    char value;
-    const char* short_desc;
+    char m_value;
+    const char* m_shortDesc;
 };
 
 struct jack_constraint_enum_str_descriptor {
-    const char* value;
-    const char* short_desc;
+    const char* m_value;
+    const char* m_shortDesc;
 };
 
 typedef struct {
-    std::uint32_t flags;  // < JACK_CONSTRAINT_FLAG_XXX
+    std::uint32_t m_flags;  // < JACK_CONSTRAINT_FLAG_XXX
     union {
         struct {
-            jack_driver_param_value_t min;
-            jack_driver_param_value_t max;
-        } range;  // < valid when JACK_CONSTRAINT_FLAG_RANGE flag is set
+            DriverParamValue m_min;
+            DriverParamValue m_max;
+        } m_range;  // < valid when JACK_CONSTRAINT_FLAG_RANGE flag is set
 
         struct {
-            std::uint32_t count;
-            jack_driver_param_value_enum_t* possible_values_array;
-        } enumeration;  // < valid when JACK_CONSTRAINT_FLAG_RANGE flag is not set
-    } constraint;
-} jack_driver_param_constraint_desc_t;
+            std::uint32_t m_count;
+            DriverParamValueEnum* m_possibleValuesArray;
+        } m_enumeration;  // < valid when JACK_CONSTRAINT_FLAG_RANGE flag is not set
+    } m_constraint;
+} DriverParamConstraintDesc;
 
 // A driver parameter descriptor
 typedef struct {
-    std::array<char, kDriverNameMax + 1> name;  // < The parameter's name
-    char character;  // < The parameter's character (for getopt, etc)
-    jack_driver_param_type_t type;  // < The parameter's type
-    jack_driver_param_value_t value;  // < The parameter's (default) value
-    jack_driver_param_constraint_desc_t* constraint;  // < Pointer to parameter constraint descriptor. nullptr if there is no constraint
-    std::array<char, 64> short_desc;  // < A short (~30 chars) description for the user
-    std::array<char, 1024> long_desc;  // < A longer description for the user
-} jack_driver_param_desc_t;
+    std::array<char, kDriverNameMax + 1> m_name;  // < The parameter's name
+    char m_character;  // < The parameter's character (for getopt, etc)
+    DriverParamType m_type;  // < The parameter's type
+    DriverParamValue m_value;  // < The parameter's (default) value
+    DriverParamConstraintDesc* m_constraint;  // < Pointer to parameter constraint descriptor. nullptr if there is no constraint
+    std::array<char, 64> m_shortDesc;  // < A short (~30 chars) description for the user
+    std::array<char, 1024> m_longDesc;  // < A longer description for the user
+} DriverParamDesc;
 
 // A driver parameter
 typedef struct {
-    char character;
-    jack_driver_param_value_t value;
-} jack_driver_param_t;
+    char m_character;
+    DriverParamValue m_value;
+} DriverParam;
 
 // A struct for describing a jack driver
 typedef struct {
-    std::array<char, kDriverNameMax + 1> name;  // < The driver's canonical name
-    jack_driver_type_t type;  // < The driver's type
-    std::array<char, kDriverParamDesc + 1> desc;  // < The driver's extended description
-    std::array<char, kPathMax + 1> file;  // < The filename of the driver's shared object file
-    std::uint32_t nparams;  // < The number of parameters the driver has
-    jack_driver_param_desc_t* params;  // < An array of parameter descriptors
-} jack_driver_desc_t;
+    std::array<char, kDriverNameMax + 1> m_name;  // < The driver's canonical name
+    DriverType m_type;  // < The driver's type
+    std::array<char, kDriverParamDesc + 1> m_desc;  // < The driver's extended description
+    std::array<char, kPathMax + 1> m_file;  // < The filename of the driver's shared object file
+    std::uint32_t m_nparams;  // < The number of parameters the driver has
+    DriverParamDesc* m_params;  // < An array of parameter descriptors
+} DriverDesc;
 
 typedef struct {
-    std::uint32_t size;  // size of the param array, in elements
-} jack_driver_desc_filler_t;
+    std::uint32_t m_size;  // size of the param array, in elements
+} DriverDescFiller;
 
 
 // To be used by drivers
 
-SERVER_EXPORT jack_driver_desc_t*  // Newly allocated driver descriptor, nullptr on failure
+SERVER_EXPORT DriverDesc*  // Newly allocated driver descriptor, nullptr on failure
 jack_driver_descriptor_construct(
     const char* name,  // Driver name
-    jack_driver_type_t type,  // Driver type
+    DriverType type,  // Driver type
     const char* description,  // Driver description
-    jack_driver_desc_filler_t* filler);  // Pointer to stack var to be supplied to jack_driver_descriptor_add_parameter() as well.
+    DriverDescFiller* filler);  // Pointer to stack var to be supplied to jack_driver_descriptor_add_parameter() as well.
     // Can be nullptr for drivers that have no parameters.
 
 SERVER_EXPORT std::int32_t  // 0 on failure
 jack_driver_descriptor_add_parameter(
-    jack_driver_desc_t* driver_descr,  // Pointer to driver descriptor as returned by jack_driver_descriptor_construct()
-    jack_driver_desc_filler_t* filler,  // Pointer to the stack var that was supplied to jack_driver_descriptor_add_parameter().
+    DriverDesc* driverDescr,  // Pointer to driver descriptor as returned by jack_driver_descriptor_construct()
+    DriverDescFiller* filler,  // Pointer to the stack var that was supplied to jack_driver_descriptor_add_parameter().
     const char* name,  // Parameter's name
     char character,  // Parameter's character (for getopt, etc)
-    jack_driver_param_type_t type,  // The parameter's type
-    const jack_driver_param_value_t* value_ptr,  // Pointer to parameter's (default) value
-    jack_driver_param_constraint_desc_t* constraint,  // Pointer to parameter constraint descriptor. nullptr if there is no constraint
-    const char* short_desc,  // A short (~30 chars) description for the user
-    const char* long_desc);  // A longer description for the user, if nullptr short_desc will be used
+    DriverParamType type,  // The parameter's type
+    const DriverParamValue* valuePtr,  // Pointer to parameter's (default) value
+    DriverParamConstraintDesc* constraint,  // Pointer to parameter constraint descriptor. nullptr if there is no constraint
+    const char* shortDesc,  // A short (~30 chars) description for the user
+    const char* longDesc);  // A longer description for the user, if nullptr short_desc will be used
 
 SERVER_EXPORT
 std::int32_t jack_constraint_add_enum(
-    jack_driver_param_constraint_desc_t** constraint_ptr_ptr,
-    std::uint32_t* array_size_ptr,
-    jack_driver_param_value_t* value_ptr,
-    const char* short_desc);
+    DriverParamConstraintDesc** constraintPtrPtr,
+    std::uint32_t* arraySizePtr,
+    DriverParamValue* valuePtr,
+    const char* shortDesc);
 
 SERVER_EXPORT
-void jack_constraint_free(jack_driver_param_constraint_desc_t* constraint_ptr);
+void jack_constraint_free(DriverParamConstraintDesc* constraintPtr);
 
 #define JACK_CONSTRAINT_COMPOSE_ENUM(type) \
     SERVER_EXPORT                          \
-    jack_driver_param_constraint_desc_t*   \
+    DriverParamConstraintDesc*   \
     jack_constraint_compose_enum_##type(   \
         std::uint32_t flags,                    \
         struct jack_constraint_enum_##type##_descriptor* descr_array_ptr)

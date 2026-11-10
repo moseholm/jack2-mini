@@ -18,11 +18,11 @@
 
 namespace jackmini {
 
-std::atomic<bool> JackGlobals::fVerbose { false };
+std::atomic<bool> Globals::s_verbose { false };
 
-jack_tls_key JackGlobals::fKeyLogFunction;
-static bool fKeyLogFunctionInitialized = jack_tls_allocate_key(&JackGlobals::fKeyLogFunction);
+TlsKey Globals::s_keyLogFunction;
+static bool gFKeyLogFunctionInitialized = tlsAllocateKey(&Globals::s_keyLogFunction);
 
-jack_thread_creator_t JackGlobals::fJackThreadCreator = pthread_create;
+ThreadCreator Globals::s_jackThreadCreator = pthread_create;
 
 } // namespace jackmini

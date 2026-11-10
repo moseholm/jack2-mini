@@ -65,75 +65,75 @@ public:
 
     ~Hpet()
     {
-        if (fPtr) {
-            munmap(fPtr, kHpetMapSize);
+        if (m_ptr) {
+            munmap(m_ptr, kHpetMapSize);
         }
-        if (fFd >= 0) {
-            close(fFd);
+        if (m_fd >= 0) {
+            close(m_fd);
         }
     }
 
     bool open()
     {
-        fFd = ::open("/dev/hpet", O_RDONLY);
-        if (fFd < 0) {
+        m_fd = ::open("/dev/hpet", O_RDONLY);
+        if (m_fd < 0) {
             jack_error("This system has no accessible HPET device (%s)", strerror(errno));
             return false;
         }
 
-        void* map = mmap(nullptr, kHpetMapSize, PROT_READ, MAP_SHARED, fFd, 0);
+        void* map = mmap(nullptr, kHpetMapSize, PROT_READ, MAP_SHARED, m_fd, 0);
         if (map == MAP_FAILED) {
             jack_error("This system has no mappable HPET device (%s)", strerror(errno));
-            close(fFd);
-            fFd = -1;
+            close(m_fd);
+            m_fd = -1;
             return false;
         }
-        fPtr = static_cast<std::byte*>(map);
+        m_ptr = static_cast<std::byte*>(map);
 
         // The period is read once. It is assumed to be constant.
-        fPeriod = read_register<std::uint32_t>(kHpetPeriod);
-        const auto caps = read_register<std::uint32_t>(kHpetCaps);
-        fWrap = ((caps & kHpetCapsCounter64) && (sizeof(HpetCounter) == sizeof(std::uint64_t))) ? 0 : (std::uint64_t(1) << 32);
+        m_period = readRegister<std::uint32_t>(kHpetPeriod);
+        const auto caps = readRegister<std::uint32_t>(kHpetCaps);
+        m_wrap = ((caps & kHpetCapsCounter64) && (sizeof(HpetCounter) == sizeof(std::uint64_t))) ? 0 : (std::uint64_t(1) << 32);
         return true;
     }
 
-    jack_time_t now()
+    TimeC now()
     {
-        const auto counter = read_register<HpetCounter>(kHpetCounter);
-        if (counter < fPrevious) {
-            fOffset += fWrap;
+        const auto counter = readRegister<HpetCounter>(kHpetCounter);
+        if (counter < m_previous) {
+            m_offset += m_wrap;
         }
-        fPrevious = counter;
-        const long double time = static_cast<long double>(fOffset + counter)
-            * static_cast<long double>(fPeriod) * 1e-9L;
-        return static_cast<jack_time_t>(time + 0.5L);
+        m_previous = counter;
+        const long double time = static_cast<long double>(m_offset + counter)
+            * static_cast<long double>(m_period) * 1e-9L;
+        return static_cast<TimeC>(time + 0.5L);
     }
 
 private:
     template <typename T>
-    T read_register(std::size_t offset) const
+    T readRegister(std::size_t offset) const
     {
-        return *reinterpret_cast<const volatile T*>(fPtr + offset);
+        return *reinterpret_cast<const volatile T*>(m_ptr + offset);
     }
 
-    std::int32_t fFd = -1;
-    std::byte* fPtr = nullptr;
-    std::uint32_t fPeriod = 0; // femtoseconds
-    std::uint64_t fOffset = 0;
-    std::uint64_t fWrap = 0;
-    HpetCounter fPrevious = 0;
+    std::int32_t m_fd = -1;
+    std::byte* m_ptr = nullptr;
+    std::uint32_t m_period = 0; // femtoseconds
+    std::uint64_t m_offset = 0;
+    std::uint64_t m_wrap = 0;
+    HpetCounter m_previous = 0;
 };
 
-Hpet hpet;
+Hpet gHpet;
 
-bool open_hpet()
+bool openHpet()
 {
-    return hpet.open();
+    return gHpet.open();
 }
 
-jack_time_t get_microseconds_from_hpet()
+TimeC getMicrosecondsFromHpet()
 {
-    return hpet.now();
+    return gHpet.now();
 }
 
 #else
@@ -153,7 +153,7 @@ jack_time_t get_microseconds_from_hpet()
 
 #endif // HPET_SUPPORT
 
-jack_time_t get_microseconds_from_system()
+TimeC getMicrosecondsFromSystem()
 {
 #ifdef CLOCK_MONOTONIC_RAW
     constexpr clockid_t kClock = CLOCK_MONOTONIC_RAW;
@@ -163,62 +163,62 @@ jack_time_t get_microseconds_from_system()
     timespec time { };
     clock_gettime(kClock, &time);
     const auto elapsed = std::chrono::seconds(time.tv_sec) + std::chrono::nanoseconds(time.tv_nsec);
-    return static_cast<jack_time_t>(std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count());
+    return static_cast<TimeC>(std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count());
 }
 
-jack_time_t (*current_clock)() = nullptr;
+TimeC (*gCurrentClock)() = nullptr;
 
 } // end of anonymous namespace
 
-void sleep_microseconds(std::int64_t usec)
+void sleepMicroseconds(std::int64_t usec)
 {
     usleep(usec);
 }
 
-void init_time()
+void initTime()
 {
     // Nothing to do: the system clock needs no setup.
 }
 
-void end_time()
+void endTime()
 {
 }
 
-void set_clock_source(jack_timer_type_t source)
+void setClockSource(TimerType source)
 {
-    jack_log("Clock source : %s", clock_source_name(source));
+    jack_log("Clock source : %s", clockSourceName(source));
 
     switch (source) {
-    case JACK_TIMER_HPET:
-        if (open_hpet()) {
-            current_clock = get_microseconds_from_hpet;
+    case kTimerHpet:
+        if (openHpet()) {
+            gCurrentClock = getMicrosecondsFromHpet;
         } else {
-            current_clock = get_microseconds_from_system;
+            gCurrentClock = getMicrosecondsFromSystem;
         }
         break;
 
-    case JACK_TIMER_SYSTEM_CLOCK:
+    case kTimerSystemClock:
     default:
-        current_clock = get_microseconds_from_system;
+        gCurrentClock = getMicrosecondsFromSystem;
         break;
     }
 }
 
-const char* clock_source_name(jack_timer_type_t source)
+const char* clockSourceName(TimerType source)
 {
     switch (source) {
-    case JACK_TIMER_HPET:
+    case kTimerHpet:
         return "hpet";
-    case JACK_TIMER_SYSTEM_CLOCK:
+    case kTimerSystemClock:
         return "system clock via clock_gettime";
     }
 
     return "unknown";
 }
 
-jack_time_t get_microseconds()
+TimeC getMicroseconds()
 {
-    return current_clock();
+    return gCurrentClock();
 }
 
 } // end of namespace jackmini

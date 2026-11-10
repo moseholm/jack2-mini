@@ -27,23 +27,23 @@ namespace jackmini {
 // Cards are compared by key (the port base, the device and its directions).
 // Indices refer to the \a current and \a desired lists.
 
-struct JackAlsaCardChanges {
-    std::vector<size_t> retire;
-    std::vector<size_t> add;
+struct AlsaCardChanges {
+    std::vector<size_t> m_retire;
+    std::vector<size_t> m_add;
 };
 
-inline JackAlsaCardChanges JackAlsaDiffCards(const std::vector<std::string>& current,
+inline AlsaCardChanges alsaDiffCards(const std::vector<std::string>& current,
     const std::vector<std::string>& desired)
 {
-    JackAlsaCardChanges changes;
+    AlsaCardChanges changes;
     for (size_t i = 0; i < current.size(); i++) {
         if (std::find(desired.begin(), desired.end(), current[i]) == desired.end()) {
-            changes.retire.push_back(i);
+            changes.m_retire.push_back(i);
         }
     }
     for (size_t j = 0; j < desired.size(); j++) {
         if (std::find(current.begin(), current.end(), desired[j]) == current.end()) {
-            changes.add.push_back(j);
+            changes.m_add.push_back(j);
         }
     }
     return changes;

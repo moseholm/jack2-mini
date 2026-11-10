@@ -30,7 +30,7 @@
 
 namespace jackmini {
 
-std::int32_t group_to_gid(const char* group)
+std::int32_t groupToGid(const char* group)
 {
     if (!group || !*group) {
         return -1;
@@ -56,12 +56,12 @@ std::int32_t group_to_gid(const char* group)
     return static_cast<std::int32_t>(entry.gr_gid);
 }
 
-std::int32_t set_promiscuous_perms(std::int32_t fd, const char* path, gid_t gid)
+std::int32_t setPromiscuousPerms(std::int32_t fd, const char* path, gid_t gid)
 {
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
     // gid_t is unsigned, so the group is always changed here. A gid of -1 leaves the group as it is.
-    const std::int32_t chown_result = (fd < 0) ? chown(path, -1, gid) : fchown(fd, -1, gid);
-    if (chown_result < 0) {
+    const std::int32_t chownResult = (fd < 0) ? chown(path, -1, gid) : fchown(fd, -1, gid);
+    if (chownResult < 0) {
         jack_log("Cannot chgrp %s: %s. Falling back to permissive perms.", path, strerror(errno));
     } else {
         mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;

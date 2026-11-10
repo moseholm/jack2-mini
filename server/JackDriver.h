@@ -29,220 +29,220 @@
 
 namespace jackmini {
 
-class JackLockedEngine;
-class JackGraphManager;
-struct JackEngineControl;
-class JackSlaveDriverInterface;
+class LockedEngine;
+class GraphManager;
+struct EngineControl;
+class SlaveDriverInterface;
 
 // \brief The base interface for drivers.
 
-class SERVER_EXPORT JackDriverInterface {
+class SERVER_EXPORT DriverInterface {
 
 public:
-    JackDriverInterface()
+    DriverInterface()
     {
     }
-    virtual ~JackDriverInterface()
+    virtual ~DriverInterface()
     {
     }
 
-    virtual std::int32_t Open() = 0;
+    virtual std::int32_t open() = 0;
 
-    virtual std::int32_t Open(jack_nframes_t buffer_size,
-        jack_nframes_t samplerate,
+    virtual std::int32_t open(NframesC bufferSize,
+        NframesC samplerate,
         bool capturing,
         bool playing,
         std::int32_t inchannels,
         std::int32_t outchannels,
         bool monitor,
-        const char* capture_driver_name,
-        const char* playback_driver_name,
-        jack_nframes_t capture_latency,
-        jack_nframes_t playback_latency) = 0;
+        const char* captureDriverName,
+        const char* playbackDriverName,
+        NframesC captureLatency,
+        NframesC playbackLatency) = 0;
 
-    virtual std::int32_t Attach() = 0;
-    virtual std::int32_t Detach() = 0;
+    virtual std::int32_t attach() = 0;
+    virtual std::int32_t detach() = 0;
 
-    virtual std::int32_t Read() = 0;
-    virtual std::int32_t Write() = 0;
+    virtual std::int32_t read() = 0;
+    virtual std::int32_t write() = 0;
 
-    virtual std::int32_t Start() = 0;
-    virtual std::int32_t Stop() = 0;
+    virtual std::int32_t start() = 0;
+    virtual std::int32_t stop() = 0;
 
-    virtual bool IsFixedBufferSize() = 0;
-    virtual std::int32_t SetBufferSize(jack_nframes_t buffer_size) = 0;
-    virtual std::int32_t SetSampleRate(jack_nframes_t sample_rate) = 0;
+    virtual bool isFixedBufferSize() = 0;
+    virtual std::int32_t setBufferSize(NframesC bufferSize) = 0;
+    virtual std::int32_t setSampleRate(NframesC sampleRate) = 0;
 
-    virtual std::int32_t Process() = 0;
+    virtual std::int32_t process() = 0;
 
-    virtual void SetMaster(bool onoff) = 0;
-    virtual bool GetMaster() = 0;
+    virtual void setMaster(bool onoff) = 0;
+    virtual bool getMaster() = 0;
 
-    virtual void AddSlave(JackDriverInterface* slave) = 0;
-    virtual void RemoveSlave(JackDriverInterface* slave) = 0;
+    virtual void addSlave(DriverInterface* slave) = 0;
+    virtual void removeSlave(DriverInterface* slave) = 0;
 
-    virtual std::list<JackDriverInterface*> GetSlaves() = 0;
+    virtual std::list<DriverInterface*> getSlaves() = 0;
 
     // For "master" driver
-    virtual std::int32_t ProcessReadSlaves() = 0;
-    virtual std::int32_t ProcessWriteSlaves() = 0;
+    virtual std::int32_t processReadSlaves() = 0;
+    virtual std::int32_t processWriteSlaves() = 0;
 
     // For "slave" driver
-    virtual std::int32_t ProcessRead() = 0;
-    virtual std::int32_t ProcessWrite() = 0;
+    virtual std::int32_t processRead() = 0;
+    virtual std::int32_t processWrite() = 0;
 
     // For "slave" driver in "synchronous" mode
-    virtual std::int32_t ProcessReadSync() = 0;
-    virtual std::int32_t ProcessWriteSync() = 0;
+    virtual std::int32_t processReadSync() = 0;
+    virtual std::int32_t processWriteSync() = 0;
 
     // For "slave" driver in "asynchronous" mode
-    virtual std::int32_t ProcessReadAsync() = 0;
-    virtual std::int32_t ProcessWriteAsync() = 0;
+    virtual std::int32_t processReadAsync() = 0;
+    virtual std::int32_t processWriteAsync() = 0;
 
-    virtual bool IsRealTime() const = 0;
-    virtual bool IsRunning() const = 0;
+    virtual bool isRealTime() const = 0;
+    virtual bool isRunning() const = 0;
 };
 
 // \brief The base interface for drivers clients.
 
-class SERVER_EXPORT JackDriverClientInterface : public JackDriverInterface, public JackClientInterface { };
+class SERVER_EXPORT DriverClientInterface : public DriverInterface, public ClientInterface { };
 
 // \brief The base class for drivers.
 
-inline constexpr JackPortFlags kCaptureDriverFlags = static_cast<JackPortFlags>(JackPortIsOutput | JackPortIsPhysical | JackPortIsTerminal);
-inline constexpr JackPortFlags kPlaybackDriverFlags = static_cast<JackPortFlags>(JackPortIsInput | JackPortIsPhysical | JackPortIsTerminal);
-inline constexpr JackPortFlags kMonitorDriverFlags = static_cast<JackPortFlags>(JackPortIsOutput);
+inline constexpr PortFlagsC kCaptureDriverFlags = static_cast<PortFlagsC>(kPortIsOutput | kPortIsPhysical | kPortIsTerminal);
+inline constexpr PortFlagsC kPlaybackDriverFlags = static_cast<PortFlagsC>(kPortIsInput | kPortIsPhysical | kPortIsTerminal);
+inline constexpr PortFlagsC kMonitorDriverFlags = static_cast<PortFlagsC>(kPortIsOutput);
 
-typedef std::list<std::pair<std::string, std::pair<std::string, std::string>>> driver_connections_list_t; // [type : (src, dst)]
+typedef std::list<std::pair<std::string, std::pair<std::string, std::string>>> DriverConnectionsList; // [type : (src, dst)]
 
-class SERVER_EXPORT JackDriver : public JackDriverClientInterface {
+class SERVER_EXPORT Driver : public DriverClientInterface {
 
 protected:
-    std::array<char, kClientNameSize + 1> fCaptureDriverName { };
-    std::array<char, kClientNameSize + 1> fPlaybackDriverName { };
-    std::array<char, kClientNameSize + 1> fAliasName { };
+    std::array<char, kClientNameSize + 1> m_captureDriverName { };
+    std::array<char, kClientNameSize + 1> m_playbackDriverName { };
+    std::array<char, kClientNameSize + 1> m_aliasName { };
 
-    jack_nframes_t fCaptureLatency;
-    jack_nframes_t fPlaybackLatency;
+    NframesC m_captureLatency;
+    NframesC m_playbackLatency;
 
-    std::int32_t fCaptureChannels;
-    std::int32_t fPlaybackChannels;
+    std::int32_t m_captureChannels;
+    std::int32_t m_playbackChannels;
 
-    jack_time_t fBeginDateUst;
-    jack_time_t fEndDateUst;
-    float fDelayedUsecs;
+    TimeC m_beginDateUst;
+    TimeC m_endDateUst;
+    float m_delayedUsecs;
 
     // Pointers to engine state
-    JackLockedEngine* fEngine;
-    JackGraphManager* fGraphManager;
-    JackSynchro* fSynchroTable;
-    JackEngineControl* fEngineControl;
-    JackClientControl fClientControl;
+    LockedEngine* m_engine;
+    GraphManager* m_graphManager;
+    Synchro* m_synchroTable;
+    EngineControl* m_engineControl;
+    ClientControl m_clientControl;
 
-    std::list<JackDriverInterface*> fSlaveList;
+    std::list<DriverInterface*> m_slaveList;
 
-    bool fIsMaster;
-    bool fIsRunning;
-    bool fWithMonitorPorts;
+    bool m_isMaster;
+    bool m_isRunning;
+    bool m_withMonitorPorts;
 
     // Static tables since the actual number of ports may be changed by the real driver
     // thus dynamic allocation is more difficult to handle
-    std::array<jack_port_id_t, kDriverPortNum> fCapturePortList;
-    std::array<jack_port_id_t, kDriverPortNum> fPlaybackPortList;
-    std::array<jack_port_id_t, kDriverPortNum> fMonitorPortList;
+    std::array<PortIdC, kDriverPortNum> m_capturePortList;
+    std::array<PortIdC, kDriverPortNum> m_playbackPortList;
+    std::array<PortIdC, kDriverPortNum> m_monitorPortList;
 
-    driver_connections_list_t fConnections; // Connections list
+    DriverConnectionsList m_connections; // Connections list
 
-    void CycleIncTime();
-    void CycleTakeBeginTime();
-    void CycleTakeEndTime();
+    void cycleIncTime();
+    void cycleTakeBeginTime();
+    void cycleTakeEndTime();
 
-    void SetupDriverSync(std::int32_t ref, bool freewheel);
+    void setupDriverSync(std::int32_t ref, bool freewheel);
 
-    void NotifyXRun(jack_time_t callback_usecs, float delayed_usecs); // XRun notification sent by the driver
-    void NotifyBufferSize(jack_nframes_t buffer_size); // BufferSize notification sent by the driver
-    void NotifySampleRate(jack_nframes_t sample_rate); // SampleRate notification sent by the driver
-    void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, std::int32_t direction); // secondary card rate change
-    void NotifyFailure(std::int32_t code, const char* reason); // Failure notification sent by the driver
+    void notifyXRun(TimeC callbackUsecs, float delayedUsecs); // XRun notification sent by the driver
+    void notifyBufferSize(NframesC bufferSize); // BufferSize notification sent by the driver
+    void notifySampleRate(NframesC sampleRate); // SampleRate notification sent by the driver
+    void notifySecondarySampleRate(const char* card, NframesC sampleRate, std::int32_t direction); // secondary card rate change
+    void notifyFailure(std::int32_t code, const char* reason); // Failure notification sent by the driver
 
-    virtual void SaveConnections(std::int32_t alias);
-    virtual void LoadConnections(std::int32_t alias, bool full_name = true);
-    std::string MatchPortName(const char* name, const char** ports, std::int32_t alias, const std::string& type);
+    virtual void saveConnections(std::int32_t alias);
+    virtual void loadConnections(std::int32_t alias, bool fullName = true);
+    std::string matchPortName(const char* name, const char** ports, std::int32_t alias, const std::string& type);
 
-    virtual std::int32_t StartSlaves();
-    virtual std::int32_t StopSlaves();
+    virtual std::int32_t startSlaves();
+    virtual std::int32_t stopSlaves();
 
-    virtual Result<void> ResumeRefNum();
-    virtual Result<void> SuspendRefNum();
+    virtual Result<void> resumeRefNum();
+    virtual Result<void> suspendRefNum();
 
 public:
-    JackDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table);
-    virtual ~JackDriver();
+    Driver(const char* name, const char* alias, LockedEngine* engine, Synchro* table);
+    virtual ~Driver();
 
-    void SetMaster(bool onoff);
-    bool GetMaster();
+    void setMaster(bool onoff);
+    bool getMaster();
 
-    void AddSlave(JackDriverInterface* slave);
-    void RemoveSlave(JackDriverInterface* slave);
+    void addSlave(DriverInterface* slave);
+    void removeSlave(DriverInterface* slave);
 
-    std::list<JackDriverInterface*> GetSlaves()
+    std::list<DriverInterface*> getSlaves()
     {
-        return fSlaveList;
+        return m_slaveList;
     }
 
-    virtual std::int32_t Open();
+    virtual std::int32_t open();
 
-    virtual std::int32_t Open(jack_nframes_t buffer_size,
-        jack_nframes_t samplerate,
+    virtual std::int32_t open(NframesC bufferSize,
+        NframesC samplerate,
         bool capturing,
         bool playing,
         std::int32_t inchannels,
         std::int32_t outchannels,
         bool monitor,
-        const char* capture_driver_name,
-        const char* playback_driver_name,
-        jack_nframes_t capture_latency,
-        jack_nframes_t playback_latency);
+        const char* captureDriverName,
+        const char* playbackDriverName,
+        NframesC captureLatency,
+        NframesC playbackLatency);
 
-    virtual std::int32_t Close();
+    virtual std::int32_t close();
 
-    virtual std::int32_t Process();
+    virtual std::int32_t process();
 
-    virtual std::int32_t Attach();
-    virtual std::int32_t Detach();
+    virtual std::int32_t attach();
+    virtual std::int32_t detach();
 
-    virtual std::int32_t Read();
-    virtual std::int32_t Write();
+    virtual std::int32_t read();
+    virtual std::int32_t write();
 
-    virtual std::int32_t Start();
-    virtual std::int32_t Stop();
+    virtual std::int32_t start();
+    virtual std::int32_t stop();
 
     // For "master" driver
-    std::int32_t ProcessReadSlaves();
-    std::int32_t ProcessWriteSlaves();
+    std::int32_t processReadSlaves();
+    std::int32_t processWriteSlaves();
 
     // For "slave" driver with typically decompose a given cycle in separated Read and Write parts.
-    virtual std::int32_t ProcessRead();
-    virtual std::int32_t ProcessWrite();
+    virtual std::int32_t processRead();
+    virtual std::int32_t processWrite();
 
     // For "slave" driver in "synchronous" mode
-    virtual std::int32_t ProcessReadSync();
-    virtual std::int32_t ProcessWriteSync();
+    virtual std::int32_t processReadSync();
+    virtual std::int32_t processWriteSync();
 
     // For "slave" driver in "asynchronous" mode
-    virtual std::int32_t ProcessReadAsync();
-    virtual std::int32_t ProcessWriteAsync();
+    virtual std::int32_t processReadAsync();
+    virtual std::int32_t processWriteAsync();
 
-    virtual bool IsFixedBufferSize();
-    virtual std::int32_t SetBufferSize(jack_nframes_t buffer_size);
-    virtual std::int32_t SetSampleRate(jack_nframes_t sample_rate);
+    virtual bool isFixedBufferSize();
+    virtual std::int32_t setBufferSize(NframesC bufferSize);
+    virtual std::int32_t setSampleRate(NframesC sampleRate);
 
-    virtual std::int32_t ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
-    virtual JackClientControl* GetClientControl() const;
+    virtual std::int32_t clientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
+    virtual ClientControl* getClientControl() const;
 
-    virtual bool IsRealTime() const;
-    virtual bool IsRunning() const { return fIsRunning; }
-    virtual bool Initialize(); // To be called by the wrapping thread Init method when the driver is a "blocking" one
+    virtual bool isRealTime() const;
+    virtual bool isRunning() const { return m_isRunning; }
+    virtual bool initialize(); // To be called by the wrapping thread Init method when the driver is a "blocking" one
 };
 
 } // namespace jackmini

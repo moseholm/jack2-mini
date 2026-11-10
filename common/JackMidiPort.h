@@ -27,27 +27,27 @@
 #include <stddef.h>
 
 // Type for raw event data contained in @ref jack_midi_event_t.
-typedef std::byte jack_midi_data_t;
+typedef std::byte MidiData;
 
 // A Jack MIDI event.
-struct jack_midi_event_t {
-    jack_nframes_t time;  // < Sample index at which event is valid
-    size_t size;  // < Number of bytes of data in \a buffer
-    jack_midi_data_t* buffer;  // < Raw MIDI data
+struct MidiEventC {
+    NframesC m_time;  // < Sample index at which event is valid
+    size_t m_size;  // < Number of bytes of data in \a buffer
+    MidiData* m_buffer;  // < Raw MIDI data
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-LIB_EXPORT std::uint32_t jack_midi_get_event_count(void* port_buffer);
-LIB_EXPORT std::int32_t jack_midi_event_get(jack_midi_event_t* event, void* port_buffer, std::uint32_t event_index);
-LIB_EXPORT void jack_midi_clear_buffer(void* port_buffer);
-LIB_EXPORT void jack_midi_reset_buffer(void* port_buffer);
-LIB_EXPORT size_t jack_midi_max_event_size(void* port_buffer);
-LIB_EXPORT jack_midi_data_t* jack_midi_event_reserve(void* port_buffer, jack_nframes_t time, size_t data_size);
-LIB_EXPORT std::int32_t jack_midi_event_write(void* port_buffer, jack_nframes_t time, const jack_midi_data_t* data, size_t data_size);
-LIB_EXPORT std::uint32_t jack_midi_get_lost_event_count(void* port_buffer);
+LIB_EXPORT std::uint32_t jack_midi_get_event_count(void* portBuffer);
+LIB_EXPORT std::int32_t jack_midi_event_get(MidiEventC* event, void* portBuffer, std::uint32_t eventIndex);
+LIB_EXPORT void jack_midi_clear_buffer(void* portBuffer);
+LIB_EXPORT void jack_midi_reset_buffer(void* portBuffer);
+LIB_EXPORT size_t jack_midi_max_event_size(void* portBuffer);
+LIB_EXPORT MidiData* jack_midi_event_reserve(void* portBuffer, NframesC time, size_t dataSize);
+LIB_EXPORT std::int32_t jack_midi_event_write(void* portBuffer, NframesC time, const MidiData* data, size_t dataSize);
+LIB_EXPORT std::uint32_t jack_midi_get_lost_event_count(void* portBuffer);
 
 #ifdef __cplusplus
 }
@@ -56,23 +56,23 @@ LIB_EXPORT std::uint32_t jack_midi_get_lost_event_count(void* port_buffer);
 
 namespace jackmini {
 
-struct LIB_EXPORT JackMidiEvent {
+struct LIB_EXPORT MidiEvent {
     // Most MIDI events are < 4 bytes in size, so we can save a lot, storing them inplace.
-    enum { INLINE_SIZE_MAX = sizeof(jack_shmsize_t) };
+    enum { kInlineSizeMax = sizeof(ShmsizeC) };
 
-    std::uint32_t time;
-    jack_shmsize_t size;
+    std::uint32_t m_time;
+    ShmsizeC m_size;
     union {
-        jack_shmsize_t offset;
-        std::array<jack_midi_data_t, INLINE_SIZE_MAX> data;
+        ShmsizeC m_offset;
+        std::array<MidiData, kInlineSizeMax> m_data;
     };
 
-    jack_midi_data_t* GetData(void* buffer)
+    MidiData* getData(void* buffer)
     {
-        if (size <= INLINE_SIZE_MAX) {
-            return data.data();
+        if (m_size <= kInlineSizeMax) {
+            return m_data.data();
         } else {
-            return (jack_midi_data_t*)buffer + offset;
+            return (MidiData*)buffer + m_offset;
         }
     }
 };
@@ -82,29 +82,29 @@ struct LIB_EXPORT JackMidiEvent {
 // Events are stored in an linear array from the beginning of the buffer,
 // but their data (if not inlined) is stored from the end of the same buffer.
 
-struct LIB_EXPORT JackMidiBuffer {
-    enum { MAGIC = 0x900df00d };
+struct LIB_EXPORT MidiBuffer {
+    enum { kMagic = 0x900df00d };
 
-    std::uint32_t magic;
-    jack_shmsize_t buffer_size;
-    jack_nframes_t nframes;
-    jack_shmsize_t write_pos; //!< data write position from the end of the buffer.
-    std::uint32_t event_count;
-    std::uint32_t lost_events;
+    std::uint32_t m_magic;
+    ShmsizeC m_bufferSize;
+    NframesC m_nframes;
+    ShmsizeC m_writePos; //!< data write position from the end of the buffer.
+    std::uint32_t m_eventCount;
+    std::uint32_t m_lostEvents;
 
-    JackMidiEvent events[1]; // Using 0 size does not compile with older GCC versions, so use 1 here.
+    MidiEvent m_events[1]; // Using 0 size does not compile with older GCC versions, so use 1 here.
 
-    std::int32_t IsValid() const
+    std::int32_t isValid() const
     {
-        return magic == MAGIC;
+        return m_magic == kMagic;
     }
-    void Reset(jack_nframes_t nframes);
-    jack_shmsize_t MaxEventSize() const;
+    void reset(NframesC nframes);
+    ShmsizeC maxEventSize() const;
 
     // checks only size constraints.
-    jack_midi_data_t* ReserveEvent(jack_nframes_t time, jack_shmsize_t size);
+    MidiData* reserveEvent(NframesC time, ShmsizeC size);
 };
 
-void MidiBufferInit(void* buffer, size_t buffer_size, jack_nframes_t nframes);
+void midiBufferInit(void* buffer, size_t bufferSize, NframesC nframes);
 
 } // namespace jackmini

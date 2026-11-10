@@ -25,18 +25,18 @@
 // the offsets within their structures.  The operations are seq_cst, which is
 // the ordering the original inline assembly gave.
 
-static inline bool CAS(UInt32 value, UInt32 newvalue, void* addr)
+static inline bool cAS(UInt32 value, UInt32 newvalue, void* addr)
 {
     UInt32 expected = value;
     return std::atomic_ref<UInt32>(*static_cast<UInt32*>(addr)).compare_exchange_strong(expected, newvalue);
 }
 
-static inline std::int64_t INC_ATOMIC(SInt32* val)
+static inline std::int64_t INCATOMIC(SInt32* val)
 {
     return std::atomic_ref<SInt32>(*val).fetch_add(1);
 }
 
-static inline std::int64_t DEC_ATOMIC(SInt32* val)
+static inline std::int64_t DECATOMIC(SInt32* val)
 {
     return std::atomic_ref<SInt32>(*val).fetch_sub(1);
 }

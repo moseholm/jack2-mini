@@ -31,179 +31,179 @@
 using namespace jackmini;
 
 struct Freq {
-    std::int32_t p;
-    std::int32_t f;
-    float xa;
-    float ya;
-    float x1;
-    float y1;
-    float x2;
-    float y2;
+    std::int32_t m_p;
+    std::int32_t m_f;
+    float m_xa;
+    float m_ya;
+    float m_x1;
+    float m_y1;
+    float m_x2;
+    float m_y2;
 };
 
 
 struct MTDM {
-    double _del;
-    double _err;
-    float _wlp;
-    std::int32_t _cnt;
-    std::int32_t _inv;
+    double m_del;
+    double m_err;
+    float m_wlp;
+    std::int32_t m_cnt;
+    std::int32_t m_inv;
 
-    std::array<struct Freq, 13> _freq;
+    std::array<struct Freq, 13> m_freq;
 };
 
 
-struct MTDM* mtdm_new(double fsamp)
+struct MTDM* mtdmNew(double fsamp)
 {
     std::int32_t i;
-    struct Freq* F;
+    struct Freq* f;
 
     struct MTDM* retval = (MTDM*)malloc(sizeof(struct MTDM));
 
     if (retval == nullptr)
         return nullptr;
 
-    retval->_cnt = 0;
-    retval->_inv = 0;
+    retval->m_cnt = 0;
+    retval->m_inv = 0;
 
-    retval->_freq[0].f = 4096;
-    retval->_freq[1].f = 2048;
-    retval->_freq[2].f = 3072;
-    retval->_freq[3].f = 2560;
-    retval->_freq[4].f = 2304;
-    retval->_freq[5].f = 2176;
-    retval->_freq[6].f = 1088;
-    retval->_freq[7].f = 1312;
-    retval->_freq[8].f = 1552;
-    retval->_freq[9].f = 1800;
-    retval->_freq[10].f = 3332;
-    retval->_freq[11].f = 3586;
-    retval->_freq[12].f = 3841;
-    retval->_wlp = 200.0f / fsamp;
-    for (i = 0, F = retval->_freq.data(); i < 13; i++, F++) {
-        F->p = 128;
-        F->xa = F->ya = 0.0f;
-        F->x1 = F->y1 = 0.0f;
-        F->x2 = F->y2 = 0.0f;
+    retval->m_freq[0].m_f = 4096;
+    retval->m_freq[1].m_f = 2048;
+    retval->m_freq[2].m_f = 3072;
+    retval->m_freq[3].m_f = 2560;
+    retval->m_freq[4].m_f = 2304;
+    retval->m_freq[5].m_f = 2176;
+    retval->m_freq[6].m_f = 1088;
+    retval->m_freq[7].m_f = 1312;
+    retval->m_freq[8].m_f = 1552;
+    retval->m_freq[9].m_f = 1800;
+    retval->m_freq[10].m_f = 3332;
+    retval->m_freq[11].m_f = 3586;
+    retval->m_freq[12].m_f = 3841;
+    retval->m_wlp = 200.0f / fsamp;
+    for (i = 0, f = retval->m_freq.data(); i < 13; i++, f++) {
+        f->m_p = 128;
+        f->m_xa = f->m_ya = 0.0f;
+        f->m_x1 = f->m_y1 = 0.0f;
+        f->m_x2 = f->m_y2 = 0.0f;
     }
 
     return retval;
 }
 
-std::int32_t mtdm_process(struct MTDM* self, size_t len, float* ip, float* op)
+std::int32_t mtdmProcess(struct MTDM* self, size_t len, float* ip, float* op)
 {
     std::int32_t i;
     float vip, vop, a, c, s;
-    struct Freq* F;
+    struct Freq* f;
 
     while (len--) {
         vop = 0.0f;
         vip = *ip++;
-        for (i = 0, F = self->_freq.data(); i < 13; i++, F++) {
-            a = 2 * (float)M_PI * (F->p & 65535) / 65536.0;
-            F->p += F->f;
+        for (i = 0, f = self->m_freq.data(); i < 13; i++, f++) {
+            a = 2 * (float)M_PI * (f->m_p & 65535) / 65536.0;
+            f->m_p += f->m_f;
             c = cosf(a);
             s = -sinf(a);
             vop += (i ? 0.01f : 0.20f) * s;
-            F->xa += s * vip;
-            F->ya += c * vip;
+            f->m_xa += s * vip;
+            f->m_ya += c * vip;
         }
         *op++ = vop;
-        if (++self->_cnt == 16) {
-            for (i = 0, F = self->_freq.data(); i < 13; i++, F++) {
-                F->x1 += self->_wlp * (F->xa - F->x1 + 1e-20);
-                F->y1 += self->_wlp * (F->ya - F->y1 + 1e-20);
-                F->x2 += self->_wlp * (F->x1 - F->x2 + 1e-20);
-                F->y2 += self->_wlp * (F->y1 - F->y2 + 1e-20);
-                F->xa = F->ya = 0.0f;
+        if (++self->m_cnt == 16) {
+            for (i = 0, f = self->m_freq.data(); i < 13; i++, f++) {
+                f->m_x1 += self->m_wlp * (f->m_xa - f->m_x1 + 1e-20);
+                f->m_y1 += self->m_wlp * (f->m_ya - f->m_y1 + 1e-20);
+                f->m_x2 += self->m_wlp * (f->m_x1 - f->m_x2 + 1e-20);
+                f->m_y2 += self->m_wlp * (f->m_y1 - f->m_y2 + 1e-20);
+                f->m_xa = f->m_ya = 0.0f;
             }
-            self->_cnt = 0;
+            self->m_cnt = 0;
         }
     }
 
     return 0;
 }
 
-std::int32_t mtdm_resolve(struct MTDM* self)
+std::int32_t mtdmResolve(struct MTDM* self)
 {
     std::int32_t i, k, m;
     double d, e, f0, p;
-    struct Freq* F = self->_freq.data();
+    struct Freq* f = self->m_freq.data();
 
-    if (hypot(F->x2, F->y2) < 0.001)
+    if (hypot(f->m_x2, f->m_y2) < 0.001)
         return -1;
-    d = atan2(F->y2, F->x2) / (2 * M_PI);
-    if (self->_inv)
+    d = atan2(f->m_y2, f->m_x2) / (2 * M_PI);
+    if (self->m_inv)
         d += 0.5;
     if (d > 0.5)
         d -= 1.0;
-    f0 = self->_freq[0].f;
+    f0 = self->m_freq[0].m_f;
     m = 1;
-    self->_err = 0.0;
+    self->m_err = 0.0;
     for (i = 0; i < 12; i++) {
-        F++;
-        p = atan2(F->y2, F->x2) / (2 * M_PI) - d * F->f / f0;
-        if (self->_inv)
+        f++;
+        p = atan2(f->m_y2, f->m_x2) / (2 * M_PI) - d * f->m_f / f0;
+        if (self->m_inv)
             p += 0.5;
         p -= floor(p);
         p *= 2;
         k = (std::int32_t)(floor(p + 0.5));
         e = fabs(p - k);
-        if (e > self->_err)
-            self->_err = e;
+        if (e > self->m_err)
+            self->m_err = e;
         if (e > 0.4)
             return 1;
         d += m * (k & 1);
         m *= 2;
     }
-    self->_del = 16 * d;
+    self->m_del = 16 * d;
 
     return 0;
 }
 
-void mtdm_invert(struct MTDM* self)
+void mtdmInvert(struct MTDM* self)
 {
-    self->_inv ^= 1;
+    self->m_inv ^= 1;
 }
 // --------------------------------------------------------------------------------
 
-static struct MTDM* mtdm;
-static Client* jack_handle;
-static Port jack_capt;
-static Port jack_play;
-static std::atomic<std::uint64_t> cycles { 0 };
+static struct MTDM* gMtdm;
+static Client* gJackHandle;
+static Port gJackCapt;
+static Port gJackPlay;
+static std::atomic<std::uint64_t> gCycles { 0 };
 
-LatencyRange capture_latency = { UINT32_MAX, UINT32_MAX };
-LatencyRange playback_latency = { UINT32_MAX, UINT32_MAX };
+LatencyRange gCaptureLatency = { UINT32_MAX, UINT32_MAX };
+LatencyRange gPlaybackLatency = { UINT32_MAX, UINT32_MAX };
 
-void latency_cb(LatencyMode mode)
+void latencyCb(LatencyMode mode)
 {
     LatencyRange range { 0, 0 };
 
-    if (mode == LatencyMode::Capture) {
-        jack_handle->set_port_latency(jack_play, mode, range);
-        range = jack_handle->port_latency(jack_capt, mode);
-        if ((range.min != capture_latency.min) || (range.max != capture_latency.max)) {
-            capture_latency = range;
-            printf("new capture latency: [%d, %d]\n", range.min, range.max);
+    if (mode == LatencyMode::kCapture) {
+        gJackHandle->setPortLatency(gJackPlay, mode, range);
+        range = gJackHandle->portLatency(gJackCapt, mode);
+        if ((range.m_min != gCaptureLatency.m_min) || (range.m_max != gCaptureLatency.m_max)) {
+            gCaptureLatency = range;
+            printf("new capture latency: [%d, %d]\n", range.m_min, range.m_max);
         }
     } else {
-        jack_handle->set_port_latency(jack_capt, mode, range);
-        range = jack_handle->port_latency(jack_play, mode);
-        if ((range.min != playback_latency.min) || (range.max != playback_latency.max)) {
-            playback_latency = range;
-            printf("new playback latency: [%d, %d]\n", range.min, range.max);
+        gJackHandle->setPortLatency(gJackCapt, mode, range);
+        range = gJackHandle->portLatency(gJackPlay, mode);
+        if ((range.m_min != gPlaybackLatency.m_min) || (range.m_max != gPlaybackLatency.m_max)) {
+            gPlaybackLatency = range;
+            printf("new playback latency: [%d, %d]\n", range.m_min, range.m_max);
         }
     }
 }
 
-bool jack_callback(const Cycle& cycle)
+bool callback(const Cycle& cycle)
 {
-    const FrameCount nframes = cycle.frames;
-    auto ip = jack_handle->audio_buffer(jack_capt);
-    auto op = jack_handle->audio_buffer(jack_play);
-    mtdm_process(mtdm, nframes, ip.data(), op.data());
-    cycles++;
+    const FrameCount nframes = cycle.m_frames;
+    auto ip = gJackHandle->audioBuffer(gJackCapt);
+    auto op = gJackHandle->audioBuffer(gJackPlay);
+    mtdmProcess(gMtdm, nframes, ip.data(), op.data());
+    gCycles++;
     return true;
 }
 
@@ -211,7 +211,7 @@ int main(std::int32_t ac, char* av[])
 {
     float t;
     OpenOptions options;
-    options.start_server = false;
+    options.m_startServer = false;
 
     auto opened = Client::open("jack_delay", options);
     if (!opened) {
@@ -219,23 +219,23 @@ int main(std::int32_t ac, char* av[])
         exit(1);
     }
     Client client = std::move(*opened);
-    jack_handle = &client;
+    gJackHandle = &client;
 
-    mtdm = mtdm_new(client.sample_rate());
+    gMtdm = mtdmNew(client.sampleRate());
 
-    client.on_process(jack_callback);
-    client.on_latency(latency_cb);
+    client.onProcess(callback);
+    client.onLatency(latencyCb);
 
-    auto capt = client.register_port("in", PortType::Audio, PortFlags::Input);
-    auto play = client.register_port("out", PortType::Audio, PortFlags::Output);
+    auto capt = client.registerPort("in", PortType::kAudio, PortFlags::kInput);
+    auto play = client.registerPort("out", PortType::kAudio, PortFlags::kOutput);
     if (!capt || !play) {
         fprintf(stderr, "Can't register the ports\n");
         return 1;
     }
-    jack_capt = *capt;
-    jack_play = *play;
+    gJackCapt = *capt;
+    gJackPlay = *play;
 
-    t = 1000.0f / client.sample_rate();
+    t = 1000.0f / client.sampleRate();
 
     if (!client.activate().has_value()) {
         fprintf(stderr, "Can't activate Jack");
@@ -243,28 +243,28 @@ int main(std::int32_t ac, char* av[])
     }
 
     // A report every quarter second of audio: counted in cycles, so it holds in freewheel mode as well.
-    const std::uint64_t cycles_per_report = std::max<std::uint64_t>(1, client.sample_rate() / 4 / client.buffer_size());
+    const std::uint64_t cyclesPerReport = std::max<std::uint64_t>(1, client.sampleRate() / 4 / client.bufferSize());
     while (1) {
-        if (!WaitCycles(cycles, cycles_per_report)) {
+        if (!waitCycles(gCycles, cyclesPerReport)) {
             fprintf(stderr, "The server stopped running cycles\n");
             return 1;
         }
-        if (mtdm_resolve(mtdm) < 0)
+        if (mtdmResolve(gMtdm) < 0)
             printf("Signal below threshold...\n");
         else {
-            FrameCount systemic_latency;
+            FrameCount systemicLatency;
 
-            if (mtdm->_err > 0.3) {
-                mtdm_invert(mtdm);
-                mtdm_resolve(mtdm);
+            if (gMtdm->m_err > 0.3) {
+                mtdmInvert(gMtdm);
+                mtdmResolve(gMtdm);
             }
-            systemic_latency = (FrameCount)floor(mtdm->_del - (capture_latency.max + playback_latency.max));
+            systemicLatency = (FrameCount)floor(gMtdm->m_del - (gCaptureLatency.m_max + gPlaybackLatency.m_max));
 
-            printf("%10.3lf frames %10.3lf ms total roundtrip latency\n\textra loopback latency: %u frames\n\tuse %u for the backend arguments -I and -O", mtdm->_del, mtdm->_del * t,
-                systemic_latency, systemic_latency / 2);
-            if (mtdm->_err > 0.2)
+            printf("%10.3lf frames %10.3lf ms total roundtrip latency\n\textra loopback latency: %u frames\n\tuse %u for the backend arguments -I and -O", gMtdm->m_del, gMtdm->m_del * t,
+                systemicLatency, systemicLatency / 2);
+            if (gMtdm->m_err > 0.2)
                 printf(" ??");
-            if (mtdm->_inv)
+            if (gMtdm->m_inv)
                 printf(" Inv");
             printf("\n");
         }

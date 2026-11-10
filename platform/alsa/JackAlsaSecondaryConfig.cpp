@@ -28,32 +28,32 @@
 
 namespace jackmini {
 
-JackAlsaSecondaryConfig::JackAlsaSecondaryConfig()
-    : mode(SecondaryModeDuplex)
-    , capture_channels(2)
-    , playback_channels(2)
-    , rate(0)
-    , nperiods(0)
-    , optional(false)
-    , follow_hw_rate(false)
-    , clock(SecondaryClockAsync)
-    , sample_format(SampleFormatAuto)
-    , resampler("pipewire")
-    , automatic(false)
+AlsaSecondaryConfig::AlsaSecondaryConfig()
+    : m_mode(kSecondaryModeDuplex)
+    , m_captureChannels(2)
+    , m_playbackChannels(2)
+    , m_rate(0)
+    , m_nperiods(0)
+    , m_optional(false)
+    , m_followHwRate(false)
+    , m_clock(kSecondaryClockAsync)
+    , m_sampleFormat(kSampleFormatAuto)
+    , m_resampler("pipewire")
+    , m_automatic(false)
 {
 }
 
-static std::string_view Trim(std::string_view text)
+static std::string_view trim(std::string_view text)
 {
-    constexpr std::string_view whitespace = " \t\r\n";
-    const auto begin = text.find_first_not_of(whitespace);
+    constexpr std::string_view kWhitespace = " \t\r\n";
+    const auto begin = text.find_first_not_of(kWhitespace);
     if (begin == std::string_view::npos) {
         return { };
     }
-    return text.substr(begin, text.find_last_not_of(whitespace) - begin + 1);
+    return text.substr(begin, text.find_last_not_of(kWhitespace) - begin + 1);
 }
 
-static std::string_view Unquote(std::string_view text)
+static std::string_view unquote(std::string_view text)
 {
     if (text.size() >= 2) {
         const char first = text.front();
@@ -65,7 +65,7 @@ static std::string_view Unquote(std::string_view text)
     return text;
 }
 
-static std::string Lowercase(std::string_view text)
+static std::string lowercase(std::string_view text)
 {
     std::string result(text);
     std::ranges::transform(result, result.begin(), [](char c) {
@@ -74,26 +74,26 @@ static std::string Lowercase(std::string_view text)
     return result;
 }
 
-static bool ParseBool(std::string_view value, bool* result)
+static bool parseBool(std::string_view value, bool* result)
 {
-    constexpr std::array truthy = { "1", "true", "yes", "on" };
-    constexpr std::array falsy = { "0", "false", "no", "off" };
-    const std::string lower = Lowercase(value);
-    if (std::ranges::contains(truthy, lower)) {
+    constexpr std::array kTruthy = { "1", "true", "yes", "on" };
+    constexpr std::array kFalsy = { "0", "false", "no", "off" };
+    const std::string lower = lowercase(value);
+    if (std::ranges::contains(kTruthy, lower)) {
         *result = true;
         return true;
     }
-    if (std::ranges::contains(falsy, lower)) {
+    if (std::ranges::contains(kFalsy, lower)) {
         *result = false;
         return true;
     }
     return false;
 }
 
-static bool ParseInt(std::string_view value, std::int32_t* result)
+static bool parseInt(std::string_view value, std::int32_t* result)
 {
     // Accepts what strtol() accepted (leading white space and '+'), but stays strict after the digits.
-    value = SkipNumericPrefix(value);
+    value = skipNumericPrefix(value);
     if (value.empty()) {
         return false;
     }
@@ -107,18 +107,18 @@ static bool ParseInt(std::string_view value, std::int32_t* result)
     return true;
 }
 
-std::int32_t JackAlsaPcmDeviceNumber(std::string_view pcm)
+std::int32_t alsaPcmDeviceNumber(std::string_view pcm)
 {
     if (const auto dev = pcm.find("DEV="); dev != std::string_view::npos) {
-        return ParseLeadingInteger<std::int32_t>(pcm.substr(dev + 4));
+        return parseLeadingInteger<std::int32_t>(pcm.substr(dev + 4));
     }
     if (const auto comma = pcm.rfind(','); comma != std::string_view::npos) {
-        return ParseLeadingInteger<std::int32_t>(pcm.substr(comma + 1));
+        return parseLeadingInteger<std::int32_t>(pcm.substr(comma + 1));
     }
     return 0;
 }
 
-bool JackAlsaPcmNameIsById(std::string_view pcm)
+bool alsaPcmNameIsById(std::string_view pcm)
 {
     const auto colon = pcm.find(':');
     if (colon == std::string_view::npos) {
@@ -139,16 +139,16 @@ bool JackAlsaPcmNameIsById(std::string_view pcm)
     return card.find_first_not_of("0123456789") != std::string_view::npos;
 }
 
-bool JackAlsaCardExcluded(std::string_view card_id, const std::vector<std::string>& excluded)
+bool alsaCardExcluded(std::string_view cardId, const std::vector<std::string>& excluded)
 {
-    return std::ranges::any_of(excluded, [card_id](const std::string& id) {
-        return std::ranges::equal(id, card_id, [](char a, char b) {
+    return std::ranges::any_of(excluded, [cardId](const std::string& id) {
+        return std::ranges::equal(id, cardId, [](char a, char b) {
             return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
         });
     });
 }
 
-std::string JackAlsaSecondarySanitizeName(std::string_view name)
+std::string alsaSecondarySanitizeName(std::string_view name)
 {
     std::string result;
     for (const char ch : name) {
@@ -165,115 +165,115 @@ std::string JackAlsaSecondarySanitizeName(std::string_view name)
     return result;
 }
 
-static std::string DefaultNameForDevice(std::string_view device)
+static std::string defaultNameForDevice(std::string_view device)
 {
     // Prefer a compact name derived from the first number in the device
     // string, so "hw:1,0" becomes "hw1" rather than "hw_1_0".
-    constexpr std::string_view digits = "0123456789";
-    const auto start = device.find_first_of(digits);
+    constexpr std::string_view kDigits = "0123456789";
+    const auto start = device.find_first_of(kDigits);
     if (start != std::string_view::npos) {
         auto number = device.substr(start);
-        number = number.substr(0, number.find_first_not_of(digits));
+        number = number.substr(0, number.find_first_not_of(kDigits));
         return std::format("hw{}", number);
     }
-    std::string sanitized = JackAlsaSecondarySanitizeName(device);
+    std::string sanitized = alsaSecondarySanitizeName(device);
     return sanitized.empty() ? "card" : sanitized;
 }
 
-static bool ParseClock(std::string_view value, JackAlsaSecondaryClock* clock)
+static bool parseClock(std::string_view value, AlsaSecondaryClock* clock)
 {
     if (value == "async") {
-        *clock = SecondaryClockAsync;
+        *clock = kSecondaryClockAsync;
     } else if (value == "sync") {
-        *clock = SecondaryClockSync;
+        *clock = kSecondaryClockSync;
     } else {
         return false;
     }
     return true;
 }
 
-static bool ParseFormat(std::string_view value, JackAlsaSampleFormat* format)
+static bool parseFormat(std::string_view value, AlsaSampleFormat* format)
 {
     if (value == "auto") {
-        *format = SampleFormatAuto;
+        *format = kSampleFormatAuto;
     } else if (value == "float") {
-        *format = SampleFormatFloat;
+        *format = kSampleFormatFloat;
     } else if (value == "s32") {
-        *format = SampleFormatS32;
+        *format = kSampleFormatS32;
     } else if (value == "s16") {
-        *format = SampleFormatS16;
+        *format = kSampleFormatS16;
     } else {
         return false;
     }
     return true;
 }
 
-static bool ParseMode(std::string_view value, JackAlsaSecondaryMode* mode)
+static bool parseMode(std::string_view value, AlsaSecondaryMode* mode)
 {
     if (value == "duplex" || value == "both") {
-        *mode = SecondaryModeDuplex;
+        *mode = kSecondaryModeDuplex;
     } else if (value == "capture" || value == "capture-only" || value == "in") {
-        *mode = SecondaryModeCapture;
+        *mode = kSecondaryModeCapture;
     } else if (value == "playback" || value == "playback-only" || value == "out") {
-        *mode = SecondaryModePlayback;
+        *mode = kSecondaryModePlayback;
     } else {
         return false;
     }
     return true;
 }
 
-static bool ApplyField(JackAlsaSecondaryConfig* config,
+static bool applyField(AlsaSecondaryConfig* config,
     std::string_view key,
     std::string_view value,
     std::string* error)
 {
     if (key == "name") {
-        config->name = value;
+        config->m_name = value;
     } else if (key == "device") {
-        config->capture_device = value;
-        config->playback_device = value;
+        config->m_captureDevice = value;
+        config->m_playbackDevice = value;
     } else if (key == "capture_device") {
-        config->capture_device = value;
+        config->m_captureDevice = value;
     } else if (key == "playback_device") {
-        config->playback_device = value;
+        config->m_playbackDevice = value;
     } else if (key == "mode") {
-        if (!ParseMode(value, &config->mode)) {
+        if (!parseMode(value, &config->m_mode)) {
             *error = std::format("invalid mode '{}'", value);
             return false;
         }
     } else if (key == "channels") {
-        if (!ParseInt(value, &config->capture_channels) || config->capture_channels <= 0) {
+        if (!parseInt(value, &config->m_captureChannels) || config->m_captureChannels <= 0) {
             *error = std::format("invalid channels '{}'", value);
             return false;
         }
-        config->playback_channels = config->capture_channels;
+        config->m_playbackChannels = config->m_captureChannels;
     } else if (key == "capture_channels") {
-        if (!ParseInt(value, &config->capture_channels) || config->capture_channels <= 0) {
+        if (!parseInt(value, &config->m_captureChannels) || config->m_captureChannels <= 0) {
             *error = std::format("invalid capture_channels '{}'", value);
             return false;
         }
     } else if (key == "playback_channels") {
-        if (!ParseInt(value, &config->playback_channels) || config->playback_channels <= 0) {
+        if (!parseInt(value, &config->m_playbackChannels) || config->m_playbackChannels <= 0) {
             *error = std::format("invalid playback_channels '{}'", value);
             return false;
         }
     } else if (key == "rate") {
-        if (!ParseInt(value, &config->rate) || config->rate <= 0) {
+        if (!parseInt(value, &config->m_rate) || config->m_rate <= 0) {
             *error = std::format("invalid rate '{}'", value);
             return false;
         }
     } else if (key == "nperiods") {
-        if (!ParseInt(value, &config->nperiods) || config->nperiods < 2) {
+        if (!parseInt(value, &config->m_nperiods) || config->m_nperiods < 2) {
             *error = std::format("invalid nperiods '{}'", value);
             return false;
         }
     } else if (key == "optional") {
-        if (!ParseBool(value, &config->optional)) {
+        if (!parseBool(value, &config->m_optional)) {
             *error = std::format("invalid optional value '{}'", value);
             return false;
         }
     } else if (key == "follow_hw_rate") {
-        if (!ParseBool(value, &config->follow_hw_rate)) {
+        if (!parseBool(value, &config->m_followHwRate)) {
             *error = std::format("invalid follow_hw_rate value '{}'", value);
             return false;
         }
@@ -282,23 +282,23 @@ static bool ApplyField(JackAlsaSecondaryConfig* config,
             *error = "resampler name is empty";
             return false;
         }
-        config->resampler = value;
+        config->m_resampler = value;
     } else if (key == "format") {
-        if (!ParseFormat(value, &config->sample_format)) {
+        if (!parseFormat(value, &config->m_sampleFormat)) {
             *error = std::format("invalid format '{}' (use auto, float, s32 or s16)", value);
             return false;
         }
     } else if (key == "clock") {
-        if (!ParseClock(value, &config->clock)) {
+        if (!parseClock(value, &config->m_clock)) {
             *error = std::format("invalid clock '{}' (use async or sync)", value);
             return false;
         }
     } else if (key == "capture_rate_ctl") {
-        config->capture_rate_ctl = value;
+        config->m_captureRateCtl = value;
     } else if (key == "playback_rate_ctl") {
-        config->playback_rate_ctl = value;
+        config->m_playbackRateCtl = value;
     } else if (key == "rate_map") {
-        config->rate_map = value;
+        config->m_rateMap = value;
     } else {
         *error = std::format("unknown key '{}'", key);
         return false;
@@ -306,51 +306,51 @@ static bool ApplyField(JackAlsaSecondaryConfig* config,
     return true;
 }
 
-static bool Validate(JackAlsaSecondaryConfig* config, std::string* error)
+static bool validate(AlsaSecondaryConfig* config, std::string* error)
 {
-    if (config->capture_device.empty() && config->playback_device.empty()) {
+    if (config->m_captureDevice.empty() && config->m_playbackDevice.empty()) {
         *error = "no ALSA device specified";
         return false;
     }
 
-    if (config->mode == SecondaryModeDuplex) {
-        if (config->capture_device.empty()) {
-            config->capture_device = config->playback_device;
+    if (config->m_mode == kSecondaryModeDuplex) {
+        if (config->m_captureDevice.empty()) {
+            config->m_captureDevice = config->m_playbackDevice;
         }
-        if (config->playback_device.empty()) {
-            config->playback_device = config->capture_device;
+        if (config->m_playbackDevice.empty()) {
+            config->m_playbackDevice = config->m_captureDevice;
         }
-    } else if (config->mode == SecondaryModeCapture) {
-        if (config->capture_device.empty()) {
-            config->capture_device = config->playback_device;
+    } else if (config->m_mode == kSecondaryModeCapture) {
+        if (config->m_captureDevice.empty()) {
+            config->m_captureDevice = config->m_playbackDevice;
         }
-        if (config->capture_device.empty()) {
+        if (config->m_captureDevice.empty()) {
             *error = "capture mode requires a capture device";
             return false;
         }
-    } else if (config->mode == SecondaryModePlayback) {
-        if (config->playback_device.empty()) {
-            config->playback_device = config->capture_device;
+    } else if (config->m_mode == kSecondaryModePlayback) {
+        if (config->m_playbackDevice.empty()) {
+            config->m_playbackDevice = config->m_captureDevice;
         }
-        if (config->playback_device.empty()) {
+        if (config->m_playbackDevice.empty()) {
             *error = "playback mode requires a playback device";
             return false;
         }
     }
 
-    if (config->rate != 0 && (config->rate < 8000 || config->rate > 768000)) {
-        *error = std::format("rate {} is outside the supported range", config->rate);
+    if (config->m_rate != 0 && (config->m_rate < 8000 || config->m_rate > 768000)) {
+        *error = std::format("rate {} is outside the supported range", config->m_rate);
         return false;
     }
 
-    if (config->name.empty()) {
-        const std::string& device = config->capture_device.empty()
-            ? config->playback_device
-            : config->capture_device;
-        config->name = DefaultNameForDevice(device);
+    if (config->m_name.empty()) {
+        const std::string& device = config->m_captureDevice.empty()
+            ? config->m_playbackDevice
+            : config->m_captureDevice;
+        config->m_name = defaultNameForDevice(device);
     }
-    config->name = JackAlsaSecondarySanitizeName(config->name);
-    if (config->name.empty()) {
+    config->m_name = alsaSecondarySanitizeName(config->m_name);
+    if (config->m_name.empty()) {
         *error = "card name is empty after sanitizing";
         return false;
     }
@@ -358,12 +358,12 @@ static bool Validate(JackAlsaSecondaryConfig* config, std::string* error)
     return true;
 }
 
-bool JackAlsaSecondaryConfigParse(std::string_view spec,
-    JackAlsaSecondaryConfig* config,
+bool alsaSecondaryConfigParse(std::string_view spec,
+    AlsaSecondaryConfig* config,
     std::string* error)
 {
-    JackAlsaSecondaryConfig parsed;
-    const std::string_view text = Trim(spec);
+    AlsaSecondaryConfig parsed;
+    const std::string_view text = trim(spec);
 
     if (text.empty()) {
         *error = "empty secondary card specification";
@@ -372,11 +372,11 @@ bool JackAlsaSecondaryConfigParse(std::string_view spec,
 
     // Bare device name shorthand.
     if (text.find('=') == std::string_view::npos) {
-        parsed.capture_device = text;
-        parsed.playback_device = text;
+        parsed.m_captureDevice = text;
+        parsed.m_playbackDevice = text;
     } else {
         for (const auto segment : text | std::views::split(';')) {
-            const std::string_view field = Trim(std::string_view(std::ranges::data(segment),
+            const std::string_view field = trim(std::string_view(std::ranges::data(segment),
                 std::ranges::size(segment)));
             if (field.empty()) {
                 continue;
@@ -386,19 +386,19 @@ bool JackAlsaSecondaryConfigParse(std::string_view spec,
                 *error = std::format("expected key=value in '{}'", field);
                 return false;
             }
-            const std::string key = Lowercase(Trim(field.substr(0, eq)));
-            const std::string_view value = Unquote(Trim(field.substr(eq + 1)));
+            const std::string key = lowercase(trim(field.substr(0, eq)));
+            const std::string_view value = unquote(trim(field.substr(eq + 1)));
             if (key.empty()) {
                 *error = std::format("empty key in '{}'", field);
                 return false;
             }
-            if (!ApplyField(&parsed, key, value, error)) {
+            if (!applyField(&parsed, key, value, error)) {
                 return false;
             }
         }
     }
 
-    if (!Validate(&parsed, error)) {
+    if (!validate(&parsed, error)) {
         return false;
     }
 
@@ -406,8 +406,8 @@ bool JackAlsaSecondaryConfigParse(std::string_view spec,
     return true;
 }
 
-bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
-    std::vector<JackAlsaSecondaryConfig>* configs,
+bool alsaSecondaryConfigLoadFile(const std::string& path,
+    std::vector<AlsaSecondaryConfig>* configs,
     std::string* error)
 {
     std::ifstream file(path);
@@ -417,19 +417,19 @@ bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
     }
 
     std::string line;
-    std::int32_t line_number = 0;
+    std::int32_t lineNumber = 0;
     while (std::getline(file, line)) {
-        line_number++;
+        lineNumber++;
         const std::string_view content(line);
-        const std::string_view text = Trim(content.substr(0, content.find('#')));
+        const std::string_view text = trim(content.substr(0, content.find('#')));
         if (text.empty()) {
             continue;
         }
 
-        JackAlsaSecondaryConfig config;
-        std::string parse_error;
-        if (!JackAlsaSecondaryConfigParse(text, &config, &parse_error)) {
-            *error = std::format("{}:{}: {}", path, line_number, parse_error);
+        AlsaSecondaryConfig config;
+        std::string parseError;
+        if (!alsaSecondaryConfigParse(text, &config, &parseError)) {
+            *error = std::format("{}:{}: {}", path, lineNumber, parseError);
             return false;
         }
         configs->push_back(std::move(config));

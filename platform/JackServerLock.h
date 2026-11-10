@@ -27,7 +27,7 @@ namespace jackmini {
 // while the first one still holds the old one.
 //
 // The lock belongs to the process.  Acquiring it while it is held fails with std::errc::file_exists.
-std::expected<void, std::error_code> AcquireServerLock(const char* dir);
-void ReleaseServerLock() noexcept;
+std::expected<void, std::error_code> acquireServerLock(const char* dir);
+void releaseServerLock() noexcept;
 
 } // namespace jackmini

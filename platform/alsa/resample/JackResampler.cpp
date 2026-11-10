@@ -24,89 +24,89 @@ static constexpr std::int32_t kResampleDefaultQuality = 4;
 
 namespace jackmini {
 
-class JackPipeWireResampler : public JackResampler {
+class PipeWireResampler : public Resampler {
 
 private:
-    jack_pw_resampler* fHandle;
+    jack_pw_resampler* m_handle;
 
 public:
-    explicit JackPipeWireResampler(jack_pw_resampler* handle)
-        : fHandle(handle)
+    explicit PipeWireResampler(jack_pw_resampler* handle)
+        : m_handle(handle)
     {
     }
 
-    virtual ~JackPipeWireResampler()
+    virtual ~PipeWireResampler()
     {
-        jack_pw_resampler_free(fHandle);
+        jack_pw_resampler_free(m_handle);
     }
 
-    void Reset()
+    void reset()
     {
-        jack_pw_resampler_reset(fHandle);
+        jack_pw_resampler_reset(m_handle);
     }
 
-    void SetRate(double rate)
+    void setRate(double rate)
     {
-        jack_pw_resampler_set_rate(fHandle, rate);
+        jack_pw_resampler_set_rate(m_handle, rate);
     }
 
-    std::uint32_t InputLength(std::uint32_t out_len)
+    std::uint32_t inputLength(std::uint32_t outLen)
     {
-        return jack_pw_resampler_in_len(fHandle, out_len);
+        return jack_pw_resampler_in_len(m_handle, outLen);
     }
 
-    std::uint32_t OutputLength(std::uint32_t in_len)
+    std::uint32_t outputLength(std::uint32_t inLen)
     {
-        return jack_pw_resampler_out_len(fHandle, in_len);
+        return jack_pw_resampler_out_len(m_handle, inLen);
     }
 
-    void Process(const float* const* src, std::uint32_t* in_len,
-        float* const* dst, std::uint32_t* out_len)
+    void process(const float* const* src, std::uint32_t* inLen,
+        float* const* dst, std::uint32_t* outLen)
     {
-        jack_pw_resampler_process(fHandle, src, in_len, dst, out_len);
+        jack_pw_resampler_process(m_handle, src, inLen, dst, outLen);
     }
 
-    std::uint32_t Delay()
+    std::uint32_t delay()
     {
-        return jack_pw_resampler_delay(fHandle);
+        return jack_pw_resampler_delay(m_handle);
     }
 };
 
-class JackPipeWireResamplerFactory : public JackResamplerFactory {
+class PipeWireResamplerFactory : public ResamplerFactory {
 
 public:
-    const char* Name() const
+    const char* name() const
     {
         return "pipewire";
     }
 
-    JackResampler* Create(const JackResamplerParams& params)
+    Resampler* create(const ResamplerParams& params)
     {
-        std::int32_t quality = (params.quality < 0) ? kResampleDefaultQuality : params.quality;
-        jack_pw_resampler* handle = jack_pw_resampler_new(params.channels, params.in_rate,
-            params.out_rate, quality);
+        std::int32_t quality = (params.m_quality < 0) ? kResampleDefaultQuality : params.m_quality;
+        jack_pw_resampler* handle = jack_pw_resampler_new(params.m_channels, params.m_inRate,
+            params.m_outRate, quality);
         if (handle == nullptr) {
             return nullptr;
         }
-        return new JackPipeWireResampler(handle);
+        return new PipeWireResampler(handle);
     }
 };
 
-JackResamplerFactory* JackResamplerFactory::Find(const char* name)
+ResamplerFactory* ResamplerFactory::find(const char* name)
 {
-    static JackPipeWireResamplerFactory pipewire;
+    static PipeWireResamplerFactory pipewire;
     if (name == nullptr) {
         return nullptr;
     }
-    if (strcmp(name, pipewire.Name()) == 0) {
+    if (strcmp(name, pipewire.name()) == 0) {
         return &pipewire;
     }
     return nullptr;
 }
 
-JackResamplerFactory* JackResamplerFactory::Default()
+ResamplerFactory* ResamplerFactory::defaultFactory()
 {
-    return Find("pipewire");
+    return find("pipewire");
 }
 
 } // namespace jackmini

@@ -26,75 +26,75 @@ namespace jackmini {
 
 // \brief The base class for threaded drivers using a "decorator" pattern. Threaded drivers are used with blocking devices.
 
-class SERVER_EXPORT JackThreadedDriver : public JackDriverClientInterface, public JackRunnableInterface {
+class SERVER_EXPORT ThreadedDriver : public DriverClientInterface, public RunnableInterface {
 
 protected:
-    JackThread fThread;
-    JackDriver* fDriver;
+    Thread m_thread;
+    Driver* m_driver;
 
-    void SetRealTime();
+    void setRealTime();
 
 public:
-    JackThreadedDriver(JackDriver* driver);
-    virtual ~JackThreadedDriver();
+    ThreadedDriver(Driver* driver);
+    virtual ~ThreadedDriver();
 
-    virtual std::int32_t Open();
-    virtual std::int32_t Open(jack_nframes_t buffer_size,
-        jack_nframes_t samplerate,
+    virtual std::int32_t open();
+    virtual std::int32_t open(NframesC bufferSize,
+        NframesC samplerate,
         bool capturing,
         bool playing,
         std::int32_t inchannels,
         std::int32_t outchannels,
         bool monitor,
-        const char* capture_driver_name,
-        const char* playback_driver_name,
-        jack_nframes_t capture_latency,
-        jack_nframes_t playback_latency);
-    virtual std::int32_t Close();
+        const char* captureDriverName,
+        const char* playbackDriverName,
+        NframesC captureLatency,
+        NframesC playbackLatency);
+    virtual std::int32_t close();
 
-    virtual std::int32_t Process();
+    virtual std::int32_t process();
 
-    virtual std::int32_t Attach();
-    virtual std::int32_t Detach();
+    virtual std::int32_t attach();
+    virtual std::int32_t detach();
 
-    virtual std::int32_t Read();
-    virtual std::int32_t Write();
+    virtual std::int32_t read();
+    virtual std::int32_t write();
 
-    virtual std::int32_t Start();
-    virtual std::int32_t Stop();
+    virtual std::int32_t start();
+    virtual std::int32_t stop();
 
-    virtual bool IsFixedBufferSize();
-    virtual std::int32_t SetBufferSize(jack_nframes_t buffer_size);
-    virtual std::int32_t SetSampleRate(jack_nframes_t sample_rate);
+    virtual bool isFixedBufferSize();
+    virtual std::int32_t setBufferSize(NframesC bufferSize);
+    virtual std::int32_t setSampleRate(NframesC sampleRate);
 
-    virtual void SetMaster(bool onoff);
-    virtual bool GetMaster();
+    virtual void setMaster(bool onoff);
+    virtual bool getMaster();
 
-    virtual void AddSlave(JackDriverInterface* slave);
-    virtual void RemoveSlave(JackDriverInterface* slave);
+    virtual void addSlave(DriverInterface* slave);
+    virtual void removeSlave(DriverInterface* slave);
 
-    virtual std::list<JackDriverInterface*> GetSlaves();
+    virtual std::list<DriverInterface*> getSlaves();
 
-    virtual std::int32_t ProcessReadSlaves();
-    virtual std::int32_t ProcessWriteSlaves();
+    virtual std::int32_t processReadSlaves();
+    virtual std::int32_t processWriteSlaves();
 
-    virtual std::int32_t ProcessRead();
-    virtual std::int32_t ProcessWrite();
+    virtual std::int32_t processRead();
+    virtual std::int32_t processWrite();
 
-    virtual std::int32_t ProcessReadSync();
-    virtual std::int32_t ProcessWriteSync();
+    virtual std::int32_t processReadSync();
+    virtual std::int32_t processWriteSync();
 
-    virtual std::int32_t ProcessReadAsync();
-    virtual std::int32_t ProcessWriteAsync();
+    virtual std::int32_t processReadAsync();
+    virtual std::int32_t processWriteAsync();
 
-    virtual std::int32_t ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
-    virtual JackClientControl* GetClientControl() const;
-    virtual bool IsRealTime() const;
-    virtual bool IsRunning() const;
+    virtual std::int32_t clientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
+    virtual ClientControl* getClientControl() const;
+    virtual bool isRealTime() const;
+    virtual bool isRunning() const;
 
     // JackRunnableInterface interface
-    virtual bool Execute();
-    virtual bool Init();
+    virtual bool execute();
+    virtual bool init();
 };
 
 } // namespace jackmini

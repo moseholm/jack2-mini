@@ -25,34 +25,34 @@ namespace jackmini {
 
 // \brief The timed driver.
 
-class SERVER_EXPORT JackTimedDriver : public JackAudioDriver {
+class SERVER_EXPORT TimedDriver : public AudioDriver {
 protected:
-    std::int32_t fCycleCount;
-    jack_time_t fAnchorTimeUsec;
+    std::int32_t m_cycleCount;
+    TimeC m_anchorTimeUsec;
 
-    std::int32_t FirstCycle(jack_time_t cur_time);
-    std::int32_t CurrentCycle(jack_time_t cur_time);
+    std::int32_t firstCycle(TimeC curTime);
+    std::int32_t currentCycle(TimeC curTime);
 
-    void ProcessWait();
+    void processWait();
 
 public:
-    JackTimedDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
-        : JackAudioDriver(name, alias, engine, table)
-        , fCycleCount(0)
-        , fAnchorTimeUsec(0)
+    TimedDriver(const char* name, const char* alias, LockedEngine* engine, Synchro* table)
+        : AudioDriver(name, alias, engine, table)
+        , m_cycleCount(0)
+        , m_anchorTimeUsec(0)
     {
     }
-    virtual ~JackTimedDriver()
+    virtual ~TimedDriver()
     {
     }
 
     // BufferSize can be changed
-    bool IsFixedBufferSize()
+    bool isFixedBufferSize()
     {
         return false;
     }
 
-    std::int32_t Start();
+    std::int32_t start();
 };
 
 } // namespace jackmini

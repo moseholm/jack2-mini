@@ -23,25 +23,25 @@
 
 namespace jackmini {
 
-struct JackClientControl;
+struct ClientControl;
 
 // \brief Client interface.
 
-class SERVER_EXPORT JackClientInterface {
+class SERVER_EXPORT ClientInterface {
 
 public:
-    JackClientInterface()
+    ClientInterface()
     {
     }
-    virtual ~JackClientInterface()
+    virtual ~ClientInterface()
     {
     }
 
-    virtual std::int32_t Close() = 0;
+    virtual std::int32_t close() = 0;
 
-    virtual std::int32_t ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2) = 0;
+    virtual std::int32_t clientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2) = 0;
 
-    virtual JackClientControl* GetClientControl() const = 0;
+    virtual ClientControl* getClientControl() const = 0;
 };
 
 

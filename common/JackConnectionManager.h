@@ -28,57 +28,57 @@
 
 namespace jackmini {
 
-struct JackClientControl;
+struct ClientControl;
 
 // \brief Utility class.
 
 
 template <std::int32_t SIZE>
-class JackFixedArray {
+class FixedArray {
 
 private:
-    jack_int_t fTable[SIZE];
-    std::uint32_t fCounter;
+    Int m_table[SIZE];
+    std::uint32_t m_counter;
 
 public:
-    JackFixedArray()
+    FixedArray()
     {
-        Init();
+        init();
     }
 
-    void Init()
+    void init()
     {
         for (std::int32_t i = 0; i < SIZE; i++)
-            fTable[i] = kEmpty;
-        fCounter = 0;
+            m_table[i] = kEmpty;
+        m_counter = 0;
     }
 
-    bool AddItem(jack_int_t index)
+    bool addItem(Int index)
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            if (fTable[i] == kEmpty) {
-                fTable[i] = index;
-                fCounter++;
+            if (m_table[i] == kEmpty) {
+                m_table[i] = index;
+                m_counter++;
                 return true;
             }
         }
         return false;
     }
 
-    bool RemoveItem(jack_int_t index)
+    bool removeItem(Int index)
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            if (fTable[i] == index) {
-                fCounter--;
+            if (m_table[i] == index) {
+                m_counter--;
                 // Shift all indexes
                 if (i == SIZE - 1) {
-                    fTable[i] = kEmpty;
+                    m_table[i] = kEmpty;
                 } else {
                     std::int32_t j;
-                    for (j = i; j <= SIZE - 2 && fTable[j] != kEmpty; j++) {
-                        fTable[j] = fTable[j + 1];
+                    for (j = i; j <= SIZE - 2 && m_table[j] != kEmpty; j++) {
+                        m_table[j] = m_table[j + 1];
                     }
-                    fTable[j] = kEmpty;
+                    m_table[j] = kEmpty;
                 }
                 return true;
             }
@@ -86,28 +86,28 @@ public:
         return false;
     }
 
-    jack_int_t GetItem(jack_int_t index) const
+    Int getItem(Int index) const
     {
-        return (index < SIZE) ? fTable[index] : kEmpty;
+        return (index < SIZE) ? m_table[index] : kEmpty;
     }
 
-    const jack_int_t* GetItems() const
+    const Int* getItems() const
     {
-        return fTable;
+        return m_table;
     }
 
-    bool CheckItem(jack_int_t index) const
+    bool checkItem(Int index) const
     {
-        for (std::int32_t i = 0; i < SIZE && fTable[i] != kEmpty; i++) {
-            if (fTable[i] == index)
+        for (std::int32_t i = 0; i < SIZE && m_table[i] != kEmpty; i++) {
+            if (m_table[i] == index)
                 return true;
         }
         return false;
     }
 
-    std::uint32_t GetItemCount() const
+    std::uint32_t getItemCount() const
     {
-        return fCounter;
+        return m_counter;
     }
 };
 
@@ -115,28 +115,28 @@ public:
 
 
 template <std::int32_t SIZE>
-class JackFixedArray1 : public JackFixedArray<SIZE> {
+class FixedArray1 : public FixedArray<SIZE> {
 private:
-    bool fUsed;
+    bool m_used;
 
 public:
-    JackFixedArray1()
+    FixedArray1()
     {
-        Init();
+        init();
     }
 
-    void Init()
+    void init()
     {
-        JackFixedArray<SIZE>::Init();
-        fUsed = false;
+        FixedArray<SIZE>::init();
+        m_used = false;
     }
 
-    bool IsAvailable()
+    bool isAvailable()
     {
-        if (fUsed) {
+        if (m_used) {
             return false;
         } else {
-            fUsed = true;
+            m_used = true;
             return true;
         }
     }
@@ -146,52 +146,52 @@ public:
 
 
 template <std::int32_t SIZE>
-class JackFixedMatrix {
+class FixedMatrix {
 private:
-    jack_int_t fTable[SIZE][SIZE];
+    Int m_table[SIZE][SIZE];
 
 public:
-    JackFixedMatrix()
+    FixedMatrix()
     {
     }
 
-    void Init(jack_int_t index)
+    void init(Int index)
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            fTable[index][i] = 0;
-            fTable[i][index] = 0;
+            m_table[index][i] = 0;
+            m_table[i][index] = 0;
         }
     }
 
-    const jack_int_t* GetItems(jack_int_t index) const
+    const Int* getItems(Int index) const
     {
-        return fTable[index];
+        return m_table[index];
     }
 
-    jack_int_t IncItem(jack_int_t index1, jack_int_t index2)
+    Int incItem(Int index1, Int index2)
     {
-        fTable[index1][index2]++;
-        return fTable[index1][index2];
+        m_table[index1][index2]++;
+        return m_table[index1][index2];
     }
 
-    jack_int_t DecItem(jack_int_t index1, jack_int_t index2)
+    Int decItem(Int index1, Int index2)
     {
-        fTable[index1][index2]--;
-        return fTable[index1][index2];
+        m_table[index1][index2]--;
+        return m_table[index1][index2];
     }
 
-    jack_int_t GetItemCount(jack_int_t index1, jack_int_t index2) const
+    Int getItemCount(Int index1, Int index2) const
     {
-        return fTable[index1][index2];
+        return m_table[index1][index2];
     }
 
-    void ClearItem(jack_int_t index1, jack_int_t index2)
+    void clearItem(Int index1, Int index2)
     {
-        fTable[index1][index2] = 0;
+        m_table[index1][index2] = 0;
     }
 
     // \brief Get the output indexes of a given index.
-    void GetOutputTable(jack_int_t index, jack_int_t* output) const
+    void getOutputTable(Int index, Int* output) const
     {
         std::int32_t i, j;
 
@@ -199,21 +199,21 @@ public:
             output[i] = kEmpty;
 
         for (i = 0, j = 0; i < SIZE; i++) {
-            if (fTable[index][i] > 0) {
+            if (m_table[index][i] > 0) {
                 output[j] = i;
                 j++;
             }
         }
     }
 
-    void GetOutputTable1(jack_int_t index, jack_int_t* output) const
+    void getOutputTable1(Int index, Int* output) const
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            output[i] = fTable[i][index];
+            output[i] = m_table[i][index];
         }
     }
 
-    bool IsInsideTable(jack_int_t index, jack_int_t* output) const
+    bool isInsideTable(Int index, Int* output) const
     {
         for (std::int32_t i = 0; i < SIZE && output[i] != kEmpty; i++) {
             if (output[i] == index)
@@ -222,10 +222,10 @@ public:
         return false;
     }
 
-    void Copy(JackFixedMatrix& copy)
+    void copy(FixedMatrix& copy)
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            memcpy(copy.fTable[i], fTable[i], sizeof(jack_int_t) * SIZE);
+            memcpy(copy.m_table[i], m_table[i], sizeof(Int) * SIZE);
         }
     }
 };
@@ -234,18 +234,18 @@ public:
 
 
 template <std::int32_t SIZE>
-class JackLoopFeedback {
+class LoopFeedback {
 private:
-    std::int32_t fTable[SIZE][3];
+    std::int32_t m_table[SIZE][3];
 
     // \brief Add a feedback connection between 2 refnum.
-    bool AddConnectionAux(std::int32_t ref1, std::int32_t ref2)
+    bool addConnectionAux(std::int32_t ref1, std::int32_t ref2)
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            if (fTable[i][0] == kEmpty) {
-                fTable[i][0] = ref1;
-                fTable[i][1] = ref2;
-                fTable[i][2] = 1;
+            if (m_table[i][0] == kEmpty) {
+                m_table[i][0] = ref1;
+                m_table[i][1] = ref2;
+                m_table[i][2] = 1;
                 jack_log("JackLoopFeedback::AddConnectionAux ref1 = %ld ref2 = %ld", ref1, ref2);
                 return true;
             }
@@ -255,13 +255,13 @@ private:
     }
 
     // \brief Remove a feedback connection between 2 refnum.
-    bool RemoveConnectionAux(std::int32_t ref1, std::int32_t ref2)
+    bool removeConnectionAux(std::int32_t ref1, std::int32_t ref2)
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            if (fTable[i][0] == ref1 && fTable[i][1] == ref2) {
-                fTable[i][0] = kEmpty;
-                fTable[i][1] = kEmpty;
-                fTable[i][2] = 0;
+            if (m_table[i][0] == ref1 && m_table[i][1] == ref2) {
+                m_table[i][0] = kEmpty;
+                m_table[i][1] = kEmpty;
+                m_table[i][2] = 0;
                 jack_log("JackLoopFeedback::RemoveConnectionAux ref1 = %ld ref2 = %ld", ref1, ref2);
                 return true;
             }
@@ -270,62 +270,62 @@ private:
         return false;
     }
 
-    std::int32_t IncConnection(std::int32_t index)
+    std::int32_t incConnection(std::int32_t index)
     {
-        fTable[index][2]++;
-        return fTable[index][2];
+        m_table[index][2]++;
+        return m_table[index][2];
     }
 
-    std::int32_t DecConnection(std::int32_t index)
+    std::int32_t decConnection(std::int32_t index)
     {
-        fTable[index][2]--;
-        return fTable[index][2];
+        m_table[index][2]--;
+        return m_table[index][2];
     }
 
 public:
-    JackLoopFeedback()
+    LoopFeedback()
     {
-        Init();
+        init();
     }
 
-    void Init()
+    void init()
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            fTable[i][0] = kEmpty;
-            fTable[i][1] = kEmpty;
-            fTable[i][2] = 0;
+            m_table[i][0] = kEmpty;
+            m_table[i][1] = kEmpty;
+            m_table[i][2] = 0;
         }
     }
 
-    bool IncConnection(std::int32_t ref1, std::int32_t ref2)
+    bool incConnection(std::int32_t ref1, std::int32_t ref2)
     {
-        std::int32_t index = GetConnectionIndex(ref1, ref2);
+        std::int32_t index = getConnectionIndex(ref1, ref2);
 
         if (index >= 0) { // Feedback connection is already added, increment counter
-            IncConnection(index);
+            incConnection(index);
             return true;
         } else {
-            return AddConnectionAux(ref1, ref2); // Add the feedback connection
+            return addConnectionAux(ref1, ref2); // Add the feedback connection
         }
     }
 
-    bool DecConnection(std::int32_t ref1, std::int32_t ref2)
+    bool decConnection(std::int32_t ref1, std::int32_t ref2)
     {
-        std::int32_t index = GetConnectionIndex(ref1, ref2);
+        std::int32_t index = getConnectionIndex(ref1, ref2);
 
         if (index >= 0) {
             jack_log("JackLoopFeedback::DecConnection ref1 = %ld ref2 = %ld index = %ld", ref1, ref2, index);
-            return (DecConnection(index) == 0) ? RemoveConnectionAux(ref1, ref2) : true;
+            return (decConnection(index) == 0) ? removeConnectionAux(ref1, ref2) : true;
         } else {
             return false;
         }
     }
 
     // \brief Test if a connection between 2 refnum is a feedback connection.
-    std::int32_t GetConnectionIndex(std::int32_t ref1, std::int32_t ref2) const
+    std::int32_t getConnectionIndex(std::int32_t ref1, std::int32_t ref2) const
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            if (fTable[i][0] == ref1 && fTable[i][1] == ref2)
+            if (m_table[i][0] == ref1 && m_table[i][1] == ref2)
                 return i;
         }
         return -1;
@@ -335,26 +335,26 @@ public:
 // \brief For client timing measurements.
 
 
-struct JackClientTiming {
-    jack_time_t fSignaledAt;
-    jack_time_t fAwakeAt;
-    jack_time_t fFinishedAt;
-    jack_client_state_t fStatus;
+struct ClientTiming {
+    TimeC m_signaledAt;
+    TimeC m_awakeAt;
+    TimeC m_finishedAt;
+    ClientState m_status;
 
-    JackClientTiming()
+    ClientTiming()
     {
-        Init();
+        init();
     }
-    ~JackClientTiming()
+    ~ClientTiming()
     {
     }
 
-    void Init()
+    void init()
     {
-        fSignaledAt = 0;
-        fAwakeAt = 0;
-        fFinishedAt = 0;
-        fStatus = NotTriggered;
+        m_signaledAt = 0;
+        m_awakeAt = 0;
+        m_finishedAt = 0;
+        m_status = kNotTriggered;
     }
 };
 
@@ -369,87 +369,87 @@ struct JackClientTiming {
 // </UL>
 
 
-class SERVER_EXPORT JackConnectionManager {
+class SERVER_EXPORT ConnectionManager {
 
 private:
-    std::array<JackFixedArray<kConnectionNumForPort>, kPortNumMax> fConnection;  // Connection matrix: list of connected ports for a given port: needed to compute Mix buffer
-    std::array<JackFixedArray1<kPortNumForClient>, kClientNum> fInputPort;  // Table of input port per refnum : to find a refnum for a given port
-    std::array<JackFixedArray<kPortNumForClient>, kClientNum> fOutputPort;  // Table of output port per refnum : to find a refnum for a given port
-    JackFixedMatrix<kClientNum> fConnectionRef;  // Table of port connections by (refnum , refnum)
-    alignas(UInt32) alignas(JackActivationCount) std::array<JackActivationCount, kClientNum> fInputCounter;  // Activation counter per refnum
-    std::array<UInt32, kClientNum> fInactive;  // 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed
-    JackLoopFeedback<kConnectionNumForPort> fLoopFeedback;  // Loop feedback connections
+    std::array<FixedArray<kConnectionNumForPort>, kPortNumMax> m_connection;  // Connection matrix: list of connected ports for a given port: needed to compute Mix buffer
+    std::array<FixedArray1<kPortNumForClient>, kClientNum> m_inputPort;  // Table of input port per refnum : to find a refnum for a given port
+    std::array<FixedArray<kPortNumForClient>, kClientNum> m_outputPort;  // Table of output port per refnum : to find a refnum for a given port
+    FixedMatrix<kClientNum> m_connectionRef;  // Table of port connections by (refnum , refnum)
+    alignas(UInt32) alignas(ActivationCount) std::array<ActivationCount, kClientNum> m_inputCounter;  // Activation counter per refnum
+    std::array<UInt32, kClientNum> m_inactive;  // 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed
+    LoopFeedback<kConnectionNumForPort> m_loopFeedback;  // Loop feedback connections
 
-    bool IsLoopPathAux(std::int32_t ref1, std::int32_t ref2) const;
+    bool isLoopPathAux(std::int32_t ref1, std::int32_t ref2) const;
 
 public:
-    JackConnectionManager();
-    ~JackConnectionManager();
+    ConnectionManager();
+    ~ConnectionManager();
 
     // Connections management
-    Result<void> Connect(jack_port_id_t port_src, jack_port_id_t port_dst);
-    Result<void> Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst);
-    bool IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst) const;
+    Result<void> connect(PortIdC portSrc, PortIdC portDst);
+    Result<void> disconnect(PortIdC portSrc, PortIdC portDst);
+    bool isConnected(PortIdC portSrc, PortIdC portDst) const;
 
     // \brief Get the connection number of a given port.
-    jack_int_t Connections(jack_port_id_t port_index) const
+    Int connections(PortIdC portIndex) const
     {
-        return fConnection[port_index].GetItemCount();
+        return m_connection[portIndex].getItemCount();
     }
 
-    jack_port_id_t GetPort(jack_port_id_t port_index, std::int32_t connection) const
+    PortIdC getPort(PortIdC portIndex, std::int32_t connection) const
     {
         assert(connection < kConnectionNumForPort);
-        return (jack_port_id_t)fConnection[port_index].GetItem(connection);
+        return (PortIdC)m_connection[portIndex].getItem(connection);
     }
 
-    const jack_int_t* GetConnections(jack_port_id_t port_index) const;
+    const Int* getConnections(PortIdC portIndex) const;
 
-    bool IncFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
-    bool DecFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
-    bool IsFeedbackConnection(jack_port_id_t port_src, jack_port_id_t port_dst) const;
+    bool incFeedbackConnection(PortIdC portSrc, PortIdC portDst);
+    bool decFeedbackConnection(PortIdC portSrc, PortIdC portDst);
+    bool isFeedbackConnection(PortIdC portSrc, PortIdC portDst) const;
 
-    bool IsLoopPath(jack_port_id_t port_src, jack_port_id_t port_dst) const;
-    void IncDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
-    void DecDirectConnection(jack_port_id_t port_src, jack_port_id_t port_dst);
+    bool isLoopPath(PortIdC portSrc, PortIdC portDst) const;
+    void incDirectConnection(PortIdC portSrc, PortIdC portDst);
+    void decDirectConnection(PortIdC portSrc, PortIdC portDst);
 
     // Ports management
-    Result<void> AddInputPort(std::int32_t refnum, jack_port_id_t port_index);
-    Result<void> AddOutputPort(std::int32_t refnum, jack_port_id_t port_index);
+    Result<void> addInputPort(std::int32_t refnum, PortIdC portIndex);
+    Result<void> addOutputPort(std::int32_t refnum, PortIdC portIndex);
 
-    Result<void> RemoveInputPort(std::int32_t refnum, jack_port_id_t port_index);
-    Result<void> RemoveOutputPort(std::int32_t refnum, jack_port_id_t port_index);
+    Result<void> removeInputPort(std::int32_t refnum, PortIdC portIndex);
+    Result<void> removeOutputPort(std::int32_t refnum, PortIdC portIndex);
 
-    const jack_int_t* GetInputPorts(std::int32_t refnum);
-    const jack_int_t* GetOutputPorts(std::int32_t refnum);
+    const Int* getInputPorts(std::int32_t refnum);
+    const Int* getOutputPorts(std::int32_t refnum);
 
     // Client management
-    void InitRefNum(std::int32_t refnum);
-    std::int32_t GetInputRefNum(jack_port_id_t port_index) const;
-    std::int32_t GetOutputRefNum(jack_port_id_t port_index) const;
+    void initRefNum(std::int32_t refnum);
+    std::int32_t getInputRefNum(PortIdC portIndex) const;
+    std::int32_t getOutputRefNum(PortIdC portIndex) const;
 
     // Connect/Disconnect 2 refnum "directly"
-    bool IsDirectConnection(std::int32_t ref1, std::int32_t ref2) const;
-    void DirectConnect(std::int32_t ref1, std::int32_t ref2);
-    void DirectDisconnect(std::int32_t ref1, std::int32_t ref2);
+    bool isDirectConnection(std::int32_t ref1, std::int32_t ref2) const;
+    void directConnect(std::int32_t ref1, std::int32_t ref2);
+    void directDisconnect(std::int32_t ref1, std::int32_t ref2);
 
     // A deactivated client keeps its connections, but they stop counting toward the clients they feed, and its
     // ports are silent (protocol.md section 6).
-    void SetInactive(std::int32_t refnum, bool inactive);
+    void setInactive(std::int32_t refnum, bool inactive);
     // A port with no owner has been released; the RT thread can still see it in the connections of the current
     // state, so it counts as inactive (silent) rather than indexing the table with -1.
-    bool IsInactive(std::int32_t refnum) const
+    bool isInactive(std::int32_t refnum) const
     {
-        return refnum < 0 || fInactive[refnum] != 0;
+        return refnum < 0 || m_inactive[refnum] != 0;
     }
 
 
     // Graph
     // The live activation counters are passed in: they are not part of this (copied) state.
-    void ResetGraph(JackClientTiming* timing, std::atomic<SInt32>* live);
-    Result<void> ResumeRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::atomic<SInt32>* live);
-    Result<void> SuspendRefNum(JackClientControl* control, JackSynchro* table, JackClientTiming* timing, std::int64_t time_out_usec);
-    void TopologicalSort(std::vector<jack_int_t>& sorted);
+    void resetGraph(ClientTiming* timing, std::atomic<SInt32>* live);
+    Result<void> resumeRefNum(ClientControl* control, Synchro* table, ClientTiming* timing, std::atomic<SInt32>* live);
+    Result<void> suspendRefNum(ClientControl* control, Synchro* table, ClientTiming* timing, std::int64_t timeOutUsec);
+    void topologicalSort(std::vector<Int>& sorted);
 };
 
 } // namespace jackmini

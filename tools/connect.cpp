@@ -40,7 +40,7 @@ constexpr const char* kTool = "jackmini_connect";
 
 namespace {
 
-void show_usage(FILE* out)
+void showUsage(FILE* out)
 {
     std::fprintf(out, "\nusage: %s [options] port1 port2\n", kTool);
     std::fprintf(out, kDisconnect ? "Disconnects two JACK ports.\n\n" : "Connects two JACK ports together.\n\n");
@@ -51,7 +51,7 @@ void show_usage(FILE* out)
 }
 
 // A port name given as <client UUID>:<port>: the client part is replaced by the client's name, when it is known.
-std::string name_from_uuid(const std::string& text, const std::map<std::string, std::string>& names)
+std::string nameFromUuid(const std::string& text, const std::map<std::string, std::string>& names)
 {
     const auto colon = text.find(':');
     if (colon == std::string::npos) {
@@ -66,10 +66,10 @@ std::string name_from_uuid(const std::string& text, const std::map<std::string, 
 
 // Waits, a bounded number of times, until the connection is in the state the tool asked for.  The server changes the
 // graph in its next cycle; the tool waits for that, as jack_connect waited for the connect callback.
-bool wait_for(const jackmini::Client& client, jackmini::Port source, jackmini::Port destination, bool connected)
+bool waitFor(const jackmini::Client& client, jackmini::Port source, jackmini::Port destination, bool connected)
 {
     for (std::int32_t i = 0; i < 500; i++) {
-        if (client.is_connected(source, destination) == connected) {
+        if (client.isConnected(source, destination) == connected) {
             return true;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -82,7 +82,7 @@ bool wait_for(const jackmini::Client& client, jackmini::Port source, jackmini::P
 int main(std::int32_t argc, char** argv)
 {
     std::string server;
-    bool use_uuid = false;
+    bool useUuid = false;
     static constexpr std::string_view kShortOptions = "s:uhv";
     static std::array<const struct option, 5> kLongOptions = {{
         { "server", required_argument, nullptr, 's' },
@@ -99,41 +99,41 @@ int main(std::int32_t argc, char** argv)
             server = optarg;
             break;
         case 'u':
-            use_uuid = true;
+            useUuid = true;
             break;
         case 'h':
-            show_usage(stderr);
+            showUsage(stderr);
             return 1;
         case 'v':
             std::printf("%s " JACK_VERSION "\n", kTool);
             return 0;
         default:
-            show_usage(stderr);
+            showUsage(stderr);
             return 1;
         }
     }
 
     if (argc - optind < 2) {
-        show_usage(stderr);
+        showUsage(stderr);
         return 1;
     }
     // As jack_connect did: the two last arguments are the ports.
     std::string first = argv[argc - 1];
     std::string second = argv[argc - 2];
 
-    auto opened = jackmini::tools::open_client(kTool, server);
+    auto opened = jackmini::tools::openClient(kTool, server);
     if (!opened) {
         return jackmini::tools::fail(kTool, opened.error());
     }
     jackmini::Client& client = *opened;
 
-    if (use_uuid) {
+    if (useUuid) {
         std::map<std::string, std::string> names;
         for (const jackmini::PortInfo& port : client.ports()) {
-            names.emplace(std::to_string(port.owner_uuid.value()), port.owner);
+            names.emplace(std::to_string(port.m_ownerUuid.value()), port.m_owner);
         }
-        first = name_from_uuid(first, names);
-        second = name_from_uuid(second, names);
+        first = nameFromUuid(first, names);
+        second = nameFromUuid(second, names);
     }
 
     // The engine connects only the ports of active clients, as jack_connect required.
@@ -141,28 +141,28 @@ int main(std::int32_t argc, char** argv)
         return jackmini::tools::fail(kTool, activated.error());
     }
 
-    auto port1 = client.find_port(first);
+    auto port1 = client.findPort(first);
     if (!port1) {
         std::fprintf(stderr, "ERROR %s not a valid port\n", first.c_str());
         return 1;
     }
-    auto port2 = client.find_port(second);
+    auto port2 = client.findPort(second);
     if (!port2) {
         std::fprintf(stderr, "ERROR %s not a valid port\n", second.c_str());
         return 1;
     }
 
     // One input and one output: the output is the source, whichever order the arguments have.
-    const jackmini::PortFlags flags1 = client.port_flags(*port1);
-    const jackmini::PortFlags flags2 = client.port_flags(*port2);
+    const jackmini::PortFlags flags1 = client.portFlags(*port1);
+    const jackmini::PortFlags flags2 = client.portFlags(*port2);
     jackmini::Port source;
     jackmini::Port destination;
     bool found = false;
-    if (jackmini::has_flag(flags1, jackmini::PortFlags::Input) && jackmini::has_flag(flags2, jackmini::PortFlags::Output)) {
+    if (jackmini::hasFlag(flags1, jackmini::PortFlags::kInput) && jackmini::hasFlag(flags2, jackmini::PortFlags::kOutput)) {
         source = *port2;
         destination = *port1;
         found = true;
-    } else if (jackmini::has_flag(flags1, jackmini::PortFlags::Output) && jackmini::has_flag(flags2, jackmini::PortFlags::Input)) {
+    } else if (jackmini::hasFlag(flags1, jackmini::PortFlags::kOutput) && jackmini::hasFlag(flags2, jackmini::PortFlags::kInput)) {
         source = *port1;
         destination = *port2;
         found = true;
@@ -172,23 +172,23 @@ int main(std::int32_t argc, char** argv)
         return 1;
     }
 
-    const std::string source_name(client.port_name(source));
-    const std::string destination_name(client.port_name(destination));
+    const std::string sourceName(client.portName(source));
+    const std::string destinationName(client.portName(destination));
     if (kDisconnect) {
         if (auto done = client.disconnect(source, destination); !done) {
-            const bool absent = done.error() == jackmini::Error::NotFound;
-            std::fprintf(stderr, "cannot disconnect %s from %s: %s\n", source_name.c_str(), destination_name.c_str(),
-                         absent ? "already disconnected" : std::string(jackmini::to_string(done.error())).c_str());
+            const bool absent = done.error() == jackmini::Error::kNotFound;
+            std::fprintf(stderr, "cannot disconnect %s from %s: %s\n", sourceName.c_str(), destinationName.c_str(),
+                         absent ? "already disconnected" : std::string(jackmini::toString(done.error())).c_str());
             return 1;
         }
-        return wait_for(client, source, destination, false) ? 0 : 1;
+        return waitFor(client, source, destination, false) ? 0 : 1;
     }
 
     if (auto done = client.connect(source, destination); !done) {
-        const bool linked = done.error() == jackmini::Error::InvalidState;
-        std::fprintf(stderr, "cannot connect %s to %s: %s\n", source_name.c_str(), destination_name.c_str(),
-                     linked ? "already connected" : std::string(jackmini::to_string(done.error())).c_str());
+        const bool linked = done.error() == jackmini::Error::kInvalidState;
+        std::fprintf(stderr, "cannot connect %s to %s: %s\n", sourceName.c_str(), destinationName.c_str(),
+                     linked ? "already connected" : std::string(jackmini::toString(done.error())).c_str());
         return 1;
     }
-    return wait_for(client, source, destination, true) ? 0 : 1;
+    return waitFor(client, source, destination, true) ? 0 : 1;
 }

@@ -32,42 +32,42 @@ namespace jackmini {
 // Adds a new 'MakePrivate' function that makes the sync happen in the local process only,
 // making it even faster for internal clients.
 
-class SERVER_EXPORT JackLinuxFutex : public detail::JackSynchro {
+class SERVER_EXPORT LinuxFutex : public detail::Synchro {
 
 private:
     struct FutexData {
-        std::int32_t futex; // futex, needs to be 1st member
-        bool internal; // current internal state
-        bool wasInternal; // initial internal state, only changes in allocate
-        bool needsChange; // change state on next wait call
-        std::int32_t externalCount; // how many external clients have connected
+        std::int32_t m_futex; // futex, needs to be 1st member
+        bool m_internal; // current internal state
+        bool m_wasInternal; // initial internal state, only changes in allocate
+        bool m_needsChange; // change state on next wait call
+        std::int32_t m_externalCount; // how many external clients have connected
     };
 
-    std::int32_t fSharedMem;
-    FutexData* fFutex;
-    bool fPrivate;
-    bool fPromiscuous;
-    std::int32_t fPromiscuousGid;
+    std::int32_t m_sharedMem;
+    FutexData* m_futex;
+    bool m_private;
+    bool m_promiscuous;
+    std::int32_t m_promiscuousGid;
 
 protected:
-    void BuildName(const char* name, const char* server_name, char* res, std::int32_t size);
+    void buildName(const char* name, const char* serverName, char* res, std::int32_t size);
 
 public:
-    JackLinuxFutex();
+    LinuxFutex();
 
-    bool Signal();
-    bool SignalAll();
-    bool Wait();
-    bool TimedWait(std::int64_t usec);
+    bool signal();
+    bool signalAll();
+    bool wait();
+    bool timedWait(std::int64_t usec);
 
-    bool Allocate(const char* name, const char* server_name, std::int32_t value, bool internal = false);
-    bool Connect(const char* name, const char* server_name);
-    bool ConnectInput(const char* name, const char* server_name);
-    bool ConnectOutput(const char* name, const char* server_name);
-    bool Disconnect();
-    void Destroy();
+    bool allocate(const char* name, const char* serverName, std::int32_t value, bool internal = false);
+    bool connect(const char* name, const char* serverName);
+    bool connectInput(const char* name, const char* serverName);
+    bool connectOutput(const char* name, const char* serverName);
+    bool disconnect();
+    void destroy();
 
-    void MakePrivate(bool priv);
+    void makePrivate(bool priv);
 };
 
 } // namespace jackmini

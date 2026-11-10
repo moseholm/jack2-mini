@@ -32,72 +32,72 @@ namespace jackmini {
 
 // \brief Exception base class.
 
-class SERVER_EXPORT JackException : public std::runtime_error {
+class SERVER_EXPORT Exception : public std::runtime_error {
 
 public:
-    JackException(const std::string& msg)
+    Exception(const std::string& msg)
         : std::runtime_error(msg)
     {
     }
-    JackException(char* msg)
+    Exception(char* msg)
         : std::runtime_error(msg)
     {
     }
-    JackException(const char* msg)
+    Exception(const char* msg)
         : std::runtime_error(msg)
     {
     }
 
-    std::string Message()
+    std::string message()
     {
         return what();
     }
 
-    void PrintMessage();
+    void printMessage();
 };
 
 // \brief Exception thrown by JackEngine in temporary mode.
 
-class SERVER_EXPORT JackTemporaryException : public JackException {
+class SERVER_EXPORT TemporaryException : public Exception {
 
 public:
-    JackTemporaryException(const std::string& msg)
-        : JackException(msg)
+    TemporaryException(const std::string& msg)
+        : Exception(msg)
     {
     }
-    JackTemporaryException(char* msg)
-        : JackException(msg)
+    TemporaryException(char* msg)
+        : Exception(msg)
     {
     }
-    JackTemporaryException(const char* msg)
-        : JackException(msg)
+    TemporaryException(const char* msg)
+        : Exception(msg)
     {
     }
-    JackTemporaryException()
-        : JackException("")
+    TemporaryException()
+        : Exception("")
     {
     }
 };
 
 // \brief
 
-class SERVER_EXPORT JackQuitException : public JackException {
+class SERVER_EXPORT QuitException : public Exception {
 
 public:
-    JackQuitException(const std::string& msg)
-        : JackException(msg)
+    QuitException(const std::string& msg)
+        : Exception(msg)
     {
     }
-    JackQuitException(char* msg)
-        : JackException(msg)
+    QuitException(char* msg)
+        : Exception(msg)
     {
     }
-    JackQuitException(const char* msg)
-        : JackException(msg)
+    QuitException(const char* msg)
+        : Exception(msg)
     {
     }
-    JackQuitException()
-        : JackException("")
+    QuitException()
+        : Exception("")
     {
     }
 };

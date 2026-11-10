@@ -22,9 +22,9 @@
 
 namespace jackmini {
 
-std::string Uuid::to_string() const
+std::string Uuid::toString() const
 {
-    return std::format("{:016x}", fValue);
+    return std::format("{:016x}", m_value);
 }
 
 std::optional<Uuid> Uuid::parse(std::string_view text)

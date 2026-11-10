@@ -30,58 +30,58 @@
 namespace jackmini {
 
 // Quiet time after the last sound event before listeners are told.
-static const std::int32_t kSettleMs = 250;
+static const std::int32_t gKSettleMs = 250;
 
-JackAlsaHotplug::JackAlsaHotplug(JackAlsaHotplugListener* listener)
-    : fListener(listener)
-    , fThread(this)
-    , fUdev(nullptr)
-    , fMonitor(nullptr)
-    , fWakeFd(-1)
+AlsaHotplug::AlsaHotplug(AlsaHotplugListener* listener)
+    : m_listener(listener)
+    , m_thread(this)
+    , m_udev(nullptr)
+    , m_monitor(nullptr)
+    , m_wakeFd(-1)
 {
-    fUdev = udev_new();
-    if (fUdev == nullptr) {
+    m_udev = udev_new();
+    if (m_udev == nullptr) {
         jack_error("hot-plug is disabled: udev is not available");
         return;
     }
-    fMonitor = udev_monitor_new_from_netlink(fUdev, "udev");
-    if (fMonitor == nullptr || udev_monitor_filter_add_match_subsystem_devtype(fMonitor, "sound", nullptr) < 0 || udev_monitor_enable_receiving(fMonitor) < 0) {
+    m_monitor = udev_monitor_new_from_netlink(m_udev, "udev");
+    if (m_monitor == nullptr || udev_monitor_filter_add_match_subsystem_devtype(m_monitor, "sound", nullptr) < 0 || udev_monitor_enable_receiving(m_monitor) < 0) {
         jack_error("hot-plug is disabled: cannot listen to udev");
-        if (fMonitor != nullptr) {
-            udev_monitor_unref(fMonitor);
-            fMonitor = nullptr;
+        if (m_monitor != nullptr) {
+            udev_monitor_unref(m_monitor);
+            m_monitor = nullptr;
         }
         return;
     }
-    fWakeFd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    m_wakeFd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 }
 
-JackAlsaHotplug::~JackAlsaHotplug()
+AlsaHotplug::~AlsaHotplug()
 {
-    Stop();
-    if (fMonitor != nullptr) {
-        udev_monitor_unref(fMonitor);
+    stop();
+    if (m_monitor != nullptr) {
+        udev_monitor_unref(m_monitor);
     }
-    if (fUdev != nullptr) {
-        udev_unref(fUdev);
+    if (m_udev != nullptr) {
+        udev_unref(m_udev);
     }
-    if (fWakeFd >= 0) {
-        close(fWakeFd);
+    if (m_wakeFd >= 0) {
+        close(m_wakeFd);
     }
 }
 
-bool JackAlsaHotplug::Init()
+bool AlsaHotplug::init()
 {
     return true;
 }
 
-bool JackAlsaHotplug::Execute()
+bool AlsaHotplug::execute()
 {
     std::array<struct pollfd, 2> fds;
-    fds[0].fd = udev_monitor_get_fd(fMonitor);
+    fds[0].fd = udev_monitor_get_fd(m_monitor);
     fds[0].events = POLLIN;
     fds[0].revents = 0;
-    fds[1].fd = fWakeFd;
+    fds[1].fd = m_wakeFd;
     fds[1].events = POLLIN;
     fds[1].revents = 0;
 
@@ -102,7 +102,7 @@ bool JackAlsaHotplug::Execute()
         }
         if (fds[0].revents & POLLIN) {
             struct udev_device* device;
-            while ((device = udev_monitor_receive_device(fMonitor)) != nullptr) {
+            while ((device = udev_monitor_receive_device(m_monitor)) != nullptr) {
                 const char* action = udev_device_get_action(device);
                 if (action != nullptr && (strcmp(action, "add") == 0 || strcmp(action, "remove") == 0 || strcmp(action, "change") == 0)) {
                     pending = true;
@@ -116,39 +116,39 @@ bool JackAlsaHotplug::Execute()
         // Keep draining while events arrive; report once they stop.
         fds[0].revents = 0;
         fds[1].revents = 0;
-        ret = poll(fds.data(), 2, kSettleMs);
+        ret = poll(fds.data(), 2, gKSettleMs);
         if (ret == 0) {
-            fListener->OnSoundChanged();
+            m_listener->onSoundChanged();
             return true;
         }
     }
 }
 
-std::int32_t JackAlsaHotplug::Start()
+std::int32_t AlsaHotplug::start()
 {
-    if (fMonitor == nullptr) {
+    if (m_monitor == nullptr) {
         return 0;
     }
     std::uint64_t dummy;
-    while (read(fWakeFd, &dummy, sizeof(dummy)) > 0) {
+    while (read(m_wakeFd, &dummy, sizeof(dummy)) > 0) {
     }
-    if (fThread.StartSync() < 0) {
+    if (m_thread.startSync() < 0) {
         jack_error("hot-plug: cannot start the udev thread");
         return -1;
     }
     return 0;
 }
 
-std::int32_t JackAlsaHotplug::Stop()
+std::int32_t AlsaHotplug::stop()
 {
-    if (fMonitor == nullptr || fWakeFd < 0) {
+    if (m_monitor == nullptr || m_wakeFd < 0) {
         return 0;
     }
     std::uint64_t one = 1;
-    if (write(fWakeFd, &one, sizeof(one)) < 0) {
+    if (write(m_wakeFd, &one, sizeof(one)) < 0) {
         jack_error("hot-plug: cannot wake the udev thread");
     }
-    return fThread.Stop();
+    return m_thread.stop();
 }
 
 } // namespace jackmini

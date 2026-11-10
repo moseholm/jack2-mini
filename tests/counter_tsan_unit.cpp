@@ -41,33 +41,33 @@ constexpr std::int32_t kRounds = 20000;
 int main()
 {
     // The cycle reads the time, through a clock the server selects at startup.
-    set_clock_source(JACK_TIMER_SYSTEM_CLOCK);
+    setClockSource(kTimerSystemClock);
 
-    JackGraphManager* graph = JackGraphManager::Allocate(16);
-    JackSynchro* table = new JackSynchro[kClientNum];
+    GraphManager* graph = GraphManager::allocate(16);
+    Synchro* table = new Synchro[kClientNum];
 
     std::array<char, 64> name { };
     for (std::int32_t ref : { kInputRef, kOutputRef }) {
         std::snprintf(name.data(), name.size(), "counter_test_%d", ref);
-        if (!table[ref].Allocate(name.data(), "counter_test", 0)) {
+        if (!table[ref].allocate(name.data(), "counter_test", 0)) {
             std::printf("cannot allocate the synchro of ref %d\n", ref);
             return 1;
         }
-        graph->InitRefNum(ref);
+        graph->initRefNum(ref);
     }
 
     // The output client feeds the input client: the input waits for it.
-    graph->DirectConnect(kOutputRef, kInputRef);
-    graph->RunNextGraph();
+    graph->directConnect(kOutputRef, kInputRef);
+    graph->runNextGraph();
 
-    JackClientControl output(name.data(), 0, kOutputRef, 0);
+    ClientControl output(name.data(), 0, kOutputRef, 0);
     std::atomic<std::int32_t> failures { 0 };
 
     // The realtime thread: one cycle per round.
     std::thread rt([&] {
         for (std::int32_t i = 0; i < kRounds; i++) {
-            graph->RunNextGraph();
-            if (!graph->ResumeRefNum(&output, table)) {
+            graph->runNextGraph();
+            if (!graph->resumeRefNum(&output, table)) {
                 failures++;
             }
         }
@@ -76,8 +76,8 @@ int main()
     // The control thread: connections change while the cycles run.  Each change copies the configuration.
     std::thread control([&] {
         for (std::int32_t i = 0; i < kRounds; i++) {
-            graph->DirectDisconnect(kOutputRef, kInputRef);
-            graph->DirectConnect(kOutputRef, kInputRef);
+            graph->directDisconnect(kOutputRef, kInputRef);
+            graph->directConnect(kOutputRef, kInputRef);
         }
     });
 
@@ -87,9 +87,9 @@ int main()
     std::printf("counter test: %d failed cycles\n", failures.load());
     const std::int32_t result = failures.load() == 0 ? 0 : 1;
     for (std::int32_t ref : { kInputRef, kOutputRef }) {
-        table[ref].Destroy();
+        table[ref].destroy();
     }
     delete[] table;
-    JackGraphManager::Destroy(graph);
+    GraphManager::destroy(graph);
     return result;
 }

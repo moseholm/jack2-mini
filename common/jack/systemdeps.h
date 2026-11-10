@@ -34,7 +34,7 @@
 
 //  to make jack API independent of different thread implementations,
 //  we define jack_native_thread_t to pthread_t here.
-typedef pthread_t jack_native_thread_t;
+typedef pthread_t NativeThreadC;
 
 #if defined(__arm__) || defined(__aarch64__) || defined(__mips__) || defined(__ppc__) || defined(__powerpc__)
 #undef POST_PACKED_STRUCTURE

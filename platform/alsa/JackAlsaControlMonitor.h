@@ -30,12 +30,12 @@ namespace jackmini {
 
 // \brief Receives rate values read from ALSA control events.
 
-class JackAlsaControlListener {
+class AlsaControlListener {
 public:
-    virtual ~JackAlsaControlListener()
+    virtual ~AlsaControlListener()
     {
     }
-    virtual void OnRateEvent(std::int32_t card, JackAlsaRateDirection dir, std::int64_t value) = 0;
+    virtual void onRateEvent(std::int32_t card, AlsaRateDirection dir, std::int64_t value) = 0;
 };
 
 // \brief One thread that watches the rate elements of all secondary cards.
@@ -45,70 +45,70 @@ public:
 // wake-up eventfd, and reports each value change to the listener.  It never
 // writes to a control, so writes from other threads use their own handles.
 
-class JackAlsaControlMonitor : public JackRunnableInterface {
+class AlsaControlMonitor : public RunnableInterface {
 
 private:
     struct Watch {
-        std::int32_t card;
-        JackAlsaRateDirection dir;
-        JackAlsaRateElement elem;
+        std::int32_t m_card;
+        AlsaRateDirection m_dir;
+        AlsaRateElement m_elem;
     };
 
     struct Device {
-        std::string name;
-        snd_ctl_t* ctl;
-        std::vector<Watch> watches;
-        bool dead; // the device went away; it is no longer polled
+        std::string m_name;
+        snd_ctl_t* m_ctl;
+        std::vector<Watch> m_watches;
+        bool m_dead; // the device went away; it is no longer polled
     };
 
-    JackAlsaControlListener* fListener;
-    std::vector<Device*> fDevices;
-    JackThread fThread;
-    std::int32_t fWakeFd;
-    std::int32_t fUpdateFd;
-    std::mutex fUpdateMutex;
-    std::vector<std::int32_t> fRemovals;
+    AlsaControlListener* m_listener;
+    std::vector<Device*> m_devices;
+    Thread m_thread;
+    std::int32_t m_wakeFd;
+    std::int32_t m_updateFd;
+    std::mutex m_updateMutex;
+    std::vector<std::int32_t> m_removals;
     struct PendingWatch {
-        std::int32_t card;
-        std::string ctl_name;
-        JackAlsaRateElement elem;
-        JackAlsaRateDirection dir;
+        std::int32_t m_card;
+        std::string m_ctlName;
+        AlsaRateElement m_elem;
+        AlsaRateDirection m_dir;
     };
-    std::vector<PendingWatch> fAdditions;
-    snd_ctl_event_t* fEvent;
+    std::vector<PendingWatch> m_additions;
+    snd_ctl_event_t* m_event;
 
-    void Subscribe(Device* device);
-    bool Dispatch(Device* device);
-    void MarkDead(Device* device);
-    void ApplyUpdates();
-    void AddPendingWatch(const PendingWatch& watch);
+    void subscribe(Device* device);
+    bool dispatch(Device* device);
+    void markDead(Device* device);
+    void applyUpdates();
+    void addPendingWatch(const PendingWatch& watch);
 
-    JackAlsaControlMonitor(const JackAlsaControlMonitor&);
-    JackAlsaControlMonitor& operator=(const JackAlsaControlMonitor&);
+    AlsaControlMonitor(const AlsaControlMonitor&);
+    AlsaControlMonitor& operator=(const AlsaControlMonitor&);
 
 public:
-    explicit JackAlsaControlMonitor(JackAlsaControlListener* listener);
-    virtual ~JackAlsaControlMonitor();
+    explicit AlsaControlMonitor(AlsaControlListener* listener);
+    virtual ~AlsaControlMonitor();
 
     // Must be called before Start().  Opens the device on first use.
-    std::int32_t AddWatch(std::int32_t card, const std::string& ctl_name, const JackAlsaRateElement& elem,
-        JackAlsaRateDirection dir);
+    std::int32_t addWatch(std::int32_t card, const std::string& ctlName, const AlsaRateElement& elem,
+        AlsaRateDirection dir);
 
     // Starts watching an element while the thread is running.  The thread adds it
     // between polls; the control device is opened and subscribed on that thread.
-    void QueueWatch(std::int32_t card, const std::string& ctl_name, const JackAlsaRateElement& elem,
-        JackAlsaRateDirection dir);
+    void queueWatch(std::int32_t card, const std::string& ctlName, const AlsaRateElement& elem,
+        AlsaRateDirection dir);
 
     // Stops watching a card's elements.  Safe while the thread is running: the
     // thread applies the removal between polls.  A device with no watches left
     // is closed.
-    void RemoveWatches(std::int32_t card);
+    void removeWatches(std::int32_t card);
 
-    std::int32_t Start();
-    std::int32_t Stop();
+    std::int32_t start();
+    std::int32_t stop();
 
-    virtual bool Init();
-    virtual bool Execute();
+    virtual bool init();
+    virtual bool execute();
 };
 
 } // namespace jackmini

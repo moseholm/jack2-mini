@@ -24,7 +24,7 @@
 
 namespace {
 
-std::int32_t failures = 0;
+std::int32_t gFailures = 0;
 
 #define CHECK(cond)                                              \
     do {                                                         \
@@ -36,15 +36,15 @@ std::int32_t failures = 0;
     } while (0)
 
 template <std::size_t N>
-void check_bytes(const char* what, const void* got, const std::array<const std::byte, N>& want)
+void checkBytes(const char* what, const void* got, const std::array<const std::byte, N>& want)
 {
     if (std::memcmp(got, want.data(), N) != 0) {
         std::fprintf(stderr, "FAILED %s: bytes differ\n", what);
-        ++failures;
+        ++gFailures;
     }
 }
 
-std::array<const std::byte, 16> kD16 = {
+std::array<const std::byte, 16> gKD16 = {
     std::byte{0x00},
     std::byte{0x00},
     std::byte{0xff},
@@ -63,7 +63,7 @@ std::array<const std::byte, 16> kD16 = {
     std::byte{0x2a},
 };
 
-std::array<const std::byte, 24> kD24 = {
+std::array<const std::byte, 24> gKD24 = {
     std::byte{0x00},
     std::byte{0x00},
     std::byte{0x00},
@@ -90,7 +90,7 @@ std::array<const std::byte, 24> kD24 = {
     std::byte{0x2a},
 };
 
-std::array<const std::byte, 32> kD32 = {
+std::array<const std::byte, 32> gKD32 = {
     std::byte{0x00},
     std::byte{0x00},
     std::byte{0x00},
@@ -125,7 +125,7 @@ std::array<const std::byte, 32> kD32 = {
     std::byte{0x2a},
 };
 
-std::array<const std::byte, 32> kD32u24 = {
+std::array<const std::byte, 32> gKD32u24 = {
     std::byte{0x00},
     std::byte{0x00},
     std::byte{0x00},
@@ -160,7 +160,7 @@ std::array<const std::byte, 32> kD32u24 = {
     std::byte{0x2a},
 };
 
-std::array<const std::byte, 24> kS16Float = {
+std::array<const std::byte, 24> gKS16Float = {
     std::byte{0x00},
     std::byte{0x00},
     std::byte{0x00},
@@ -187,7 +187,7 @@ std::array<const std::byte, 24> kS16Float = {
     std::byte{0x38},
 };
 
-std::array<const std::byte, 20> kS32Float = {
+std::array<const std::byte, 20> gKS32Float = {
     std::byte{0x00},
     std::byte{0x00},
     std::byte{0x00},
@@ -210,7 +210,7 @@ std::array<const std::byte, 20> kS32Float = {
     std::byte{0xbe},
 };
 
-std::array<const std::byte, 24> kInterleave16 = {
+std::array<const std::byte, 24> gKInterleave16 = {
     std::byte{0x01},
     std::byte{0x02},
     std::byte{0x55},
@@ -237,7 +237,7 @@ std::array<const std::byte, 24> kInterleave16 = {
     std::byte{0x55},
 };
 
-std::array<const std::byte, 24> kMemsetUnit2 = {
+std::array<const std::byte, 24> gKMemsetUnit2 = {
     std::byte{0x7f},
     std::byte{0x00},
     std::byte{0x55},
@@ -264,7 +264,7 @@ std::array<const std::byte, 24> kMemsetUnit2 = {
     std::byte{0x55},
 };
 
-std::array<const std::byte, 12> kMemcpyFake = {
+std::array<const std::byte, 12> gKMemcpyFake = {
     std::byte{0x01},
     std::byte{0x02},
     std::byte{0x03},
@@ -279,70 +279,70 @@ std::array<const std::byte, 12> kMemcpyFake = {
     std::byte{0x0c},
 };
 
-void check_floats_to_samples()
+void checkFloatsToSamples()
 {
     std::array<const float, 8> in = { 0.0f, 1.0f, -1.0f, 0.5f, -0.25f, 2.0f, -2.0f, 0.3333333f };
     const std::uint64_t n = sizeof in / sizeof in[0];
-    dither_state_t st { };
+    DitherState st { };
 
     std::array<std::byte, n * 2> d16 = { };
-    sample_move_d16_sS(d16.data(), const_cast<float*>(in.data()), n, 2, &st);
-    check_bytes("d16", d16.data(), kD16);
+    sampleMoveD16SS(d16.data(), const_cast<float*>(in.data()), n, 2, &st);
+    checkBytes("d16", d16.data(), gKD16);
 
     std::array<std::byte, n * 3> d24 = { };
-    sample_move_d24_sS(d24.data(), const_cast<float*>(in.data()), n, 3, &st);
-    check_bytes("d24", d24.data(), kD24);
+    sampleMoveD24SS(d24.data(), const_cast<float*>(in.data()), n, 3, &st);
+    checkBytes("d24", d24.data(), gKD24);
 
     std::array<std::byte, n * 4> d32 = { };
-    sample_move_d32_sS(d32.data(), const_cast<float*>(in.data()), n, 4, &st);
-    check_bytes("d32", d32.data(), kD32);
+    sampleMoveD32SS(d32.data(), const_cast<float*>(in.data()), n, 4, &st);
+    checkBytes("d32", d32.data(), gKD32);
 
     std::array<std::byte, n * 4> d32u24 = { };
-    sample_move_d32u24_sS(d32u24.data(), const_cast<float*>(in.data()), n, 4, &st);
-    check_bytes("d32u24", d32u24.data(), kD32u24);
+    sampleMoveD32u24SS(d32u24.data(), const_cast<float*>(in.data()), n, 4, &st);
+    checkBytes("d32u24", d32u24.data(), gKD32u24);
 }
 
-void check_samples_to_floats()
+void checkSamplesToFloats()
 {
     std::array<const std::int16_t, 6> s16 = { 0, 32767, -32767, 16384, -8192, 1 };
     std::array<float, 6> back = { };
-    sample_move_dS_s16(back.data(), reinterpret_cast<std::byte*>(const_cast<std::int16_t*>(s16.data())), 6, 2);
-    check_bytes("s16 to float", back.data(), kS16Float);
+    sampleMoveDSS16(back.data(), reinterpret_cast<std::byte*>(const_cast<std::int16_t*>(s16.data())), 6, 2);
+    checkBytes("s16 to float", back.data(), gKS16Float);
 
     std::array<const std::int32_t, 5> s32 = { 0, 2147483647, -2147483647, 1073741824, -536870912 };
     std::array<float, 5> backs = { };
-    sample_move_dS_s32(backs.data(), reinterpret_cast<std::byte*>(const_cast<std::int32_t*>(s32.data())), 5, 4);
-    check_bytes("s32 to float", backs.data(), kS32Float);
+    sampleMoveDSS32(backs.data(), reinterpret_cast<std::byte*>(const_cast<std::int32_t*>(s32.data())), 5, 4);
+    checkBytes("s32 to float", backs.data(), gKS32Float);
 }
 
-void check_copies()
+void checkCopies()
 {
     std::array<std::byte, 12> src = { std::byte { 1 }, std::byte { 2 }, std::byte { 3 }, std::byte { 4 }, std::byte { 5 }, std::byte { 6 }, std::byte { 7 }, std::byte { 8 }, std::byte { 9 }, std::byte { 10 }, std::byte { 11 }, std::byte { 12 } };
     std::array<std::byte, 24> dst;
 
     std::memset(dst.data(), 0x55, sizeof dst);
-    memcpy_interleave_d16_s16(dst.data(), src.data(), 6, 4, 2);
-    check_bytes("interleave 16", dst.data(), kInterleave16);
+    memcpyInterleaveD16S16(dst.data(), src.data(), 6, 4, 2);
+    checkBytes("interleave 16", dst.data(), gKInterleave16);
 
     std::memset(dst.data(), 0x55, sizeof dst);
-    memset_interleave(dst.data(), std::byte { 0x7f }, 6, 2, 4);
-    check_bytes("memset interleave", dst.data(), kMemsetUnit2);
+    memsetInterleave(dst.data(), std::byte { 0x7f }, 6, 2, 4);
+    checkBytes("memset interleave", dst.data(), gKMemsetUnit2);
 
     std::memset(dst.data(), 0x55, sizeof dst);
-    memcpy_fake(dst.data(), src.data(), 12, 0, 0);
-    check_bytes("memcpy", dst.data(), kMemcpyFake);
+    memcpyFake(dst.data(), src.data(), 12, 0, 0);
+    checkBytes("memcpy", dst.data(), gKMemcpyFake);
 }
 
 } // end of anonymous namespace
 
 int main()
 {
-    check_floats_to_samples();
-    check_samples_to_floats();
-    check_copies();
+    checkFloatsToSamples();
+    checkSamplesToFloats();
+    checkCopies();
 
-    if (failures) {
-        std::fprintf(stderr, "memops_unit: %d failure(s)\n", failures);
+    if (gFailures) {
+        std::fprintf(stderr, "memops_unit: %d failure(s)\n", gFailures);
         return 1;
     }
     std::printf("memops_unit: all checks passed\n");

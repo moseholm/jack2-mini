@@ -26,20 +26,20 @@ namespace jackmini {
 
 // When used in "master" mode
 
-std::int32_t JackFreewheelDriver::Process()
+std::int32_t FreewheelDriver::process()
 {
-    jack_log("JackFreewheelDriver::Process master %lld", fEngineControl->fTimeOutUsecs);
-    JackDriver::CycleTakeBeginTime();
+    jack_log("JackFreewheelDriver::Process master %lld", m_engineControl->m_timeOutUsecs);
+    Driver::cycleTakeBeginTime();
 
-    if (fEngine->Process(fBeginDateUst, fEndDateUst)) {
+    if (m_engine->process(m_beginDateUst, m_endDateUst)) {
 
         // Resume connected clients in the graph
-        if (!ResumeRefNum()) {
+        if (!resumeRefNum()) {
             jack_error("JackFreewheelDriver::Process: ResumeRefNum error");
         }
 
         // Special "SuspendRefNum" with longer timeout
-        if (!SuspendRefNum()) { // Wait for all clients to finish for FREEWHEEL_DRIVER_TIMEOUT sec
+        if (!suspendRefNum()) { // Wait for all clients to finish for FREEWHEEL_DRIVER_TIMEOUT sec
             jack_error("JackFreewheelDriver::Process: SuspendRefNum error");
         }
 
@@ -52,44 +52,44 @@ std::int32_t JackFreewheelDriver::Process()
 
 // When used in "slave" mode
 
-std::int32_t JackFreewheelDriver::ProcessReadSync()
+std::int32_t FreewheelDriver::processReadSync()
 {
     // Resume connected clients in the graph
-    if (!ResumeRefNum()) { // Signal all clients
+    if (!resumeRefNum()) { // Signal all clients
         jack_error("JackFreewheelDriver::ProcessReadSync: ResumeRefNum error");
         return -1;
     }
     return 0;
 }
 
-std::int32_t JackFreewheelDriver::ProcessWriteSync()
+std::int32_t FreewheelDriver::processWriteSync()
 {
     // Generic "SuspendRefNum" here
-    if (!JackDriver::SuspendRefNum()) {
+    if (!Driver::suspendRefNum()) {
         jack_error("JackFreewheelDriver::ProcessSync: SuspendRefNum error");
         return -1;
     }
     return 0;
 }
 
-std::int32_t JackFreewheelDriver::ProcessReadAsync()
+std::int32_t FreewheelDriver::processReadAsync()
 {
     // Resume connected clients in the graph
-    if (!ResumeRefNum()) { // Signal all clients
+    if (!resumeRefNum()) { // Signal all clients
         jack_error("JackFreewheelDriver::ProcessReadAsync: ResumeRefNum error");
         return -1;
     }
     return 0;
 }
 
-std::int32_t JackFreewheelDriver::ProcessWriteAsync()
+std::int32_t FreewheelDriver::processWriteAsync()
 {
     return 0;
 }
 
-Result<void> JackFreewheelDriver::SuspendRefNum()
+Result<void> FreewheelDriver::suspendRefNum()
 {
-    return fGraphManager->SuspendRefNum(&fClientControl, fSynchroTable, kFreewheelDriverTimeout * 1000000);
+    return m_graphManager->suspendRefNum(&m_clientControl, m_synchroTable, kFreewheelDriverTimeout * 1000000);
 }
 
 } // namespace jackmini

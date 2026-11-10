@@ -32,44 +32,44 @@ namespace jackmini {
 struct AtomicArrayCounter {
     union {
         struct {
-            std::array<std::uint8_t, 4> fByteVal;
-        } scounter;
-        UInt32 fLongVal;
-    } info;
+            std::array<std::uint8_t, 4> m_byteVal;
+        } m_scounter;
+        UInt32 m_longVal;
+    } m_info;
 
     AtomicArrayCounter()
     {
-        info.fLongVal = 0;
+        m_info.m_longVal = 0;
     }
 
     AtomicArrayCounter(const AtomicArrayCounter& obj)
     {
-        info.fLongVal = obj.info.fLongVal;
+        m_info.m_longVal = obj.m_info.m_longVal;
     }
     AtomicArrayCounter(volatile const AtomicArrayCounter& obj)
     {
-        info.fLongVal = obj.info.fLongVal;
+        m_info.m_longVal = obj.m_info.m_longVal;
     }
 
     AtomicArrayCounter(volatile AtomicArrayCounter& obj)
     {
-        info.fLongVal = obj.info.fLongVal;
+        m_info.m_longVal = obj.m_info.m_longVal;
     }
 
     AtomicArrayCounter& operator=(const AtomicArrayCounter& obj)
     {
-        info.fLongVal = obj.info.fLongVal;
+        m_info.m_longVal = obj.m_info.m_longVal;
         return *this;
     }
     AtomicArrayCounter& operator=(volatile AtomicArrayCounter& obj)
     {
-        info.fLongVal = obj.info.fLongVal;
+        m_info.m_longVal = obj.m_info.m_longVal;
         return *this;
     }
 
     AtomicArrayCounter& operator=(AtomicArrayCounter& obj)
     {
-        info.fLongVal = obj.info.fLongVal;
+        m_info.m_longVal = obj.m_info.m_longVal;
         return *this;
     }
 };
@@ -77,38 +77,38 @@ struct AtomicArrayCounter {
 template <typename T>
 constexpr auto& longVal1(T&& e)
 {
-    return e.info.fLongVal;
+    return e.m_info.m_longVal;
 }
 
 template <typename T>
 constexpr auto& getIndex1(T&& e, std::int32_t state)
 {
-    return e.info.scounter.fByteVal[state];
+    return e.m_info.m_scounter.m_byteVal[state];
 }
 
 template <typename T>
 constexpr void setIndex1(T&& e, std::int32_t state, std::uint8_t val)
 {
-    e.info.scounter.fByteVal[state] = val;
+    e.m_info.m_scounter.m_byteVal[state] = val;
 }
 
 template <typename T>
 constexpr void incIndex1(T&& e, std::int32_t state)
 {
-    e.info.scounter.fByteVal[state]++;
+    e.m_info.m_scounter.m_byteVal[state]++;
 }
 
 template <typename T>
 constexpr std::int32_t swapIndex1(T&& e, std::int32_t state)
 {
-    return (e.info.scounter.fByteVal[0] == state) ? 0 : state;
+    return (e.m_info.m_scounter.m_byteVal[0] == state) ? 0 : state;
 }
 
 // \brief Loads a shared counter atomically.  Every read of the counter goes through this.
-static inline AtomicArrayCounter LoadCounter1(const AtomicArrayCounter& counter)
+static inline AtomicArrayCounter loadCounter1(const AtomicArrayCounter& counter)
 {
     AtomicArrayCounter result;
-    longVal1(result) = std::atomic_ref<UInt32>(const_cast<UInt32&>(counter.info.fLongVal)).load();
+    longVal1(result) = std::atomic_ref<UInt32>(const_cast<UInt32&>(counter.m_info.m_longVal)).load();
     return result;
 }
 
@@ -129,7 +129,7 @@ static inline AtomicArrayCounter LoadCounter1(const AtomicArrayCounter& counter)
 //
 // GetCurrentIndex() *must* return an increasing value to be able to check reading current state coherency
 //
-// The fCounter is an array of indexes to access the current and 3 different "pending" states.
+// The m_counter is an array of indexes to access the current and 3 different "pending" states.
 //
 // WriteNextStateStart(int index) must return a valid state to be written into, and must invalidate state "index" ==> cur state switch.
 // WriteNextStateStop(int index) makes the "index" state become "switchable" with the current state.
@@ -144,131 +144,131 @@ static inline AtomicArrayCounter LoadCounter1(const AtomicArrayCounter& counter)
 
 
 template <class T>
-class JackAtomicArrayState {
+class AtomicArrayState {
 
 protected:
-    // fState[0] ==> current
-    // fState[1] ==> pending
-    // fState[2] ==> request
+    // m_state[0] ==> current
+    // m_state[1] ==> pending
+    // m_state[2] ==> request
 
-    std::array<T, 3> fState;
-    alignas(UInt32) alignas(AtomicArrayCounter) AtomicArrayCounter fCounter;
+    std::array<T, 3> m_state;
+    alignas(UInt32) alignas(AtomicArrayCounter) AtomicArrayCounter m_counter;
 
-    UInt32 WriteNextStateStartAux(std::int32_t state, bool* result)
+    UInt32 writeNextStateStartAux(std::int32_t state, bool* result)
     {
-        AtomicArrayCounter old_val;
-        AtomicArrayCounter new_val;
-        UInt32 cur_index;
-        UInt32 next_index;
-        bool need_copy;
+        AtomicArrayCounter oldVal;
+        AtomicArrayCounter newVal;
+        UInt32 curIndex;
+        UInt32 nextIndex;
+        bool needCopy;
         do {
-            old_val = LoadCounter1(fCounter);
-            new_val = old_val;
-            *result = getIndex1(new_val, state);
-            cur_index = getIndex1(new_val, 0);
-            next_index = swapIndex1(old_val, state);
-            need_copy = (getIndex1(new_val, state) == 0); // Written = false, switch just occurred
-            setIndex1(new_val, state, 0); // Written = false, invalidate state
-        } while (!CAS(longVal1(old_val), longVal1(new_val), (UInt32*)&fCounter));
-        if (need_copy)
-            memcpy(&fState[next_index], &fState[cur_index], sizeof(T));
-        return next_index;
+            oldVal = loadCounter1(m_counter);
+            newVal = oldVal;
+            *result = getIndex1(newVal, state);
+            curIndex = getIndex1(newVal, 0);
+            nextIndex = swapIndex1(oldVal, state);
+            needCopy = (getIndex1(newVal, state) == 0); // Written = false, switch just occurred
+            setIndex1(newVal, state, 0); // Written = false, invalidate state
+        } while (!cAS(longVal1(oldVal), longVal1(newVal), (UInt32*)&m_counter));
+        if (needCopy)
+            memcpy(&m_state[nextIndex], &m_state[curIndex], sizeof(T));
+        return nextIndex;
     }
 
-    void WriteNextStateStopAux(std::int32_t state)
+    void writeNextStateStopAux(std::int32_t state)
     {
-        AtomicArrayCounter old_val;
-        AtomicArrayCounter new_val;
+        AtomicArrayCounter oldVal;
+        AtomicArrayCounter newVal;
         do {
-            old_val = LoadCounter1(fCounter);
-            new_val = old_val;
-            setIndex1(new_val, state, 1); // Written = true, state becomes "switchable"
-        } while (!CAS(longVal1(old_val), longVal1(new_val), (UInt32*)&fCounter));
+            oldVal = loadCounter1(m_counter);
+            newVal = oldVal;
+            setIndex1(newVal, state, 1); // Written = true, state becomes "switchable"
+        } while (!cAS(longVal1(oldVal), longVal1(newVal), (UInt32*)&m_counter));
     }
 
 public:
-    JackAtomicArrayState()
+    AtomicArrayState()
     {
-        static_assert(offsetof(JackAtomicArrayState, fCounter) % sizeof(fCounter) == 0,
-            "fCounter must be aligned within JackAtomicArrayState");
-        assert(reinterpret_cast<std::uintptr_t>(&fCounter) % alignof(UInt32) == 0);
-        longVal1(fCounter) = 0;
+        static_assert(offsetof(AtomicArrayState, m_counter) % sizeof(m_counter) == 0,
+            "m_counter must be aligned within JackAtomicArrayState");
+        assert(reinterpret_cast<std::uintptr_t>(&m_counter) % alignof(UInt32) == 0);
+        longVal1(m_counter) = 0;
     }
 
-    ~JackAtomicArrayState() // Not virtual ??
+    ~AtomicArrayState() // Not virtual ??
     {
     }
 
     // \brief Returns the current state : only valid in the RT reader thread
 
-    T* ReadCurrentState()
+    T* readCurrentState()
     {
-        return &fState[getIndex1(LoadCounter1(fCounter), 0)];
+        return &m_state[getIndex1(loadCounter1(m_counter), 0)];
     }
 
     // \brief Returns the current switch counter
 
-    UInt16 GetCurrentIndex()
+    UInt16 getCurrentIndex()
     {
-        return getIndex1(LoadCounter1(fCounter), 3);
+        return getIndex1(loadCounter1(m_counter), 3);
     }
 
     // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
 
-    T* TrySwitchState(std::int32_t state)
+    T* trySwitchState(std::int32_t state)
     {
-        AtomicArrayCounter old_val;
-        AtomicArrayCounter new_val;
+        AtomicArrayCounter oldVal;
+        AtomicArrayCounter newVal;
         do {
-            old_val = LoadCounter1(fCounter);
-            new_val = old_val;
-            if (getIndex1(new_val, state)) { // If state has been written
-                setIndex1(new_val, 0, swapIndex1(new_val, state)); // Prepare switch
-                setIndex1(new_val, state, 0); // Invalidate the state "state"
-                incIndex1(new_val, 3); // Inc switch
+            oldVal = loadCounter1(m_counter);
+            newVal = oldVal;
+            if (getIndex1(newVal, state)) { // If state has been written
+                setIndex1(newVal, 0, swapIndex1(newVal, state)); // Prepare switch
+                setIndex1(newVal, state, 0); // Invalidate the state "state"
+                incIndex1(newVal, 3); // Inc switch
             }
-        } while (!CAS(longVal1(old_val), longVal1(new_val), (UInt32*)&fCounter));
-        return &fState[getIndex1(LoadCounter1(fCounter), 0)]; // Read the counter again
+        } while (!cAS(longVal1(oldVal), longVal1(newVal), (UInt32*)&m_counter));
+        return &m_state[getIndex1(loadCounter1(m_counter), 0)]; // Read the counter again
     }
 
     // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
 
-    T* TrySwitchState(std::int32_t state, bool* result)
+    T* trySwitchState(std::int32_t state, bool* result)
     {
-        AtomicArrayCounter old_val;
-        AtomicArrayCounter new_val;
+        AtomicArrayCounter oldVal;
+        AtomicArrayCounter newVal;
         do {
-            old_val = LoadCounter1(fCounter);
-            new_val = old_val;
-            if ((*result = getIndex1(new_val, state))) { // If state has been written
-                setIndex1(new_val, 0, swapIndex1(new_val, state)); // Prepare switch
-                setIndex1(new_val, state, 0); // Invalidate the state "state"
-                incIndex1(new_val, 3); // Inc switch
+            oldVal = loadCounter1(m_counter);
+            newVal = oldVal;
+            if ((*result = getIndex1(newVal, state))) { // If state has been written
+                setIndex1(newVal, 0, swapIndex1(newVal, state)); // Prepare switch
+                setIndex1(newVal, state, 0); // Invalidate the state "state"
+                incIndex1(newVal, 3); // Inc switch
             }
-        } while (!CAS(longVal1(old_val), longVal1(new_val), (UInt32*)&fCounter));
-        return &fState[getIndex1(LoadCounter1(fCounter), 0)]; // Read the counter again
+        } while (!cAS(longVal1(oldVal), longVal1(newVal), (UInt32*)&m_counter));
+        return &m_state[getIndex1(loadCounter1(m_counter), 0)]; // Read the counter again
     }
 
     // \brief Start write operation : setup and returns the next state to update, check for recursive write calls.
 
-    T* WriteNextStateStart(std::int32_t state)
+    T* writeNextStateStart(std::int32_t state)
     {
         bool tmp;
-        UInt32 index = WriteNextStateStartAux(state, &tmp);
-        return &fState[index];
+        UInt32 index = writeNextStateStartAux(state, &tmp);
+        return &m_state[index];
     }
 
-    T* WriteNextStateStart(std::int32_t state, bool* result)
+    T* writeNextStateStart(std::int32_t state, bool* result)
     {
-        UInt32 index = WriteNextStateStartAux(state, result);
-        return &fState[index];
+        UInt32 index = writeNextStateStartAux(state, result);
+        return &m_state[index];
     }
 
     // \brief Stop write operation : make the next state ready to be used by the RT thread
 
-    void WriteNextStateStop(std::int32_t state)
+    void writeNextStateStop(std::int32_t state)
     {
-        WriteNextStateStopAux(state);
+        writeNextStateStopAux(state);
     }
 };
 

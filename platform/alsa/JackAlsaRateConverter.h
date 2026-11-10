@@ -30,48 +30,48 @@ namespace jackmini {
 // requested output count, and Convert() returns the frames it could produce.
 // Not thread safe; intended to be used from the primary RT thread only.
 
-class JackAlsaRateConverter {
+class AlsaRateConverter {
 
 private:
-    JackResampler* fResampler;
-    std::int32_t fChannels;
-    std::uint32_t fCapacity;
-    float** fIn;
-    float** fOut;
-    float** fOutPtr;
-    std::uint32_t fInCount;
-    std::uint32_t fOutCount;
+    Resampler* m_resampler;
+    std::int32_t m_channels;
+    std::uint32_t m_capacity;
+    float** m_in;
+    float** m_out;
+    float** m_outPtr;
+    std::uint32_t m_inCount;
+    std::uint32_t m_outCount;
 
-    JackAlsaRateConverter(const JackAlsaRateConverter&);
-    JackAlsaRateConverter& operator=(const JackAlsaRateConverter&);
+    AlsaRateConverter(const AlsaRateConverter&);
+    AlsaRateConverter& operator=(const AlsaRateConverter&);
 
 public:
     // Takes ownership of resampler.
-    JackAlsaRateConverter(JackResampler* resampler, std::int32_t channels, std::uint32_t capacity);
-    ~JackAlsaRateConverter();
+    AlsaRateConverter(Resampler* resampler, std::int32_t channels, std::uint32_t capacity);
+    ~AlsaRateConverter();
 
-    bool IsValid() const { return fIn != nullptr && fOut != nullptr; }
+    bool isValid() const { return m_in != nullptr && m_out != nullptr; }
 
-    void Reset();
+    void reset();
 
     // Ratio correction forwarded to the resampler, 1.0 is nominal.
-    void SetRate(double rate);
+    void setRate(double rate);
 
     // Input frames held in staging, not yet consumed by the resampler.
-    std::uint32_t Backlog() const { return fInCount; }
+    std::uint32_t backlog() const { return m_inCount; }
 
     // Filter delay of the resampler, in frames.
-    std::uint32_t Delay();
+    std::uint32_t delay();
 
     // Output frames the staged input would produce, not yet converted.
-    std::uint32_t OutputBacklog();
+    std::uint32_t outputBacklog();
 
     // Input frames to supply before Convert(out_frames) to produce out_frames.
-    std::uint32_t NeedInput(std::uint32_t out_frames);
+    std::uint32_t needInput(std::uint32_t outFrames);
 
     // Pushes in_frames and produces up to out_frames.  Returns the count produced.
-    std::uint32_t Convert(const float* const* in, std::uint32_t in_frames,
-        float* const* out, std::uint32_t out_frames);
+    std::uint32_t convert(const float* const* in, std::uint32_t inFrames,
+        float* const* out, std::uint32_t outFrames);
 };
 
 } // namespace jackmini

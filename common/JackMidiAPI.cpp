@@ -25,24 +25,24 @@
 extern "C" {
 #endif
 
-LIB_EXPORT std::uint32_t jack_midi_get_event_count(void* port_buffer);
+LIB_EXPORT std::uint32_t jack_midi_get_event_count(void* portBuffer);
 
-LIB_EXPORT std::int32_t jack_midi_event_get(jack_midi_event_t* event,
-    void* port_buffer, std::uint32_t event_index);
+LIB_EXPORT std::int32_t jack_midi_event_get(MidiEventC* event,
+    void* portBuffer, std::uint32_t eventIndex);
 
-LIB_EXPORT void jack_midi_clear_buffer(void* port_buffer);
+LIB_EXPORT void jack_midi_clear_buffer(void* portBuffer);
 
-LIB_EXPORT void jack_midi_reset_buffer(void* port_buffer);
+LIB_EXPORT void jack_midi_reset_buffer(void* portBuffer);
 
-LIB_EXPORT size_t jack_midi_max_event_size(void* port_buffer);
+LIB_EXPORT size_t jack_midi_max_event_size(void* portBuffer);
 
-LIB_EXPORT jack_midi_data_t* jack_midi_event_reserve(void* port_buffer,
-    jack_nframes_t time, size_t data_size);
+LIB_EXPORT MidiData* jack_midi_event_reserve(void* portBuffer,
+    NframesC time, size_t dataSize);
 
-LIB_EXPORT std::int32_t jack_midi_event_write(void* port_buffer,
-    jack_nframes_t time, const jack_midi_data_t* data, size_t data_size);
+LIB_EXPORT std::int32_t jack_midi_event_write(void* portBuffer,
+    NframesC time, const MidiData* data, size_t dataSize);
 
-LIB_EXPORT jack_nframes_t jack_midi_get_lost_event_count(void* port_buffer);
+LIB_EXPORT NframesC jack_midi_get_lost_event_count(void* portBuffer);
 
 #ifdef __cplusplus
 }
@@ -51,108 +51,108 @@ LIB_EXPORT jack_nframes_t jack_midi_get_lost_event_count(void* port_buffer);
 using namespace jackmini;
 
 LIB_EXPORT
-std::uint32_t jack_midi_get_event_count(void* port_buffer)
+std::uint32_t jack_midi_get_event_count(void* portBuffer)
 {
-    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
-    if (!buf || !buf->IsValid()) {
+    MidiBuffer* buf = (MidiBuffer*)portBuffer;
+    if (!buf || !buf->isValid()) {
         return 0;
     }
-    return buf->event_count;
+    return buf->m_eventCount;
 }
 
 LIB_EXPORT
-std::int32_t jack_midi_event_get(jack_midi_event_t* event, void* port_buffer, std::uint32_t event_index)
+std::int32_t jack_midi_event_get(MidiEventC* event, void* portBuffer, std::uint32_t eventIndex)
 {
-    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
-    if (!buf || !buf->IsValid()) {
+    MidiBuffer* buf = (MidiBuffer*)portBuffer;
+    if (!buf || !buf->isValid()) {
         return -EINVAL;
     }
-    if (event_index >= buf->event_count) {
+    if (eventIndex >= buf->m_eventCount) {
         return -ENOBUFS;
     }
-    JackMidiEvent* ev = &buf->events[event_index];
-    event->time = ev->time;
-    event->size = ev->size;
-    event->buffer = ev->GetData(buf);
+    jackmini::MidiEvent* ev = &buf->m_events[eventIndex];
+    event->m_time = ev->m_time;
+    event->m_size = ev->m_size;
+    event->m_buffer = ev->getData(buf);
     return 0;
 }
 
 LIB_EXPORT
-void jack_midi_clear_buffer(void* port_buffer)
+void jack_midi_clear_buffer(void* portBuffer)
 {
-    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
-    if (buf && buf->IsValid()) {
-        buf->Reset(buf->nframes);
+    MidiBuffer* buf = (MidiBuffer*)portBuffer;
+    if (buf && buf->isValid()) {
+        buf->reset(buf->m_nframes);
     }
 }
 
 LIB_EXPORT
-void jack_midi_reset_buffer(void* port_buffer)
+void jack_midi_reset_buffer(void* portBuffer)
 {
-    MidiBufferInit(port_buffer, kBufferSizeMax, kBufferSizeMax);
+    midiBufferInit(portBuffer, kBufferSizeMax, kBufferSizeMax);
 }
 
 LIB_EXPORT
-size_t jack_midi_max_event_size(void* port_buffer)
+size_t jack_midi_max_event_size(void* portBuffer)
 {
-    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
-    if (buf && buf->IsValid()) {
-        return buf->MaxEventSize();
+    MidiBuffer* buf = (MidiBuffer*)portBuffer;
+    if (buf && buf->isValid()) {
+        return buf->maxEventSize();
     }
     return 0;
 }
 
 LIB_EXPORT
-jack_midi_data_t* jack_midi_event_reserve(void* port_buffer, jack_nframes_t time, size_t data_size)
+MidiData* jack_midi_event_reserve(void* portBuffer, NframesC time, size_t dataSize)
 {
-    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
+    MidiBuffer* buf = (MidiBuffer*)portBuffer;
     if (!buf) {
         jack_error("jack_midi_event_reserve: port buffer is set to NULL");
         return 0;
     }
-    if (!buf->IsValid()) {
+    if (!buf->isValid()) {
         jack_error("jack_midi_event_reserve: port buffer is invalid");
         return 0;
     }
-    if (time >= buf->nframes) {
+    if (time >= buf->m_nframes) {
         jack_error("jack_midi_event_reserve: time parameter is out of range "
                    "(%lu >= %lu)",
-            time, buf->nframes);
+            time, buf->m_nframes);
         return 0;
     }
-    if (buf->event_count && (buf->events[buf->event_count - 1].time > time)) {
+    if (buf->m_eventCount && (buf->m_events[buf->m_eventCount - 1].m_time > time)) {
         jack_error("jack_midi_event_reserve: time parameter is earlier than "
                    "last reserved event");
         return 0;
     }
-    return buf->ReserveEvent(time, data_size);
+    return buf->reserveEvent(time, dataSize);
 }
 
 LIB_EXPORT
-std::int32_t jack_midi_event_write(void* port_buffer,
-    jack_nframes_t time, const jack_midi_data_t* data, size_t data_size)
+std::int32_t jack_midi_event_write(void* portBuffer,
+    NframesC time, const MidiData* data, size_t dataSize)
 {
-    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
-    if (!buf || !buf->IsValid()) {
+    MidiBuffer* buf = (MidiBuffer*)portBuffer;
+    if (!buf || !buf->isValid()) {
         return -EINVAL;
     }
-    if (time >= buf->nframes || (buf->event_count && buf->events[buf->event_count - 1].time > time)) {
+    if (time >= buf->m_nframes || (buf->m_eventCount && buf->m_events[buf->m_eventCount - 1].m_time > time)) {
         return -EINVAL;
     }
-    jack_midi_data_t* dest = buf->ReserveEvent(time, data_size);
+    MidiData* dest = buf->reserveEvent(time, dataSize);
     if (!dest) {
         return -ENOBUFS;
     }
-    memcpy(dest, data, data_size);
+    memcpy(dest, data, dataSize);
     return 0;
 }
 
 LIB_EXPORT
-std::uint32_t jack_midi_get_lost_event_count(void* port_buffer)
+std::uint32_t jack_midi_get_lost_event_count(void* portBuffer)
 {
-    JackMidiBuffer* buf = (JackMidiBuffer*)port_buffer;
-    if (buf && buf->IsValid()) {
-        return buf->lost_events;
+    MidiBuffer* buf = (MidiBuffer*)portBuffer;
+    if (buf && buf->isValid()) {
+        return buf->m_lostEvents;
     }
     return 0;
 }

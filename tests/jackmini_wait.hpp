@@ -23,7 +23,7 @@
 // still correct in real time.
 
 template <typename Pred>
-bool WaitUntil(Pred pred)
+bool waitUntil(Pred pred)
 {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
     while (!pred()) {
@@ -36,8 +36,8 @@ bool WaitUntil(Pred pred)
 }
 
 // Waits until a counter has moved by n.
-inline bool WaitCycles(const std::atomic<std::uint64_t>& counter, std::uint64_t n)
+inline bool waitCycles(const std::atomic<std::uint64_t>& counter, std::uint64_t n)
 {
     const std::uint64_t target = counter.load() + n;
-    return WaitUntil([&] { return counter.load() >= target; });
+    return waitUntil([&] { return counter.load() >= target; });
 }

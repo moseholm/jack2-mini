@@ -26,86 +26,86 @@
 #include "driver_module.h"
 
 
-static jack_driver_desc_t* describe_driver()
+static DriverDesc* describeDriver()
 {
-    jack_driver_desc_t* desc;
-    jack_driver_desc_filler_t filler;
-    jack_driver_param_value_t value;
+    DriverDesc* desc;
+    DriverDescFiller filler;
+    DriverParamValue value;
 
-    desc = jack_driver_descriptor_construct("dummy", JackDriverMaster, "Timer based backend", &filler);
+    desc = jack_driver_descriptor_construct("dummy", kDriverMaster, "Timer based backend", &filler);
 
-    value.ui = 2U;
-    jack_driver_descriptor_add_parameter(desc, &filler, "capture", 'C', JackDriverParamUInt, &value, nullptr, "Number of capture ports", nullptr);
-    jack_driver_descriptor_add_parameter(desc, &filler, "playback", 'P', JackDriverParamUInt, &value, nullptr, "Number of playback ports", nullptr);
+    value.m_ui = 2U;
+    jack_driver_descriptor_add_parameter(desc, &filler, "capture", 'C', kDriverParamUInt, &value, nullptr, "Number of capture ports", nullptr);
+    jack_driver_descriptor_add_parameter(desc, &filler, "playback", 'P', kDriverParamUInt, &value, nullptr, "Number of playback ports", nullptr);
 
-    value.ui = 48000U;
-    jack_driver_descriptor_add_parameter(desc, &filler, "rate", 'r', JackDriverParamUInt, &value, nullptr, "Sample rate", nullptr);
+    value.m_ui = 48000U;
+    jack_driver_descriptor_add_parameter(desc, &filler, "rate", 'r', kDriverParamUInt, &value, nullptr, "Sample rate", nullptr);
 
-    value.i = 0;
-    jack_driver_descriptor_add_parameter(desc, &filler, "monitor", 'm', JackDriverParamBool, &value, nullptr, "Provide monitor ports for the output", nullptr);
+    value.m_i = 0;
+    jack_driver_descriptor_add_parameter(desc, &filler, "monitor", 'm', kDriverParamBool, &value, nullptr, "Provide monitor ports for the output", nullptr);
 
-    value.ui = 1024U;
-    jack_driver_descriptor_add_parameter(desc, &filler, "period", 'p', JackDriverParamUInt, &value, nullptr, "Frames per period", nullptr);
+    value.m_ui = 1024U;
+    jack_driver_descriptor_add_parameter(desc, &filler, "period", 'p', kDriverParamUInt, &value, nullptr, "Frames per period", nullptr);
 
-    value.ui = 21333U;
-    jack_driver_descriptor_add_parameter(desc, &filler, "wait", 'w', JackDriverParamUInt, &value, nullptr, "Number of usecs to wait between engine processes", nullptr);
+    value.m_ui = 21333U;
+    jack_driver_descriptor_add_parameter(desc, &filler, "wait", 'w', kDriverParamUInt, &value, nullptr, "Number of usecs to wait between engine processes", nullptr);
 
     return desc;
 }
 
-static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLockedEngine* engine, jackmini::JackSynchro* table, const JSList* params)
+static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine* engine, jackmini::Synchro* table, const JSListC* params)
 {
-    jack_nframes_t sample_rate = 48000;
-    jack_nframes_t buffer_size = 1024;
-    std::uint32_t capture_ports = 2;
-    std::uint32_t playback_ports = 2;
-    std::int32_t wait_time = 0;
-    const JSList* node;
-    const jack_driver_param_t* param;
+    NframesC sampleRate = 48000;
+    NframesC bufferSize = 1024;
+    std::uint32_t capturePorts = 2;
+    std::uint32_t playbackPorts = 2;
+    std::int32_t waitTime = 0;
+    const JSListC* node;
+    const DriverParam* param;
     bool monitor = false;
 
     for (node = params; node; node = jack_slist_next(node)) {
-        param = (const jack_driver_param_t*)node->data;
+        param = (const DriverParam*)node->m_data;
 
-        switch (param->character) {
+        switch (param->m_character) {
 
         case 'C':
-            capture_ports = param->value.ui;
+            capturePorts = param->m_value.m_ui;
             break;
 
         case 'P':
-            playback_ports = param->value.ui;
+            playbackPorts = param->m_value.m_ui;
             break;
 
         case 'r':
-            sample_rate = param->value.ui;
+            sampleRate = param->m_value.m_ui;
             break;
 
         case 'p':
-            buffer_size = param->value.ui;
+            bufferSize = param->m_value.m_ui;
             break;
 
         case 'w':
-            wait_time = param->value.ui;
+            waitTime = param->m_value.m_ui;
             break;
 
         case 'm':
-            monitor = param->value.i;
+            monitor = param->m_value.m_i;
             break;
         }
     }
 
-    if (wait_time > 0) {
-        buffer_size = lroundf((float(wait_time) * float(sample_rate)) / 1000000.0f);
+    if (waitTime > 0) {
+        bufferSize = lroundf((float(waitTime) * float(sampleRate)) / 1000000.0f);
     }
 
-    if (buffer_size > kBufferSizeMax) {
-        buffer_size = kBufferSizeMax;
+    if (bufferSize > kBufferSizeMax) {
+        bufferSize = kBufferSizeMax;
         jack_error("Buffer size set to %d", kBufferSizeMax);
     }
 
-    jackmini::JackDriverClientInterface* driver = new jackmini::JackThreadedDriver(new jackmini::JackDummyDriver("system", "dummy_pcm", engine, table));
-    if (driver->Open(buffer_size, sample_rate, 1, 1, capture_ports, playback_ports, monitor, "dummy", "dummy", 0, 0) == 0) {
+    jackmini::DriverClientInterface* driver = new jackmini::ThreadedDriver(new jackmini::DummyDriver("system", "dummy_pcm", engine, table));
+    if (driver->open(bufferSize, sampleRate, 1, 1, capturePorts, playbackPorts, monitor, "dummy", "dummy", 0, 0) == 0) {
         return driver;
     } else {
         delete driver;
@@ -116,6 +116,6 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
 
 extern "C" SERVER_EXPORT const jackmini::driver::Module* jackmini_driver_module()
 {
-    static const jackmini::driver::Module kDriverModule { jackmini::driver::kModuleVersion, describe_driver, initialize_driver };
+    static const jackmini::driver::Module kDriverModule { jackmini::driver::kModuleVersion, describeDriver, initializeDriver };
     return &kDriverModule;
 }

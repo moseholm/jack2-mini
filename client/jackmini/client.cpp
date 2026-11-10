@@ -39,111 +39,111 @@
 namespace jackmini {
 
 struct Client::Impl {
-    std::unique_ptr<client::ClientSession> session;
+    std::unique_ptr<client::ClientSession> m_session;
 
     // The handles of the ports this client has handed out, by id: the id is the slot.  Slot 0 is no port.  A slot is
     // written under the lock by the control thread and read without a lock by the realtime thread, so a slot is never
     // reused: a handle to an unregistered port stays invalid.  The table holds kMaxPortHandles; a client that uses more
     // fails.
     static constexpr std::uint32_t kMaxPortHandles = 4096;
-    std::array<std::atomic<jack_port_id_t>, kMaxPortHandles> slots { };
-    std::uint32_t used = 1;
+    std::array<std::atomic<PortIdC>, kMaxPortHandles> m_slots { };
+    std::uint32_t m_used = 1;
     // The token of this client: its handles carry it, and a handle with another token is not a port of this client.
-    std::uint32_t token = 0;
-    std::unordered_map<jack_port_id_t, std::uint32_t> ids;
-    std::mutex control;
+    std::uint32_t m_token = 0;
+    std::unordered_map<PortIdC, std::uint32_t> m_ids;
+    std::mutex m_control;
 
     // Control thread.  Returns 0 when the table is full.
-    std::uint32_t id_of(jack_port_id_t port)
+    std::uint32_t idOf(PortIdC port)
     {
-        std::lock_guard lock(control);
-        const auto found = ids.find(port);
-        if (found != ids.end()) {
+        std::lock_guard lock(m_control);
+        const auto found = m_ids.find(port);
+        if (found != m_ids.end()) {
             return found->second;
         }
-        if (used >= kMaxPortHandles) {
+        if (m_used >= kMaxPortHandles) {
             return 0;
         }
-        const std::uint32_t id = used++;
-        slots[id].store(port);
-        ids.emplace(port, id);
+        const std::uint32_t id = m_used++;
+        m_slots[id].store(port);
+        m_ids.emplace(port, id);
         return id;
     }
 
     // Realtime thread: no lock.  Returns 0 for a port that is not this client's.
-    jack_port_id_t port_of(Port port) const
+    PortIdC portOf(Port port) const
     {
         const std::uint32_t id = port.id();
-        if (port.owner() != token) {
+        if (port.owner() != m_token) {
             return 0;
         }
-        return (id > 0 && id < kMaxPortHandles) ? slots[id].load() : 0;
+        return (id > 0 && id < kMaxPortHandles) ? m_slots[id].load() : 0;
     }
 
     // Control thread.
-    void forget(jack_port_id_t port)
+    void forget(PortIdC port)
     {
-        std::lock_guard lock(control);
-        const auto found = ids.find(port);
-        if (found != ids.end()) {
-            slots[found->second].store(0);
-            ids.erase(found);
+        std::lock_guard lock(m_control);
+        const auto found = m_ids.find(port);
+        if (found != m_ids.end()) {
+            m_slots[found->second].store(0);
+            m_ids.erase(found);
         }
     }
 };
 
 namespace {
 
-std::uint64_t to_c_flags(PortFlags flags)
+std::uint64_t toCFlags(PortFlags flags)
 {
     std::uint64_t result = 0;
-    if (has_flag(flags, PortFlags::Input)) {
-        result |= JackPortIsInput;
+    if (hasFlag(flags, PortFlags::kInput)) {
+        result |= kPortIsInput;
     }
-    if (has_flag(flags, PortFlags::Output)) {
-        result |= JackPortIsOutput;
+    if (hasFlag(flags, PortFlags::kOutput)) {
+        result |= kPortIsOutput;
     }
-    if (has_flag(flags, PortFlags::Physical)) {
-        result |= JackPortIsPhysical;
+    if (hasFlag(flags, PortFlags::kPhysical)) {
+        result |= kPortIsPhysical;
     }
-    if (has_flag(flags, PortFlags::CanMonitor)) {
-        result |= JackPortCanMonitor;
+    if (hasFlag(flags, PortFlags::kCanMonitor)) {
+        result |= kPortCanMonitor;
     }
-    if (has_flag(flags, PortFlags::Terminal)) {
-        result |= JackPortIsTerminal;
-    }
-    return result;
-}
-
-PortFlags from_c_flags(std::uint64_t flags)
-{
-    PortFlags result = PortFlags::None;
-    if (flags & JackPortIsInput) {
-        result = result | PortFlags::Input;
-    }
-    if (flags & JackPortIsOutput) {
-        result = result | PortFlags::Output;
-    }
-    if (flags & JackPortIsPhysical) {
-        result = result | PortFlags::Physical;
-    }
-    if (flags & JackPortCanMonitor) {
-        result = result | PortFlags::CanMonitor;
-    }
-    if (flags & JackPortIsTerminal) {
-        result = result | PortFlags::Terminal;
+    if (hasFlag(flags, PortFlags::kTerminal)) {
+        result |= kPortIsTerminal;
     }
     return result;
 }
 
-const char* to_c_type(PortType type)
+PortFlags fromCFlags(std::uint64_t flags)
 {
-    return type == PortType::Midi ? kDefaultMidiType : kDefaultAudioType;
+    PortFlags result = PortFlags::kNone;
+    if (flags & kPortIsInput) {
+        result = result | PortFlags::kInput;
+    }
+    if (flags & kPortIsOutput) {
+        result = result | PortFlags::kOutput;
+    }
+    if (flags & kPortIsPhysical) {
+        result = result | PortFlags::kPhysical;
+    }
+    if (flags & kPortCanMonitor) {
+        result = result | PortFlags::kCanMonitor;
+    }
+    if (flags & kPortIsTerminal) {
+        result = result | PortFlags::kTerminal;
+    }
+    return result;
 }
 
-jack_latency_callback_mode_t to_c_mode(LatencyMode mode)
+const char* toCType(PortType type)
 {
-    return mode == LatencyMode::Capture ? JackCaptureLatency : JackPlaybackLatency;
+    return type == PortType::kMidi ? kDefaultMidiType : kDefaultAudioType;
+}
+
+LatencyCallbackModeC toCMode(LatencyMode mode)
+{
+    return mode == LatencyMode::kCapture ? kCaptureLatency : kPlaybackLatency;
 }
 
 } // namespace
@@ -156,10 +156,10 @@ Result<Client> Client::open(std::string_view name, OpenOptions options)
     }
 
     Client client;
-    client.fImpl = std::make_unique<Impl>();
-    static std::atomic<std::uint32_t> next_token { 1 };
-    client.fImpl->token = next_token.fetch_add(1);
-    client.fImpl->session = std::move(*session);
+    client.m_impl = std::make_unique<Impl>();
+    static std::atomic<std::uint32_t> nextToken { 1 };
+    client.m_impl->m_token = nextToken.fetch_add(1);
+    client.m_impl->m_session = std::move(*session);
     return client;
 }
 
@@ -168,420 +168,420 @@ Client::Client(Client&& other) noexcept = default;
 Client& Client::operator=(Client&& other) noexcept
 {
     if (this != &other) {
-        if (fImpl && fImpl->session) {
+        if (m_impl && m_impl->m_session) {
             (void)close();
         }
-        fImpl = std::move(other.fImpl);
+        m_impl = std::move(other.m_impl);
     }
     return *this;
 }
 
 Client::~Client()
 {
-    if (fImpl && fImpl->session) {
+    if (m_impl && m_impl->m_session) {
         (void)close();
     }
 }
 
 Result<void> Client::activate()
 {
-    if (!fImpl || !fImpl->session || fImpl->session->is_active()) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session || m_impl->m_session->isActive()) {
+        return std::unexpected(Error::kInvalidState);
     }
-    return fImpl->session->activate();
+    return m_impl->m_session->activate();
 }
 
 Result<void> Client::deactivate()
 {
-    if (!fImpl || !fImpl->session || !fImpl->session->is_active()) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session || !m_impl->m_session->isActive()) {
+        return std::unexpected(Error::kInvalidState);
     }
-    return fImpl->session->deactivate();
+    return m_impl->m_session->deactivate();
 }
 
 Result<void> Client::close()
 {
-    if (!fImpl || !fImpl->session) {
+    if (!m_impl || !m_impl->m_session) {
         return { };
     }
-    auto result = fImpl->session->close();
-    fImpl->session.reset();
+    auto result = m_impl->m_session->close();
+    m_impl->m_session.reset();
     return result;
 }
 
-bool Client::is_active() const noexcept
+bool Client::isActive() const noexcept
 {
-    return fImpl && fImpl->session && fImpl->session->is_active();
+    return m_impl && m_impl->m_session && m_impl->m_session->isActive();
 }
 
-Result<Port> Client::register_port(std::string_view name, PortType type, PortFlags flags)
+Result<Port> Client::registerPort(std::string_view name, PortType type, PortFlags flags)
 {
-    if (!fImpl || !fImpl->session) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session) {
+        return std::unexpected(Error::kInvalidState);
     }
     // The name is the port's short name; the full name is client:name, so the short name has no colon.
     if (name.empty() || name.find(':') != std::string_view::npos) {
-        return std::unexpected(Error::InvalidArgument);
+        return std::unexpected(Error::kInvalidArgument);
     }
-    auto index = fImpl->session->register_port(name, to_c_type(type), to_c_flags(flags), 0);
+    auto index = m_impl->m_session->registerPort(name, toCType(type), toCFlags(flags), 0);
     if (!index) {
         const std::string full = std::string(this->name()) + ":" + std::string(name);
-        return std::unexpected(fImpl->session->find_port(full) ? Error::NameTaken : Error::ServerFailure);
+        return std::unexpected(m_impl->m_session->findPort(full) ? Error::kNameTaken : Error::kServerFailure);
     }
-    return Port(fImpl->id_of(*index), fImpl->token);
+    return Port(m_impl->idOf(*index), m_impl->m_token);
 }
 
-Result<void> Client::unregister_port(Port port)
+Result<void> Client::unregisterPort(Port port)
 {
-    if (!fImpl || !fImpl->session) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session) {
+        return std::unexpected(Error::kInvalidState);
     }
-    const jack_port_id_t index = fImpl->port_of(port);
+    const PortIdC index = m_impl->portOf(port);
     if (index == 0) {
-        return std::unexpected(Error::NotFound);
+        return std::unexpected(Error::kNotFound);
     }
-    if (auto result = fImpl->session->unregister_port(index); !result) {
+    if (auto result = m_impl->m_session->unregisterPort(index); !result) {
         return result;
     }
-    fImpl->forget(index);
+    m_impl->forget(index);
     return { };
 }
 
 // For a port that is not known, the name is empty, the type is audio, and the flags are none: the accessors have no error
 // report, so they say nothing rather than fail.
-std::string_view Client::port_name(Port port) const
+std::string_view Client::portName(Port port) const
 {
-    const jack_port_id_t index = fImpl && fImpl->session ? fImpl->port_of(port) : 0;
-    return index ? fImpl->session->port_name(index) : std::string_view();
+    const PortIdC index = m_impl && m_impl->m_session ? m_impl->portOf(port) : 0;
+    return index ? m_impl->m_session->portName(index) : std::string_view();
 }
 
-PortType Client::port_type(Port port) const
+PortType Client::portType(Port port) const
 {
-    const jack_port_id_t index = fImpl && fImpl->session ? fImpl->port_of(port) : 0;
+    const PortIdC index = m_impl && m_impl->m_session ? m_impl->portOf(port) : 0;
     if (index == 0) {
-        return PortType::Audio;
+        return PortType::kAudio;
     }
-    return std::strcmp(fImpl->session->port_type(index), kDefaultMidiType) == 0 ? PortType::Midi : PortType::Audio;
+    return std::strcmp(m_impl->m_session->portType(index), kDefaultMidiType) == 0 ? PortType::kMidi : PortType::kAudio;
 }
 
-PortFlags Client::port_flags(Port port) const
+PortFlags Client::portFlags(Port port) const
 {
-    const jack_port_id_t index = fImpl && fImpl->session ? fImpl->port_of(port) : 0;
-    return index ? from_c_flags(fImpl->session->port_flags(index)) : PortFlags::None;
+    const PortIdC index = m_impl && m_impl->m_session ? m_impl->portOf(port) : 0;
+    return index ? fromCFlags(m_impl->m_session->portFlags(index)) : PortFlags::kNone;
 }
 
-Result<Port> Client::find_port(std::string_view full_name) const
+Result<Port> Client::findPort(std::string_view fullName) const
 {
-    if (!fImpl || !fImpl->session) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session) {
+        return std::unexpected(Error::kInvalidState);
     }
-    const auto index = fImpl->session->find_port(full_name);
+    const auto index = m_impl->m_session->findPort(fullName);
     if (!index) {
-        return std::unexpected(Error::NotFound);
+        return std::unexpected(Error::kNotFound);
     }
-    return Port(fImpl->id_of(*index), fImpl->token);
+    return Port(m_impl->idOf(*index), m_impl->m_token);
 }
 
-std::vector<std::string> Client::port_names(PortType type, PortFlags required) const
+std::vector<std::string> Client::portNames(PortType type, PortFlags required) const
 {
-    if (!fImpl || !fImpl->session) {
+    if (!m_impl || !m_impl->m_session) {
         return { };
     }
-    return fImpl->session->port_names(to_c_type(type), to_c_flags(required));
+    return m_impl->m_session->portNames(toCType(type), toCFlags(required));
 }
 
 std::vector<PortInfo> Client::ports() const
 {
-    if (!fImpl || !fImpl->session) {
+    if (!m_impl || !m_impl->m_session) {
         return { };
     }
     std::vector<PortInfo> infos;
-    for (auto& record : fImpl->session->port_records()) {
+    for (auto& record : m_impl->m_session->portRecords()) {
         PortInfo info;
-        info.owner = record.name.substr(0, record.name.find(':'));
-        info.name = std::move(record.name);
-        info.type = std::move(record.type);
-        info.flags = from_c_flags(record.flags);
-        info.playback_latency = LatencyRange { record.playback_latency.min, record.playback_latency.max };
-        info.capture_latency = LatencyRange { record.capture_latency.min, record.capture_latency.max };
-        info.total_latency = record.total_latency;
-        info.aliases = std::move(record.aliases);
-        info.port_uuid = Uuid(record.port_uuid);
-        info.owner_uuid = Uuid(record.owner_uuid);
-        info.connections = std::move(record.connections);
+        info.m_owner = record.m_name.substr(0, record.m_name.find(':'));
+        info.m_name = std::move(record.m_name);
+        info.m_type = std::move(record.m_type);
+        info.m_flags = fromCFlags(record.m_flags);
+        info.m_playbackLatency = LatencyRange { record.m_playbackLatency.m_min, record.m_playbackLatency.m_max };
+        info.m_captureLatency = LatencyRange { record.m_captureLatency.m_min, record.m_captureLatency.m_max };
+        info.m_totalLatency = record.m_totalLatency;
+        info.m_aliases = std::move(record.m_aliases);
+        info.m_portUuid = Uuid(record.m_portUuid);
+        info.m_ownerUuid = Uuid(record.m_ownerUuid);
+        info.m_connections = std::move(record.m_connections);
         infos.push_back(std::move(info));
     }
     return infos;
 }
 
-std::uint32_t Client::total_latency(Port port) const
+std::uint32_t Client::totalLatency(Port port) const
 {
-    const jack_port_id_t index = fImpl && fImpl->session ? fImpl->port_of(port) : 0;
-    return index ? fImpl->session->port_total_latency(index) : 0;
+    const PortIdC index = m_impl && m_impl->m_session ? m_impl->portOf(port) : 0;
+    return index ? m_impl->m_session->portTotalLatency(index) : 0;
 }
 
 Result<void> Client::connect(Port source, Port destination)
 {
-    if (!fImpl || !fImpl->session) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session) {
+        return std::unexpected(Error::kInvalidState);
     }
-    const jack_port_id_t src = fImpl->port_of(source);
-    const jack_port_id_t dst = fImpl->port_of(destination);
+    const PortIdC src = m_impl->portOf(source);
+    const PortIdC dst = m_impl->portOf(destination);
     if (src == 0 || dst == 0) {
-        return std::unexpected(Error::NotFound);
+        return std::unexpected(Error::kNotFound);
     }
     // The server refuses a connection without a reason, so the reasons are checked here first.
-    if (port_type(source) != port_type(destination) || !has_flag(port_flags(source), PortFlags::Output) || !has_flag(port_flags(destination), PortFlags::Input)) {
-        return std::unexpected(Error::InvalidArgument); // different types, or not an output to an input
+    if (portType(source) != portType(destination) || !hasFlag(portFlags(source), PortFlags::kOutput) || !hasFlag(portFlags(destination), PortFlags::kInput)) {
+        return std::unexpected(Error::kInvalidArgument); // different types, or not an output to an input
     }
-    if (is_connected(source, destination)) {
-        return std::unexpected(Error::InvalidState);
+    if (isConnected(source, destination)) {
+        return std::unexpected(Error::kInvalidState);
     }
-    return fImpl->session->connect_ports(fImpl->session->port_name(src), fImpl->session->port_name(dst));
+    return m_impl->m_session->connectPorts(m_impl->m_session->portName(src), m_impl->m_session->portName(dst));
 }
 
 Result<void> Client::disconnect(Port source, Port destination)
 {
-    if (!fImpl || !fImpl->session) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session) {
+        return std::unexpected(Error::kInvalidState);
     }
-    const jack_port_id_t src = fImpl->port_of(source);
-    const jack_port_id_t dst = fImpl->port_of(destination);
-    if (src == 0 || dst == 0 || !is_connected(source, destination)) {
-        return std::unexpected(Error::NotFound);
+    const PortIdC src = m_impl->portOf(source);
+    const PortIdC dst = m_impl->portOf(destination);
+    if (src == 0 || dst == 0 || !isConnected(source, destination)) {
+        return std::unexpected(Error::kNotFound);
     }
-    return fImpl->session->disconnect_ports(fImpl->session->port_name(src), fImpl->session->port_name(dst));
+    return m_impl->m_session->disconnectPorts(m_impl->m_session->portName(src), m_impl->m_session->portName(dst));
 }
 
-bool Client::is_connected(Port source, Port destination) const
+bool Client::isConnected(Port source, Port destination) const
 {
-    const jack_port_id_t src = fImpl && fImpl->session ? fImpl->port_of(source) : 0;
-    const jack_port_id_t dst = fImpl && fImpl->session ? fImpl->port_of(destination) : 0;
+    const PortIdC src = m_impl && m_impl->m_session ? m_impl->portOf(source) : 0;
+    const PortIdC dst = m_impl && m_impl->m_session ? m_impl->portOf(destination) : 0;
     if (src == 0 || dst == 0) {
         return false;
     }
-    return fImpl->session->is_connected(src, dst);
+    return m_impl->m_session->isConnected(src, dst);
 }
 
 std::vector<std::string> Client::connections(Port port) const
 {
-    const jack_port_id_t index = fImpl && fImpl->session ? fImpl->port_of(port) : 0;
+    const PortIdC index = m_impl && m_impl->m_session ? m_impl->portOf(port) : 0;
     if (index == 0) {
         return { };
     }
-    return fImpl->session->connections(index);
+    return m_impl->m_session->connections(index);
 }
 
-Result<void> Client::set_process(ProcessFn fn)
+Result<void> Client::setProcess(ProcessFn fn)
 {
-    if (!fImpl || !fImpl->session || fImpl->session->is_active()) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session || m_impl->m_session->isActive()) {
+        return std::unexpected(Error::kInvalidState);
     }
-    fImpl->session->set_process(std::move(fn));
+    m_impl->m_session->setProcess(std::move(fn));
     return { };
 }
 
-Result<void> Client::on_xrun(XrunFn fn)
+Result<void> Client::onXrun(XrunFn fn)
 {
-    if (!fImpl || !fImpl->session || fImpl->session->is_active()) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session || m_impl->m_session->isActive()) {
+        return std::unexpected(Error::kInvalidState);
     }
-    fImpl->session->set_xrun_handler(std::move(fn));
+    m_impl->m_session->setXrunHandler(std::move(fn));
     return { };
 }
 
-Result<void> Client::on_shutdown(ShutdownFn fn)
+Result<void> Client::onShutdown(ShutdownFn fn)
 {
-    if (!fImpl || !fImpl->session || fImpl->session->is_active()) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session || m_impl->m_session->isActive()) {
+        return std::unexpected(Error::kInvalidState);
     }
-    fImpl->session->set_shutdown_handler(std::move(fn));
+    m_impl->m_session->setShutdownHandler(std::move(fn));
     return { };
 }
 
-Result<void> Client::on_buffer_size(BufferSizeFn fn)
+Result<void> Client::onBufferSize(BufferSizeFn fn)
 {
-    if (!fImpl || !fImpl->session || fImpl->session->is_active()) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session || m_impl->m_session->isActive()) {
+        return std::unexpected(Error::kInvalidState);
     }
-    fImpl->session->set_buffer_size_handler(std::move(fn));
+    m_impl->m_session->setBufferSizeHandler(std::move(fn));
     return { };
 }
 
-Result<void> Client::on_sample_rate(SampleRateFn fn)
+Result<void> Client::onSampleRate(SampleRateFn fn)
 {
-    if (!fImpl || !fImpl->session || fImpl->session->is_active()) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session || m_impl->m_session->isActive()) {
+        return std::unexpected(Error::kInvalidState);
     }
-    fImpl->session->set_sample_rate_handler(std::move(fn));
+    m_impl->m_session->setSampleRateHandler(std::move(fn));
     return { };
 }
 
-Result<void> Client::on_latency(LatencyFn fn)
+Result<void> Client::onLatency(LatencyFn fn)
 {
-    if (!fImpl || !fImpl->session || fImpl->session->is_active()) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session || m_impl->m_session->isActive()) {
+        return std::unexpected(Error::kInvalidState);
     }
-    fImpl->session->set_latency_handler(std::move(fn));
+    m_impl->m_session->setLatencyHandler(std::move(fn));
     return { };
 }
 
-LatencyRange Client::port_latency(Port port, LatencyMode mode) const
+LatencyRange Client::portLatency(Port port, LatencyMode mode) const
 {
-    const jack_port_id_t index = fImpl && fImpl->session ? fImpl->port_of(port) : 0;
+    const PortIdC index = m_impl && m_impl->m_session ? m_impl->portOf(port) : 0;
     if (index == 0) {
         return { };
     }
-    const jack_latency_range_t range = fImpl->session->port_latency_range(index, to_c_mode(mode));
-    return LatencyRange { range.min, range.max };
+    const LatencyRangeC range = m_impl->m_session->portLatencyRange(index, toCMode(mode));
+    return LatencyRange { range.m_min, range.m_max };
 }
 
-Result<void> Client::set_port_latency(Port port, LatencyMode mode, LatencyRange range)
+Result<void> Client::setPortLatency(Port port, LatencyMode mode, LatencyRange range)
 {
-    if (!fImpl || !fImpl->session) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session) {
+        return std::unexpected(Error::kInvalidState);
     }
-    const jack_port_id_t index = fImpl->port_of(port);
+    const PortIdC index = m_impl->portOf(port);
     if (index == 0) {
-        return std::unexpected(Error::NotFound);
+        return std::unexpected(Error::kNotFound);
     }
-    fImpl->session->set_port_latency_range(index, to_c_mode(mode), jack_latency_range_t { range.min, range.max });
+    m_impl->m_session->setPortLatencyRange(index, toCMode(mode), LatencyRangeC { range.m_min, range.m_max });
     return { };
 }
 
-Result<void> Client::recompute_latencies()
+Result<void> Client::recomputeLatencies()
 {
-    if (!fImpl || !fImpl->session) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session) {
+        return std::unexpected(Error::kInvalidState);
     }
-    return fImpl->session->recompute_latencies();
+    return m_impl->m_session->recomputeLatencies();
 }
 
 std::string_view Client::name() const noexcept
 {
-    return fImpl && fImpl->session ? fImpl->session->name() : std::string_view();
+    return m_impl && m_impl->m_session ? m_impl->m_session->name() : std::string_view();
 }
 
 Uuid Client::uuid() const noexcept
 {
-    if (!fImpl || !fImpl->session) {
+    if (!m_impl || !m_impl->m_session) {
         return { };
     }
-    auto uuid = fImpl->session->lookup_uuid();
+    auto uuid = m_impl->m_session->lookupUuid();
     return uuid ? *uuid : Uuid();
 }
 
-FrameCount Client::sample_rate() const noexcept
+FrameCount Client::sampleRate() const noexcept
 {
-    return fImpl && fImpl->session ? fImpl->session->sample_rate() : 0;
+    return m_impl && m_impl->m_session ? m_impl->m_session->sampleRate() : 0;
 }
 
-FrameCount Client::buffer_size() const noexcept
+FrameCount Client::bufferSize() const noexcept
 {
-    return fImpl && fImpl->session ? fImpl->session->buffer_size() : 0;
+    return m_impl && m_impl->m_session ? m_impl->m_session->bufferSize() : 0;
 }
 
-float Client::cpu_load() const noexcept
+float Client::cpuLoad() const noexcept
 {
-    return fImpl && fImpl->session ? fImpl->session->cpu_load() : 0.0f;
+    return m_impl && m_impl->m_session ? m_impl->m_session->cpuLoad() : 0.0f;
 }
 
 // Realtime access.  These do not allocate, lock, or return errors; a port that is not known gives an empty buffer.
-std::span<float> Client::audio_buffer(Port port) noexcept
+std::span<float> Client::audioBuffer(Port port) noexcept
 {
-    const jack_port_id_t index = fImpl ? fImpl->port_of(port) : 0;
-    if (index == 0 || std::strcmp(fImpl->session->port_type(index), kDefaultAudioType) != 0) {
+    const PortIdC index = m_impl ? m_impl->portOf(port) : 0;
+    if (index == 0 || std::strcmp(m_impl->m_session->portType(index), kDefaultAudioType) != 0) {
         return { };
     }
-    const jack_nframes_t frames = fImpl->session->buffer_size();
-    return std::span<float>(static_cast<float*>(fImpl->session->port_buffer(index, frames)), frames);
+    const NframesC frames = m_impl->m_session->bufferSize();
+    return std::span<float>(static_cast<float*>(m_impl->m_session->portBuffer(index, frames)), frames);
 }
 
-midi::Buffer Client::midi_buffer(Port port) noexcept
+midi::Buffer Client::midiBuffer(Port port) noexcept
 {
-    const jack_port_id_t index = fImpl ? fImpl->port_of(port) : 0;
-    if (index == 0 || std::strcmp(fImpl->session->port_type(index), kDefaultMidiType) != 0) {
+    const PortIdC index = m_impl ? m_impl->portOf(port) : 0;
+    if (index == 0 || std::strcmp(m_impl->m_session->portType(index), kDefaultMidiType) != 0) {
         return midi::Buffer(nullptr);
     }
-    return midi::Buffer(fImpl->session->port_buffer(index, fImpl->session->buffer_size()));
+    return midi::Buffer(m_impl->m_session->portBuffer(index, m_impl->m_session->bufferSize()));
 }
 
 namespace midi {
 
 std::size_t Buffer::count() const noexcept
 {
-    return fHandle ? jack_midi_get_event_count(fHandle) : 0;
+    return m_handle ? jack_midi_get_event_count(m_handle) : 0;
 }
 
 Event Buffer::event(std::size_t index) const noexcept
 {
-    jack_midi_event_t raw { };
-    if (fHandle == nullptr || jack_midi_event_get(&raw, fHandle, index) != 0) {
+    MidiEventC raw { };
+    if (m_handle == nullptr || jack_midi_event_get(&raw, m_handle, index) != 0) {
         return { };
     }
-    return Event { raw.time, std::span<const std::byte>(reinterpret_cast<const std::byte*>(raw.buffer), raw.size) };
+    return Event { raw.m_time, std::span<const std::byte>(reinterpret_cast<const std::byte*>(raw.m_buffer), raw.m_size) };
 }
 
 bool Buffer::write(FrameCount time, std::span<const std::byte> data) noexcept
 {
-    if (fHandle == nullptr) {
+    if (m_handle == nullptr) {
         return false;
     }
-    return jack_midi_event_write(fHandle, time, reinterpret_cast<const jack_midi_data_t*>(data.data()), data.size()) == 0;
+    return jack_midi_event_write(m_handle, time, reinterpret_cast<const MidiData*>(data.data()), data.size()) == 0;
 }
 
 void Buffer::clear() noexcept
 {
-    if (fHandle != nullptr) {
-        jack_midi_clear_buffer(fHandle);
+    if (m_handle != nullptr) {
+        jack_midi_clear_buffer(m_handle);
     }
 }
 
 } // namespace midi
 
 // Transport.
-TransportState Client::transport_state() const noexcept
+TransportState Client::transportState() const noexcept
 {
-    if (!fImpl || !fImpl->session) {
-        return TransportState::Stopped;
+    if (!m_impl || !m_impl->m_session) {
+        return TransportState::kStopped;
     }
-    jack_position_t position { };
-    switch (fImpl->session->transport_query(&position)) {
-    case JackTransportRolling:
-        return TransportState::Rolling;
-    case JackTransportStarting:
-        return TransportState::Starting;
-    case JackTransportLooping:
-        return TransportState::Looping;
+    PositionC position { };
+    switch (m_impl->m_session->transportQuery(&position)) {
+    case kTransportRolling:
+        return TransportState::kRolling;
+    case kTransportStarting:
+        return TransportState::kStarting;
+    case kTransportLooping:
+        return TransportState::kLooping;
     default:
-        return TransportState::Stopped;
+        return TransportState::kStopped;
     }
 }
 
-Result<void> Client::transport_start()
+Result<void> Client::transportStart()
 {
-    if (!fImpl || !fImpl->session) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session) {
+        return std::unexpected(Error::kInvalidState);
     }
-    fImpl->session->transport_start();
+    m_impl->m_session->transportStart();
     return { };
 }
 
-Result<void> Client::transport_stop()
+Result<void> Client::transportStop()
 {
-    if (!fImpl || !fImpl->session) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session) {
+        return std::unexpected(Error::kInvalidState);
     }
-    fImpl->session->transport_stop();
+    m_impl->m_session->transportStop();
     return { };
 }
 
-Result<void> Client::transport_locate(FrameCount frame)
+Result<void> Client::transportLocate(FrameCount frame)
 {
-    if (!fImpl || !fImpl->session) {
-        return std::unexpected(Error::InvalidState);
+    if (!m_impl || !m_impl->m_session) {
+        return std::unexpected(Error::kInvalidState);
     }
-    fImpl->session->transport_locate(frame);
+    m_impl->m_session->transportLocate(frame);
     return { };
 }
 

@@ -40,12 +40,12 @@ namespace jackmini {
 // them, and the period is measured, not nominal.  A client correcting for clock drift must skip that when freewheel is
 // set.
 struct Cycle {
-    FrameCount frames = 0; // the buffer size of this cycle
-    FrameCount current_frames = 0; // the frame at the start of this cycle
-    std::uint64_t current_usecs = 0; // the time at the start of this cycle
-    std::uint64_t next_usecs = 0; // the expected start of the next cycle
-    float period_usecs = 0.0f; // the nominal period
-    bool freewheel = false; // the server runs its cycles without the sound card
+    FrameCount m_frames = 0; // the buffer size of this cycle
+    FrameCount m_currentFrames = 0; // the frame at the start of this cycle
+    std::uint64_t m_currentUsecs = 0; // the time at the start of this cycle
+    std::uint64_t m_nextUsecs = 0; // the expected start of the next cycle
+    float m_periodUsecs = 0.0f; // the nominal period
+    bool m_freewheel = false; // the server runs its cycles without the sound card
 };
 
 // The lifecycle is three states.  A client is opened, then it may be activated
@@ -84,71 +84,71 @@ public:
     Result<void> activate(); // opened or inactive -> active
     Result<void> deactivate(); // active -> inactive; joins the realtime thread
     Result<void> close(); // any state -> closed
-    bool is_active() const noexcept;
+    bool isActive() const noexcept;
 
     // Callbacks.  Each is stored while the client is inactive.  Setting one
     // while active returns Error::InvalidState.  The stored callable is used
     // from the next activate().
     template <std::invocable<const Cycle&> F>
         requires std::convertible_to<std::invoke_result_t<F&, const Cycle&>, bool>
-    Result<void> on_process(F&& fn)
+    Result<void> onProcess(F&& fn)
     {
-        return set_process(ProcessFn(std::forward<F>(fn)));
+        return setProcess(ProcessFn(std::forward<F>(fn)));
     }
-    Result<void> on_xrun(XrunFn fn);
-    Result<void> on_shutdown(ShutdownFn fn);
-    Result<void> on_buffer_size(BufferSizeFn fn);
-    Result<void> on_sample_rate(SampleRateFn fn);
-    Result<void> on_latency(LatencyFn fn); // the server asks for the latency of this client's ports
+    Result<void> onXrun(XrunFn fn);
+    Result<void> onShutdown(ShutdownFn fn);
+    Result<void> onBufferSize(BufferSizeFn fn);
+    Result<void> onSampleRate(SampleRateFn fn);
+    Result<void> onLatency(LatencyFn fn); // the server asks for the latency of this client's ports
 
     // Latency.  The server computes the total latency of each path; a client sets the range of its ports.
-    LatencyRange port_latency(Port port, LatencyMode mode) const;
-    Result<void> set_port_latency(Port port, LatencyMode mode, LatencyRange range);
-    Result<void> recompute_latencies(); // asks the server to recompute the total latencies
+    LatencyRange portLatency(Port port, LatencyMode mode) const;
+    Result<void> setPortLatency(Port port, LatencyMode mode, LatencyRange range);
+    Result<void> recomputeLatencies(); // asks the server to recompute the total latencies
 
     // Identity and timing, valid at any time.
     std::string_view name() const noexcept;
     Uuid uuid() const noexcept;
-    FrameCount sample_rate() const noexcept;
-    FrameCount buffer_size() const noexcept;
-    float cpu_load() const noexcept;
+    FrameCount sampleRate() const noexcept;
+    FrameCount bufferSize() const noexcept;
+    float cpuLoad() const noexcept;
 
     // Ports.  Registering and unregistering are allowed in any state.
-    Result<Port> register_port(std::string_view name, PortType type, PortFlags flags);
-    Result<void> unregister_port(Port port);
-    std::string_view port_name(Port port) const;
-    PortType port_type(Port port) const;
-    PortFlags port_flags(Port port) const;
-    Result<Port> find_port(std::string_view full_name) const;
-    std::vector<std::string> port_names(PortType type, PortFlags required) const;
+    Result<Port> registerPort(std::string_view name, PortType type, PortFlags flags);
+    Result<void> unregisterPort(Port port);
+    std::string_view portName(Port port) const;
+    PortType portType(Port port) const;
+    PortFlags portFlags(Port port) const;
+    Result<Port> findPort(std::string_view fullName) const;
+    std::vector<std::string> portNames(PortType type, PortFlags required) const;
 
     // Connections.  Kept across deactivate.
     Result<void> connect(Port source, Port destination);
     Result<void> disconnect(Port source, Port destination);
-    bool is_connected(Port source, Port destination) const;
+    bool isConnected(Port source, Port destination) const;
     std::vector<std::string> connections(Port port) const;
     // Every port of the graph, in port-number order, from one read of the graph.
     std::vector<PortInfo> ports() const;
     // The total latency of a port: the latency of the longest path through it, as the server last computed it.
-    std::uint32_t total_latency(Port port) const;
+    std::uint32_t totalLatency(Port port) const;
 
     // Realtime access: valid only inside the process callback, for the cycle
     // being processed.  These do not allocate and do not return errors.
-    std::span<float> audio_buffer(Port port) noexcept;
-    midi::Buffer midi_buffer(Port port) noexcept;
+    std::span<float> audioBuffer(Port port) noexcept;
+    midi::Buffer midiBuffer(Port port) noexcept;
 
     // Transport.
-    TransportState transport_state() const noexcept;
-    Result<void> transport_start();
-    Result<void> transport_stop();
-    Result<void> transport_locate(FrameCount frame);
+    TransportState transportState() const noexcept;
+    Result<void> transportStart();
+    Result<void> transportStop();
+    Result<void> transportLocate(FrameCount frame);
 
 private:
     Client() = default;
-    Result<void> set_process(ProcessFn fn);
+    Result<void> setProcess(ProcessFn fn);
 
     struct Impl;
-    std::unique_ptr<Impl> fImpl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 } // namespace jackmini

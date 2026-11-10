@@ -23,20 +23,20 @@
 
 namespace jackmini {
 
-JackTimer::JackTimer()
+Timer::Timer()
 {
-    fInitialized = false;
-    fFrames = 0;
-    fCurrentWakeup = 0;
-    fCurrentCallback = 0;
-    fNextWakeUp = 0;
-    fPeriodUsecs = 0.0f;
-    fFilterOmega = 0.0f;  // Initialised later
+    m_initialized = false;
+    m_frames = 0;
+    m_currentWakeup = 0;
+    m_currentCallback = 0;
+    m_nextWakeUp = 0;
+    m_periodUsecs = 0.0f;
+    m_filterOmega = 0.0f;  // Initialised later
 }
 
-jack_nframes_t JackTimer::Time2Frames(jack_time_t usecs, jack_nframes_t buffer_size)
+NframesC Timer::time2Frames(TimeC usecs, NframesC bufferSize)
 {
-    if (fInitialized) {
+    if (m_initialized) {
         // Make sure we have signed differences. It would make a lot of sense
         // to use the standard signed intNN_t types everywhere  instead of e.g.
         // jack_nframes_t and jack_time_t. This would at least ensure that the
@@ -45,17 +45,17 @@ jack_nframes_t JackTimer::Time2Frames(jack_time_t usecs, jack_nframes_t buffer_s
         // types below are inherently fragile and there is no automatic way to
         // check they are the correct ones. The only way is to check manually
         // against jack/types.h.  FA - 16/02/2012
-        std::int64_t du = usecs - fCurrentWakeup;
-        std::int64_t dp = fNextWakeUp - fCurrentWakeup;
-        return fFrames + (std::int32_t)rint((double)du / (double)dp * buffer_size);
+        std::int64_t du = usecs - m_currentWakeup;
+        std::int64_t dp = m_nextWakeUp - m_currentWakeup;
+        return m_frames + (std::int32_t)rint((double)du / (double)dp * bufferSize);
     } else {
         return 0;
     }
 }
 
-jack_time_t JackTimer::Frames2Time(jack_nframes_t frames, jack_nframes_t buffer_size)
+TimeC Timer::frames2Time(NframesC frames, NframesC bufferSize)
 {
-    if (fInitialized) {
+    if (m_initialized) {
         // Make sure we have signed differences. It would make a lot of sense
         // to use the standard signed intNN_t types everywhere  instead of e.g.
         // jack_nframes_t and jack_time_t. This would at least ensure that the
@@ -64,75 +64,75 @@ jack_time_t JackTimer::Frames2Time(jack_nframes_t frames, jack_nframes_t buffer_
         // types below are inherently fragile and there is no automatic way to
         // check they are the correct ones. The only way is to check manually
         // against jack/types.h.  FA - 16/02/2012
-        std::int32_t df = frames - fFrames;
-        std::int64_t dp = fNextWakeUp - fCurrentWakeup;
-        return fCurrentWakeup + (std::int64_t)rint((double)df * (double)dp / buffer_size);
+        std::int32_t df = frames - m_frames;
+        std::int64_t dp = m_nextWakeUp - m_currentWakeup;
+        return m_currentWakeup + (std::int64_t)rint((double)df * (double)dp / bufferSize);
     } else {
         return 0;
     }
 }
 
-std::int32_t JackTimer::GetCycleTimes(jack_nframes_t* current_frames, jack_time_t* current_usecs, jack_time_t* next_usecs, float* period_usecs)
+std::int32_t Timer::getCycleTimes(NframesC* currentFrames, TimeC* currentUsecs, TimeC* nextUsecs, float* periodUsecs)
 {
-    if (fInitialized) {
-        *current_frames = fFrames;
-        *current_usecs = fCurrentWakeup;
-        *next_usecs = fNextWakeUp;
-        *period_usecs = fPeriodUsecs;
+    if (m_initialized) {
+        *currentFrames = m_frames;
+        *currentUsecs = m_currentWakeup;
+        *nextUsecs = m_nextWakeUp;
+        *periodUsecs = m_periodUsecs;
         return 0;
     } else {
         return -1;
     }
 }
 
-jack_nframes_t JackTimer::FramesSinceCycleStart(jack_time_t cur_time, jack_nframes_t frames_rate)
+NframesC Timer::framesSinceCycleStart(TimeC curTime, NframesC framesRate)
 {
-    return (jack_nframes_t)floor((((float)frames_rate) / 1000000.0f) * (cur_time - fCurrentCallback));
+    return (NframesC)floor((((float)framesRate) / 1000000.0f) * (curTime - m_currentCallback));
 }
 
-void JackFrameTimer::InitFrameTime()
+void FrameTimer::initFrameTime()
 {
-    fFirstWakeUp = true;
+    m_firstWakeUp = true;
 }
 
-void JackFrameTimer::IncFrameTime(jack_nframes_t buffer_size, jack_time_t callback_usecs, jack_time_t period_usecs)
+void FrameTimer::incFrameTime(NframesC bufferSize, TimeC callbackUsecs, TimeC periodUsecs)
 {
-    if (fFirstWakeUp) {
-        InitFrameTimeAux(callback_usecs, period_usecs);
-        fFirstWakeUp = false;
+    if (m_firstWakeUp) {
+        initFrameTimeAux(callbackUsecs, periodUsecs);
+        m_firstWakeUp = false;
     }
 
-    IncFrameTimeAux(buffer_size, callback_usecs, period_usecs);
+    incFrameTimeAux(bufferSize, callbackUsecs, periodUsecs);
 }
 
-void JackFrameTimer::ResetFrameTime(jack_time_t callback_usecs)
+void FrameTimer::resetFrameTime(TimeC callbackUsecs)
 {
-    if (!fFirstWakeUp) { // ResetFrameTime may be called by a xrun/delayed wakeup on the first cycle
-        JackTimer* timer = WriteNextStateStart();
-        timer->fCurrentWakeup = callback_usecs;
-        timer->fCurrentCallback = callback_usecs;
-        WriteNextStateStop();
-        TrySwitchState(); // always succeed since there is only one writer
+    if (!m_firstWakeUp) { // ResetFrameTime may be called by a xrun/delayed wakeup on the first cycle
+        Timer* timer = writeNextStateStart();
+        timer->m_currentWakeup = callbackUsecs;
+        timer->m_currentCallback = callbackUsecs;
+        writeNextStateStop();
+        trySwitchState(); // always succeed since there is only one writer
     }
 }
 
 // Use the state returned by ReadCurrentState and check that the state was not changed during the read operation.
 // The operation is lock-free since there is no intermediate state in the write operation that could cause the
 // read to loop forever.
-void JackFrameTimer::ReadFrameTime(JackTimer* timer)
+void FrameTimer::readFrameTime(Timer* timer)
 {
-    UInt16 next_index = GetCurrentIndex();
-    UInt16 cur_index;
+    UInt16 nextIndex = getCurrentIndex();
+    UInt16 curIndex;
     do {
-        cur_index = next_index;
-        memcpy(timer, ReadCurrentState(), sizeof(JackTimer));
-        next_index = GetCurrentIndex();
-    } while (cur_index != next_index); // Until a coherent state has been read
+        curIndex = nextIndex;
+        memcpy(timer, readCurrentState(), sizeof(Timer));
+        nextIndex = getCurrentIndex();
+    } while (curIndex != nextIndex); // Until a coherent state has been read
 }
 
 // Internal
 
-void JackFrameTimer::InitFrameTimeAux(jack_time_t callback_usecs, jack_time_t period_usecs)
+void FrameTimer::initFrameTimeAux(TimeC callbackUsecs, TimeC periodUsecs)
 {
     // the first wakeup or post-freewheeling or post-xrun
 
@@ -163,18 +163,18 @@ void JackFrameTimer::InitFrameTimeAux(jack_time_t callback_usecs, jack_time_t pe
     // timer->filter_omega is 2 * pi * BW * Tperiod.
     // FA 13/02/2012
 
-    JackTimer* timer = WriteNextStateStart();
-    timer->fPeriodUsecs = (float)period_usecs;
-    timer->fCurrentCallback = callback_usecs;
-    timer->fNextWakeUp = callback_usecs;
-    timer->fFilterOmega = period_usecs * 7.854e-7f;
-    WriteNextStateStop();
-    TrySwitchState(); // always succeed since there is only one writer
+    Timer* timer = writeNextStateStart();
+    timer->m_periodUsecs = (float)periodUsecs;
+    timer->m_currentCallback = callbackUsecs;
+    timer->m_nextWakeUp = callbackUsecs;
+    timer->m_filterOmega = periodUsecs * 7.854e-7f;
+    writeNextStateStop();
+    trySwitchState(); // always succeed since there is only one writer
 }
 
-void JackFrameTimer::IncFrameTimeAux(jack_nframes_t buffer_size, jack_time_t callback_usecs, jack_time_t period_usecs)
+void FrameTimer::incFrameTimeAux(NframesC bufferSize, TimeC callbackUsecs, TimeC periodUsecs)
 {
-    JackTimer* timer = WriteNextStateStart();
+    Timer* timer = writeNextStateStart();
 
     // Modified implementation (the actual result is the same).
     //
@@ -197,17 +197,17 @@ void JackFrameTimer::IncFrameTimeAux(jack_nframes_t buffer_size, jack_time_t cal
     //
     // FA 13/02/2012
 
-    float delta = (float)((std::int64_t)callback_usecs - (std::int64_t)timer->fNextWakeUp);
-    delta *= timer->fFilterOmega;
-    timer->fCurrentWakeup = timer->fNextWakeUp;
-    timer->fCurrentCallback = callback_usecs;
-    timer->fFrames += buffer_size;
-    timer->fPeriodUsecs += timer->fFilterOmega * delta;
-    timer->fNextWakeUp += (std::int64_t)floorf(timer->fPeriodUsecs + 1.41f * delta + 0.5f);
-    timer->fInitialized = true;
+    float delta = (float)((std::int64_t)callbackUsecs - (std::int64_t)timer->m_nextWakeUp);
+    delta *= timer->m_filterOmega;
+    timer->m_currentWakeup = timer->m_nextWakeUp;
+    timer->m_currentCallback = callbackUsecs;
+    timer->m_frames += bufferSize;
+    timer->m_periodUsecs += timer->m_filterOmega * delta;
+    timer->m_nextWakeUp += (std::int64_t)floorf(timer->m_periodUsecs + 1.41f * delta + 0.5f);
+    timer->m_initialized = true;
 
-    WriteNextStateStop();
-    TrySwitchState(); // always succeed since there is only one writer
+    writeNextStateStop();
+    trySwitchState(); // always succeed since there is only one writer
 }
 
 } // namespace jackmini

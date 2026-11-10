@@ -25,41 +25,41 @@
 
 namespace jackmini {
 
-class JackServer;
+class ServerCore;
 
 // The protocol replies 0 on success and -1 on failure. The reason is logged where it was detected.
-inline std::int32_t ReplyCode(const Result<void>& result)
+inline std::int32_t replyCode(const Result<void>& result)
 {
     return result ? 0 : -1;
 }
 
-struct JackClientOpenRequest;
-struct JackClientOpenResult;
+struct ClientOpenRequest;
+struct ClientOpenResult;
 
-struct JackClientHandlerInterface {
+struct ClientHandlerInterface {
 
-    virtual void ClientAdd(detail::JackChannelTransactionInterface* socket, JackClientOpenRequest* req, JackClientOpenResult* res) = 0;
-    virtual void ClientRemove(detail::JackChannelTransactionInterface* socket, std::int32_t refnum) = 0;
+    virtual void clientAdd(detail::ChannelTransactionInterface* socket, ClientOpenRequest* req, ClientOpenResult* res) = 0;
+    virtual void clientRemove(detail::ChannelTransactionInterface* socket, std::int32_t refnum) = 0;
 
-    virtual ~JackClientHandlerInterface()
+    virtual ~ClientHandlerInterface()
     {
     }
 };
 
 // \brief Request decoder
 
-class JackRequestDecoder {
+class RequestDecoder {
 private:
-    JackServer* fServer;
-    JackClientHandlerInterface* fHandler;
+    ServerCore* m_server;
+    ClientHandlerInterface* m_handler;
 
 public:
-    JackRequestDecoder(JackServer* server, JackClientHandlerInterface* handler);
-    virtual ~JackRequestDecoder();
+    RequestDecoder(ServerCore* server, ClientHandlerInterface* handler);
+    virtual ~RequestDecoder();
 
-    std::int32_t HandleRequest(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
+    std::int32_t handleRequest(detail::ChannelTransactionInterface* socket, const MsgHeader& header);
     // Refuses a message of another protocol version: the reply carries the protocol error.
-    std::int32_t Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header);
+    std::int32_t refuse(detail::ChannelTransactionInterface* socket, const MsgHeader& header);
 };
 
 } // namespace jackmini

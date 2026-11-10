@@ -18,24 +18,24 @@
 
 namespace jackmini {
 
-std::string_view to_string(Error error)
+std::string_view toString(Error error)
 {
     switch (error) {
-    case Error::InvalidArgument:
+    case Error::kInvalidArgument:
         return "invalid argument";
-    case Error::InvalidState:
+    case Error::kInvalidState:
         return "operation not allowed in the current state";
-    case Error::NameTaken:
+    case Error::kNameTaken:
         return "name already in use";
-    case Error::NotFound:
+    case Error::kNotFound:
         return "not found";
-    case Error::NoServer:
+    case Error::kNoServer:
         return "server not running and could not be started";
-    case Error::ServerFailure:
+    case Error::kServerFailure:
         return "server failed the request";
-    case Error::Protocol:
+    case Error::kProtocol:
         return "unexpected reply from the server";
-    case Error::Io:
+    case Error::kIo:
         return "connection to the server failed";
     }
     return "unknown error";

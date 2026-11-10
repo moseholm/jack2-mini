@@ -26,72 +26,72 @@
 
 namespace {
 
-std::int32_t g_failures = 0;
-std::int32_t g_checks = 0;
+std::int32_t gFailures = 0;
+std::int32_t gChecks = 0;
 
 #define CHECK(cond)                                                                       \
     do {                                                                                  \
-        g_checks++;                                                                       \
+        gChecks++;                                                                       \
         if (!(cond)) {                                                                    \
             std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
-            g_failures++;                                                                 \
+            gFailures++;                                                                 \
         }                                                                                 \
     } while (0)
 
-void TestFits()
+void testFits()
 {
     std::array<char, 8> buf;
-    jackmini::CopyCString(buf, "abc");
+    jackmini::copyCString(buf, "abc");
     CHECK(std::strcmp(buf.data(), "abc") == 0);
     for (std::int32_t i = 4; i < 8; i++) {
         CHECK(buf[i] == '\0');
     }
 }
 
-void TestExactFit()
+void testExactFit()
 {
     std::array<char, 4> buf;
-    jackmini::CopyCString(buf, "abc");
+    jackmini::copyCString(buf, "abc");
     CHECK(std::strncmp(buf.data(), "abc", 4) == 0);
     CHECK(buf[3] == '\0');
 }
 
-void TestTruncates()
+void testTruncates()
 {
     std::array<char, 4> buf;
-    jackmini::CopyCString(buf, "abcdef");
+    jackmini::copyCString(buf, "abcdef");
     CHECK(std::strncmp(buf.data(), "abc", 4) == 0);
     CHECK(buf[3] == '\0');
 }
 
-void TestZeroFillsStaleBytes()
+void testZeroFillsStaleBytes()
 {
     std::array<char, 8> buf;
     std::memset(buf.data(), 'x', sizeof(buf));
-    jackmini::CopyCString(buf, "ab");
+    jackmini::copyCString(buf, "ab");
     CHECK(buf[0] == 'a' && buf[1] == 'b');
     for (std::int32_t i = 2; i < 8; i++) {
         CHECK(buf[i] == '\0');
     }
 }
 
-void TestLeadingInteger()
+void testLeadingInteger()
 {
     // The same answers atoi() gives for these inputs.
-    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("42") == 42);
-    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("  -7") == -7);
-    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("+5") == 5);
-    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("12abc") == 12);
-    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("abc") == 0);
-    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("") == 0);
-    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("+-3") == 0);
-    CHECK(jackmini::ParseLeadingInteger<std::int32_t>("99999999999") == 0);
-    CHECK(jackmini::ParseLeadingInteger<std::uint32_t>("300") == 300u);
+    CHECK(jackmini::parseLeadingInteger<std::int32_t>("42") == 42);
+    CHECK(jackmini::parseLeadingInteger<std::int32_t>("  -7") == -7);
+    CHECK(jackmini::parseLeadingInteger<std::int32_t>("+5") == 5);
+    CHECK(jackmini::parseLeadingInteger<std::int32_t>("12abc") == 12);
+    CHECK(jackmini::parseLeadingInteger<std::int32_t>("abc") == 0);
+    CHECK(jackmini::parseLeadingInteger<std::int32_t>("") == 0);
+    CHECK(jackmini::parseLeadingInteger<std::int32_t>("+-3") == 0);
+    CHECK(jackmini::parseLeadingInteger<std::int32_t>("99999999999") == 0);
+    CHECK(jackmini::parseLeadingInteger<std::uint32_t>("300") == 300u);
 }
 
-void TestEmptyBuffer()
+void testEmptyBuffer()
 {
-    jackmini::CopyCString(std::span<char> { }, "abc");
+    jackmini::copyCString(std::span<char> { }, "abc");
     CHECK(true);
 }
 
@@ -99,13 +99,13 @@ void TestEmptyBuffer()
 
 int main()
 {
-    TestFits();
-    TestExactFit();
-    TestTruncates();
-    TestZeroFillsStaleBytes();
-    TestLeadingInteger();
-    TestEmptyBuffer();
+    testFits();
+    testExactFit();
+    testTruncates();
+    testZeroFillsStaleBytes();
+    testLeadingInteger();
+    testEmptyBuffer();
 
-    std::printf("%d checks, %d failed\n", g_checks, g_failures);
-    return g_failures == 0 ? 0 : 1;
+    std::printf("%d checks, %d failed\n", gChecks, gFailures);
+    return gFailures == 0 ? 0 : 1;
 }

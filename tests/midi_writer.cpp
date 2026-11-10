@@ -31,7 +31,7 @@ namespace {
 
 std::atomic<bool> gStop { false };
 
-void on_signal(std::int32_t)
+void onSignal(std::int32_t)
 {
     gStop.store(true);
 }
@@ -46,17 +46,17 @@ int main(std::int32_t argc, char** argv)
     }
 
     jackmini::OpenOptions options;
-    options.start_server = false;
-    options.server_name = server;
+    options.m_startServer = false;
+    options.m_serverName = server;
     auto opened = jackmini::Client::open("midi_writer", options);
     if (!opened) {
         std::fprintf(stderr, "midi_writer: cannot open a client: %s\n",
-                     std::string(jackmini::to_string(opened.error())).c_str());
+                     std::string(jackmini::toString(opened.error())).c_str());
         return 1;
     }
     jackmini::Client& client = *opened;
 
-    auto port = client.register_port("out", jackmini::PortType::Midi, jackmini::PortFlags::Output);
+    auto port = client.registerPort("out", jackmini::PortType::kMidi, jackmini::PortFlags::kOutput);
     if (!port) {
         std::fprintf(stderr, "midi_writer: cannot register the port\n");
         return 1;
@@ -64,8 +64,8 @@ int main(std::int32_t argc, char** argv)
     const jackmini::Port output = *port;
 
     static constexpr std::array<std::byte, 3> kNoteOn { std::byte { 0x90 }, std::byte { 0x3c }, std::byte { 0x40 } };
-    if (auto set = client.on_process([&](const jackmini::Cycle&) {
-            jackmini::midi::Buffer events = client.midi_buffer(output);
+    if (auto set = client.onProcess([&](const jackmini::Cycle&) {
+            jackmini::midi::Buffer events = client.midiBuffer(output);
             events.clear();
             events.write(0, kNoteOn);
             return true;
@@ -74,8 +74,8 @@ int main(std::int32_t argc, char** argv)
         return 1;
     }
 
-    std::signal(SIGINT, on_signal);
-    std::signal(SIGTERM, on_signal);
+    std::signal(SIGINT, onSignal);
+    std::signal(SIGTERM, onSignal);
     if (auto activated = client.activate(); !activated) {
         std::fprintf(stderr, "midi_writer: cannot activate\n");
         return 1;

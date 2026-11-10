@@ -22,21 +22,21 @@
 #include "driver_interface.h"
 #include "driver_module.h"
 
-class SERVER_EXPORT JackDriverInfo {
+class SERVER_EXPORT DriverInfo {
 
 private:
-    const jackmini::driver::Module* fModule;
-    DriverHandle fHandle;
-    jackmini::JackDriverClientInterface* fBackend;
+    const jackmini::driver::Module* m_module;
+    DriverHandle m_handle;
+    jackmini::DriverClientInterface* m_backend;
 
 public:
-    JackDriverInfo()
-        : fModule(nullptr)
-        , fHandle(nullptr)
-        , fBackend(nullptr)
+    DriverInfo()
+        : m_module(nullptr)
+        , m_handle(nullptr)
+        , m_backend(nullptr)
     {
     }
-    ~JackDriverInfo();
+    ~DriverInfo();
 
-    jackmini::JackDriverClientInterface* Open(jack_driver_desc_t* driver_desc, jackmini::JackLockedEngine*, jackmini::JackSynchro*, const JSList*);
+    jackmini::DriverClientInterface* open(DriverDesc* driverDesc, jackmini::LockedEngine*, jackmini::Synchro*, const JSListC*);
 };

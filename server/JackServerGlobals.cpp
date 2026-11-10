@@ -20,26 +20,26 @@
 
 namespace jackmini {
 
-JackServer* JackServerGlobals::fInstance = nullptr;
+ServerCore* ServerGlobals::s_instance = nullptr;
 
-bool (*JackServerGlobals::on_device_acquire)(const char* device_name) = nullptr;
-void (*JackServerGlobals::on_device_release)(const char* device_name) = nullptr;
-void (*JackServerGlobals::on_device_reservation_loop)(void) = nullptr;
+bool (*ServerGlobals::s_onDeviceAcquire)(const char* deviceName) = nullptr;
+void (*ServerGlobals::s_onDeviceRelease)(const char* deviceName) = nullptr;
+void (*ServerGlobals::s_onDeviceReservationLoop)(void) = nullptr;
 
 // Used for the external C API (JackAPI.cpp)
-SERVER_EXPORT JackGraphManager* GetGraphManager()
+SERVER_EXPORT GraphManager* getGraphManager()
 {
-    return JackServerGlobals::fInstance->GetGraphManager();
+    return ServerGlobals::s_instance->getGraphManager();
 }
 
-SERVER_EXPORT JackEngineControl* GetEngineControl()
+SERVER_EXPORT EngineControl* getEngineControl()
 {
-    return JackServerGlobals::fInstance->GetEngineControl();
+    return ServerGlobals::s_instance->getEngineControl();
 }
 
-SERVER_EXPORT JackSynchro* GetSynchroTable()
+SERVER_EXPORT Synchro* getSynchroTable()
 {
-    return JackServerGlobals::fInstance->GetSynchroTable();
+    return ServerGlobals::s_instance->getSynchroTable();
 }
 
 } // namespace jackmini

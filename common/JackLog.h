@@ -30,25 +30,25 @@
 inline constexpr std::int32_t kLogLevelInfo = 1;
 inline constexpr std::int32_t kLogLevelError = 2;
 
-typedef void (*jack_log_function_t)(std::int32_t level, const char* message);
+typedef void (*LogFunction)(std::int32_t level, const char* message);
 
 LIB_EXPORT void jack_error(const char* fmt, ...);
 LIB_EXPORT void jack_info(const char* fmt, ...);
 
 // Formats a message and passes it to jack_log_router.
-LIB_EXPORT void jack_log_message(std::int32_t level, const char* prefix, const char* fmt, va_list ap);
+LIB_EXPORT void logMessage(std::int32_t level, const char* prefix, const char* fmt, va_list ap);
 
 // Passes a message to the callbacks: the default delivery.
-LIB_EXPORT void jack_log_direct(std::int32_t level, const char* message);
+LIB_EXPORT void logDirect(std::int32_t level, const char* message);
 
 // Where messages go.  Defaults to jack_log_direct.
-LIB_EXPORT extern jack_log_function_t jack_log_router;
+LIB_EXPORT extern LogFunction gJackLogRouter;
 
-LIB_EXPORT extern void (*jack_error_callback)(const char* desc);
-LIB_EXPORT extern void (*jack_info_callback)(const char* desc);
+LIB_EXPORT extern void (*gJackErrorCallback)(const char* desc);
+LIB_EXPORT extern void (*gJackInfoCallback)(const char* desc);
 
-LIB_EXPORT extern void default_jack_error_callback(const char* desc);
-LIB_EXPORT extern void default_jack_info_callback(const char* desc);
+LIB_EXPORT extern void defaultJackErrorCallback(const char* desc);
+LIB_EXPORT extern void defaultJackInfoCallback(const char* desc);
 
-LIB_EXPORT void silent_jack_error_callback(const char* desc);
-LIB_EXPORT void silent_jack_info_callback(const char* desc);
+LIB_EXPORT void silentJackErrorCallback(const char* desc);
+LIB_EXPORT void silentJackInfoCallback(const char* desc);

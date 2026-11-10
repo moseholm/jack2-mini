@@ -31,12 +31,12 @@ namespace jackmini {
 // Called once a burst of udev events has settled, so one device change that
 // produces several events is reported once.
 
-class JackAlsaHotplugListener {
+class AlsaHotplugListener {
 public:
-    virtual ~JackAlsaHotplugListener()
+    virtual ~AlsaHotplugListener()
     {
     }
-    virtual void OnSoundChanged() = 0;
+    virtual void onSoundChanged() = 0;
 };
 
 // \brief Watches the kernel's sound devices through udev.
@@ -45,29 +45,29 @@ public:
 // the "sound" subsystem.  If udev is not available the watcher stays silent and
 // the server runs with the cards it found at startup.
 
-class JackAlsaHotplug : public JackRunnableInterface {
+class AlsaHotplug : public RunnableInterface {
 
 private:
-    JackAlsaHotplugListener* fListener;
-    JackThread fThread;
-    struct udev* fUdev;
-    struct udev_monitor* fMonitor;
-    std::int32_t fWakeFd;
+    AlsaHotplugListener* m_listener;
+    Thread m_thread;
+    struct udev* m_udev;
+    struct udev_monitor* m_monitor;
+    std::int32_t m_wakeFd;
 
-    JackAlsaHotplug(const JackAlsaHotplug&);
-    JackAlsaHotplug& operator=(const JackAlsaHotplug&);
+    AlsaHotplug(const AlsaHotplug&);
+    AlsaHotplug& operator=(const AlsaHotplug&);
 
 public:
-    explicit JackAlsaHotplug(JackAlsaHotplugListener* listener);
-    virtual ~JackAlsaHotplug();
+    explicit AlsaHotplug(AlsaHotplugListener* listener);
+    virtual ~AlsaHotplug();
 
-    bool Available() const { return fMonitor != nullptr; }
+    bool available() const { return m_monitor != nullptr; }
 
-    std::int32_t Start();
-    std::int32_t Stop();
+    std::int32_t start();
+    std::int32_t stop();
 
-    virtual bool Init();
-    virtual bool Execute();
+    virtual bool init();
+    virtual bool execute();
 };
 
 } // namespace jackmini

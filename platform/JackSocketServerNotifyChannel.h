@@ -25,20 +25,20 @@ namespace jackmini {
 
 // \brief JackServerNotifyChannel using sockets.
 
-class JackSocketServerNotifyChannel {
+class SocketServerNotifyChannel {
 private:
-    JackClientSocket fRequestSocket;
+    ClientSocket m_requestSocket;
 
 public:
-    JackSocketServerNotifyChannel()
+    SocketServerNotifyChannel()
     {
     }
 
-    Result<void> Open(const char* server_name);
-    void Close();
+    Result<void> open(const char* serverName);
+    void close();
 
-    void Notify(std::int32_t refnum, std::int32_t notify, std::int32_t value);
-    void NotifyQuit();
+    void notify(std::int32_t refnum, std::int32_t notify, std::int32_t value);
+    void notifyQuit();
 };
 
 } // namespace jackmini

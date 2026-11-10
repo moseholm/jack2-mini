@@ -27,7 +27,7 @@ namespace {
 
 constexpr const char* kTool = "jackmini_samplerate";
 
-void show_usage(FILE* out)
+void showUsage(FILE* out)
 {
     std::fprintf(out, "\nusage: %s [options]\n", kTool);
     std::fprintf(out, "Prints the sample rate of the JACK server, and exits.\n\n");
@@ -59,22 +59,22 @@ int main(std::int32_t argc, char** argv)
             std::printf("%s " JACK_VERSION "\n", kTool);
             return 0;
         case 'h':
-            show_usage(stderr);
+            showUsage(stderr);
             return 1;
         default:
-            show_usage(stderr);
+            showUsage(stderr);
             return 1;
         }
     }
     if (optind < argc) {
-        show_usage(stderr);
+        showUsage(stderr);
         return 1;
     }
 
-    auto opened = jackmini::tools::open_client(kTool, server);
+    auto opened = jackmini::tools::openClient(kTool, server);
     if (!opened) {
         return jackmini::tools::fail(kTool, opened.error());
     }
-    std::printf("%u\n", static_cast<std::uint32_t>(opened->sample_rate()));
+    std::printf("%u\n", static_cast<std::uint32_t>(opened->sampleRate()));
     return 0;
 }

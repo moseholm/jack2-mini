@@ -36,20 +36,20 @@
 #include "JackTime.h"
 #include "driver_interface.h"
 
-const char* jack_get_self_connect_mode_description(char mode);
+const char* getSelfConnectModeDescription(char mode);
 
 namespace jackmini {
 
 // The driver reports 0 on success and -1 on failure.
-static Result<void> DriverResult(std::int32_t rc)
+static Result<void> driverResult(std::int32_t rc)
 {
-    return (rc < 0) ? Result<void>(std::unexpected(Error::ServerFailure)) : Result<void> { };
+    return (rc < 0) ? Result<void>(std::unexpected(Error::kServerFailure)) : Result<void> { };
 }
 
 //----------------
 // Server control
 //----------------
-JackServer::JackServer(bool sync, bool temporary, std::int32_t timeout, bool rt, std::int32_t priority, std::int32_t port_max, bool verbose, jack_timer_type_t clock, char self_connect_mode, const char* server_name)
+ServerCore::ServerCore(bool sync, bool temporary, std::int32_t timeout, bool rt, std::int32_t priority, std::int32_t portMax, bool verbose, TimerType clock, char selfConnectMode, const char* serverName)
 {
     if (rt) {
         jack_info("JACK server starting in realtime mode with priority %ld", priority);
@@ -57,185 +57,185 @@ JackServer::JackServer(bool sync, bool temporary, std::int32_t timeout, bool rt,
         jack_info("JACK server starting in non-realtime mode");
     }
 
-    jack_info("self-connect-mode is \"%s\"", jack_get_self_connect_mode_description(self_connect_mode));
+    jack_info("self-connect-mode is \"%s\"", getSelfConnectModeDescription(selfConnectMode));
 
-    fGraphManager = JackGraphManager::Allocate(port_max);
-    fEngineControl = std::make_unique<JackEngineControl>(sync, temporary, timeout, rt, priority, verbose, clock, server_name);
-    fEngine = std::make_unique<JackLockedEngine>(fGraphManager, GetSynchroTable(), fEngineControl.get(), self_connect_mode);
+    m_graphManager = GraphManager::allocate(portMax);
+    m_engineControl = std::make_unique<EngineControl>(sync, temporary, timeout, rt, priority, verbose, clock, serverName);
+    m_engine = std::make_unique<LockedEngine>(m_graphManager, getSynchroTable(), m_engineControl.get(), selfConnectMode);
 
     // A distinction is made between the threaded freewheel driver and the
     // regular freewheel driver because the freewheel driver needs to run in
     // threaded mode when freewheel mode is active and needs to run as a slave
     // when freewheel mode isn't active.
-    JackFreewheelDriver* freewheelDriver = new JackFreewheelDriver(fEngine.get(), GetSynchroTable());
-    fThreadedFreewheelDriver = std::make_unique<JackThreadedDriver>(freewheelDriver);
+    FreewheelDriver* freewheelDriver = new FreewheelDriver(m_engine.get(), getSynchroTable());
+    m_threadedFreewheelDriver = std::make_unique<ThreadedDriver>(freewheelDriver);
 
-    fFreewheelDriver = freewheelDriver;
-    fDriverInfo = std::make_unique<JackDriverInfo>();
-    fAudioDriver = nullptr;
-    fFreewheel = false;
-    JackServerGlobals::fInstance = this; // Unique instance
-    JackGlobals::fVerbose = verbose;
+    m_freewheelDriver = freewheelDriver;
+    m_driverInfo = std::make_unique<DriverInfo>();
+    m_audioDriver = nullptr;
+    m_freewheel = false;
+    ServerGlobals::s_instance = this; // Unique instance
+    Globals::s_verbose = verbose;
 }
 
-JackServer::~JackServer()
+ServerCore::~ServerCore()
 {
     // The engine uses the engine control, so it goes first.
-    JackGraphManager::Destroy(fGraphManager);
-    fDriverInfo.reset();
-    fThreadedFreewheelDriver.reset();
-    fEngine.reset();
-    fEngineControl.reset();
+    GraphManager::destroy(m_graphManager);
+    m_driverInfo.reset();
+    m_threadedFreewheelDriver.reset();
+    m_engine.reset();
+    m_engineControl.reset();
 }
 
-Result<void> JackServer::Open(jack_driver_desc_t* driver_desc, JSList* driver_params)
+Result<void> ServerCore::open(DriverDesc* driverDesc, JSListC* driverParams)
 {
     // TODO: move that in reworked JackServerGlobals::Init()
-    if (!JackMessageBuffer::Create()) {
+    if (!MessageBuffer::create()) {
         jack_error("Cannot create message buffer");
     }
 
-    if ((fAudioDriver = fDriverInfo->Open(driver_desc, fEngine.get(), GetSynchroTable(), driver_params)) == nullptr) {
+    if ((m_audioDriver = m_driverInfo->open(driverDesc, m_engine.get(), getSynchroTable(), driverParams)) == nullptr) {
         jack_error("Cannot initialize driver");
-        JackMessageBuffer::Destroy();
-        return std::unexpected(Error::ServerFailure);
+        MessageBuffer::destroy();
+        return std::unexpected(Error::kServerFailure);
     }
 
-    if (!fRequestChannel.Open(fEngineControl->fServerName.data(), this)) {
+    if (!m_requestChannel.open(m_engineControl->m_serverName.data(), this)) {
         jack_error("Server channel open error");
-        fAudioDriver->Close();
-        JackMessageBuffer::Destroy();
-        return std::unexpected(Error::ServerFailure);
+        m_audioDriver->close();
+        MessageBuffer::destroy();
+        return std::unexpected(Error::kServerFailure);
     }
 
-    if (!fEngine->Open()) {
+    if (!m_engine->open()) {
         jack_error("Cannot open engine");
-        fRequestChannel.Close();
-        fAudioDriver->Close();
-        JackMessageBuffer::Destroy();
-        return std::unexpected(Error::ServerFailure);
+        m_requestChannel.close();
+        m_audioDriver->close();
+        MessageBuffer::destroy();
+        return std::unexpected(Error::kServerFailure);
     }
 
-    if (fFreewheelDriver->Open() < 0) {
+    if (m_freewheelDriver->open() < 0) {
         jack_error("Cannot open freewheel driver");
-        fEngine->Close();
-        fRequestChannel.Close();
-        fAudioDriver->Close();
-        JackMessageBuffer::Destroy();
-        return std::unexpected(Error::ServerFailure);
+        m_engine->close();
+        m_requestChannel.close();
+        m_audioDriver->close();
+        MessageBuffer::destroy();
+        return std::unexpected(Error::kServerFailure);
     }
 
-    if (fAudioDriver->Attach() < 0) {
+    if (m_audioDriver->attach() < 0) {
         jack_error("Cannot attach audio driver");
-        fFreewheelDriver->Close();
-        fEngine->Close();
-        fRequestChannel.Close();
-        fAudioDriver->Close();
-        JackMessageBuffer::Destroy();
-        return std::unexpected(Error::ServerFailure);
+        m_freewheelDriver->close();
+        m_engine->close();
+        m_requestChannel.close();
+        m_audioDriver->close();
+        MessageBuffer::destroy();
+        return std::unexpected(Error::kServerFailure);
     }
 
-    fFreewheelDriver->SetMaster(false);
-    fAudioDriver->SetMaster(true);
-    fAudioDriver->AddSlave(fFreewheelDriver);
-    init_time();
-    set_clock_source(fEngineControl->fClockSource);
+    m_freewheelDriver->setMaster(false);
+    m_audioDriver->setMaster(true);
+    m_audioDriver->addSlave(m_freewheelDriver);
+    initTime();
+    setClockSource(m_engineControl->m_clockSource);
     return { };
 }
 
-void JackServer::Close()
+void ServerCore::close()
 {
     jack_log("JackServer::Close");
-    fRequestChannel.Close();
-    fAudioDriver->Detach();
-    fAudioDriver->Close();
-    fFreewheelDriver->Close();
-    fEngine->Close();
+    m_requestChannel.close();
+    m_audioDriver->detach();
+    m_audioDriver->close();
+    m_freewheelDriver->close();
+    m_engine->close();
     // TODO: move that in reworked JackServerGlobals::Destroy()
-    JackMessageBuffer::Destroy();
-    end_time();
+    MessageBuffer::destroy();
+    endTime();
 }
 
-Result<void> JackServer::Start(bool freewheel)
+Result<void> ServerCore::start(bool freewheel)
 {
     jack_log("JackServer::Start freewheel = %d", freewheel);
     if (freewheel) {
         // Begin in freewheel mode with the sound card never started (SetFreewheel would stop it)
-        fFreewheel = true;
-        fEngine->NotifyFreewheel(true);
-        fAudioDriver->SetMaster(false);
-        fFreewheelDriver->SetMaster(true);
-        if (fThreadedFreewheelDriver->Start() < 0) {
-            return std::unexpected(Error::ServerFailure);
+        m_freewheel = true;
+        m_engine->notifyFreewheel(true);
+        m_audioDriver->setMaster(false);
+        m_freewheelDriver->setMaster(true);
+        if (m_threadedFreewheelDriver->start() < 0) {
+            return std::unexpected(Error::kServerFailure);
         }
-    } else if (fAudioDriver->Start() < 0) {
-        return std::unexpected(Error::ServerFailure);
+    } else if (m_audioDriver->start() < 0) {
+        return std::unexpected(Error::kServerFailure);
     }
-    return fRequestChannel.Start();
+    return m_requestChannel.start();
 }
 
-Result<void> JackServer::Stop()
+Result<void> ServerCore::stop()
 {
     jack_log("JackServer::Stop");
     std::int32_t res = -1;
 
-    if (fFreewheel) {
-        if (fThreadedFreewheelDriver) {
-            res = fThreadedFreewheelDriver->Stop();
+    if (m_freewheel) {
+        if (m_threadedFreewheelDriver) {
+            res = m_threadedFreewheelDriver->stop();
         }
     } else {
-        if (fAudioDriver) {
-            res = fAudioDriver->Stop();
+        if (m_audioDriver) {
+            res = m_audioDriver->stop();
         }
     }
 
-    fEngine->NotifyQuit();
-    fRequestChannel.Stop();
-    fEngine->NotifyFailure(JackFailure | JackServerError, kServerFailure);
+    m_engine->notifyQuit();
+    m_requestChannel.stop();
+    m_engine->notifyFailure(kFailure | kServerError, kServerFailure);
 
-    return DriverResult(res);
+    return driverResult(res);
 }
 
-bool JackServer::IsRunning()
+bool ServerCore::isRunning()
 {
     jack_log("JackServer::IsRunning");
     assert(fAudioDriver);
-    return fAudioDriver->IsRunning();
+    return m_audioDriver->isRunning();
 }
 
 //---------------------------
 // From request thread : API
 //---------------------------
 
-Result<void> JackServer::SetBufferSize(jack_nframes_t buffer_size)
+Result<void> ServerCore::setBufferSize(NframesC bufferSize)
 {
-    jack_log("JackServer::SetBufferSize nframes = %ld", buffer_size);
-    jack_nframes_t current_buffer_size = fEngineControl->fBufferSize;
+    jack_log("JackServer::SetBufferSize nframes = %ld", bufferSize);
+    NframesC currentBufferSize = m_engineControl->m_bufferSize;
 
-    if (current_buffer_size == buffer_size) {
+    if (currentBufferSize == bufferSize) {
         jack_log("SetBufferSize: requirement for new buffer size equals current value");
         return { };
     }
 
-    if (fAudioDriver->IsFixedBufferSize()) {
+    if (m_audioDriver->isFixedBufferSize()) {
         jack_log("SetBufferSize: driver only supports a fixed buffer size");
-        return std::unexpected(Error::InvalidState);
+        return std::unexpected(Error::kInvalidState);
     }
 
-    if (fAudioDriver->Stop() != 0) {
+    if (m_audioDriver->stop() != 0) {
         jack_error("Cannot stop audio driver");
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     }
 
-    if (fAudioDriver->SetBufferSize(buffer_size) == 0) {
-        fEngine->NotifyBufferSize(buffer_size);
-        return DriverResult(fAudioDriver->Start());
+    if (m_audioDriver->setBufferSize(bufferSize) == 0) {
+        m_engine->notifyBufferSize(bufferSize);
+        return driverResult(m_audioDriver->start());
     } else { // Failure: try to restore current value
-        jack_error("Cannot SetBufferSize for audio driver, restore current value %ld", current_buffer_size);
-        fAudioDriver->SetBufferSize(current_buffer_size);
-        fAudioDriver->Start();
+        jack_error("Cannot SetBufferSize for audio driver, restore current value %ld", currentBufferSize);
+        m_audioDriver->setBufferSize(currentBufferSize);
+        m_audioDriver->start();
         // SetBufferSize actually failed, so return an error...
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     }
 }
 
@@ -249,43 +249,43 @@ Result<void> JackServer::SetBufferSize(jack_nframes_t buffer_size)
 // Normal mode is restored with the connections state valid before freewheel mode was done. Thus one consider that
 // no graph state change can be done during freewheel mode.
 
-Result<void> JackServer::SetFreewheel(bool onoff)
+Result<void> ServerCore::setFreewheel(bool onoff)
 {
-    jack_log("JackServer::SetFreewheel is = %ld want = %ld", fFreewheel, onoff);
+    jack_log("JackServer::SetFreewheel is = %ld want = %ld", m_freewheel, onoff);
 
-    if (fFreewheel) {
+    if (m_freewheel) {
         if (onoff) {
-            return std::unexpected(Error::InvalidState);
+            return std::unexpected(Error::kInvalidState);
         } else {
-            fFreewheel = false;
-            fThreadedFreewheelDriver->Stop();
-            fGraphManager->Restore(&fConnectionState); // Restore connection state
-            fEngine->NotifyFreewheel(onoff);
-            fFreewheelDriver->SetMaster(false);
-            fAudioDriver->SetMaster(true);
-            return DriverResult(fAudioDriver->Start());
+            m_freewheel = false;
+            m_threadedFreewheelDriver->stop();
+            m_graphManager->restore(&m_connectionState); // Restore connection state
+            m_engine->notifyFreewheel(onoff);
+            m_freewheelDriver->setMaster(false);
+            m_audioDriver->setMaster(true);
+            return driverResult(m_audioDriver->start());
         }
     } else {
         if (onoff) {
-            fFreewheel = true;
-            fAudioDriver->Stop();
-            fGraphManager->Save(&fConnectionState); // Save connection state
+            m_freewheel = true;
+            m_audioDriver->stop();
+            m_graphManager->save(&m_connectionState); // Save connection state
             // Disconnect all slaves
-            std::list<JackDriverInterface*> slave_list = fAudioDriver->GetSlaves();
-            std::list<JackDriverInterface*>::const_iterator it;
-            for (it = slave_list.begin(); it != slave_list.end(); it++) {
-                JackDriver* slave = dynamic_cast<JackDriver*>(*it);
+            std::list<DriverInterface*> slaveList = m_audioDriver->getSlaves();
+            std::list<DriverInterface*>::const_iterator it;
+            for (it = slaveList.begin(); it != slaveList.end(); it++) {
+                Driver* slave = dynamic_cast<Driver*>(*it);
                 assert(slave);
-                fGraphManager->DisconnectAllPorts(slave->GetClientControl()->fRefNum);
+                m_graphManager->disconnectAllPorts(slave->getClientControl()->m_refNum);
             }
             // Disconnect master
-            fGraphManager->DisconnectAllPorts(fAudioDriver->GetClientControl()->fRefNum);
-            fEngine->NotifyFreewheel(onoff);
-            fAudioDriver->SetMaster(false);
-            fFreewheelDriver->SetMaster(true);
-            return DriverResult(fThreadedFreewheelDriver->Start());
+            m_graphManager->disconnectAllPorts(m_audioDriver->getClientControl()->m_refNum);
+            m_engine->notifyFreewheel(onoff);
+            m_audioDriver->setMaster(false);
+            m_freewheelDriver->setMaster(true);
+            return driverResult(m_threadedFreewheelDriver->start());
         } else {
-            return std::unexpected(Error::InvalidState);
+            return std::unexpected(Error::kInvalidState);
         }
     }
 }
@@ -294,16 +294,16 @@ Result<void> JackServer::SetFreewheel(bool onoff)
 // Coming from the RT thread
 //---------------------------
 
-void JackServer::Notify(std::int32_t refnum, std::int32_t notify, std::int32_t value)
+void ServerCore::notify(std::int32_t refnum, std::int32_t notify, std::int32_t value)
 {
     switch (notify) {
 
     case kGraphOrderCallback:
-        fEngine->NotifyGraphReorder();
+        m_engine->notifyGraphReorder();
         break;
 
     case kXRunCallback:
-        fEngine->NotifyClientXRun(refnum);
+        m_engine->notifyClientXRun(refnum);
         break;
     }
 }
@@ -316,34 +316,34 @@ void JackServer::Notify(std::int32_t refnum, std::int32_t notify, std::int32_t v
 // Transport management
 //----------------------
 
-Result<void> JackServer::ReleaseTimebase(std::int32_t refnum)
+Result<void> ServerCore::releaseTimebase(std::int32_t refnum)
 {
-    return fEngineControl->fTransport.ResetTimebase(refnum);
+    return m_engineControl->m_transport.resetTimebase(refnum);
 }
 
-Result<void> JackServer::SetTimebaseCallback(std::int32_t refnum, std::int32_t conditional)
+Result<void> ServerCore::setTimebaseCallback(std::int32_t refnum, std::int32_t conditional)
 {
-    return fEngineControl->fTransport.SetTimebaseMaster(refnum, conditional);
+    return m_engineControl->m_transport.setTimebaseMaster(refnum, conditional);
 }
 
-JackLockedEngine* JackServer::GetEngine()
+LockedEngine* ServerCore::getEngine()
 {
-    return fEngine.get();
+    return m_engine.get();
 }
 
-JackSynchro* JackServer::GetSynchroTable()
+Synchro* ServerCore::getSynchroTable()
 {
-    return fSynchroTable.data();
+    return m_synchroTable.data();
 }
 
-JackEngineControl* JackServer::GetEngineControl()
+EngineControl* ServerCore::getEngineControl()
 {
-    return fEngineControl.get();
+    return m_engineControl.get();
 }
 
-JackGraphManager* JackServer::GetGraphManager()
+GraphManager* ServerCore::getGraphManager()
 {
-    return fGraphManager;
+    return m_graphManager;
 }
 
 } // namespace jackmini

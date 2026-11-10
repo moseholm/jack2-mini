@@ -27,10 +27,10 @@
 namespace jackmini {
 
 typedef enum {
-    TransportCommandNone = 0,
-    TransportCommandStart = 1,
-    TransportCommandStop = 2,
-} transport_command_t;
+    kTransportCommandNone = 0,
+    kTransportCommandStart = 1,
+    kTransportCommandStop = 2,
+} TransportCommand;
 
 // \brief The client transport structure.
 //
@@ -82,99 +82,99 @@ typedef enum {
 // - release (client)
 // - transport stop (server)
 
-class JackClientInterface;
+class ClientInterface;
 
 
-class SERVER_EXPORT JackTransportEngine : public JackAtomicArrayState<jack_position_t> {
+class SERVER_EXPORT TransportEngine : public AtomicArrayState<PositionC> {
 
 private:
-    jack_transport_state_t fTransportState;
-    volatile transport_command_t fTransportCmd;
-    transport_command_t fPreviousCmd;  // previous transport_cmd
-    jack_time_t fSyncTimeout;
-    std::int32_t fSyncTimeLeft;
-    std::int32_t fTimeBaseMaster;
-    bool fPendingPos;
-    bool fNetworkSync;
-    bool fConditionnal;
-    alignas(SInt32) SInt32 fWriteCounter;
+    TransportStateC m_transportState;
+    volatile TransportCommand m_transportCmd;
+    TransportCommand m_previousCmd;  // previous transport_cmd
+    TimeC m_syncTimeout;
+    std::int32_t m_syncTimeLeft;
+    std::int32_t m_timeBaseMaster;
+    bool m_pendingPos;
+    bool m_networkSync;
+    bool m_conditionnal;
+    alignas(SInt32) SInt32 m_writeCounter;
 
-    bool CheckAllRolling(std::atomic<JackClientInterface*>* table);
-    void MakeAllStartingLocating(std::atomic<JackClientInterface*>* table);
-    void MakeAllStopping(std::atomic<JackClientInterface*>* table);
-    void MakeAllLocating(std::atomic<JackClientInterface*>* table);
+    bool checkAllRolling(std::atomic<ClientInterface*>* table);
+    void makeAllStartingLocating(std::atomic<ClientInterface*>* table);
+    void makeAllStopping(std::atomic<ClientInterface*>* table);
+    void makeAllLocating(std::atomic<ClientInterface*>* table);
 
-    void SyncTimeout(jack_nframes_t frame_rate, jack_nframes_t buffer_size);
+    void syncTimeout(NframesC frameRate, NframesC bufferSize);
 
 public:
-    JackTransportEngine();
+    TransportEngine();
 
-    ~JackTransportEngine()
+    ~TransportEngine()
     {
     }
 
-    void SetCommand(transport_command_t state)
+    void setCommand(TransportCommand state)
     {
-        fTransportCmd = state;
+        m_transportCmd = state;
     }
 
-    jack_transport_state_t GetState() const
+    TransportStateC getState() const
     {
-        return fTransportState;
+        return m_transportState;
     }
 
-    void SetState(jack_transport_state_t state)
+    void setState(TransportStateC state)
     {
-        fTransportState = state;
-    }
-
-    // \brief
-    Result<void> ResetTimebase(std::int32_t refnum);
-
-    // \brief
-    Result<void> SetTimebaseMaster(std::int32_t refnum, bool conditionnal);
-
-    void GetTimebaseMaster(std::int32_t& refnum, bool& conditionnal)
-    {
-        refnum = fTimeBaseMaster;
-        conditionnal = fConditionnal;
+        m_transportState = state;
     }
 
     // \brief
-    void CycleBegin(jack_nframes_t frame_rate, jack_time_t time);
+    Result<void> resetTimebase(std::int32_t refnum);
 
     // \brief
-    void CycleEnd(std::atomic<JackClientInterface*>* table, jack_nframes_t frame_rate, jack_nframes_t buffer_size);
+    Result<void> setTimebaseMaster(std::int32_t refnum, bool conditionnal);
+
+    void getTimebaseMaster(std::int32_t& refnum, bool& conditionnal)
+    {
+        refnum = m_timeBaseMaster;
+        conditionnal = m_conditionnal;
+    }
 
     // \brief
-    void SetSyncTimeout(jack_time_t timeout)
+    void cycleBegin(NframesC frameRate, TimeC time);
+
+    // \brief
+    void cycleEnd(std::atomic<ClientInterface*>* table, NframesC frameRate, NframesC bufferSize);
+
+    // \brief
+    void setSyncTimeout(TimeC timeout)
     {
-        fSyncTimeout = timeout;
+        m_syncTimeout = timeout;
     }
 
-    void ReadCurrentPos(jack_position_t* pos);
+    void readCurrentPos(PositionC* pos);
 
-    jack_unique_t GenerateUniqueID()
+    UniqueC generateUniqueID()
     {
-        return (jack_unique_t)INC_ATOMIC(&fWriteCounter);
+        return (UniqueC)INCATOMIC(&m_writeCounter);
     }
 
-    void RequestNewPos(jack_position_t* pos);
+    void requestNewPos(PositionC* pos);
 
-    jack_transport_state_t Query(jack_position_t* pos);
+    TransportStateC query(PositionC* pos);
 
-    jack_nframes_t GetCurrentFrame();
+    NframesC getCurrentFrame();
 
-    static void CopyPosition(jack_position_t* from, jack_position_t* to);
+    static void copyPosition(PositionC* from, PositionC* to);
 
-    bool GetNetworkSync() const
+    bool getNetworkSync() const
     {
-        return fNetworkSync;
+        return m_networkSync;
     }
 
-    void SetNetworkSync(bool sync)
+    void setNetworkSync(bool sync)
     {
-        fNetworkSync = sync;
+        m_networkSync = sync;
     }
 };
 

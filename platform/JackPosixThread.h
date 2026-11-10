@@ -29,53 +29,53 @@ inline constexpr std::int32_t kThreadStack = 524288;
 
 // \brief The POSIX thread base class.
 
-class SERVER_EXPORT JackPosixThread : public detail::JackThreadInterface {
+class SERVER_EXPORT PosixThread : public detail::ThreadInterface {
 
 protected:
-    jack_native_thread_t fThread;
-    static void* ThreadHandler(void* arg);
+    NativeThreadC m_thread;
+    static void* threadHandler(void* arg);
 
 public:
-    JackPosixThread(JackRunnableInterface* runnable, bool real_time, std::int32_t priority, std::int32_t cancellation)
-        : JackThreadInterface(runnable, priority, real_time, cancellation)
-        , fThread((jack_native_thread_t)nullptr)
+    PosixThread(RunnableInterface* runnable, bool realTime, std::int32_t priority, std::int32_t cancellation)
+        : ThreadInterface(runnable, priority, realTime, cancellation)
+        , m_thread((NativeThreadC)nullptr)
     {
     }
-    JackPosixThread(JackRunnableInterface* runnable, std::int32_t cancellation = PTHREAD_CANCEL_ASYNCHRONOUS)
-        : JackThreadInterface(runnable, 0, false, cancellation)
-        , fThread((jack_native_thread_t)nullptr)
+    PosixThread(RunnableInterface* runnable, std::int32_t cancellation = PTHREAD_CANCEL_ASYNCHRONOUS)
+        : ThreadInterface(runnable, 0, false, cancellation)
+        , m_thread((NativeThreadC)nullptr)
     {
     }
 
-    std::int32_t Start();
-    std::int32_t StartSync();
-    std::int32_t Kill();
-    std::int32_t Stop();
-    void Terminate();
+    std::int32_t start();
+    std::int32_t startSync();
+    std::int32_t kill();
+    std::int32_t stop();
+    void terminate();
 
-    std::int32_t AcquireRealTime(); // Used when called from another thread
-    std::int32_t AcquireSelfRealTime(); // Used when called from thread itself
+    std::int32_t acquireRealTime(); // Used when called from another thread
+    std::int32_t acquireSelfRealTime(); // Used when called from thread itself
 
-    std::int32_t AcquireRealTime(std::int32_t priority); // Used when called from another thread
-    std::int32_t AcquireSelfRealTime(std::int32_t priority); // Used when called from thread itself
+    std::int32_t acquireRealTime(std::int32_t priority); // Used when called from another thread
+    std::int32_t acquireSelfRealTime(std::int32_t priority); // Used when called from thread itself
 
-    std::int32_t DropRealTime(); // Used when called from another thread
-    std::int32_t DropSelfRealTime(); // Used when called from thread itself
+    std::int32_t dropRealTime(); // Used when called from another thread
+    std::int32_t dropSelfRealTime(); // Used when called from thread itself
 
-    jack_native_thread_t GetThreadID();
-    bool IsThread();
+    NativeThreadC getThreadID();
+    bool isThread();
 
-    static std::int32_t AcquireRealTimeImp(jack_native_thread_t thread, std::int32_t priority);
-    static std::int32_t AcquireRealTimeImp(jack_native_thread_t thread, std::int32_t priority, UInt64 period, UInt64 computation, UInt64 constraint)
+    static std::int32_t acquireRealTimeImp(NativeThreadC thread, std::int32_t priority);
+    static std::int32_t acquireRealTimeImp(NativeThreadC thread, std::int32_t priority, UInt64 period, UInt64 computation, UInt64 constraint)
     {
-        return JackPosixThread::AcquireRealTimeImp(thread, priority);
+        return PosixThread::acquireRealTimeImp(thread, priority);
     }
-    static std::int32_t DropRealTimeImp(jack_native_thread_t thread);
-    static std::int32_t StartImp(jack_native_thread_t* thread, std::int32_t priority, std::int32_t realtime, void* (*start_routine)(void*), void* arg);
-    static std::int32_t StopImp(jack_native_thread_t thread);
-    static std::int32_t KillImp(jack_native_thread_t thread);
+    static std::int32_t dropRealTimeImp(NativeThreadC thread);
+    static std::int32_t startImp(NativeThreadC* thread, std::int32_t priority, std::int32_t realtime, void* (*startRoutine)(void*), void* arg);
+    static std::int32_t stopImp(NativeThreadC thread);
+    static std::int32_t killImp(NativeThreadC thread);
 };
 
-SERVER_EXPORT void ThreadExit();
+SERVER_EXPORT void threadExit();
 
 } // namespace jackmini
