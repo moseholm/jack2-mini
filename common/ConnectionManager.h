@@ -37,7 +37,7 @@ template <std::int32_t SIZE>
 class FixedArray {
 
 private:
-    Int m_table[SIZE];
+    std::array<Int, SIZE> m_table;
     std::uint32_t m_counter;
 
 public:
@@ -93,7 +93,7 @@ public:
 
     const Int* getItems() const
     {
-        return m_table;
+        return m_table.data();
     }
 
     bool checkItem(Int index) const

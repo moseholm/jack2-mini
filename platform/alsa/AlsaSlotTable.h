@@ -17,6 +17,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <array>
 #include <atomic>
 #include <cstdint>
 
@@ -34,7 +35,7 @@ template <class T, size_t N>
 class AlsaSlotTable {
 
 private:
-    std::atomic<T*> m_slots[N];
+    std::array<std::atomic<T*>, N> m_slots;
 
     AlsaSlotTable(const AlsaSlotTable&);
     AlsaSlotTable& operator=(const AlsaSlotTable&);
