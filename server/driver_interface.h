@@ -29,15 +29,15 @@
 extern "C" {
 #endif
 
-#define JACK_DRIVER_NAME_MAX 15
-#define JACK_DRIVER_PARAM_NAME_MAX 15
-#define JACK_DRIVER_PARAM_STRING_MAX 127
-#define JACK_DRIVER_PARAM_DESC 255
-#define JACK_PATH_MAX 511
+inline constexpr std::int32_t kDriverNameMax = 15;
+inline constexpr std::int32_t kDriverParamNameMax = 15;
+inline constexpr std::int32_t kDriverParamStringMax = 127;
+inline constexpr std::int32_t kDriverParamDesc = 255;
+inline constexpr std::int32_t kPathMax = 511;
 
-#define JACK_CONSTRAINT_FLAG_RANGE ((std::uint32_t)1)  // < if set, constraint is a range (min-max)
-#define JACK_CONSTRAINT_FLAG_STRICT ((std::uint32_t)2)  // < if set, constraint is strict, i.e. supplying non-matching value will not work
-#define JACK_CONSTRAINT_FLAG_FAKE_VALUE ((std::uint32_t)4)  // < if set, values have no user meaningful meaning
+inline constexpr std::uint32_t kConstraintFlagRange = ((std::uint32_t)1); // < if set, constraint is a range (min-max)
+inline constexpr std::uint32_t kConstraintFlagStrict = ((std::uint32_t)2); // < if set, constraint is strict, i.e. supplying non-matching value will not work
+inline constexpr std::uint32_t kConstraintFlagFakeValue = ((std::uint32_t)4); // < if set, values have no user meaningful meaning
 
 // Driver parameter types
 typedef enum {
@@ -60,7 +60,7 @@ typedef union {
     std::uint32_t ui;
     std::int32_t i;
     char c;
-    std::array<char, JACK_DRIVER_PARAM_STRING_MAX + 1> str;
+    std::array<char, kDriverParamStringMax + 1> str;
 } jack_driver_param_value_t;
 
 typedef struct {
@@ -105,7 +105,7 @@ typedef struct {
 
 // A driver parameter descriptor
 typedef struct {
-    std::array<char, JACK_DRIVER_NAME_MAX + 1> name;  // < The parameter's name
+    std::array<char, kDriverNameMax + 1> name;  // < The parameter's name
     char character;  // < The parameter's character (for getopt, etc)
     jack_driver_param_type_t type;  // < The parameter's type
     jack_driver_param_value_t value;  // < The parameter's (default) value
@@ -122,10 +122,10 @@ typedef struct {
 
 // A struct for describing a jack driver
 typedef struct {
-    std::array<char, JACK_DRIVER_NAME_MAX + 1> name;  // < The driver's canonical name
+    std::array<char, kDriverNameMax + 1> name;  // < The driver's canonical name
     jack_driver_type_t type;  // < The driver's type
-    std::array<char, JACK_DRIVER_PARAM_DESC + 1> desc;  // < The driver's extended description
-    std::array<char, JACK_PATH_MAX + 1> file;  // < The filename of the driver's shared object file
+    std::array<char, kDriverParamDesc + 1> desc;  // < The driver's extended description
+    std::array<char, kPathMax + 1> file;  // < The filename of the driver's shared object file
     std::uint32_t nparams;  // < The number of parameters the driver has
     jack_driver_param_desc_t* params;  // < An array of parameter descriptors
 } jack_driver_desc_t;

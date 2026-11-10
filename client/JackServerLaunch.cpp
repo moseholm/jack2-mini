@@ -95,7 +95,7 @@ static void start_server_classic_aux(const char* server_name)
 {
     std::vector<std::string> words = SplitCommandLine(ReadJackdrc());
     if (words.empty()) {
-        words = SplitCommandLine(std::format("{}/jackd -T -d {}", JACK_LOCATION, JACK_DEFAULT_DRIVER));
+        words = SplitCommandLine(std::format("{}/jackd -T -d {}", JACK_LOCATION, kDefaultDriver));
     }
 
     // insert -T and -nserver_name in front of arguments
@@ -167,7 +167,7 @@ static std::int32_t start_server(const char* server_name, jack_options_t options
 static std::int32_t server_connect(const char* server_name)
 {
     JackClientSocket socket;
-    std::int32_t res = socket.Connect(jack_server_dir, server_name, 0);
+    std::int32_t res = socket.Connect(kServerDir, server_name, 0);
     socket.Close();
     sleep_microseconds(2000); // Added by JE - 02-01-2009 (gives
                               // the channel some time to close)

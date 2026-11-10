@@ -30,7 +30,7 @@ std::int32_t JackSocketNotifyChannel::Open(const char* name)
     jack_log("JackSocketNotifyChannel::Open name = %s", name);
 
     // Connect to client listen socket
-    if (fNotifySocket.Connect(jack_client_dir, name, 0) < 0) {
+    if (fNotifySocket.Connect(kClientDir, name, 0) < 0) {
         jack_error("Cannot connect client socket");
         return -1;
     }
@@ -46,7 +46,7 @@ std::int32_t JackSocketNotifyChannel::Attach(std::int32_t fd)
 std::int32_t JackSocketNotifyChannel::Start()
 {
     // Use a time out for notifications
-    fNotifySocket.SetReadTimeOut(SOCKET_TIME_OUT);
+    fNotifySocket.SetReadTimeOut(kSocketTimeOut);
 
     {
         std::lock_guard lock(fMutex);

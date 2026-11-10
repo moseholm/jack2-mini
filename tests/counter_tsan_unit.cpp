@@ -44,7 +44,7 @@ int main()
     set_clock_source(JACK_TIMER_SYSTEM_CLOCK);
 
     JackGraphManager* graph = JackGraphManager::Allocate(16);
-    JackSynchro* table = new JackSynchro[CLIENT_NUM];
+    JackSynchro* table = new JackSynchro[kClientNum];
 
     std::array<char, 64> name { };
     for (std::int32_t ref : { kInputRef, kOutputRef }) {

@@ -16,9 +16,9 @@
 
 #pragma once
 
-#define jack_server_dir "/dev/shm"
-#define jack_client_dir "/dev/shm"
-#define JACK_DEFAULT_DRIVER "alsa"
+inline constexpr const char* kServerDir = "/dev/shm";
+inline constexpr const char* kClientDir = "/dev/shm";
+inline constexpr const char* kDefaultDriver = "alsa";
 
 namespace jackmini {
 struct JackRequest;

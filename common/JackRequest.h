@@ -38,17 +38,17 @@
 
 namespace jackmini {
 
-#define JACK_CLIENT_NAME_SIZE_1 (JACK_CLIENT_NAME_SIZE + 1)
-#define JACK_MESSAGE_SIZE_1 (JACK_MESSAGE_SIZE + 1)
-#define JACK_PORT_NAME_SIZE_1 (JACK_PORT_NAME_SIZE + 1)
-#define JACK_PORT_TYPE_SIZE_1 (JACK_PORT_TYPE_SIZE + 1)
-#define REAL_JACK_PORT_NAME_SIZE_1 (REAL_JACK_PORT_NAME_SIZE + 1)
+inline constexpr std::int32_t kClientNameSize1 = (kClientNameSize + 1);
+inline constexpr std::int32_t kMessageSize1 = (kMessageSize + 1);
+inline constexpr std::int32_t kPortNameSize1 = (kPortNameSize + 1);
+inline constexpr std::int32_t kPortTypeSize1 = (kPortTypeSize + 1);
+inline constexpr std::int32_t kRealJackPortNameSize1 = (kRealJackPortNameSize + 1);
 
 #define CheckRes(exp)                                                                \
     {                                                                                \
         std::int32_t reserr = (exp);                                                          \
         if (reserr < 0) {                                                            \
-            if (reserr != JACK_REQUEST_ERR_ABORTED)                                  \
+            if (reserr != kRequestErrAborted)                                  \
                 jack_error("CheckRes error for " #exp "in %s", __PRETTY_FUNCTION__); \
             return reserr;                                                           \
         }                                                                            \
@@ -165,7 +165,7 @@ struct JackRequestImpl : JackRequest {
         // invalidate any more writes
         fPacketPos = -1;
         const std::int32_t err = SendJackMessage(trans, MakeJackMsgHeader(fType, TotalSize, fRequestId), fPacketData.data(), TotalSize);
-        if (err < 0 && err != JACK_REQUEST_ERR_ABORTED)
+        if (err < 0 && err != kRequestErrAborted)
             jack_error("JackRequestImpl::Write failed for type %d", fType);
         return err;
     }
@@ -249,9 +249,9 @@ inline std::int32_t ReadJackReply(detail::JackClientRequestInterface* socket, st
 
 // \brief CheckClient request.
 
-struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 + 3 * sizeof(std::int32_t) + sizeof(jack_uuid_t)> {
+struct JackClientCheckRequest : public JackRequestImpl<kClientNameSize1 + 3 * sizeof(std::int32_t) + sizeof(jack_uuid_t)> {
 
-    std::array<char, JACK_CLIENT_NAME_SIZE_1> fName;
+    std::array<char, kClientNameSize1> fName;
     std::int32_t fProtocol;
     std::int32_t fOptions;
     std::int32_t fOpen;
@@ -262,7 +262,7 @@ struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 +
         , fProtocol(0)
         , fOptions(0)
         , fOpen(0)
-        , fUUID(JACK_UUID_EMPTY_INITIALIZER)
+        , fUUID(kUuidEmptyInitializer)
     {
         memset(fName.data(), 0, sizeof(fName));
     }
@@ -305,7 +305,7 @@ struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 +
 
 struct JackClientCheckResult : public JackResult {
 
-    std::array<char, JACK_CLIENT_NAME_SIZE + 1> fName;
+    std::array<char, kClientNameSize + 1> fName;
     std::int32_t fStatus;
 
     JackClientCheckResult()
@@ -341,16 +341,16 @@ struct JackClientCheckResult : public JackResult {
 
 // \brief NewClient request.
 
-struct JackClientOpenRequest : public JackRequestImpl<sizeof(std::int32_t) + sizeof(jack_uuid_t) + JACK_CLIENT_NAME_SIZE_1> {
+struct JackClientOpenRequest : public JackRequestImpl<sizeof(std::int32_t) + sizeof(jack_uuid_t) + kClientNameSize1> {
 
     std::int32_t fPID;
     jack_uuid_t fUUID;
-    std::array<char, JACK_CLIENT_NAME_SIZE_1> fName;
+    std::array<char, kClientNameSize1> fName;
 
     JackClientOpenRequest()
         : JackRequestImpl(kClientOpen)
         , fPID(0)
-        , fUUID(JACK_UUID_EMPTY_INITIALIZER)
+        , fUUID(kUuidEmptyInitializer)
     {
         memset(fName.data(), 0, sizeof(fName));
     }
@@ -534,11 +534,11 @@ struct JackDeactivateRequest : public JackRequestImpl<sizeof(std::int32_t)> {
 
 // \brief PortRegister request.
 
-struct JackPortRegisterRequest : public JackRequestImpl<sizeof(std::int32_t) + JACK_PORT_NAME_SIZE_1 + JACK_PORT_TYPE_SIZE_1 + 2 * sizeof(std::uint32_t)> {
+struct JackPortRegisterRequest : public JackRequestImpl<sizeof(std::int32_t) + kPortNameSize1 + kPortTypeSize1 + 2 * sizeof(std::uint32_t)> {
 
     std::int32_t fRefNum;
-    std::array<char, JACK_PORT_NAME_SIZE_1> fName; // port short name
-    std::array<char, JACK_PORT_TYPE_SIZE_1> fPortType;
+    std::array<char, kPortNameSize1> fName; // port short name
+    std::array<char, kPortTypeSize1> fPortType;
     std::uint32_t fFlags;
     std::uint32_t fBufferSize;
 
@@ -594,7 +594,7 @@ struct JackPortRegisterResult : public JackResult {
 
     JackPortRegisterResult()
         : JackResult()
-        , fPortIndex(NO_PORT)
+        , fPortIndex(kNoPort)
     {
     }
 
@@ -650,11 +650,11 @@ struct JackPortUnRegisterRequest : public JackRequestImpl<sizeof(std::int32_t) +
 
 // \brief PortConnectName request.
 
-struct JackPortConnectNameRequest : public JackRequestImpl<sizeof(std::int32_t) + 2 * REAL_JACK_PORT_NAME_SIZE_1> {
+struct JackPortConnectNameRequest : public JackRequestImpl<sizeof(std::int32_t) + 2 * kRealJackPortNameSize1> {
 
     std::int32_t fRefNum;
-    std::array<char, REAL_JACK_PORT_NAME_SIZE_1> fSrc; // port full name
-    std::array<char, REAL_JACK_PORT_NAME_SIZE_1> fDst; // port full name
+    std::array<char, kRealJackPortNameSize1> fSrc; // port full name
+    std::array<char, kRealJackPortNameSize1> fDst; // port full name
 
     JackPortConnectNameRequest()
         : JackRequestImpl(kConnectNamePorts)
@@ -694,11 +694,11 @@ struct JackPortConnectNameRequest : public JackRequestImpl<sizeof(std::int32_t) 
 
 // \brief PortDisconnectName request.
 
-struct JackPortDisconnectNameRequest : public JackRequestImpl<sizeof(std::int32_t) + 2 * REAL_JACK_PORT_NAME_SIZE_1> {
+struct JackPortDisconnectNameRequest : public JackRequestImpl<sizeof(std::int32_t) + 2 * kRealJackPortNameSize1> {
 
     std::int32_t fRefNum;
-    std::array<char, REAL_JACK_PORT_NAME_SIZE_1> fSrc; // port full name
-    std::array<char, REAL_JACK_PORT_NAME_SIZE_1> fDst; // port full name
+    std::array<char, kRealJackPortNameSize1> fSrc; // port full name
+    std::array<char, kRealJackPortNameSize1> fDst; // port full name
 
     JackPortDisconnectNameRequest()
         : JackRequestImpl(kDisconnectNamePorts)
@@ -822,11 +822,11 @@ struct JackPortDisconnectRequest : public JackRequestImpl<sizeof(std::int32_t) +
 
 // \brief PortRename request.
 
-struct JackPortRenameRequest : public JackRequestImpl<sizeof(std::int32_t) + sizeof(jack_port_id_t) + JACK_PORT_NAME_SIZE_1> {
+struct JackPortRenameRequest : public JackRequestImpl<sizeof(std::int32_t) + sizeof(jack_port_id_t) + kPortNameSize1> {
 
     std::int32_t fRefNum;
     jack_port_id_t fPort;
-    std::array<char, JACK_PORT_NAME_SIZE_1> fName; // port short name
+    std::array<char, kPortNameSize1> fName; // port short name
 
     JackPortRenameRequest()
         : JackRequestImpl(kPortRename)
@@ -1023,10 +1023,8 @@ struct JackSetTimebaseCallbackRequest : public JackRequestImpl<sizeof(std::int32
 
 // \brief InternalClientLoad request.
 
-#ifndef MAX_PATH
-#define MAX_PATH 256
-#endif
-#define MAX_PATH_1 (MAX_PATH + 1)
+inline constexpr std::int32_t kMaxPath = 256;
+inline constexpr std::int32_t kMaxPath1 = (kMaxPath + 1);
 
 // \brief InternalClientLoad result.
 
@@ -1079,7 +1077,7 @@ struct JackClientNotificationRequest : public JackRequestImpl<3 * sizeof(std::in
 // \brief SessionNotify request.
 
 struct JackClientNameResult : public JackResult {
-    std::array<char, JACK_CLIENT_NAME_SIZE + 1> fName;
+    std::array<char, kClientNameSize + 1> fName;
 
     JackClientNameResult()
         : JackResult()
@@ -1109,7 +1107,7 @@ struct JackClientNameResult : public JackResult {
 };
 
 struct JackUUIDResult : public JackResult {
-    std::array<char, JACK_UUID_STRING_SIZE> fUUID;
+    std::array<char, kUuidStringSize> fUUID;
 
     JackUUIDResult()
         : JackResult()
@@ -1138,8 +1136,8 @@ struct JackUUIDResult : public JackResult {
     }
 };
 
-struct JackGetUUIDRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1> {
-    std::array<char, JACK_CLIENT_NAME_SIZE_1> fName;
+struct JackGetUUIDRequest : public JackRequestImpl<kClientNameSize1> {
+    std::array<char, kClientNameSize1> fName;
 
     JackGetUUIDRequest()
         : JackRequestImpl(kGetUUIDByClient)
@@ -1168,8 +1166,8 @@ struct JackGetUUIDRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1> {
     }
 };
 
-struct JackGetClientNameRequest : public JackRequestImpl<JACK_UUID_STRING_SIZE> {
-    std::array<char, JACK_UUID_STRING_SIZE> fUUID;
+struct JackGetClientNameRequest : public JackRequestImpl<kUuidStringSize> {
+    std::array<char, kUuidStringSize> fUUID;
 
     JackGetClientNameRequest()
         : JackRequestImpl(kGetClientByUUID)
@@ -1198,10 +1196,10 @@ struct JackGetClientNameRequest : public JackRequestImpl<JACK_UUID_STRING_SIZE> 
     }
 };
 
-struct JackReserveNameRequest : public JackRequestImpl<sizeof(std::int32_t) + JACK_CLIENT_NAME_SIZE_1 + JACK_UUID_STRING_SIZE> {
+struct JackReserveNameRequest : public JackRequestImpl<sizeof(std::int32_t) + kClientNameSize1 + kUuidStringSize> {
     std::int32_t fRefNum;
-    std::array<char, JACK_CLIENT_NAME_SIZE_1> fName;
-    std::array<char, JACK_UUID_STRING_SIZE> fUUID;
+    std::array<char, kClientNameSize1> fName;
+    std::array<char, kUuidStringSize> fUUID;
 
     JackReserveNameRequest()
         : JackRequestImpl(kReserveClientName)
@@ -1243,15 +1241,15 @@ struct JackReserveNameRequest : public JackRequestImpl<sizeof(std::int32_t) + JA
 // \brief ClientNotification.
 
 struct JackClientNotification {
-    static constexpr std::int32_t PayloadSize = (JACK_CLIENT_NAME_SIZE + 1) + 5 * sizeof(std::int32_t) + (JACK_MESSAGE_SIZE + 1);
+    static constexpr std::int32_t PayloadSize = (kClientNameSize + 1) + 5 * sizeof(std::int32_t) + (kMessageSize + 1);
 
-    std::array<char, JACK_CLIENT_NAME_SIZE + 1> fName;
+    std::array<char, kClientNameSize + 1> fName;
     std::int32_t fRefNum;
     std::int32_t fNotify;
     std::int32_t fValue1;
     std::int32_t fValue2;
     std::int32_t fSync;
-    std::array<char, JACK_MESSAGE_SIZE + 1> fMessage;
+    std::array<char, kMessageSize + 1> fMessage;
 
     JackClientNotification()
         : fRefNum(0)

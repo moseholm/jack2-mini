@@ -41,7 +41,7 @@ struct JackMsgHeader {
 static_assert(sizeof(JackMsgHeader) == 16);
 
 constexpr std::uint32_t kJackMsgMagic = 0x4a4d4e53; // "JMNS"
-constexpr std::uint16_t kJackMsgVersion = JACK_PROTOCOL_VERSION;
+constexpr std::uint16_t kJackMsgVersion = kProtocolVersion;
 constexpr std::int32_t kJackMsgProtocolError = 7; // jackmini::Error::Protocol (protocol.md section 7)
 // Largest payload of a message.  The frame is built on the stack, so nothing allocates on the way out: notifications
 // are sent from the realtime thread.

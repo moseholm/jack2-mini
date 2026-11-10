@@ -50,7 +50,7 @@ bool JackPort::Allocate(std::int32_t refnum, const char* port_name, const char* 
     fMonitorRequests = 0;
     fPlaybackLatency.min = fPlaybackLatency.max = 0;
     fCaptureLatency.min = fCaptureLatency.max = 0;
-    fTied = NO_PORT;
+    fTied = kNoPort;
     fAlias1[0] = '\0';
     fAlias2[0] = '\0';
     // DB: At this point we do not know current buffer size in frames,
@@ -74,7 +74,7 @@ void JackPort::Release()
     fMonitorRequests = 0;
     fPlaybackLatency.min = fPlaybackLatency.max = 0;
     fCaptureLatency.min = fCaptureLatency.max = 0;
-    fTied = NO_PORT;
+    fTied = kNoPort;
     fAlias1[0] = '\0';
     fAlias2[0] = '\0';
 }
@@ -148,7 +148,7 @@ std::int32_t JackPort::Tie(jack_port_id_t port_index)
 
 std::int32_t JackPort::UnTie()
 {
-    fTied = NO_PORT;
+    fTied = kNoPort;
     return 0;
 }
 
@@ -224,7 +224,7 @@ void JackPort::SetName(const char* new_name)
 
 bool JackPort::NameEquals(std::string_view target)
 {
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> buf { };
+    std::array<char, kRealJackPortNameSize + 1> buf { };
 
     // this nasty, nasty kludge is here because between 0.109.0 and 0.109.1,
     // the ALSA audio backend had the name "ALSA", whereas as before and
@@ -247,12 +247,12 @@ std::int32_t JackPort::GetAliases(char* const aliases[2])
     std::int32_t cnt = 0;
 
     if (fAlias1[0] != '\0') {
-        CopyCString(std::span<char>(aliases[0], REAL_JACK_PORT_NAME_SIZE), fAlias1.data());
+        CopyCString(std::span<char>(aliases[0], kRealJackPortNameSize), fAlias1.data());
         cnt++;
     }
 
     if (fAlias2[0] != '\0') {
-        CopyCString(std::span<char>(aliases[1], REAL_JACK_PORT_NAME_SIZE), fAlias2.data());
+        CopyCString(std::span<char>(aliases[1], kRealJackPortNameSize), fAlias2.data());
         cnt++;
     }
 

@@ -49,14 +49,14 @@ public:
     void Init()
     {
         for (std::int32_t i = 0; i < SIZE; i++)
-            fTable[i] = EMPTY;
+            fTable[i] = kEmpty;
         fCounter = 0;
     }
 
     bool AddItem(jack_int_t index)
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            if (fTable[i] == EMPTY) {
+            if (fTable[i] == kEmpty) {
                 fTable[i] = index;
                 fCounter++;
                 return true;
@@ -72,13 +72,13 @@ public:
                 fCounter--;
                 // Shift all indexes
                 if (i == SIZE - 1) {
-                    fTable[i] = EMPTY;
+                    fTable[i] = kEmpty;
                 } else {
                     std::int32_t j;
-                    for (j = i; j <= SIZE - 2 && fTable[j] != EMPTY; j++) {
+                    for (j = i; j <= SIZE - 2 && fTable[j] != kEmpty; j++) {
                         fTable[j] = fTable[j + 1];
                     }
-                    fTable[j] = EMPTY;
+                    fTable[j] = kEmpty;
                 }
                 return true;
             }
@@ -88,7 +88,7 @@ public:
 
     jack_int_t GetItem(jack_int_t index) const
     {
-        return (index < SIZE) ? fTable[index] : EMPTY;
+        return (index < SIZE) ? fTable[index] : kEmpty;
     }
 
     const jack_int_t* GetItems() const
@@ -98,7 +98,7 @@ public:
 
     bool CheckItem(jack_int_t index) const
     {
-        for (std::int32_t i = 0; i < SIZE && fTable[i] != EMPTY; i++) {
+        for (std::int32_t i = 0; i < SIZE && fTable[i] != kEmpty; i++) {
             if (fTable[i] == index)
                 return true;
         }
@@ -196,7 +196,7 @@ public:
         std::int32_t i, j;
 
         for (i = 0; i < SIZE; i++)
-            output[i] = EMPTY;
+            output[i] = kEmpty;
 
         for (i = 0, j = 0; i < SIZE; i++) {
             if (fTable[index][i] > 0) {
@@ -215,7 +215,7 @@ public:
 
     bool IsInsideTable(jack_int_t index, jack_int_t* output) const
     {
-        for (std::int32_t i = 0; i < SIZE && output[i] != EMPTY; i++) {
+        for (std::int32_t i = 0; i < SIZE && output[i] != kEmpty; i++) {
             if (output[i] == index)
                 return true;
         }
@@ -242,7 +242,7 @@ private:
     bool AddConnectionAux(std::int32_t ref1, std::int32_t ref2)
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            if (fTable[i][0] == EMPTY) {
+            if (fTable[i][0] == kEmpty) {
                 fTable[i][0] = ref1;
                 fTable[i][1] = ref2;
                 fTable[i][2] = 1;
@@ -259,8 +259,8 @@ private:
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
             if (fTable[i][0] == ref1 && fTable[i][1] == ref2) {
-                fTable[i][0] = EMPTY;
-                fTable[i][1] = EMPTY;
+                fTable[i][0] = kEmpty;
+                fTable[i][1] = kEmpty;
                 fTable[i][2] = 0;
                 jack_log("JackLoopFeedback::RemoveConnectionAux ref1 = %ld ref2 = %ld", ref1, ref2);
                 return true;
@@ -291,8 +291,8 @@ public:
     void Init()
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            fTable[i][0] = EMPTY;
-            fTable[i][1] = EMPTY;
+            fTable[i][0] = kEmpty;
+            fTable[i][1] = kEmpty;
             fTable[i][2] = 0;
         }
     }
@@ -372,13 +372,13 @@ struct JackClientTiming {
 class SERVER_EXPORT JackConnectionManager {
 
 private:
-    std::array<JackFixedArray<CONNECTION_NUM_FOR_PORT>, PORT_NUM_MAX> fConnection;  // Connection matrix: list of connected ports for a given port: needed to compute Mix buffer
-    std::array<JackFixedArray1<PORT_NUM_FOR_CLIENT>, CLIENT_NUM> fInputPort;  // Table of input port per refnum : to find a refnum for a given port
-    std::array<JackFixedArray<PORT_NUM_FOR_CLIENT>, CLIENT_NUM> fOutputPort;  // Table of output port per refnum : to find a refnum for a given port
-    JackFixedMatrix<CLIENT_NUM> fConnectionRef;  // Table of port connections by (refnum , refnum)
-    alignas(UInt32) alignas(JackActivationCount) std::array<JackActivationCount, CLIENT_NUM> fInputCounter;  // Activation counter per refnum
-    std::array<UInt32, CLIENT_NUM> fInactive;  // 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed
-    JackLoopFeedback<CONNECTION_NUM_FOR_PORT> fLoopFeedback;  // Loop feedback connections
+    std::array<JackFixedArray<kConnectionNumForPort>, kPortNumMax> fConnection;  // Connection matrix: list of connected ports for a given port: needed to compute Mix buffer
+    std::array<JackFixedArray1<kPortNumForClient>, kClientNum> fInputPort;  // Table of input port per refnum : to find a refnum for a given port
+    std::array<JackFixedArray<kPortNumForClient>, kClientNum> fOutputPort;  // Table of output port per refnum : to find a refnum for a given port
+    JackFixedMatrix<kClientNum> fConnectionRef;  // Table of port connections by (refnum , refnum)
+    alignas(UInt32) alignas(JackActivationCount) std::array<JackActivationCount, kClientNum> fInputCounter;  // Activation counter per refnum
+    std::array<UInt32, kClientNum> fInactive;  // 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed
+    JackLoopFeedback<kConnectionNumForPort> fLoopFeedback;  // Loop feedback connections
 
     bool IsLoopPathAux(std::int32_t ref1, std::int32_t ref2) const;
 
@@ -399,7 +399,7 @@ public:
 
     jack_port_id_t GetPort(jack_port_id_t port_index, std::int32_t connection) const
     {
-        assert(connection < CONNECTION_NUM_FOR_PORT);
+        assert(connection < kConnectionNumForPort);
         return (jack_port_id_t)fConnection[port_index].GetItem(connection);
     }
 

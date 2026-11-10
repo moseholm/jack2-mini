@@ -37,8 +37,8 @@ using namespace std;
 
 namespace jackmini {
 
-#define DEFAULT_TMP_DIR "/tmp"
-std::string jack_tmpdir = DEFAULT_TMP_DIR;
+static constexpr const char* kDefaultTmpDir = "/tmp";
+std::string jack_tmpdir = kDefaultTmpDir;
 
 void JackTools::KillServer()
 {
@@ -66,7 +66,7 @@ const char* JackTools::DefaultServerName()
 {
     const char* server_name;
     if ((server_name = getenv("JACK_DEFAULT_SERVER")) == nullptr) {
-        server_name = JACK_DEFAULT_SERVER_NAME;
+        server_name = kDefaultServerName;
     }
     return server_name;
 }
@@ -74,7 +74,7 @@ const char* JackTools::DefaultServerName()
 // returns the name of the per-user subdirectory of jack_tmpdir
 const char* JackTools::UserDir()
 {
-    static char user_dir[JACK_PATH_MAX + 1] = "";
+    static char user_dir[kPathMax + 1] = "";
 
     // format the path name on the first call
     if (user_dir[0] == '\0') {
@@ -94,13 +94,13 @@ const char* JackTools::ServerDir(const char* server_name, char* server_dir)
     // format the path name into the suppled server_dir char array,
     // assuming that server_dir is at least as large as JACK_PATH_MAX + 1
 
-    jackmini::FormatCString(std::span<char>(server_dir, JACK_PATH_MAX + 1), "{}/{}", UserDir(), server_name);
+    jackmini::FormatCString(std::span<char>(server_dir, kPathMax + 1), "{}/{}", UserDir(), server_name);
     return server_dir;
 }
 
 void JackTools::CleanupFiles(const char* server_name)
 {
-    std::array<char, JACK_PATH_MAX + 1> dir_name { };
+    std::array<char, kPathMax + 1> dir_name { };
     ServerDir(server_name, dir_name.data());
 
     // On termination, we remove all files that jackd creates so
@@ -154,7 +154,7 @@ std::int32_t JackTools::GetTmpdir()
 {
     FILE* in;
     size_t len;
-    std::array<char, JACK_PATH_MAX + 2> buf { };  // allow tmpdir to live anywhere, plus newline, plus null
+    std::array<char, kPathMax + 2> buf { };  // allow tmpdir to live anywhere, plus newline, plus null
 
     if ((in = popen("jackd -l", "r")) == nullptr) {
         return -1;

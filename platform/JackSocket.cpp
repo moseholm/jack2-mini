@@ -33,7 +33,7 @@ namespace jackmini {
 
 static void BuildName(const char* client_name, char* res, const char* dir, std::int32_t which, std::int32_t size, bool promiscuous)
 {
-    std::array<char, SYNC_MAX_NAME_SIZE + 1> ext_client_name;
+    std::array<char, kSyncMaxNameSize + 1> ext_client_name;
     JackTools::RewriteName(client_name, ext_client_name.data());
     const std::string_view ext_name = ext_client_name.data();
     const auto end = promiscuous
@@ -150,7 +150,7 @@ std::int32_t JackClientSocket::Read(void* data, std::int32_t len)
             }
             if (errno == 0 || errno == ENOTCONN) {
                 // aborted reading due to shutdown
-                return JACK_REQUEST_ERR_ABORTED;
+                return kRequestErrAborted;
             }
             jack_error("Cannot read socket fd = %d err = %s", fSocket, strerror(errno));
             return -1;
@@ -181,7 +181,7 @@ std::int32_t JackClientSocket::Write(void* data, std::int32_t len)
             }
             if (errno == 0 || errno == ENOTCONN) {
                 // aborted reading due to shutdown
-                return JACK_REQUEST_ERR_ABORTED;
+                return kRequestErrAborted;
             }
             jack_error("Cannot write socket fd = %ld err = %s", fSocket, strerror(errno));
             return -1;
@@ -220,7 +220,7 @@ std::int32_t JackClientSocket::ReadWithFds(void* data, std::int32_t len, std::ve
     }
     if (*got == 0) {
         // The peer closed the connection.
-        return JACK_REQUEST_ERR_ABORTED;
+        return kRequestErrAborted;
     }
     // The descriptors arrived with the first bytes; the rest is plain data.
     return Read(static_cast<std::uint8_t*>(data) + *got, len - static_cast<std::int32_t>(*got));

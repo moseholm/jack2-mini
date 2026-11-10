@@ -183,7 +183,7 @@ void JackMessageBufferAdd(std::int32_t level, const char* message)
 {
     if (jackmini::JackMessageBuffer::fInstance == nullptr) {
         // Unable to print message with realtime safety. Complain and print it anyway.
-        jack_log_direct(LOG_LEVEL_ERROR, "messagebuffer not initialized, skip message");
+        jack_log_direct(kLogLevelError, "messagebuffer not initialized, skip message");
     } else {
         // scan at most one buffer's worth, so an unterminated input cannot run away
         const char* end = std::char_traits<char>::find(message, jackmini::MB_BUFFERSIZE, '\0');

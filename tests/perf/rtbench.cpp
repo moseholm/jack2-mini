@@ -19,9 +19,9 @@
 
 using namespace jackmini;
 
-#define MAXS 400000
-static std::array<std::int64_t, MAXS> starts;
-static std::array<std::int64_t, MAXS> ends;
+static constexpr std::int32_t kMaxs = 400000;
+static std::array<std::int64_t, kMaxs> starts;
+static std::array<std::int64_t, kMaxs> ends;
 static std::atomic<std::uint64_t> nsamples { 0 }, nxruns { 0 };
 static Port in, out;
 static Client* jack_handle;
@@ -42,7 +42,7 @@ static bool process(const Cycle& cycle)
     auto x = jack_handle->audio_buffer(in);
     std::memcpy(o.data(), x.data(), sizeof(float) * nframes);
     std::int64_t e = now_ns();
-    if (i < MAXS) {
+    if (i < kMaxs) {
         starts[i] = s;
         ends[i] = e;
     }
@@ -101,8 +101,8 @@ int main(std::int32_t argc, char** argv)
     client->deactivate();
 
     std::uint64_t n = nsamples.load();
-    if (n > MAXS) {
-        n = MAXS;
+    if (n > kMaxs) {
+        n = kMaxs;
     }
     std::vector<std::int64_t> iv(n > 0 ? n - 1 : 0), du(n);
     for (std::uint64_t i = 1; i < n; i++) {

@@ -45,7 +45,7 @@ private:
     JackGraphManager* fGraphManager;
     JackEngineControl* fEngineControl;
     char fSelfConnectMode;
-    std::array<std::atomic<JackClientInterface*>, CLIENT_NUM> fClientTable;
+    std::array<std::atomic<JackClientInterface*>, kClientNum> fClientTable;
     // Set by client open and close, cleared by the engine thread, which owns the rolling CPU statistics
     std::atomic<bool> fRollingResetPending;
     JackSynchro* fSynchroTable;
@@ -91,7 +91,7 @@ private:
 
     bool CheckClient(std::int32_t refnum)
     {
-        return (refnum >= 0 && refnum < CLIENT_NUM && fClientTable[refnum] != nullptr);
+        return (refnum >= 0 && refnum < kClientNum && fClientTable[refnum] != nullptr);
     }
 
     Result<bool> CheckPortsConnect(std::int32_t refnum, jack_port_id_t src, jack_port_id_t dst);

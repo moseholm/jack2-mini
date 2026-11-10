@@ -25,7 +25,7 @@ namespace jackmini {
 
 // use 512KB stack per thread - the default is way too high to be feasible
 // with mlockall() on many systems
-#define THREAD_STACK 524288
+inline constexpr std::int32_t kThreadStack = 524288;
 
 // \brief The POSIX thread base class.
 

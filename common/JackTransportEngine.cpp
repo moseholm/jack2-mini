@@ -91,7 +91,7 @@ Result<void> JackTransportEngine::SetTimebaseMaster(std::int32_t refnum, bool co
 // RT
 bool JackTransportEngine::CheckAllRolling(std::atomic<JackClientInterface*>* table)
 {
-    for (std::int32_t i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = GetEngineControl()->fDriverNum; i < kClientNum; i++) {
         JackClientInterface* client = table[i];
         if (client && client->GetClientControl()->fTransportState != JackTransportRolling) {
             jack_log("CheckAllRolling ref = %ld is not rolling", i);
@@ -105,7 +105,7 @@ bool JackTransportEngine::CheckAllRolling(std::atomic<JackClientInterface*>* tab
 // RT
 void JackTransportEngine::MakeAllStartingLocating(std::atomic<JackClientInterface*>* table)
 {
-    for (std::int32_t i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = GetEngineControl()->fDriverNum; i < kClientNum; i++) {
         JackClientInterface* client = table[i];
         if (client) {
             JackClientControl* control = client->GetClientControl();
@@ -121,7 +121,7 @@ void JackTransportEngine::MakeAllStartingLocating(std::atomic<JackClientInterfac
 // RT
 void JackTransportEngine::MakeAllStopping(std::atomic<JackClientInterface*>* table)
 {
-    for (std::int32_t i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = GetEngineControl()->fDriverNum; i < kClientNum; i++) {
         JackClientInterface* client = table[i];
         if (client) {
             JackClientControl* control = client->GetClientControl();
@@ -136,7 +136,7 @@ void JackTransportEngine::MakeAllStopping(std::atomic<JackClientInterface*>* tab
 // RT
 void JackTransportEngine::MakeAllLocating(std::atomic<JackClientInterface*>* table)
 {
-    for (std::int32_t i = GetEngineControl()->fDriverNum; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = GetEngineControl()->fDriverNum; i < kClientNum; i++) {
         JackClientInterface* client = table[i];
         if (client) {
             JackClientControl* control = client->GetClientControl();

@@ -75,7 +75,7 @@ void TestHeaderLayout()
 {
     CHECK(sizeof(JackMsgHeader) == 16);
     CHECK(kJackMsgMagic == 0x4a4d4e53);
-    CHECK(kJackMsgVersion == JACK_PROTOCOL_VERSION);
+    CHECK(kJackMsgVersion == kProtocolVersion);
 }
 
 void TestRoundTrip()

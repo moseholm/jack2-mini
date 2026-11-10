@@ -41,10 +41,25 @@
 typedef std::uint32_t _bitset_word_t;
 typedef _bitset_word_t* bitset_t;
 
-#define WORD_SIZE(cardinality) (1 + ((cardinality) + 31) / 32)
-#define BYTE_SIZE(cardinality) (WORD_SIZE(cardinality) * sizeof(_bitset_word_t))
-#define WORD_INDEX(element) (1 + (element) / 32)
-#define BIT_INDEX(element) ((element) & 037)
+constexpr std::uint32_t wordSize(std::uint32_t cardinality)
+{
+    return 1 + (cardinality + 31) / 32;
+}
+
+constexpr std::size_t byteSize(std::uint32_t cardinality)
+{
+    return wordSize(cardinality) * sizeof(_bitset_word_t);
+}
+
+constexpr std::uint32_t wordIndex(std::uint32_t element)
+{
+    return 1 + element / 32;
+}
+
+constexpr std::uint32_t bitIndex(std::uint32_t element)
+{
+    return element & 037;
+}
 
 static inline void
 bitset_add(bitset_t set, std::uint32_t element)
@@ -52,21 +67,21 @@ bitset_add(bitset_t set, std::uint32_t element)
     assert(element < set
                [0]);
     set
-        [WORD_INDEX(element)] |= (1 << BIT_INDEX(element));
+        [wordIndex(element)] |= (1 << bitIndex(element));
 }
 
 static inline void
 bitset_copy(bitset_t to_set, bitset_t from_set)
 {
     assert(to_set[0] == from_set[0]);
-    memcpy(to_set, from_set, BYTE_SIZE(to_set[0]));
+    memcpy(to_set, from_set, byteSize(to_set[0]));
 }
 
 static inline void
 bitset_create(bitset_t* set, std::uint32_t cardinality)
 {
     *set
-        = (bitset_t)calloc(WORD_SIZE(cardinality),
+        = (bitset_t)calloc(wordSize(cardinality),
             sizeof(_bitset_word_t));
     assert(*set);
     *set
@@ -88,7 +103,7 @@ bitset_empty(bitset_t set)
 {
     std::int32_t i;
     _bitset_word_t result = 0;
-    std::int32_t nwords = WORD_SIZE(set
+    std::int32_t nwords = wordSize(set
             [0]);
     for (i = 1; i < nwords; i++) {
         result |= set
@@ -102,7 +117,7 @@ bitset_contains(bitset_t set, std::uint32_t element)
 {
     assert(element < set
                [0]);
-    return (0 != (set[WORD_INDEX(element)] & (1 << BIT_INDEX(element))));
+    return (0 != (set[wordIndex(element)] & (1 << bitIndex(element))));
 }
 
 static inline void
@@ -111,5 +126,5 @@ bitset_remove(bitset_t set, std::uint32_t element)
     assert(element < set
                [0]);
     set
-        [WORD_INDEX(element)] &= ~(1 << BIT_INDEX(element));
+        [wordIndex(element)] &= ~(1 << bitIndex(element));
 }

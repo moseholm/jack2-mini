@@ -79,9 +79,9 @@ std::int32_t JackAudioDriver::Open(jack_nframes_t buffer_size,
     fCaptureChannels = inchannels;
     fPlaybackChannels = outchannels;
     fWithMonitorPorts = monitor;
-    memset(fCapturePortList.data(), 0, sizeof(jack_port_id_t) * DRIVER_PORT_NUM);
-    memset(fPlaybackPortList.data(), 0, sizeof(jack_port_id_t) * DRIVER_PORT_NUM);
-    memset(fMonitorPortList.data(), 0, sizeof(jack_port_id_t) * DRIVER_PORT_NUM);
+    memset(fCapturePortList.data(), 0, sizeof(jack_port_id_t) * kDriverPortNum);
+    memset(fPlaybackPortList.data(), 0, sizeof(jack_port_id_t) * kDriverPortNum);
+    memset(fMonitorPortList.data(), 0, sizeof(jack_port_id_t) * kDriverPortNum);
     return JackDriver::Open(buffer_size, samplerate, capturing, playing, inchannels, outchannels,
         monitor, capture_driver_name, playback_driver_name, capture_latency, playback_latency);
 }
@@ -116,8 +116,8 @@ std::int32_t JackAudioDriver::Attach()
 {
     JackPort* port;
     jack_port_id_t port_index;
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> name { };
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias { };
+    std::array<char, kRealJackPortNameSize + 1> name { };
+    std::array<char, kRealJackPortNameSize + 1> alias { };
     std::int32_t i;
 
     jack_log("JackAudioDriver::Attach fBufferSize = %ld fSampleRate = %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
@@ -125,7 +125,7 @@ std::int32_t JackAudioDriver::Attach()
     for (i = 0; i < fCaptureChannels; i++) {
         jackmini::FormatCString(alias, "{}:{}:out{}", fAliasName.data(), fCaptureDriverName.data(), i + 1);
         jackmini::FormatCString(name, "{}:capture_{}", fClientControl.fName.data(), i + 1);
-        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, CaptureDriverFlags, fEngineControl->fBufferSize, &port_index)) {
+        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), kDefaultAudioType, kCaptureDriverFlags, fEngineControl->fBufferSize, &port_index)) {
             jack_error("driver: cannot register port for %s", name.data());
             return -1;
         }
@@ -138,7 +138,7 @@ std::int32_t JackAudioDriver::Attach()
     for (i = 0; i < fPlaybackChannels; i++) {
         jackmini::FormatCString(alias, "{}:{}:in{}", fAliasName.data(), fPlaybackDriverName.data(), i + 1);
         jackmini::FormatCString(name, "{}:playback_{}", fClientControl.fName.data(), i + 1);
-        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index)) {
+        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), kDefaultAudioType, kPlaybackDriverFlags, fEngineControl->fBufferSize, &port_index)) {
             jack_error("driver: cannot register port for %s", name.data());
             return -1;
         }
@@ -151,7 +151,7 @@ std::int32_t JackAudioDriver::Attach()
         if (fWithMonitorPorts) {
             jack_log("Create monitor port");
             jackmini::FormatCString(name, "{}:monitor_{}", fClientControl.fName.data(), i + 1);
-            if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, fEngineControl->fBufferSize, &port_index)) {
+            if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), kDefaultAudioType, JackPortIsOutput, fEngineControl->fBufferSize, &port_index)) {
                 jack_error("Cannot register monitor port for %s", name.data());
                 return -1;
             } else {

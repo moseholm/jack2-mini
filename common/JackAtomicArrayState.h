@@ -74,17 +74,41 @@ struct AtomicArrayCounter {
     }
 };
 
-#define Counter1(e) (e).info.fLongVal
-#define GetIndex1(e, state) ((e).info.scounter.fByteVal[state])
-#define SetIndex1(e, state, val) ((e).info.scounter.fByteVal[state] = val)
-#define IncIndex1(e, state) ((e).info.scounter.fByteVal[state]++)
-#define SwapIndex1(e, state) (((e).info.scounter.fByteVal[0] == state) ? 0 : state)
+template <typename T>
+constexpr auto& longVal1(T&& e)
+{
+    return e.info.fLongVal;
+}
+
+template <typename T>
+constexpr auto& getIndex1(T&& e, std::int32_t state)
+{
+    return e.info.scounter.fByteVal[state];
+}
+
+template <typename T>
+constexpr void setIndex1(T&& e, std::int32_t state, std::uint8_t val)
+{
+    e.info.scounter.fByteVal[state] = val;
+}
+
+template <typename T>
+constexpr void incIndex1(T&& e, std::int32_t state)
+{
+    e.info.scounter.fByteVal[state]++;
+}
+
+template <typename T>
+constexpr std::int32_t swapIndex1(T&& e, std::int32_t state)
+{
+    return (e.info.scounter.fByteVal[0] == state) ? 0 : state;
+}
 
 // \brief Loads a shared counter atomically.  Every read of the counter goes through this.
 static inline AtomicArrayCounter LoadCounter1(const AtomicArrayCounter& counter)
 {
     AtomicArrayCounter result;
-    Counter1(result) = std::atomic_ref<UInt32>(const_cast<UInt32&>(counter.info.fLongVal)).load();
+    longVal1(result) = std::atomic_ref<UInt32>(const_cast<UInt32&>(counter.info.fLongVal)).load();
     return result;
 }
 
@@ -140,12 +164,12 @@ protected:
         do {
             old_val = LoadCounter1(fCounter);
             new_val = old_val;
-            *result = GetIndex1(new_val, state);
-            cur_index = GetIndex1(new_val, 0);
-            next_index = SwapIndex1(old_val, state);
-            need_copy = (GetIndex1(new_val, state) == 0); // Written = false, switch just occurred
-            SetIndex1(new_val, state, 0); // Written = false, invalidate state
-        } while (!CAS(Counter1(old_val), Counter1(new_val), (UInt32*)&fCounter));
+            *result = getIndex1(new_val, state);
+            cur_index = getIndex1(new_val, 0);
+            next_index = swapIndex1(old_val, state);
+            need_copy = (getIndex1(new_val, state) == 0); // Written = false, switch just occurred
+            setIndex1(new_val, state, 0); // Written = false, invalidate state
+        } while (!CAS(longVal1(old_val), longVal1(new_val), (UInt32*)&fCounter));
         if (need_copy)
             memcpy(&fState[next_index], &fState[cur_index], sizeof(T));
         return next_index;
@@ -158,8 +182,8 @@ protected:
         do {
             old_val = LoadCounter1(fCounter);
             new_val = old_val;
-            SetIndex1(new_val, state, 1); // Written = true, state becomes "switchable"
-        } while (!CAS(Counter1(old_val), Counter1(new_val), (UInt32*)&fCounter));
+            setIndex1(new_val, state, 1); // Written = true, state becomes "switchable"
+        } while (!CAS(longVal1(old_val), longVal1(new_val), (UInt32*)&fCounter));
     }
 
 public:
@@ -168,7 +192,7 @@ public:
         static_assert(offsetof(JackAtomicArrayState, fCounter) % sizeof(fCounter) == 0,
             "fCounter must be aligned within JackAtomicArrayState");
         assert(reinterpret_cast<std::uintptr_t>(&fCounter) % alignof(UInt32) == 0);
-        Counter1(fCounter) = 0;
+        longVal1(fCounter) = 0;
     }
 
     ~JackAtomicArrayState() // Not virtual ??
@@ -179,14 +203,14 @@ public:
 
     T* ReadCurrentState()
     {
-        return &fState[GetIndex1(LoadCounter1(fCounter), 0)];
+        return &fState[getIndex1(LoadCounter1(fCounter), 0)];
     }
 
     // \brief Returns the current switch counter
 
     UInt16 GetCurrentIndex()
     {
-        return GetIndex1(LoadCounter1(fCounter), 3);
+        return getIndex1(LoadCounter1(fCounter), 3);
     }
 
     // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
@@ -198,13 +222,13 @@ public:
         do {
             old_val = LoadCounter1(fCounter);
             new_val = old_val;
-            if (GetIndex1(new_val, state)) { // If state has been written
-                SetIndex1(new_val, 0, SwapIndex1(new_val, state)); // Prepare switch
-                SetIndex1(new_val, state, 0); // Invalidate the state "state"
-                IncIndex1(new_val, 3); // Inc switch
+            if (getIndex1(new_val, state)) { // If state has been written
+                setIndex1(new_val, 0, swapIndex1(new_val, state)); // Prepare switch
+                setIndex1(new_val, state, 0); // Invalidate the state "state"
+                incIndex1(new_val, 3); // Inc switch
             }
-        } while (!CAS(Counter1(old_val), Counter1(new_val), (UInt32*)&fCounter));
-        return &fState[GetIndex1(LoadCounter1(fCounter), 0)]; // Read the counter again
+        } while (!CAS(longVal1(old_val), longVal1(new_val), (UInt32*)&fCounter));
+        return &fState[getIndex1(LoadCounter1(fCounter), 0)]; // Read the counter again
     }
 
     // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
@@ -216,13 +240,13 @@ public:
         do {
             old_val = LoadCounter1(fCounter);
             new_val = old_val;
-            if ((*result = GetIndex1(new_val, state))) { // If state has been written
-                SetIndex1(new_val, 0, SwapIndex1(new_val, state)); // Prepare switch
-                SetIndex1(new_val, state, 0); // Invalidate the state "state"
-                IncIndex1(new_val, 3); // Inc switch
+            if ((*result = getIndex1(new_val, state))) { // If state has been written
+                setIndex1(new_val, 0, swapIndex1(new_val, state)); // Prepare switch
+                setIndex1(new_val, state, 0); // Invalidate the state "state"
+                incIndex1(new_val, 3); // Inc switch
             }
-        } while (!CAS(Counter1(old_val), Counter1(new_val), (UInt32*)&fCounter));
-        return &fState[GetIndex1(LoadCounter1(fCounter), 0)]; // Read the counter again
+        } while (!CAS(longVal1(old_val), longVal1(new_val), (UInt32*)&fCounter));
+        return &fState[getIndex1(LoadCounter1(fCounter), 0)]; // Read the counter again
     }
 
     // \brief Start write operation : setup and returns the next state to update, check for recursive write calls.

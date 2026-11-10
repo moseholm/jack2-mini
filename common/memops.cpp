@@ -70,28 +70,28 @@
 //
 // So, for now (October 2008) we use 2^(N-1)-1 as the scaling factor.
 
-#define SAMPLE_32BIT_SCALING 2147483647.0
-#define SAMPLE_24BIT_SCALING 8388607.0f
-#define SAMPLE_16BIT_SCALING 32767.0f
+static constexpr double kSample32BitScaling = 2147483647.0;
+static constexpr float kSample24BitScaling = 8388607.0f;
+static constexpr float kSample16BitScaling = 32767.0f;
 
 // these are just values to use if the floating point value was out of range
 //
 // advice from Fons Adriaensen: make the limits symmetrical
 
-#define SAMPLE_32BIT_MAX 2147483647
-#define SAMPLE_32BIT_MIN -2147483647
-#define SAMPLE_32BIT_MAX_D 2147483647.0
-#define SAMPLE_32BIT_MIN_D -2147483647.0
+static constexpr std::int32_t kSample32BitMax = 2147483647;
+static constexpr std::int32_t kSample32BitMin = -2147483647;
+static constexpr double kSample32BitMaxD = 2147483647.0;
+static constexpr double kSample32BitMinD = -2147483647.0;
 
-#define SAMPLE_24BIT_MAX 8388607
-#define SAMPLE_24BIT_MIN -8388607
-#define SAMPLE_24BIT_MAX_F 8388607.0f
-#define SAMPLE_24BIT_MIN_F -8388607.0f
+static constexpr std::int32_t kSample24BitMax = 8388607;
+static constexpr std::int32_t kSample24BitMin = -8388607;
+static constexpr float kSample24BitMaxF = 8388607.0f;
+static constexpr float kSample24BitMinF = -8388607.0f;
 
-#define SAMPLE_16BIT_MAX 32767
-#define SAMPLE_16BIT_MIN -32767
-#define SAMPLE_16BIT_MAX_F 32767.0f
-#define SAMPLE_16BIT_MIN_F -32767.0f
+static constexpr std::int32_t kSample16BitMax = 32767;
+static constexpr std::int32_t kSample16BitMin = -32767;
+static constexpr float kSample16BitMaxF = 32767.0f;
+static constexpr float kSample16BitMinF = -32767.0f;
 
 // these mark the outer edges of the range considered "within" range
 // for a floating point sample value. values outside (and on the boundaries)
@@ -99,92 +99,119 @@
 // range will be scaled to appropriate values for the target sample
 // type.
 
-#define NORMALIZED_FLOAT_MIN -1.0f
-#define NORMALIZED_FLOAT_MAX 1.0f
+static constexpr float kNormalizedFloatMin = -1.0f;
+static constexpr float kNormalizedFloatMax = 1.0f;
 
 // define this in case we end up on a platform that is missing
 // the real lrintf functions
 
-#define f_round(f) lrintf(f)
-#define d_round(f) lrint(f)
+inline std::int64_t fRound(float f)
+{
+    return lrintf(f);
+}
 
-#define float_16(s, d)                             \
-    if ((s) <= NORMALIZED_FLOAT_MIN) {             \
-        (d) = SAMPLE_16BIT_MIN;                    \
-    } else if ((s) >= NORMALIZED_FLOAT_MAX) {      \
-        (d) = SAMPLE_16BIT_MAX;                    \
-    } else {                                       \
-        (d) = f_round((s) * SAMPLE_16BIT_SCALING); \
+inline std::int64_t dRound(double d)
+{
+    return lrint(d);
+}
+
+template <typename S, typename D>
+inline void float16(S s, D& d)
+{
+    if (s <= kNormalizedFloatMin) {
+        d = kSample16BitMin;
+    } else if (s >= kNormalizedFloatMax) {
+        d = kSample16BitMax;
+    } else {
+        d = fRound(s * kSample16BitScaling);
     }
+}
 
 // call this when "s" has already been scaled (e.g. when dithering)
 
-#define float_16_scaled(s, d)               \
-    if ((s) <= SAMPLE_16BIT_MIN_F) {        \
-        (d) = SAMPLE_16BIT_MIN_F;           \
-    } else if ((s) >= SAMPLE_16BIT_MAX_F) { \
-        (d) = SAMPLE_16BIT_MAX;             \
-    } else {                                \
-        (d) = f_round((s));                 \
+template <typename S, typename D>
+inline void float16Scaled(S s, D& d)
+{
+    if (s <= kSample16BitMinF) {
+        d = kSample16BitMinF;
+    } else if (s >= kSample16BitMaxF) {
+        d = kSample16BitMax;
+    } else {
+        d = fRound(s);
     }
+}
 
-#define float_24u32(s, d)                               \
-    if ((s) <= NORMALIZED_FLOAT_MIN) {                  \
-        (d) = SAMPLE_24BIT_MIN << 8;                    \
-    } else if ((s) >= NORMALIZED_FLOAT_MAX) {           \
-        (d) = SAMPLE_24BIT_MAX << 8;                    \
-    } else {                                            \
-        (d) = f_round((s) * SAMPLE_24BIT_SCALING) << 8; \
+template <typename S, typename D>
+inline void float24u32(S s, D& d)
+{
+    if (s <= kNormalizedFloatMin) {
+        d = kSample24BitMin << 8;
+    } else if (s >= kNormalizedFloatMax) {
+        d = kSample24BitMax << 8;
+    } else {
+        d = fRound(s * kSample24BitScaling) << 8;
     }
+}
 
-#define float_24l32(s, d)                          \
-    if ((s) <= NORMALIZED_FLOAT_MIN) {             \
-        (d) = SAMPLE_24BIT_MIN;                    \
-    } else if ((s) >= NORMALIZED_FLOAT_MAX) {      \
-        (d) = SAMPLE_24BIT_MAX;                    \
-    } else {                                       \
-        (d) = f_round((s) * SAMPLE_24BIT_SCALING); \
+template <typename S, typename D>
+inline void float24l32(S s, D& d)
+{
+    if (s <= kNormalizedFloatMin) {
+        d = kSample24BitMin;
+    } else if (s >= kNormalizedFloatMax) {
+        d = kSample24BitMax;
+    } else {
+        d = fRound(s * kSample24BitScaling);
     }
+}
 
-#define float_32(s, d)                                \
-    do {                                              \
-        double clipped = fmin(NORMALIZED_FLOAT_MAX,   \
-            fmax((double)(s), NORMALIZED_FLOAT_MIN)); \
-        double scaled = clipped * SAMPLE_32BIT_MAX_D; \
-        (d) = d_round(scaled);                        \
-    } while (0)
+template <typename S, typename D>
+inline void float32(S s, D& d)
+{
+    double clipped = fmin(kNormalizedFloatMax, fmax((double)s, kNormalizedFloatMin));
+    double scaled = clipped * kSample32BitMaxD;
+    d = dRound(scaled);
+}
 
 // call this when "s" has already been scaled (e.g. when dithering)
 
-#define float_24u32_scaled(s, d)            \
-    if ((s) <= SAMPLE_24BIT_MIN_F) {        \
-        (d) = SAMPLE_24BIT_MIN << 8;        \
-    } else if ((s) >= SAMPLE_24BIT_MAX_F) { \
-        (d) = SAMPLE_24BIT_MAX << 8;        \
-    } else {                                \
-        (d) = f_round((s)) << 8;            \
+template <typename S, typename D>
+inline void float24u32Scaled(S s, D& d)
+{
+    if (s <= kSample24BitMinF) {
+        d = kSample24BitMin << 8;
+    } else if (s >= kSample24BitMaxF) {
+        d = kSample24BitMax << 8;
+    } else {
+        d = fRound(s) << 8;
     }
+}
 
-#define float_24(s, d)                             \
-    if ((s) <= NORMALIZED_FLOAT_MIN) {             \
-        (d) = SAMPLE_24BIT_MIN;                    \
-    } else if ((s) >= NORMALIZED_FLOAT_MAX) {      \
-        (d) = SAMPLE_24BIT_MAX;                    \
-    } else {                                       \
-        (d) = f_round((s) * SAMPLE_24BIT_SCALING); \
+template <typename S, typename D>
+inline void float24(S s, D& d)
+{
+    if (s <= kNormalizedFloatMin) {
+        d = kSample24BitMin;
+    } else if (s >= kNormalizedFloatMax) {
+        d = kSample24BitMax;
+    } else {
+        d = fRound(s * kSample24BitScaling);
     }
+}
 
 // call this when "s" has already been scaled (e.g. when dithering)
 
-#define float_24_scaled(s, d)               \
-    if ((s) <= SAMPLE_24BIT_MIN_F) {        \
-        (d) = SAMPLE_24BIT_MIN;             \
-    } else if ((s) >= SAMPLE_24BIT_MAX_F) { \
-        (d) = SAMPLE_24BIT_MAX;             \
-    } else {                                \
-        (d) = f_round((s));                 \
+template <typename S, typename D>
+inline void float24Scaled(S s, D& d)
+{
+    if (s <= kSample24BitMinF) {
+        d = kSample24BitMin;
+    } else if (s >= kSample24BitMaxF) {
+        d = kSample24BitMax;
+    } else {
+        d = fRound(s);
     }
-
+}
 
 #if defined(__SSE2__)
 
@@ -212,7 +239,7 @@ static inline __m128i float_24_sse(__m128 s)
     const __m128 lower_bound = _mm_sub_ps(_mm_setzero_ps(), upper_bound);
 
     __m128 clipped = clip(s, lower_bound, upper_bound);
-    __m128 scaled = _mm_mul_ps(clipped, _mm_set1_ps(SAMPLE_24BIT_SCALING));
+    __m128 scaled = _mm_mul_ps(clipped, _mm_set1_ps(kSample24BitScaling));
     return _mm_cvtps_epi32(scaled);
 }
 #endif
@@ -240,31 +267,31 @@ static inline int32x4_t round_to_int_neon(float32x4_t scaled)
 // The 32-bit kernels' SSE path truncates (_mm_cvttps_epi32), so the NEON path of d32u24 does too.
 static inline int32x4_t float_24_trunc_neon(float32x4_t s)
 {
-    const float32x4_t upper_bound = vdupq_n_f32(NORMALIZED_FLOAT_MAX);
-    const float32x4_t lower_bound = vdupq_n_f32(NORMALIZED_FLOAT_MIN);
+    const float32x4_t upper_bound = vdupq_n_f32(kNormalizedFloatMax);
+    const float32x4_t lower_bound = vdupq_n_f32(kNormalizedFloatMin);
 
     float32x4_t clipped = clip(s, lower_bound, upper_bound);
-    float32x4_t scaled = vmulq_f32(clipped, vdupq_n_f32(SAMPLE_24BIT_SCALING));
+    float32x4_t scaled = vmulq_f32(clipped, vdupq_n_f32(kSample24BitScaling));
     return vcvtq_s32_f32(scaled);
 }
 
 static inline int32x4_t float_24_neon(float32x4_t s)
 {
-    const float32x4_t upper_bound = vdupq_n_f32(NORMALIZED_FLOAT_MAX);
-    const float32x4_t lower_bound = vdupq_n_f32(NORMALIZED_FLOAT_MIN);
+    const float32x4_t upper_bound = vdupq_n_f32(kNormalizedFloatMax);
+    const float32x4_t lower_bound = vdupq_n_f32(kNormalizedFloatMin);
 
     float32x4_t clipped = clip(s, lower_bound, upper_bound);
-    float32x4_t scaled = vmulq_f32(clipped, vdupq_n_f32(SAMPLE_24BIT_SCALING));
+    float32x4_t scaled = vmulq_f32(clipped, vdupq_n_f32(kSample24BitScaling));
     return round_to_int_neon(scaled);
 }
 
 static inline int16x4_t float_16_neon(float32x4_t s)
 {
-    const float32x4_t upper_bound = vdupq_n_f32(NORMALIZED_FLOAT_MAX);
-    const float32x4_t lower_bound = vdupq_n_f32(NORMALIZED_FLOAT_MIN);
+    const float32x4_t upper_bound = vdupq_n_f32(kNormalizedFloatMax);
+    const float32x4_t lower_bound = vdupq_n_f32(kNormalizedFloatMin);
 
     float32x4_t clipped = clip(s, lower_bound, upper_bound);
-    float32x4_t scaled = vmulq_f32(clipped, vdupq_n_f32(SAMPLE_16BIT_SCALING));
+    float32x4_t scaled = vmulq_f32(clipped, vdupq_n_f32(kSample16BitScaling));
     return vmovn_s32(round_to_int_neon(scaled));
 }
 #endif
@@ -330,7 +357,7 @@ void sample_move_d32_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::
 {
     while (nsamples--) {
         std::int32_t z;
-        float_32(*src, z);
+        float32(*src, z);
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         dst[0] = static_cast<std::byte>(z >> 24);
         dst[1] = static_cast<std::byte>(z >> 16);
@@ -350,7 +377,7 @@ void sample_move_d32_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::
 void sample_move_d32_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
     while (nsamples--) {
-        float_32(*src, *(std::int32_t*)dst);
+        float32(*src, *(std::int32_t*)dst);
         dst += dst_skip;
         src++;
     }
@@ -388,7 +415,7 @@ void sample_move_d32u24_sSs(std::byte* dst, jack_default_audio_sample_t* src, st
 
     while (nsamples--) {
 
-        float_24u32(*src, z);
+        float24u32(*src, z);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         dst[0] = static_cast<std::byte>(z >> 24);
@@ -409,7 +436,7 @@ void sample_move_d32u24_sSs(std::byte* dst, jack_default_audio_sample_t* src, st
 void sample_move_d32u24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
 #if defined(__SSE2__)
-    __m128 int_max = _mm_set1_ps(SAMPLE_24BIT_MAX_F);
+    __m128 int_max = _mm_set1_ps(kSample24BitMaxF);
     __m128 int_min = _mm_sub_ps(_mm_setzero_ps(), int_max);
     __m128 factor = int_max;
 
@@ -486,14 +513,14 @@ void sample_move_d32u24_sS(std::byte* dst, jack_default_audio_sample_t* src, std
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     // The same clip and truncation as the SSE tail above, so the tail agrees with the vector part.
     while (nsamples--) {
-        const float scaled = fminf(SAMPLE_24BIT_MAX_F, fmaxf(*src * SAMPLE_24BIT_MAX_F, -SAMPLE_24BIT_MAX_F));
+        const float scaled = fminf(kSample24BitMaxF, fmaxf(*src * kSample24BitMaxF, -kSample24BitMaxF));
         *((std::int32_t*)dst) = ((std::int32_t)scaled) << 8;
         dst += dst_skip;
         src++;
     }
 #elif !defined(__SSE2__)
     while (nsamples--) {
-        float_24u32(*src, *((std::int32_t*)dst));
+        float24u32(*src, *((std::int32_t*)dst));
         dst += dst_skip;
         src++;
     }
@@ -503,7 +530,7 @@ void sample_move_d32u24_sS(std::byte* dst, jack_default_audio_sample_t* src, std
 void sample_move_dS_s32u24s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
-    float32x4_t factor = vdupq_n_f32(1.0 / SAMPLE_24BIT_SCALING);
+    float32x4_t factor = vdupq_n_f32(1.0 / kSample24BitScaling);
     std::uint64_t unrolled = nsamples / 4;
     while (unrolled--) {
         int32x4_t src128;
@@ -535,7 +562,7 @@ void sample_move_dS_s32u24s(jack_default_audio_sample_t* dst, std::byte* src, st
 
     // ALERT: signed sign-extension portability !!!
 
-    const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_24BIT_SCALING;
+    const jack_default_audio_sample_t scaling = 1.0 / kSample24BitScaling;
 
     while (nsamples--) {
         std::int32_t x;
@@ -566,7 +593,7 @@ void sample_move_dS_s32u24(jack_default_audio_sample_t* dst, std::byte* src, std
 {
 #if defined(__SSE2__)
     std::uint64_t unrolled = nsamples / 4;
-    static float inv_sample_max_24bit = 1.0 / SAMPLE_24BIT_SCALING;
+    static float inv_sample_max_24bit = 1.0 / kSample24BitScaling;
     __m128 factor = _mm_set1_ps(inv_sample_max_24bit);
     while (unrolled--) {
         std::int32_t i1 = *((std::int32_t*)src);
@@ -591,7 +618,7 @@ void sample_move_dS_s32u24(jack_default_audio_sample_t* dst, std::byte* src, std
     nsamples = nsamples & 3;
 #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
     std::uint64_t unrolled = nsamples / 4;
-    float32x4_t factor = vdupq_n_f32(1.0 / SAMPLE_24BIT_SCALING);
+    float32x4_t factor = vdupq_n_f32(1.0 / kSample24BitScaling);
     while (unrolled--) {
         int32x4_t src128;
         switch (src_skip) {
@@ -621,7 +648,7 @@ void sample_move_dS_s32u24(jack_default_audio_sample_t* dst, std::byte* src, std
 
     // ALERT: signed sign-extension portability !!!
 
-    const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_24BIT_SCALING;
+    const jack_default_audio_sample_t scaling = 1.0 / kSample24BitScaling;
     while (nsamples--) {
         *dst = (*((std::int32_t*)src) >> 8) * scaling;
         dst++;
@@ -660,7 +687,7 @@ void sample_move_d32l24_sSs(std::byte* dst, jack_default_audio_sample_t* src, st
 
     while (nsamples--) {
 
-        float_24l32(*src, z);
+        float24l32(*src, z);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         dst[0] = static_cast<std::byte>(z >> 24);
@@ -681,7 +708,7 @@ void sample_move_d32l24_sSs(std::byte* dst, jack_default_audio_sample_t* src, st
 void sample_move_d32l24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
 #if defined(__SSE2__)
-    __m128 int_max = _mm_set1_ps(SAMPLE_24BIT_MAX_F);
+    __m128 int_max = _mm_set1_ps(kSample24BitMaxF);
     __m128 int_min = _mm_sub_ps(_mm_setzero_ps(), int_max);
     __m128 factor = int_max;
 
@@ -754,7 +781,7 @@ void sample_move_d32l24_sS(std::byte* dst, jack_default_audio_sample_t* src, std
 
 #if !defined(__SSE2__)
     while (nsamples--) {
-        float_24l32(*src, *((std::int32_t*)dst));
+        float24l32(*src, *((std::int32_t*)dst));
         dst += dst_skip;
         src++;
     }
@@ -763,7 +790,7 @@ void sample_move_d32l24_sS(std::byte* dst, jack_default_audio_sample_t* src, std
 
 void sample_move_dS_s32s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
-    const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_32BIT_SCALING;
+    const jack_default_audio_sample_t scaling = 1.0 / kSample32BitScaling;
     while (nsamples--) {
         std::int32_t x;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -793,7 +820,7 @@ void sample_move_dS_s32s(jack_default_audio_sample_t* dst, std::byte* src, std::
 void sample_move_dS_s32l24s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
-    float32x4_t factor = vdupq_n_f32(1.0 / SAMPLE_24BIT_SCALING);
+    float32x4_t factor = vdupq_n_f32(1.0 / kSample24BitScaling);
     std::uint64_t unrolled = nsamples / 4;
     while (unrolled--) {
         uint32x4_t src128;
@@ -826,7 +853,7 @@ void sample_move_dS_s32l24s(jack_default_audio_sample_t* dst, std::byte* src, st
 
     // ALERT: signed sign-extension portability !!!
 
-    const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_24BIT_SCALING;
+    const jack_default_audio_sample_t scaling = 1.0 / kSample24BitScaling;
 
     while (nsamples--) {
         std::int32_t x;
@@ -855,7 +882,7 @@ void sample_move_dS_s32l24s(jack_default_audio_sample_t* dst, std::byte* src, st
 
 void sample_move_dS_s32(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
-    const double scaling = 1.0 / SAMPLE_32BIT_SCALING;
+    const double scaling = 1.0 / kSample32BitScaling;
     while (nsamples--) {
         std::int32_t val = (*((std::int32_t*)src));
         double extended = val * scaling;
@@ -869,7 +896,7 @@ void sample_move_dS_s32l24(jack_default_audio_sample_t* dst, std::byte* src, std
 {
 #if defined(__SSE2__)
     std::uint64_t unrolled = nsamples / 4;
-    static float inv_sample_max_24bit = 1.0 / SAMPLE_24BIT_SCALING;
+    static float inv_sample_max_24bit = 1.0 / kSample24BitScaling;
     __m128 factor = _mm_set1_ps(inv_sample_max_24bit);
     while (unrolled--) {
         std::int32_t i1 = *((std::int32_t*)src);
@@ -893,7 +920,7 @@ void sample_move_dS_s32l24(jack_default_audio_sample_t* dst, std::byte* src, std
     nsamples = nsamples & 3;
 #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
     std::uint64_t unrolled = nsamples / 4;
-    float32x4_t factor = vdupq_n_f32(1.0 / SAMPLE_24BIT_SCALING);
+    float32x4_t factor = vdupq_n_f32(1.0 / kSample24BitScaling);
     while (unrolled--) {
         uint32x4_t src128;
         switch (src_skip) {
@@ -925,7 +952,7 @@ void sample_move_dS_s32l24(jack_default_audio_sample_t* dst, std::byte* src, std
 
     // ALERT: signed sign-extension portability !!!
 
-    const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_24BIT_SCALING;
+    const jack_default_audio_sample_t scaling = 1.0 / kSample24BitScaling;
     while (nsamples--) {
         std::uint32_t val = (*((std::uint32_t*)src));
         if (val & 0x800000u)
@@ -960,7 +987,7 @@ void sample_move_d24_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::
     std::int32_t z;
 
     while (nsamples--) {
-        float_24(*src, z);
+        float24(*src, z);
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         dst[0] = static_cast<std::byte>(z >> 16);
         dst[1] = static_cast<std::byte>(z >> 8);
@@ -1030,7 +1057,7 @@ void sample_move_d24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::u
     std::int32_t z;
 
     while (nsamples--) {
-        float_24(*src, z);
+        float24(*src, z);
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         memcpy(dst, &z, 3);
 #elif __BYTE_ORDER == __BIG_ENDIAN
@@ -1043,7 +1070,7 @@ void sample_move_d24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::u
 
 void sample_move_dS_s24s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
-    const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_24BIT_SCALING;
+    const jack_default_audio_sample_t scaling = 1.0 / kSample24BitScaling;
 
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     // we shift 8 to the right by dividing by 256.0 -> no sign extra handling
@@ -1109,7 +1136,7 @@ void sample_move_dS_s24s(jack_default_audio_sample_t* dst, std::byte* src, std::
 
 void sample_move_dS_s24(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
-    const jack_default_audio_sample_t scaling = 1.f / SAMPLE_24BIT_SCALING;
+    const jack_default_audio_sample_t scaling = 1.f / kSample24BitScaling;
 
 #if defined(__SSE2__)
     const __m128 scaling_block = _mm_set_ps1(scaling);
@@ -1206,12 +1233,12 @@ void sample_move_d16_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::
     while (nsamples--) {
         // float_16 (*src, tmp);
 
-        if (*src <= NORMALIZED_FLOAT_MIN) {
-            tmp = SAMPLE_16BIT_MIN;
-        } else if (*src >= NORMALIZED_FLOAT_MAX) {
-            tmp = SAMPLE_16BIT_MAX;
+        if (*src <= kNormalizedFloatMin) {
+            tmp = kSample16BitMin;
+        } else if (*src >= kNormalizedFloatMax) {
+            tmp = kSample16BitMax;
         } else {
-            tmp = (std::int16_t)f_round(*src * SAMPLE_16BIT_SCALING);
+            tmp = (std::int16_t)fRound(*src * kSample16BitScaling);
         }
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -1252,7 +1279,7 @@ void sample_move_d16_sS(std::byte* dst, jack_default_audio_sample_t* src, std::u
     }
 #endif
     while (nsamples--) {
-        float_16(*src, *((std::int16_t*)dst));
+        float16(*src, *((std::int16_t*)dst));
         dst += dst_skip;
         src++;
     }
@@ -1264,8 +1291,8 @@ void sample_move_dither_rect_d16_sSs(std::byte* dst, jack_default_audio_sample_t
     std::int16_t tmp;
 
     while (nsamples--) {
-        val = (*src * SAMPLE_16BIT_SCALING) + fast_rand() / (float)UINT_MAX - 0.5f;
-        float_16_scaled(val, tmp);
+        val = (*src * kSample16BitScaling) + fast_rand() / (float)UINT_MAX - 0.5f;
+        float16Scaled(val, tmp);
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         dst[0] = static_cast<std::byte>(tmp >> 8);
         dst[1] = static_cast<std::byte>(tmp);
@@ -1283,8 +1310,8 @@ void sample_move_dither_rect_d16_sS(std::byte* dst, jack_default_audio_sample_t*
     jack_default_audio_sample_t val;
 
     while (nsamples--) {
-        val = (*src * SAMPLE_16BIT_SCALING) + fast_rand() / (float)UINT_MAX - 0.5f;
-        float_16_scaled(val, *((std::int16_t*)dst));
+        val = (*src * kSample16BitScaling) + fast_rand() / (float)UINT_MAX - 0.5f;
+        float16Scaled(val, *((std::int16_t*)dst));
         dst += dst_skip;
         src++;
     }
@@ -1296,8 +1323,8 @@ void sample_move_dither_tri_d16_sSs(std::byte* dst, jack_default_audio_sample_t*
     std::int16_t tmp;
 
     while (nsamples--) {
-        val = (*src * SAMPLE_16BIT_SCALING) + ((float)fast_rand() + (float)fast_rand()) / (float)UINT_MAX - 1.0f;
-        float_16_scaled(val, tmp);
+        val = (*src * kSample16BitScaling) + ((float)fast_rand() + (float)fast_rand()) / (float)UINT_MAX - 1.0f;
+        float16Scaled(val, tmp);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         dst[0] = static_cast<std::byte>(tmp >> 8);
@@ -1316,8 +1343,8 @@ void sample_move_dither_tri_d16_sS(std::byte* dst, jack_default_audio_sample_t* 
     jack_default_audio_sample_t val;
 
     while (nsamples--) {
-        val = (*src * SAMPLE_16BIT_SCALING) + ((float)fast_rand() + (float)fast_rand()) / (float)UINT_MAX - 1.0f;
-        float_16_scaled(val, *((std::int16_t*)dst));
+        val = (*src * kSample16BitScaling) + ((float)fast_rand() + (float)fast_rand()) / (float)UINT_MAX - 1.0f;
+        float16Scaled(val, *((std::int16_t*)dst));
         dst += dst_skip;
         src++;
     }
@@ -1334,23 +1361,23 @@ void sample_move_dither_shaped_d16_sSs(std::byte* dst, jack_default_audio_sample
     std::int16_t tmp;
 
     while (nsamples--) {
-        x = *src * SAMPLE_16BIT_SCALING;
+        x = *src * kSample16BitScaling;
         r = ((float)fast_rand() + (float)fast_rand()) / (float)UINT_MAX - 1.0f;
         // Filter the error with Lipshitz's minimally audible FIR:
         // [2.033 -2.165 1.959 -1.590 0.6149]
         xe = x
             - state->e[idx] * 2.033f
-            + state->e[(idx - 1) & DITHER_BUF_MASK] * 2.165f
-            - state->e[(idx - 2) & DITHER_BUF_MASK] * 1.959f
-            + state->e[(idx - 3) & DITHER_BUF_MASK] * 1.590f
-            - state->e[(idx - 4) & DITHER_BUF_MASK] * 0.6149f;
+            + state->e[(idx - 1) & kDitherBufMask] * 2.165f
+            - state->e[(idx - 2) & kDitherBufMask] * 1.959f
+            + state->e[(idx - 3) & kDitherBufMask] * 1.590f
+            - state->e[(idx - 4) & kDitherBufMask] * 0.6149f;
         xp = xe + r - rm1;
         rm1 = r;
 
-        float_16_scaled(xp, tmp);
+        float16Scaled(xp, tmp);
 
         // Intrinsic z^-1 delay
-        idx = (idx + 1) & DITHER_BUF_MASK;
+        idx = (idx + 1) & kDitherBufMask;
         state->e[idx] = xp - xe;
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -1377,23 +1404,23 @@ void sample_move_dither_shaped_d16_sS(std::byte* dst, jack_default_audio_sample_
     std::uint32_t idx = state->idx;
 
     while (nsamples--) {
-        x = *src * SAMPLE_16BIT_SCALING;
+        x = *src * kSample16BitScaling;
         r = ((float)fast_rand() + (float)fast_rand()) / (float)UINT_MAX - 1.0f;
         // Filter the error with Lipshitz's minimally audible FIR:
         // [2.033 -2.165 1.959 -1.590 0.6149]
         xe = x
             - state->e[idx] * 2.033f
-            + state->e[(idx - 1) & DITHER_BUF_MASK] * 2.165f
-            - state->e[(idx - 2) & DITHER_BUF_MASK] * 1.959f
-            + state->e[(idx - 3) & DITHER_BUF_MASK] * 1.590f
-            - state->e[(idx - 4) & DITHER_BUF_MASK] * 0.6149f;
+            + state->e[(idx - 1) & kDitherBufMask] * 2.165f
+            - state->e[(idx - 2) & kDitherBufMask] * 1.959f
+            + state->e[(idx - 3) & kDitherBufMask] * 1.590f
+            - state->e[(idx - 4) & kDitherBufMask] * 0.6149f;
         xp = xe + r - rm1;
         rm1 = r;
 
-        float_16_scaled(xp, *((std::int16_t*)dst));
+        float16Scaled(xp, *((std::int16_t*)dst));
 
         // Intrinsic z^-1 delay
-        idx = (idx + 1) & DITHER_BUF_MASK;
+        idx = (idx + 1) & kDitherBufMask;
         state->e[idx] = *((std::int16_t*)dst) - xe;
 
         dst += dst_skip;
@@ -1406,7 +1433,7 @@ void sample_move_dither_shaped_d16_sS(std::byte* dst, jack_default_audio_sample_
 void sample_move_dS_s16s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
     std::int16_t z;
-    const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_16BIT_SCALING;
+    const jack_default_audio_sample_t scaling = 1.0 / kSample16BitScaling;
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     const float32x4_t vscaling = vdupq_n_f32(scaling);
     std::uint64_t unrolled = nsamples / 4;
@@ -1458,7 +1485,7 @@ void sample_move_dS_s16s(jack_default_audio_sample_t* dst, std::byte* src, std::
 void sample_move_dS_s16(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
     // ALERT: signed sign-extension portability !!!
-    const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_16BIT_SCALING;
+    const jack_default_audio_sample_t scaling = 1.0 / kSample16BitScaling;
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     const float32x4_t vscaling = vdupq_n_f32(scaling);
     std::uint64_t unrolled = nsamples / 4;

@@ -27,8 +27,8 @@
 #include <stdarg.h>
 
 
-#define LOG_LEVEL_INFO 1
-#define LOG_LEVEL_ERROR 2
+inline constexpr std::int32_t kLogLevelInfo = 1;
+inline constexpr std::int32_t kLogLevelError = 2;
 
 typedef void (*jack_log_function_t)(std::int32_t level, const char* message);
 

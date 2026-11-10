@@ -84,7 +84,7 @@ void drop_realtime(pthread_t thread)
 std::string default_server_name()
 {
     const char* name = getenv("JACK_DEFAULT_SERVER");
-    return name ? name : JACK_DEFAULT_SERVER_NAME;
+    return name ? name : kDefaultServerName;
 }
 
 // The bits of the options that the server reads when it checks a new client.
@@ -147,7 +147,7 @@ ClientSession::~ClientSession()
 
 Result<std::unique_ptr<ClientSession>> ClientSession::open(std::string_view name, const OpenOptions& options)
 {
-    if (name.empty() || name.size() >= JACK_CLIENT_NAME_SIZE) {
+    if (name.empty() || name.size() >= kClientNameSize) {
         return std::unexpected(Error::InvalidArgument);
     }
 
@@ -169,18 +169,18 @@ Result<void> ClientSession::connect_and_register(std::string_view name_view, con
         return std::unexpected(Error::NoServer);
     }
 
-    if (request_.Connect(jack_server_dir, server_name_.c_str(), 0) < 0) {
+    if (request_.Connect(kServerDir, server_name_.c_str(), 0) < 0) {
         return std::unexpected(Error::Io);
     }
 
-    JackClientCheckRequest check(name.c_str(), JACK_PROTOCOL_VERSION, bits, JACK_UUID_EMPTY_INITIALIZER, true);
+    JackClientCheckRequest check(name.c_str(), kProtocolVersion, bits, kUuidEmptyInitializer, true);
     JackClientCheckResult check_reply;
     if (transact(check, check_reply) < 0) {
         return std::unexpected(Error::Io);
     }
     if (check_reply.fResult < 0) {
         if (check_reply.fStatus & JackVersionError) {
-            jack_error("JACK protocol mismatch %d", JACK_PROTOCOL_VERSION);
+            jack_error("JACK protocol mismatch %d", kProtocolVersion);
             return std::unexpected(Error::Protocol);
         }
         jack_error("Client name = %s conflits with another running client", name.c_str());
@@ -188,7 +188,7 @@ Result<void> ClientSession::connect_and_register(std::string_view name_view, con
     }
     const std::string name_res(check_reply.fName.data());
 
-    if (notify_listen_.Bind(jack_client_dir, name_res.c_str(), 0) < 0) {
+    if (notify_listen_.Bind(kClientDir, name_res.c_str(), 0) < 0) {
         jack_error("Cannot bind socket");
         return std::unexpected(Error::Io);
     }
@@ -197,7 +197,7 @@ Result<void> ClientSession::connect_and_register(std::string_view name_view, con
         return std::unexpected(Error::Io);
     }
 
-    JackClientOpenRequest open_request(name_res.c_str(), JackTools::GetPID(), JACK_UUID_EMPTY_INITIALIZER);
+    JackClientOpenRequest open_request(name_res.c_str(), JackTools::GetPID(), kUuidEmptyInitializer);
     JackClientOpenResult open_reply;
     if (transact(open_request, open_reply) < 0) {
         return std::unexpected(Error::Io);
@@ -267,7 +267,7 @@ void ClientSession::notification_loop()
     while (true) {
         JackMsgHeader header { };
         if (std::int32_t err = ReadJackMsgHeader(notify_.get(), header); err < 0) {
-            if (err != JACK_REQUEST_ERR_ABORTED && !closing_) {
+            if (err != kRequestErrAborted && !closing_) {
                 jack_error("JackSocketClientChannel read fail");
             }
             break;
@@ -407,7 +407,7 @@ Result<jack_port_id_t> ClientSession::register_port(std::string_view short_name,
         return std::unexpected(Error::InvalidArgument);
     }
     const std::string full_name = name_ + ":" + std::string(short_name);
-    if (full_name.size() >= REAL_JACK_PORT_NAME_SIZE) {
+    if (full_name.size() >= kRealJackPortNameSize) {
         jack_error("\"%s\" is too long to be used as a JACK port name.", full_name.c_str());
         return std::unexpected(Error::InvalidArgument);
     }
@@ -436,7 +436,7 @@ Result<void> ClientSession::unregister_port(jack_port_id_t port)
 
 Result<void> ClientSession::connect_ports(std::string_view source, std::string_view destination)
 {
-    if (source.size() >= REAL_JACK_PORT_NAME_SIZE || destination.size() >= REAL_JACK_PORT_NAME_SIZE) {
+    if (source.size() >= kRealJackPortNameSize || destination.size() >= kRealJackPortNameSize) {
         return std::unexpected(Error::InvalidArgument);
     }
     const std::string src(source);
@@ -451,7 +451,7 @@ Result<void> ClientSession::connect_ports(std::string_view source, std::string_v
 
 Result<void> ClientSession::disconnect_ports(std::string_view source, std::string_view destination)
 {
-    if (source.size() >= REAL_JACK_PORT_NAME_SIZE || destination.size() >= REAL_JACK_PORT_NAME_SIZE) {
+    if (source.size() >= kRealJackPortNameSize || destination.size() >= kRealJackPortNameSize) {
         return std::unexpected(Error::InvalidArgument);
     }
     const std::string src(source);
@@ -466,12 +466,12 @@ Result<void> ClientSession::disconnect_ports(std::string_view source, std::strin
 
 bool ClientSession::owns(jack_port_id_t port) const
 {
-    return port > 0 && port < PORT_NUM_MAX && context_->graph->GetPort(port)->GetRefNum() == ref_;
+    return port > 0 && port < kPortNumMax && context_->graph->GetPort(port)->GetRefNum() == ref_;
 }
 
 std::string_view ClientSession::port_name(jack_port_id_t port) const
 {
-    if (port == 0 || port >= PORT_NUM_MAX) {
+    if (port == 0 || port >= kPortNumMax) {
         return { };
     }
     return context_->graph->GetPort(port)->GetName();
@@ -491,7 +491,7 @@ std::optional<jack_port_id_t> ClientSession::find_port(std::string_view full_nam
 {
     const std::string text(full_name);
     const jack_port_id_t port = context_->graph->GetPort(text.c_str());
-    if (port == NO_PORT) {
+    if (port == kNoPort) {
         return std::nullopt;
     }
     return port;
@@ -532,7 +532,7 @@ std::vector<ClientSession::PortRecord> ClientSession::port_records() const
     wait_graph_change();
     std::vector<PortRecord> records;
     const jack_port_id_t max = context_->graph->PortMax();
-    for (jack_port_id_t index = FIRST_AVAILABLE_PORT; index < max; index++) {
+    for (jack_port_id_t index = kFirstAvailablePort; index < max; index++) {
         JackPort* port = context_->graph->GetPort(index);
         if (!port->InUse()) {
             continue;
@@ -545,7 +545,7 @@ std::vector<ClientSession::PortRecord> ClientSession::port_records() const
         port->GetLatencyRange(JackCaptureLatency, &record.capture_latency);
         record.total_latency = port->GetTotalLatency();
 
-        std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias1 { }, alias2 { };
+        std::array<char, kRealJackPortNameSize + 1> alias1 { }, alias2 { };
         std::array<char* const, 2> aliases = { alias1.data(), alias2.data() };
         const std::int32_t count = port->GetAliases(aliases.data());
         for (std::int32_t i = 0; i < count; i++) {

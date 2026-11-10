@@ -109,18 +109,18 @@ class SERVER_EXPORT JackDriverClientInterface : public JackDriverInterface, publ
 
 // \brief The base class for drivers.
 
-#define CaptureDriverFlags static_cast<JackPortFlags>(JackPortIsOutput | JackPortIsPhysical | JackPortIsTerminal)
-#define PlaybackDriverFlags static_cast<JackPortFlags>(JackPortIsInput | JackPortIsPhysical | JackPortIsTerminal)
-#define MonitorDriverFlags static_cast<JackPortFlags>(JackPortIsOutput)
+inline constexpr JackPortFlags kCaptureDriverFlags = static_cast<JackPortFlags>(JackPortIsOutput | JackPortIsPhysical | JackPortIsTerminal);
+inline constexpr JackPortFlags kPlaybackDriverFlags = static_cast<JackPortFlags>(JackPortIsInput | JackPortIsPhysical | JackPortIsTerminal);
+inline constexpr JackPortFlags kMonitorDriverFlags = static_cast<JackPortFlags>(JackPortIsOutput);
 
 typedef std::list<std::pair<std::string, std::pair<std::string, std::string>>> driver_connections_list_t; // [type : (src, dst)]
 
 class SERVER_EXPORT JackDriver : public JackDriverClientInterface {
 
 protected:
-    std::array<char, JACK_CLIENT_NAME_SIZE + 1> fCaptureDriverName { };
-    std::array<char, JACK_CLIENT_NAME_SIZE + 1> fPlaybackDriverName { };
-    std::array<char, JACK_CLIENT_NAME_SIZE + 1> fAliasName { };
+    std::array<char, kClientNameSize + 1> fCaptureDriverName { };
+    std::array<char, kClientNameSize + 1> fPlaybackDriverName { };
+    std::array<char, kClientNameSize + 1> fAliasName { };
 
     jack_nframes_t fCaptureLatency;
     jack_nframes_t fPlaybackLatency;
@@ -147,9 +147,9 @@ protected:
 
     // Static tables since the actual number of ports may be changed by the real driver
     // thus dynamic allocation is more difficult to handle
-    std::array<jack_port_id_t, DRIVER_PORT_NUM> fCapturePortList;
-    std::array<jack_port_id_t, DRIVER_PORT_NUM> fPlaybackPortList;
-    std::array<jack_port_id_t, DRIVER_PORT_NUM> fMonitorPortList;
+    std::array<jack_port_id_t, kDriverPortNum> fCapturePortList;
+    std::array<jack_port_id_t, kDriverPortNum> fPlaybackPortList;
+    std::array<jack_port_id_t, kDriverPortNum> fMonitorPortList;
 
     driver_connections_list_t fConnections; // Connections list
 

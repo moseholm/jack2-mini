@@ -136,7 +136,7 @@ jack_driver_param_value_t value_to_c(const Value& value)
         break;
     default: {
         const std::string& text = std::get<std::string>(value);
-        strncpy(out.str.data(), text.c_str(), JACK_DRIVER_PARAM_STRING_MAX);
+        strncpy(out.str.data(), text.c_str(), kDriverParamStringMax);
         break;
     }
     }
@@ -211,10 +211,10 @@ std::vector<Parameter> server_parameters(const std::string& name)
     add("verbose", "Verbose mode.", false);
     add("client-timeout", "Client timeout limit in milliseconds.", std::int64_t { 0 });
     add("clock-source", "Clocksource type : c(ycle) | h(pet) | s(ystem).", std::uint64_t { 0 });
-    add("port-max", "Maximum number of ports.", static_cast<std::uint64_t>(PORT_NUM));
+    add("port-max", "Maximum number of ports.", static_cast<std::uint64_t>(kPortNum));
     add("sync", "Use server synchronous mode.", false);
     add("self-connect-mode", "Whether JACK clients are allowed to connect their own ports",
-        Value { static_cast<char>(JACK_DEFAULT_SELF_CONNECT_MODE) });
+        Value { static_cast<char>(kDefaultSelfConnectMode) });
 
     Parameter& mode = parameters.back();
     for (const SelfConnectChoice& choice : kSelfConnectChoices) {
@@ -254,7 +254,7 @@ std::optional<DriverEntry> make_driver(DescriptorPtr descriptor)
         jack_driver_param_constraint_desc_t* constraint = descriptor_param.constraint;
         if (constraint != nullptr) {
             entry.constraints.emplace_back(constraint);
-            const bool is_range = (constraint->flags & JACK_CONSTRAINT_FLAG_RANGE) != 0;
+            const bool is_range = (constraint->flags & kConstraintFlagRange) != 0;
             if (!is_range) {
                 for (std::uint32_t c = 0; c < constraint->constraint.enumeration.count; c++) {
                     const jack_driver_param_value_enum_t& possible = constraint->constraint.enumeration.possible_values_array[c];
@@ -551,7 +551,7 @@ Result<void> Server::parse_driver_arguments(std::int32_t argc, char* argv[])
                 assign(*parameter, optarg[0]);
                 break;
             case kString:
-                assign(*parameter, std::string(optarg).substr(0, JACK_DRIVER_PARAM_STRING_MAX));
+                assign(*parameter, std::string(optarg).substr(0, kDriverParamStringMax));
                 break;
             default: {
                 const bool off = strcasecmp("false", optarg) == 0 || strcasecmp("off", optarg) == 0 || strcasecmp("no", optarg) == 0 || strcasecmp("0", optarg) == 0 || strcasecmp("(null)", optarg) == 0;
@@ -585,7 +585,7 @@ Result<void> Server::start()
     DriverEntry& master = impl.drivers[impl.selected];
 
     const std::string& name = impl.name;
-    auto lock = AcquireServerLock(jack_server_dir);
+    auto lock = AcquireServerLock(kServerDir);
     if (!lock) {
         if (lock.error() == std::errc::file_exists) {
             jack_error("`%s' server already active", name.c_str());
@@ -614,9 +614,9 @@ Result<void> Server::start()
     if (!realtime && client_timeout == 0) {
         client_timeout = 500; // 0.5 sec; usable when non realtime.
     }
-    if (port_max > PORT_NUM_MAX) {
+    if (port_max > kPortNumMax) {
         jack_error("Jack server started with too much ports %llu (when port max can be %d)",
-            static_cast<std::uint64_t>(port_max), PORT_NUM_MAX);
+            static_cast<std::uint64_t>(port_max), kPortNumMax);
         return fail(Error::InvalidArgument);
     }
 

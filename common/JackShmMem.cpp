@@ -100,7 +100,7 @@ void JackShmMem::operator delete(void* obj)
 
 void LockMemoryImp(void* ptr, size_t size)
 {
-    if (CHECK_MLOCK(ptr, size)) {
+    if (checkMlock(ptr, size)) {
         jack_log("Succeeded in locking %u byte memory area", size);
     } else {
         jack_error("Cannot lock down %u byte memory area (%s)", size, strerror(errno));
@@ -109,7 +109,7 @@ void LockMemoryImp(void* ptr, size_t size)
 
 void InitLockMemoryImp(void* ptr, size_t size)
 {
-    if (CHECK_MLOCK(ptr, size)) {
+    if (checkMlock(ptr, size)) {
         memset(ptr, 0, size);
         jack_log("Succeeded in locking %u byte memory area", size);
     } else {
@@ -119,7 +119,7 @@ void InitLockMemoryImp(void* ptr, size_t size)
 
 void UnlockMemoryImp(void* ptr, size_t size)
 {
-    if (CHECK_MUNLOCK(ptr, size)) {
+    if (checkMunlock(ptr, size)) {
         jack_log("Succeeded in unlocking %u byte memory area", size);
     } else {
         jack_error("Cannot unlock down %u byte memory area (%s)", size, strerror(errno));
@@ -128,7 +128,7 @@ void UnlockMemoryImp(void* ptr, size_t size)
 
 void LockAllMemory()
 {
-    if (CHECK_MLOCKALL()) {
+    if (checkMlockall()) {
         jack_log("Succeeded in locking all memory");
     } else {
         jack_error("Cannot lock all memory (%s)", strerror(errno));
@@ -137,7 +137,7 @@ void LockAllMemory()
 
 void UnlockAllMemory()
 {
-    if (CHECK_MUNLOCKALL()) {
+    if (checkMunlockall()) {
         jack_log("Succeeded in unlocking all memory");
     } else {
         jack_error("Cannot unlock all memory (%s)", strerror(errno));

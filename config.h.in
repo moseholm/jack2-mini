@@ -1,9 +1,12 @@
 #ifndef JACK_CONFIG_H
 #define JACK_CONFIG_H
 
+#include <cstdint>
+
 #define HAVE_ALSA 1
-#define CLIENT_NUM @JACK_MAX_CLIENTS@
-#define PORT_NUM_FOR_CLIENT @JACK_PORTS_PER_APPLICATION@
+
+inline constexpr std::int32_t kClientNum = @JACK_MAX_CLIENTS@;
+inline constexpr std::int32_t kPortNumForClient = @JACK_PORTS_PER_APPLICATION@;
 #define ADDON_DIR "@JACK_ADDON_DIR@"
 #define JACK_LOCATION "@JACK_LOCATION@"
 #define JACKMP 1

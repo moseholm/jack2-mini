@@ -31,14 +31,14 @@ typedef enum {
     Shaped
 } DitherAlgorithm;
 
-#define DITHER_BUF_SIZE 8
-#define DITHER_BUF_MASK 7
+inline constexpr std::int32_t kDitherBufSize = 8;
+inline constexpr std::int32_t kDitherBufMask = 7;
 
 typedef struct {
     std::uint32_t depth;
     float rm1;
     std::uint32_t idx;
-    std::array<float, DITHER_BUF_SIZE> e;
+    std::array<float, kDitherBufSize> e;
 } dither_state_t;
 
 // float functions

@@ -68,7 +68,7 @@ void jack_uuid_copy(jack_uuid_t* dst, jack_uuid_t src)
 
 void jack_uuid_clear(jack_uuid_t* u)
 {
-    *u = JACK_UUID_EMPTY_INITIALIZER;
+    *u = kUuidEmptyInitializer;
 }
 
 std::int32_t jack_uuid_parse(const char* b, jack_uuid_t* u)
@@ -89,12 +89,12 @@ std::int32_t jack_uuid_parse(const char* b, jack_uuid_t* u)
     return 0;
 }
 
-void jack_uuid_unparse(jack_uuid_t u, char b[JACK_UUID_STRING_SIZE])
+void jack_uuid_unparse(jack_uuid_t u, char b[kUuidStringSize])
 {
-    jackmini::FormatCString(std::span<char>(b, JACK_UUID_STRING_SIZE), "{}", static_cast<std::uint64_t>(u));
+    jackmini::FormatCString(std::span<char>(b, kUuidStringSize), "{}", static_cast<std::uint64_t>(u));
 }
 
 std::int32_t jack_uuid_empty(jack_uuid_t u)
 {
-    return u == JACK_UUID_EMPTY_INITIALIZER;
+    return u == kUuidEmptyInitializer;
 }

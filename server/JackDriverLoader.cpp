@@ -41,7 +41,7 @@
 void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file)
 {
     std::uint64_t i;
-    std::array<char, JACK_DRIVER_PARAM_STRING_MAX + 1> arg_default { };
+    std::array<char, kDriverParamStringMax + 1> arg_default { };
 
     for (i = 0; i < desc->nparams; i++) {
         switch (desc->params[i].type) {
@@ -124,14 +124,14 @@ static void* check_symbol(const char* sofile, const char* symbol, const char* dr
     std::array<char, 1024> filename { };
     jackmini::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
 
-    if ((dlhandle = LoadDriverModule(filename.data())) == nullptr) {
+    if ((dlhandle = loadDriverModule(filename.data())) == nullptr) {
         jack_error("Could not open component .so '%s': %s", filename.data(), dlerror());
     } else {
-        res = (void*)GetDriverProc(dlhandle, symbol);
+        res = (void*)getDriverProc(dlhandle, symbol);
         if (res_dllhandle) {
             *res_dllhandle = dlhandle;
         } else {
-            UnloadDriverModule(dlhandle);
+            unloadDriverModule(dlhandle);
         }
     }
 
@@ -143,7 +143,7 @@ struct DriverModuleCloser {
     void operator()(void* handle) const
     {
         if (handle) {
-            UnloadDriverModule(handle);
+            unloadDriverModule(handle);
         }
     }
 };
@@ -192,7 +192,7 @@ static jack_driver_desc_t* load_descriptor(JSList* drivers, const char* sofile, 
         }
     }
 
-    strncpy(descriptor->file.data(), filename.data(), JACK_PATH_MAX);
+    strncpy(descriptor->file.data(), filename.data(), kPathMax);
     return descriptor;
 }
 
@@ -251,7 +251,7 @@ jackmini::JackDriverClientInterface* JackDriverInfo::Open(jack_driver_desc_t* dr
 {
     const char* errstr;
 
-    fHandle = LoadDriverModule(driver_desc->file.data());
+    fHandle = loadDriverModule(driver_desc->file.data());
 
     if (fHandle == nullptr) {
         if ((errstr = dlerror()) != 0) {
@@ -264,7 +264,7 @@ jackmini::JackDriverClientInterface* JackDriverInfo::Open(jack_driver_desc_t* dr
     }
 
 
-    const auto get_module = reinterpret_cast<jackmini::driver::ModuleFunction>(GetDriverProc(fHandle, jackmini::driver::kModuleSymbol));
+    const auto get_module = reinterpret_cast<jackmini::driver::ModuleFunction>(getDriverProc(fHandle, jackmini::driver::kModuleSymbol));
     fModule = get_module ? get_module() : nullptr;
     if (fModule == nullptr) {
         jack_error("No driver module entry point in shared object %s", driver_desc->file);
@@ -285,7 +285,7 @@ JackDriverInfo::~JackDriverInfo()
 {
     delete fBackend;
     if (fHandle) {
-        UnloadDriverModule(fHandle);
+        unloadDriverModule(fHandle);
     }
 }
 
@@ -446,7 +446,7 @@ void jack_constraint_free(
     jack_driver_param_constraint_desc_t* constraint_ptr)
 {
     if (constraint_ptr != nullptr) {
-        if ((constraint_ptr->flags & JACK_CONSTRAINT_FLAG_RANGE) == 0) {
+        if ((constraint_ptr->flags & kConstraintFlagRange) == 0) {
             free(constraint_ptr->constraint.enumeration.possible_values_array);
         }
 

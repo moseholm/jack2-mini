@@ -16,7 +16,7 @@
 
 #pragma once
 
-#define DIR_SEPARATOR '/'
+inline constexpr char kDirSeparator = '/';
 #include <cstdint>
 #include <dirent.h>
 #include <sys/stat.h>

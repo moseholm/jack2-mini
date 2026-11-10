@@ -49,7 +49,7 @@ JackLinuxFutex::JackLinuxFutex()
 
 void JackLinuxFutex::BuildName(const char* client_name, const char* server_name, char* res, std::int32_t size)
 {
-    std::array<char, SYNC_MAX_NAME_SIZE + 1> ext_client_name { };
+    std::array<char, kSyncMaxNameSize + 1> ext_client_name { };
     JackTools::RewriteName(client_name, ext_client_name.data());
     if (fPromiscuous) {
         jackmini::FormatCString(std::span<char>(res, size), "jack_sem.{}_{}", server_name, ext_client_name.data());

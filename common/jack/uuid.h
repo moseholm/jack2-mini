@@ -20,9 +20,9 @@
 #include <jack/types.h>
 
 
-#define JACK_UUID_SIZE 36
-#define JACK_UUID_STRING_SIZE (JACK_UUID_SIZE + 1)  // includes trailing null
-#define JACK_UUID_EMPTY_INITIALIZER 0
+inline constexpr std::int32_t kUuidSize = 36;
+inline constexpr std::int32_t kUuidStringSize = (kUuidSize + 1); // includes trailing null
+inline constexpr std::int32_t kUuidEmptyInitializer = 0;
 
 extern jack_uuid_t jack_client_uuid_generate();
 extern jack_uuid_t jack_port_uuid_generate(std::uint32_t port_id);
@@ -33,5 +33,5 @@ extern std::int32_t jack_uuid_compare(jack_uuid_t, jack_uuid_t);
 extern void jack_uuid_copy(jack_uuid_t* dst, jack_uuid_t src);
 extern void jack_uuid_clear(jack_uuid_t*);
 extern std::int32_t jack_uuid_parse(const char* buf, jack_uuid_t*);
-extern void jack_uuid_unparse(jack_uuid_t, char buf[JACK_UUID_STRING_SIZE]);
+extern void jack_uuid_unparse(jack_uuid_t, char buf[kUuidStringSize]);
 extern std::int32_t jack_uuid_empty(jack_uuid_t);

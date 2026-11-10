@@ -45,7 +45,7 @@ std::string JackAlsaControlDeviceName(const std::string& pcm)
 
 std::int32_t JackAlsaControlLockCard(const std::string& ctl_name)
 {
-    std::string file = std::string(jack_server_dir) + "/jack_alsa_";
+    std::string file = std::string(kServerDir) + "/jack_alsa_";
     for (size_t i = 0; i < ctl_name.size(); i++) {
         char c = ctl_name[i];
         file += (isalnum((unsigned char)c) ? c : '_');

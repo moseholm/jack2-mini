@@ -28,10 +28,25 @@
 #include <cstdint>
 #include <new> // GCC 4.0
 
-#define CHECK_MLOCK(ptr, size) (mlock((ptr), (size)) == 0)
-#define CHECK_MUNLOCK(ptr, size) (munlock((ptr), (size)) == 0)
-#define CHECK_MLOCKALL() (mlockall(MCL_CURRENT | MCL_FUTURE) == 0)
-#define CHECK_MUNLOCKALL() (munlockall() == 0)
+inline bool checkMlock(const void* ptr, std::size_t size)
+{
+    return mlock(ptr, size) == 0;
+}
+
+inline bool checkMunlock(const void* ptr, std::size_t size)
+{
+    return munlock(ptr, size) == 0;
+}
+
+inline bool checkMlockall()
+{
+    return mlockall(MCL_CURRENT | MCL_FUTURE) == 0;
+}
+
+inline bool checkMunlockall()
+{
+    return munlockall() == 0;
+}
 
 namespace jackmini {
 

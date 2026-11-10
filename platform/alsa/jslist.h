@@ -60,7 +60,10 @@ jack_slist_prepend(JSList* list,
     return new_list;
 }
 
-#define jack_slist_next(slist) ((slist) ? (((JSList*)(slist))->next) : nullptr)
+inline JSList* jack_slist_next(const JSList* slist)
+{
+    return slist ? slist->next : nullptr;
+}
 static __inline__ JSList*
 jack_slist_last(JSList* list)
 {

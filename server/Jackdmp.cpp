@@ -106,9 +106,9 @@ static void usage(FILE* file, const Server& server, bool full = true)
 
 static void print_version()
 {
-    printf("jackdmp version " JACK_VERSION " tmpdir " jack_server_dir " protocol %d"
+    printf("jackdmp version " JACK_VERSION " tmpdir %s protocol %d"
            "\n",
-        JACK_PROTOCOL_VERSION);
+        kServerDir, kProtocolVersion);
 }
 
 // The self connect mode is one of the characters the server offers.
@@ -214,7 +214,7 @@ int main(std::int32_t argc, char** argv)
             break;
 
         case 'n':
-            server.set_parameter("name", std::string(optarg).substr(0, JACK_DRIVER_PARAM_STRING_MAX));
+            server.set_parameter("name", std::string(optarg).substr(0, kDriverParamStringMax));
             break;
 
         case 'P':

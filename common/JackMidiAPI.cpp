@@ -89,7 +89,7 @@ void jack_midi_clear_buffer(void* port_buffer)
 LIB_EXPORT
 void jack_midi_reset_buffer(void* port_buffer)
 {
-    MidiBufferInit(port_buffer, BUFFER_SIZE_MAX, BUFFER_SIZE_MAX);
+    MidiBufferInit(port_buffer, kBufferSizeMax, kBufferSizeMax);
 }
 
 LIB_EXPORT
