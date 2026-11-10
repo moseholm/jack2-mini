@@ -59,8 +59,8 @@ struct MTDM* mtdm_new(double fsamp)
 
     struct MTDM* retval = (MTDM*)malloc(sizeof(struct MTDM));
 
-    if (retval == NULL)
-        return NULL;
+    if (retval == nullptr)
+        return nullptr;
 
     retval->_cnt = 0;
     retval->_inv = 0;

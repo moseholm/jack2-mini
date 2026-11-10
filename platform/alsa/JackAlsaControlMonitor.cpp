@@ -30,7 +30,7 @@ JackAlsaControlMonitor::JackAlsaControlMonitor(JackAlsaControlListener* listener
     , fThread(this)
     , fWakeFd(-1)
     , fUpdateFd(-1)
-    , fEvent(NULL)
+    , fEvent(nullptr)
 {
     fUpdateFd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 }
@@ -90,14 +90,14 @@ void JackAlsaControlMonitor::QueueWatch(int card, const std::string& ctl_name,
 // Runs on the monitor thread.
 void JackAlsaControlMonitor::AddPendingWatch(const PendingWatch& pending)
 {
-    Device* device = NULL;
+    Device* device = nullptr;
     for (size_t i = 0; i < fDevices.size(); i++) {
         if (fDevices[i]->name == pending.ctl_name) {
             device = fDevices[i];
             break;
         }
     }
-    if (device == NULL) {
+    if (device == nullptr) {
         snd_ctl_t* ctl;
         int err = snd_ctl_open(&ctl, pending.ctl_name.c_str(), 0);
         if (err < 0) {
@@ -157,7 +157,7 @@ void JackAlsaControlMonitor::ApplyUpdates()
 int JackAlsaControlMonitor::AddWatch(int card, const std::string& ctl_name,
     const JackAlsaRateElement& elem, JackAlsaRateDirection dir)
 {
-    Device* device = NULL;
+    Device* device = nullptr;
     for (size_t i = 0; i < fDevices.size(); i++) {
         if (fDevices[i]->name == ctl_name) {
             device = fDevices[i];
@@ -165,7 +165,7 @@ int JackAlsaControlMonitor::AddWatch(int card, const std::string& ctl_name,
         }
     }
 
-    if (device == NULL) {
+    if (device == nullptr) {
         snd_ctl_t* ctl;
         int err = snd_ctl_open(&ctl, ctl_name.c_str(), 0);
         if (err < 0) {

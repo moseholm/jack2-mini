@@ -42,7 +42,7 @@ static float** AllocChannelBuffers(int channels, unsigned int frames)
 
 static void FreeChannelBuffers(float** buffers, int channels)
 {
-    if (buffers == NULL) {
+    if (buffers == nullptr) {
         return;
     }
     for (int i = 0; i < channels; i++) {
@@ -55,13 +55,13 @@ static void FreeChannelBuffers(float** buffers, int channels)
 // not fatal; it only means the kernel may still fault pages in later.
 static bool LockChannelBuffers(float** buffers, int channels, unsigned int frames)
 {
-    if (buffers == NULL || channels <= 0) {
+    if (buffers == nullptr || channels <= 0) {
         return true;
     }
 
     bool locked = mlock(buffers, sizeof(float*) * channels) == 0;
     for (int i = 0; i < channels; i++) {
-        if (buffers[i] != NULL && frames > 0) {
+        if (buffers[i] != nullptr && frames > 0) {
             locked = (mlock(buffers[i], sizeof(float) * frames) == 0) && locked;
         }
     }
@@ -82,13 +82,13 @@ JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& conf
     , fRate(0)
     , fCaptureChannels(0)
     , fPlaybackChannels(0)
-    , fCaptureRing(NULL)
-    , fPlaybackRing(NULL)
+    , fCaptureRing(nullptr)
+    , fPlaybackRing(nullptr)
     , fFactory(factory)
-    , fCaptureConverter(NULL)
-    , fPlaybackConverter(NULL)
-    , fCaptureConvIn(NULL)
-    , fPlaybackConvOut(NULL)
+    , fCaptureConverter(nullptr)
+    , fPlaybackConverter(nullptr)
+    , fCaptureConvIn(nullptr)
+    , fPlaybackConvOut(nullptr)
     , fConvCap(0)
     , fXrunGeneration(0)
     , fSeenXrunGeneration(0)
@@ -96,20 +96,20 @@ JackAlsaSecondaryCard::JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& conf
     , fPlaybackDropped(0)
     , fIoError(IoError::None)
     , fIoErrorStatus(0)
-    , fCtl(NULL)
-    , fCaptureTemp(NULL)
-    , fPlaybackTemp(NULL)
-    , fPortScratch(NULL)
-    , fSilence(NULL)
+    , fCtl(nullptr)
+    , fCaptureTemp(nullptr)
+    , fPlaybackTemp(nullptr)
+    , fPortScratch(nullptr)
+    , fSilence(nullptr)
 {
     fRateValid[RateCapture] = false;
     fRateValid[RatePlayback] = false;
     fSilent.store(false);
-    fRTEpoch = NULL;
-    fRTRunning = NULL;
+    fRTEpoch = nullptr;
+    fRTRunning = nullptr;
     fId = -1;
     fDevice = -1;
-    fFailureSink = NULL;
+    fFailureSink = nullptr;
     fPrimaryBufferSize = 0;
     fPrimaryRate = 0;
 }
@@ -132,7 +132,7 @@ void JackAlsaSecondaryCard::FreeBuffers()
             delete[] fCaptureTemp[i];
         }
         delete[] fCaptureTemp;
-        fCaptureTemp = NULL;
+        fCaptureTemp = nullptr;
     }
 
     if (fPlaybackTemp) {
@@ -140,32 +140,32 @@ void JackAlsaSecondaryCard::FreeBuffers()
             delete[] fPlaybackTemp[i];
         }
         delete[] fPlaybackTemp;
-        fPlaybackTemp = NULL;
+        fPlaybackTemp = nullptr;
     }
 
     delete[] fPortScratch;
-    fPortScratch = NULL;
+    fPortScratch = nullptr;
 
     delete[] fSilence;
-    fSilence = NULL;
+    fSilence = nullptr;
 
     delete fCaptureRing;
-    fCaptureRing = NULL;
+    fCaptureRing = nullptr;
 
     delete fPlaybackRing;
-    fPlaybackRing = NULL;
+    fPlaybackRing = nullptr;
 
     delete fCaptureConverter;
-    fCaptureConverter = NULL;
+    fCaptureConverter = nullptr;
 
     delete fPlaybackConverter;
-    fPlaybackConverter = NULL;
+    fPlaybackConverter = nullptr;
 
     FreeChannelBuffers(fCaptureConvIn, fCaptureChannels);
-    fCaptureConvIn = NULL;
+    fCaptureConvIn = nullptr;
 
     FreeChannelBuffers(fPlaybackConvOut, fPlaybackChannels);
-    fPlaybackConvOut = NULL;
+    fPlaybackConvOut = nullptr;
 }
 
 static jackmini::alsa::SampleFormat ToAlsaFormat(JackAlsaSampleFormat format)
@@ -217,8 +217,8 @@ int JackAlsaSecondaryCard::OpenStream(jack_nframes_t requested_rate,
         request.capture_channels = fCaptureEnabled ? fConfig.capture_channels : 0;
         request.playback_channels = fPlaybackEnabled ? fConfig.playback_channels : 0;
         request.format = ToAlsaFormat(fConfig.sample_format);
-        if (fSession.open(fCaptureEnabled ? capture_device.c_str() : NULL,
-                fPlaybackEnabled ? playback_device.c_str() : NULL,
+        if (fSession.open(fCaptureEnabled ? capture_device.c_str() : nullptr,
+                fPlaybackEnabled ? playback_device.c_str() : nullptr,
                 request, None)
             < 0) {
             jack_error("secondary card '%s': cannot open ALSA device %s",
@@ -280,7 +280,7 @@ int JackAlsaSecondaryCard::BuildBuffers(jack_nframes_t primary_buffer_size,
     // Asynchronous clocks always go through a converter, even at equal rates,
     // so the drift controller has something to steer.
     if (fRate != primary_rate || fConfig.clock == SecondaryClockAsync) {
-        if (fFactory == NULL) {
+        if (fFactory == nullptr) {
             jack_error("secondary card '%s': no resampler factory", fConfig.name.c_str());
             FreeBuffers();
             fSession.close();
@@ -456,7 +456,7 @@ int JackAlsaSecondaryCard::OpenControls()
 
     int err = snd_ctl_open(&fCtl, fCtlName.c_str(), 0);
     if (err < 0) {
-        fCtl = NULL;
+        fCtl = nullptr;
         jack_error("secondary card '%s': cannot open control device %s (%s)",
             fConfig.name.c_str(), fCtlName.c_str(), snd_strerror(err));
         return -1;
@@ -519,7 +519,7 @@ void JackAlsaSecondaryCard::CloseControls()
         fRateValid[d] = false;
     }
     snd_ctl_close(fCtl);
-    fCtl = NULL;
+    fCtl = nullptr;
 }
 
 int JackAlsaSecondaryCard::ReadRate(JackAlsaRateDirection dir, long* value)
@@ -620,7 +620,7 @@ std::string JackAlsaSecondaryCard::PortBase() const
 void JackAlsaSecondaryCard::MarkFailed()
 {
     fRunning.store(false);
-    if (fFailureSink != NULL) {
+    if (fFailureSink != nullptr) {
         fFailureSink->OnCardFailed(fId);
     }
 }
@@ -713,8 +713,8 @@ int JackAlsaSecondaryCard::Reconfigure(jack_nframes_t rate)
     fSilent.store(true, std::memory_order_release);
     // The RT side may use this card's buffers while the driver runs, even when
     // the card's own thread has stopped (for example after an I/O error).
-    bool rt_live = (fRTRunning != NULL && fRTRunning->load());
-    if (rt_live && fRTEpoch != NULL && !WaitForRTCycles(2)) {
+    bool rt_live = (fRTRunning != nullptr && fRTRunning->load());
+    if (rt_live && fRTEpoch != nullptr && !WaitForRTCycles(2)) {
         jack_error("secondary card '%s': real-time thread did not reach a safe point; keeping %u Hz",
             fConfig.name.c_str(), old_rate);
         fSilent.store(false, std::memory_order_release);

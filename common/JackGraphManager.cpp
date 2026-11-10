@@ -384,7 +384,7 @@ jack_port_id_t JackGraphManager::AllocatePortAux(int refnum, const char* port_na
 {
     jack_port_id_t port_index;
 
-    // Available ports start at FIRST_AVAILABLE_PORT (= 1), otherwise a port_index of 0 is "seen" as a NULL port by the external API...
+    // Available ports start at FIRST_AVAILABLE_PORT (= 1), otherwise a port_index of 0 is "seen" as a nullptr port by the external API...
     for (port_index = FIRST_AVAILABLE_PORT; port_index < fPortMax; port_index++) {
         JackPort* port = GetPort(port_index);
         if (!port->IsUsed()) {
@@ -785,7 +785,7 @@ void JackGraphManager::GetConnectionsAux(JackConnectionManager* manager, const c
         res[i] = port->fName;
     }
 
-    res[i] = NULL;
+    res[i] = nullptr;
 }
 
 // Use the state returned by ReadCurrentState and check that the state was not changed during the read operation.
@@ -799,7 +799,7 @@ const char** JackGraphManager::GetConnections(jack_port_id_t port_index)
     UInt16 cur_index, next_index;
 
     if (!res)
-        return NULL;
+        return nullptr;
 
     do {
         cur_index = GetCurrentIndex();
@@ -809,9 +809,9 @@ const char** JackGraphManager::GetConnections(jack_port_id_t port_index)
 
     if (res[0]) { // At least one connection
         return res;
-    } else { // Empty array, should return NULL
+    } else { // Empty array, should return nullptr
         free(res);
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -850,12 +850,12 @@ void JackGraphManager::GetPortsAux(const char** matching_ports, const char* port
             }
 
             if (matching && port_name_pattern && port_name_pattern[0]) {
-                if (regexec(&port_regex, port->GetName(), 0, NULL, 0)) {
+                if (regexec(&port_regex, port->GetName(), 0, nullptr, 0)) {
                     matching = false;
                 }
             }
             if (matching && type_name_pattern && type_name_pattern[0]) {
-                if (regexec(&type_regex, port->GetType(), 0, NULL, 0)) {
+                if (regexec(&type_regex, port->GetType(), 0, nullptr, 0)) {
                     matching = false;
                 }
             }
@@ -886,7 +886,7 @@ const char** JackGraphManager::GetPorts(const char* port_name_pattern, const cha
     UInt16 cur_index, next_index;
 
     if (!res)
-        return NULL;
+        return nullptr;
 
     do {
         cur_index = GetCurrentIndex();
@@ -897,8 +897,8 @@ const char** JackGraphManager::GetPorts(const char* port_name_pattern, const cha
     if (res[0]) { // At least one port
         return res;
     } else {
-        free(res); // Empty array, should return NULL
-        return NULL;
+        free(res); // Empty array, should return nullptr
+        return nullptr;
     }
 }
 

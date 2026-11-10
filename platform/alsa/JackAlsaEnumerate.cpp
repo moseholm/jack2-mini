@@ -62,7 +62,7 @@ static const JackAlsaPcmInfo* FindKnown(const std::vector<JackAlsaPcmInfo>& know
             return &known[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcmInfo>& known,
@@ -116,7 +116,7 @@ std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcm
 
             // Busy now: use what was known.  A device in use by this server is busy by design.
             const JackAlsaPcmInfo* old = FindKnown(known, card_id, device);
-            if (old != NULL) {
+            if (old != nullptr) {
                 if (info.playback_channels == 0) {
                     info.playback_channels = old->playback_channels;
                 }

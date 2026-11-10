@@ -37,12 +37,12 @@ protected:
 public:
     JackPosixThread(JackRunnableInterface* runnable, bool real_time, int priority, int cancellation)
         : JackThreadInterface(runnable, priority, real_time, cancellation)
-        , fThread((jack_native_thread_t)NULL)
+        , fThread((jack_native_thread_t)nullptr)
     {
     }
     JackPosixThread(JackRunnableInterface* runnable, int cancellation = PTHREAD_CANCEL_ASYNCHRONOUS)
         : JackThreadInterface(runnable, 0, false, cancellation)
-        , fThread((jack_native_thread_t)NULL)
+        , fThread((jack_native_thread_t)nullptr)
     {
     }
 

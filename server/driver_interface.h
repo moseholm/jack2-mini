@@ -107,7 +107,7 @@ typedef struct {
     char character;  // < The parameter's character (for getopt, etc)
     jack_driver_param_type_t type;  // < The parameter's type
     jack_driver_param_value_t value;  // < The parameter's (default) value
-    jack_driver_param_constraint_desc_t* constraint;  // < Pointer to parameter constraint descriptor. NULL if there is no constraint
+    jack_driver_param_constraint_desc_t* constraint;  // < Pointer to parameter constraint descriptor. nullptr if there is no constraint
     char short_desc[64];  // < A short (~30 chars) description for the user
     char long_desc[1024];  // < A longer description for the user
 } jack_driver_param_desc_t;
@@ -135,13 +135,13 @@ typedef struct {
 
 // To be used by drivers
 
-SERVER_EXPORT jack_driver_desc_t*  // Newly allocated driver descriptor, NULL on failure
+SERVER_EXPORT jack_driver_desc_t*  // Newly allocated driver descriptor, nullptr on failure
 jack_driver_descriptor_construct(
     const char* name,  // Driver name
     jack_driver_type_t type,  // Driver type
     const char* description,  // Driver description
     jack_driver_desc_filler_t* filler);  // Pointer to stack var to be supplied to jack_driver_descriptor_add_parameter() as well.
-    // Can be NULL for drivers that have no parameters.
+    // Can be nullptr for drivers that have no parameters.
 
 SERVER_EXPORT int  // 0 on failure
 jack_driver_descriptor_add_parameter(
@@ -151,9 +151,9 @@ jack_driver_descriptor_add_parameter(
     char character,  // Parameter's character (for getopt, etc)
     jack_driver_param_type_t type,  // The parameter's type
     const jack_driver_param_value_t* value_ptr,  // Pointer to parameter's (default) value
-    jack_driver_param_constraint_desc_t* constraint,  // Pointer to parameter constraint descriptor. NULL if there is no constraint
+    jack_driver_param_constraint_desc_t* constraint,  // Pointer to parameter constraint descriptor. nullptr if there is no constraint
     const char* short_desc,  // A short (~30 chars) description for the user
-    const char* long_desc);  // A longer description for the user, if NULL short_desc will be used
+    const char* long_desc);  // A longer description for the user, if nullptr short_desc will be used
 
 SERVER_EXPORT
 int jack_constraint_add_enum(

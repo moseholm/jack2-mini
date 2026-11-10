@@ -155,7 +155,7 @@ int main(int argc, char** argv)
         { 0, 0, 0, 0 }
     };
 
-    char* master_driver_name = NULL;
+    char* master_driver_name = nullptr;
 
     copyright(stdout);
     auto created = Server::create("");

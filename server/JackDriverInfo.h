@@ -31,9 +31,9 @@ private:
 
 public:
     JackDriverInfo()
-        : fModule(NULL)
-        , fHandle(NULL)
-        , fBackend(NULL)
+        : fModule(nullptr)
+        , fHandle(nullptr)
+        , fBackend(nullptr)
     {
     }
     ~JackDriverInfo();

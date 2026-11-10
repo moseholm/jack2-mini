@@ -25,7 +25,7 @@ namespace jackmini {
 //
 // Writers (non-RT) place an object in a free slot with Assign() and take it out
 // with Remove(). Readers call Get() once per slot per cycle; a slot that is empty
-// returns NULL.  Nothing is allocated, so the table is safe to read on the RT
+// returns nullptr.  Nothing is allocated, so the table is safe to read on the RT
 // thread.  Removing an object does not free it: the caller must wait until the RT
 // thread has stopped using the object before destroying it.
 
@@ -42,7 +42,7 @@ public:
     JackAlsaSlotTable()
     {
         for (size_t i = 0; i < N; i++) {
-            fSlots[i].store(NULL, std::memory_order_relaxed);
+            fSlots[i].store(nullptr, std::memory_order_relaxed);
         }
     }
 
@@ -52,7 +52,7 @@ public:
     int Assign(T* object)
     {
         for (size_t i = 0; i < N; i++) {
-            if (fSlots[i].load(std::memory_order_relaxed) == NULL) {
+            if (fSlots[i].load(std::memory_order_relaxed) == nullptr) {
                 fSlots[i].store(object, std::memory_order_release);
                 return (int)i;
             }
@@ -66,7 +66,7 @@ public:
         size_t removed = 0;
         for (size_t i = 0; i < N; i++) {
             T* expected = object;
-            if (fSlots[i].compare_exchange_strong(expected, NULL, std::memory_order_release)) {
+            if (fSlots[i].compare_exchange_strong(expected, nullptr, std::memory_order_release)) {
                 removed++;
             }
         }
@@ -84,7 +84,7 @@ public:
     {
         size_t count = 0;
         for (size_t i = 0; i < N; i++) {
-            if (fSlots[i].load(std::memory_order_acquire) != NULL) {
+            if (fSlots[i].load(std::memory_order_acquire) != nullptr) {
                 count++;
             }
         }

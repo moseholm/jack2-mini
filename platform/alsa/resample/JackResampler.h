@@ -75,13 +75,13 @@ public:
 
     virtual const char* Name() const = 0;
 
-    // Returns NULL when the parameters cannot be supported.
+    // Returns nullptr when the parameters cannot be supported.
     virtual JackResampler* Create(const JackResamplerParams& params) = 0;
 
     // The factory used when no other is requested.
     static JackResamplerFactory* Default();
 
-    // Returns NULL for unknown names.  Only "pipewire" exists.
+    // Returns nullptr for unknown names.  Only "pipewire" exists.
     static JackResamplerFactory* Find(const char* name);
 };
 

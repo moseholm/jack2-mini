@@ -146,11 +146,11 @@ ExternalMetro::~ExternalMetro()
 
 int main(int argc, char* argv[])
 {
-    ExternalMetro* client1 = NULL;
-    ExternalMetro* client2 = NULL;
-    ExternalMetro* client3 = NULL;
-    ExternalMetro* client4 = NULL;
-    ExternalMetro* client5 = NULL;
+    ExternalMetro* client1 = nullptr;
+    ExternalMetro* client2 = nullptr;
+    ExternalMetro* client3 = nullptr;
+    ExternalMetro* client4 = nullptr;
+    ExternalMetro* client5 = nullptr;
 
     std::printf("Testing multiple Jack clients in one process: open 5 metro clients...\n");
     client1 = new ExternalMetro(1200, 0.4, 20, 80, "t1");

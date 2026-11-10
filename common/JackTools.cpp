@@ -64,7 +64,7 @@ int JackTools::GetUID()
 const char* JackTools::DefaultServerName()
 {
     const char* server_name;
-    if ((server_name = getenv("JACK_DEFAULT_SERVER")) == NULL) {
+    if ((server_name = getenv("JACK_DEFAULT_SERVER")) == nullptr) {
         server_name = JACK_DEFAULT_SERVER_NAME;
     }
     return server_name;
@@ -155,11 +155,11 @@ int JackTools::GetTmpdir()
     size_t len;
     std::array<char, JACK_PATH_MAX + 2> buf { };  // allow tmpdir to live anywhere, plus newline, plus null
 
-    if ((in = popen("jackd -l", "r")) == NULL) {
+    if ((in = popen("jackd -l", "r")) == nullptr) {
         return -1;
     }
 
-    if (fgets(buf.data(), sizeof(buf), in) == NULL) {
+    if (fgets(buf.data(), sizeof(buf), in) == nullptr) {
         pclose(in);
         return -1;
     }

@@ -89,7 +89,7 @@ jack_driver_desc_t* jack_find_driver_descriptor(JSList* drivers, const char* nam
         desc = (jack_driver_desc_t*)node->data;
 
         if (strcmp(desc->name, name) != 0) {
-            desc = NULL;
+            desc = nullptr;
         } else {
             break;
         }
@@ -116,14 +116,14 @@ static bool HasSharedObjectExtension(std::string_view name)
     return dot != std::string_view::npos && name.substr(dot + 1).starts_with("so");
 }
 
-static void* check_symbol(const char* sofile, const char* symbol, const char* driver_dir, void** res_dllhandle = NULL)
+static void* check_symbol(const char* sofile, const char* symbol, const char* driver_dir, void** res_dllhandle = nullptr)
 {
     void* dlhandle;
-    void* res = NULL;
+    void* res = nullptr;
     std::array<char, 1024> filename { };
     jackmini::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
 
-    if ((dlhandle = LoadDriverModule(filename.data())) == NULL) {
+    if ((dlhandle = LoadDriverModule(filename.data())) == nullptr) {
         jack_error("Could not open component .so '%s': %s", filename.data(), dlerror());
     } else {
         res = (void*)GetDriverProc(dlhandle, symbol);
@@ -151,33 +151,33 @@ struct DriverModuleCloser {
 // already in the list is refused, so the first one is used.
 static jack_driver_desc_t* load_descriptor(JSList* drivers, const char* sofile, const char* driver_dir)
 {
-    jack_driver_desc_t* descriptor = NULL;
+    jack_driver_desc_t* descriptor = nullptr;
     jack_driver_desc_t* other_descriptor;
     std::array<char, 1024> filename { };
     JSList* node;
-    void* raw_handle = NULL;
+    void* raw_handle = nullptr;
 
     jackmini::FormatCString(std::span<char>(filename.data(), 1022), "{}/{}", driver_dir, sofile);
 
     const auto get_module = reinterpret_cast<jackmini::driver::ModuleFunction>(
         check_symbol(sofile, jackmini::driver::kModuleSymbol, driver_dir, &raw_handle));
     std::unique_ptr<void, DriverModuleCloser> dlhandle(raw_handle);
-    const jackmini::driver::Module* module = get_module ? get_module() : NULL;
+    const jackmini::driver::Module* module = get_module ? get_module() : nullptr;
 
-    if (module == NULL) {
+    if (module == nullptr) {
         jack_error("load_descriptor : dll %s is not a driver", sofile);
-        return NULL;
+        return nullptr;
     }
 
     if (module->version != jackmini::driver::kModuleVersion) {
         jack_error("Driver from '%s' has interface version %u, this server needs version %u",
             filename.data(), module->version, jackmini::driver::kModuleVersion);
-        return NULL;
+        return nullptr;
     }
 
-    if ((descriptor = module->describe()) == NULL) {
+    if ((descriptor = module->describe()) == nullptr) {
         jack_error("Driver from '%s' returned NULL descriptor", filename.data());
-        return NULL;
+        return nullptr;
     }
 
     // check it doesn't exist already
@@ -187,7 +187,7 @@ static jack_driver_desc_t* load_descriptor(JSList* drivers, const char* sofile, 
             jack_error("The drivers in '%s' and '%s' both have the name '%s'; using the first",
                 other_descriptor->file, filename.data(), other_descriptor->name);
             // FIXME: delete the descriptor
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -198,8 +198,8 @@ static jack_driver_desc_t* load_descriptor(JSList* drivers, const char* sofile, 
 
 JSList* jack_drivers_load(JSList* drivers)
 {
-    JSList* driver_list = NULL;
-    jack_driver_desc_t* desc = NULL;
+    JSList* driver_list = nullptr;
+    jack_driver_desc_t* desc = nullptr;
 
     const char* driver_dir;
     if ((driver_dir = getenv("JACK_DRIVER_DIR")) == 0) {
@@ -213,7 +213,7 @@ JSList* jack_drivers_load(JSList* drivers)
     if (ec) {
         jack_error("Could not open driver directory %s: %s",
             driver_dir, ec.message().c_str());
-        return NULL;
+        return nullptr;
     }
 
     for (const std::string& name : entries) {
@@ -236,7 +236,7 @@ JSList* jack_drivers_load(JSList* drivers)
 
     if (!driver_list) {
         jack_error("Could not find any drivers in %s!", driver_dir);
-        return NULL;
+        return nullptr;
     }
 
     return driver_list;
@@ -252,28 +252,28 @@ jackmini::JackDriverClientInterface* JackDriverInfo::Open(jack_driver_desc_t* dr
 
     fHandle = LoadDriverModule(driver_desc->file);
 
-    if (fHandle == NULL) {
+    if (fHandle == nullptr) {
         if ((errstr = dlerror()) != 0) {
             jack_error("Can't load \"%s\": %s", driver_desc->file, errstr);
 
         } else {
             jack_error("Error loading driver shared object %s", driver_desc->file);
         }
-        return NULL;
+        return nullptr;
     }
 
 
     const auto get_module = reinterpret_cast<jackmini::driver::ModuleFunction>(GetDriverProc(fHandle, jackmini::driver::kModuleSymbol));
-    fModule = get_module ? get_module() : NULL;
-    if (fModule == NULL) {
+    fModule = get_module ? get_module() : nullptr;
+    if (fModule == nullptr) {
         jack_error("No driver module entry point in shared object %s", driver_desc->file);
-        return NULL;
+        return nullptr;
     }
 
     if (fModule->version != jackmini::driver::kModuleVersion) {
         jack_error("Driver %s has interface version %u, this server needs version %u",
             driver_desc->file, fModule->version, jackmini::driver::kModuleVersion);
-        return NULL;
+        return nullptr;
     }
 
     fBackend = fModule->initialize(engine, synchro, params);
@@ -307,7 +307,7 @@ SERVER_EXPORT jack_driver_desc_t* jack_driver_descriptor_construct(
     }
 
     desc_ptr = (jack_driver_desc_t*)calloc(1, sizeof(jack_driver_desc_t));
-    if (desc_ptr == NULL) {
+    if (desc_ptr == nullptr) {
         jack_error("Error calloc() failed to allocate memory for driver descriptor struct");
         return 0;
     }
@@ -318,7 +318,7 @@ SERVER_EXPORT jack_driver_desc_t* jack_driver_descriptor_construct(
     desc_ptr->nparams = 0;
     desc_ptr->type = type;
 
-    if (filler_ptr != NULL) {
+    if (filler_ptr != nullptr) {
         filler_ptr->size = 0;
     }
 
@@ -345,7 +345,7 @@ SERVER_EXPORT int jack_driver_descriptor_add_parameter(
     name_len = strlen(name);
     short_desc_len = strlen(short_desc);
 
-    if (long_desc != NULL) {
+    if (long_desc != nullptr) {
         long_desc_len = strlen(long_desc);
     } else {
         long_desc = short_desc;
@@ -360,7 +360,7 @@ SERVER_EXPORT int jack_driver_descriptor_add_parameter(
     if (desc_ptr->nparams == filler_ptr->size) {
         newsize = filler_ptr->size + 20; // most drivers have less than 20 parameters
         param_ptr = (jack_driver_param_desc_t*)realloc(desc_ptr->params, newsize * sizeof(jack_driver_param_desc_t));
-        if (param_ptr == NULL) {
+        if (param_ptr == nullptr) {
             jack_error("Error realloc() failed for parameter array of %zu elements", newsize);
             return false;
         }
@@ -402,9 +402,9 @@ int jack_constraint_add_enum(
     }
 
     constraint_ptr = *constraint_ptr_ptr;
-    if (constraint_ptr == NULL) {
+    if (constraint_ptr == nullptr) {
         constraint_ptr = (jack_driver_param_constraint_desc_t*)calloc(1, sizeof(jack_driver_param_constraint_desc_t));
-        if (constraint_ptr == NULL) {
+        if (constraint_ptr == nullptr) {
             jack_error("calloc() failed to allocate memory for param constraint struct");
             return false;
         }
@@ -419,7 +419,7 @@ int jack_constraint_add_enum(
         possible_value_ptr = (jack_driver_param_value_enum_t*)realloc(
             constraint_ptr->constraint.enumeration.possible_values_array,
             sizeof(jack_driver_param_value_enum_t) * array_size);
-        if (possible_value_ptr == NULL) {
+        if (possible_value_ptr == nullptr) {
             jack_error("realloc() failed to (re)allocate memory for possible values array");
             return false;
         }
@@ -444,7 +444,7 @@ SERVER_EXPORT
 void jack_constraint_free(
     jack_driver_param_constraint_desc_t* constraint_ptr)
 {
-    if (constraint_ptr != NULL) {
+    if (constraint_ptr != nullptr) {
         if ((constraint_ptr->flags & JACK_CONSTRAINT_FLAG_RANGE) == 0) {
             free(constraint_ptr->constraint.enumeration.possible_values_array);
         }
@@ -461,7 +461,7 @@ void jack_constraint_free(
         jack_driver_param_value_t value;                            \
         struct jack_constraint_enum_##type##_descriptor* descr_ptr; \
                                                                     \
-        constraint_ptr = NULL;                                      \
+        constraint_ptr = nullptr;                                      \
         for (descr_ptr = descr_array_ptr;                           \
             descr_ptr->value;                                       \
             descr_ptr++) {                                          \
@@ -472,7 +472,7 @@ void jack_constraint_free(
                     &value,                                         \
                     descr_ptr->short_desc)) {                       \
                 jack_constraint_free(constraint_ptr);               \
-                return NULL;                                        \
+                return nullptr;                                        \
             }                                                       \
         }                                                           \
                                                                     \

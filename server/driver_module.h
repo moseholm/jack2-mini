@@ -40,7 +40,7 @@ inline constexpr const char* kModuleSymbol = "jackmini_driver_module";
 using DescribeFunction = jack_driver_desc_t* (*)();
 
 // Creates the driver's backend on the engine, with the parameters given on the command line or by the control API.
-// Returns NULL on failure.
+// Returns nullptr on failure.
 using InitializeFunction = JackDriverClientInterface* (*)(JackLockedEngine* engine, JackSynchro* table, const JSList* params);
 
 struct Module {

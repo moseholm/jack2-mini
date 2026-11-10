@@ -224,7 +224,7 @@ public:
     int ReadRate(JackAlsaRateDirection dir, long* value);
     int WriteRate(JackAlsaRateDirection dir, long value);
 
-    bool IsConverting() const { return fCaptureConverter != NULL || fPlaybackConverter != NULL; }
+    bool IsConverting() const { return fCaptureConverter != nullptr || fPlaybackConverter != nullptr; }
 
     std::vector<jack_port_id_t>& CapturePorts() { return fCapturePorts; }
     std::vector<jack_port_id_t>& PlaybackPorts() { return fPlaybackPorts; }

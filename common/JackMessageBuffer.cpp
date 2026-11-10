@@ -36,7 +36,7 @@ JackMessageBuffer* JackMessageBuffer::fInstance = nullptr;
 
 JackMessageBuffer::JackMessageBuffer()
     : fInit(nullptr)
-    , fInitArg(NULL)
+    , fInitArg(nullptr)
     , fEnqueuePos(0)
     , fDequeuePos(0)
     , fOverruns(0)

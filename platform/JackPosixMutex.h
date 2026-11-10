@@ -36,7 +36,7 @@ protected:
     pthread_t fOwner;
 
 public:
-    JackBasePosixMutex(const char* name = NULL);
+    JackBasePosixMutex(const char* name = nullptr);
     virtual ~JackBasePosixMutex();
 
     bool Lock();
@@ -49,7 +49,7 @@ protected:
     pthread_mutex_t fMutex;
 
 public:
-    JackPosixMutex(const char* name = NULL);
+    JackPosixMutex(const char* name = nullptr);
     virtual ~JackPosixMutex();
 
     bool Lock();

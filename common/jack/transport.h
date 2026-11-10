@@ -53,7 +53,7 @@ int jack_release_timebase(jack_client_t* client) JACK_OPTIONAL_WEAK_EXPORT;
 //
 // @param client the JACK client structure.
 // @param sync_callback is a realtime function that returns TRUE when
-// the client is ready.  Setting @a sync_callback to NULL declares that
+// the client is ready.  Setting @a sync_callback to nullptr declares that
 // this client no longer requires slow-sync processing.
 // @param arg an argument for the @a sync_callback function.
 //
@@ -135,7 +135,7 @@ int jack_transport_locate(jack_client_t* client,
 // @param client the JACK client structure.
 // @param pos pointer to structure for returning current transport
 // position; @a pos->valid will show which fields contain valid data.
-// If @a pos is NULL, do not return position information.
+// If @a pos is nullptr, do not return position information.
 //
 // @return Current transport state.
 jack_transport_state_t jack_transport_query(const jack_client_t* client,

@@ -25,7 +25,7 @@ namespace jackmini {
 JackBasePosixMutex::JackBasePosixMutex(const char* name)
     : fOwner(0)
 {
-    int res = pthread_mutex_init(&fMutex, NULL);
+    int res = pthread_mutex_init(&fMutex, nullptr);
     ThrowIf(res != 0, JackException("JackBasePosixMutex: could not init the mutex"));
 }
 

@@ -34,20 +34,20 @@ static jack_driver_desc_t* describe_driver()
     desc = jack_driver_descriptor_construct("dummy", JackDriverMaster, "Timer based backend", &filler);
 
     value.ui = 2U;
-    jack_driver_descriptor_add_parameter(desc, &filler, "capture", 'C', JackDriverParamUInt, &value, NULL, "Number of capture ports", NULL);
-    jack_driver_descriptor_add_parameter(desc, &filler, "playback", 'P', JackDriverParamUInt, &value, NULL, "Number of playback ports", NULL);
+    jack_driver_descriptor_add_parameter(desc, &filler, "capture", 'C', JackDriverParamUInt, &value, nullptr, "Number of capture ports", nullptr);
+    jack_driver_descriptor_add_parameter(desc, &filler, "playback", 'P', JackDriverParamUInt, &value, nullptr, "Number of playback ports", nullptr);
 
     value.ui = 48000U;
-    jack_driver_descriptor_add_parameter(desc, &filler, "rate", 'r', JackDriverParamUInt, &value, NULL, "Sample rate", NULL);
+    jack_driver_descriptor_add_parameter(desc, &filler, "rate", 'r', JackDriverParamUInt, &value, nullptr, "Sample rate", nullptr);
 
     value.i = 0;
-    jack_driver_descriptor_add_parameter(desc, &filler, "monitor", 'm', JackDriverParamBool, &value, NULL, "Provide monitor ports for the output", NULL);
+    jack_driver_descriptor_add_parameter(desc, &filler, "monitor", 'm', JackDriverParamBool, &value, nullptr, "Provide monitor ports for the output", nullptr);
 
     value.ui = 1024U;
-    jack_driver_descriptor_add_parameter(desc, &filler, "period", 'p', JackDriverParamUInt, &value, NULL, "Frames per period", NULL);
+    jack_driver_descriptor_add_parameter(desc, &filler, "period", 'p', JackDriverParamUInt, &value, nullptr, "Frames per period", nullptr);
 
     value.ui = 21333U;
-    jack_driver_descriptor_add_parameter(desc, &filler, "wait", 'w', JackDriverParamUInt, &value, NULL, "Number of usecs to wait between engine processes", NULL);
+    jack_driver_descriptor_add_parameter(desc, &filler, "wait", 'w', JackDriverParamUInt, &value, nullptr, "Number of usecs to wait between engine processes", nullptr);
 
     return desc;
 }
@@ -108,7 +108,7 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
         return driver;
     } else {
         delete driver;
-        return NULL;
+        return nullptr;
     }
 }
 
