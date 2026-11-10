@@ -1,24 +1,44 @@
 # jackmini code style
 
 jackmini is the name of the whole project: the client library, the server, the drivers, and the tools. The code uses one
-style everywhere. The client code (`client/jackmini/`) is the reference.
+style everywhere. The base is the WebKit C++ style. The tweaks are in `.clang-format` at the top of the repository, and
+the file is the reference for layout: run `clang-format -i` on the files you change.
 
 ## Names
 
-- Namespace `jackmini`. The server is in `jackmini::server`, the drivers in `jackmini::driver`, the shared memory in
-  `jackmini::shm`, the graph in `jackmini::graph`, and logging in `jackmini::log`. There is no `Jack` namespace and no
-  `Jack` prefix on internal names.
-- Types are CamelCase: `Client`, `Port`, `Error`, `Cycle`, `Options`.
-- Methods and free functions are snake_case: `register_port`, `activate`, `buffer_size`.
-- Constants are `kCamelCase`. Macros are not used for constants.
-- Files are lowercase `snake_case`, named after the main type they hold: `client.hpp`, `port.hpp`, `port_table.hpp`.
-- The public C names that the library keeps for its users (`jack_ringbuffer_*`, `jack_midi_*`) are the only names with a
-  `jack_` prefix. They are listed in `docs/design/client-api.md`.
+- Namespace `jackmini`, with the nested namespaces `jackmini::alsa`, `jackmini::client`, `jackmini::control`,
+  `jackmini::midi` and `jackmini::tools`. Namespaces are lowercase.
+- Types are CamelCase, without a `Jack` prefix: `Client`, `Port`, `Error`, `Cycle`, `Options`, `GraphManager`.
+- Functions and methods are camelCase: `registerPort`, `activate`, `bufferSize`, `toString`.
+- Enumerators and constants are `kCamelCase`: `kNoPort`, `kClientNum`, `kInvalidState`. Constants are `constexpr`, not
+  macros.
+- Data members have an `m_` prefix: `m_name`, `m_refNum`. This holds for classes and for structs. Static data members
+  have an `s_` prefix: `s_verbose`. Namespace-scope variables have a `g` prefix: `gPortTypes`.
+- Locals and parameters are camelCase.
+- Files are CamelCase and named after the main type they hold: `Client.hpp`, `ServerPort.h`, `PcmCycle.hpp`. Tests are
+  named the same way: `MemopsUnit.cpp`.
+- The public C API headers in `common/jack/` keep their file names, and the functions declared there keep their names,
+  because plugins and programs look them up by name: `jack_ringbuffer_read`, `jack_midi_event_get`. The logging functions
+  `jack_error`, `jack_info` and `jack_log`, and the `jack_slist_*` list helpers, keep their names too. The public C names
+  that the library keeps for its users (`jack_ringbuffer_*`, `jack_midi_*`) are listed in `docs/design/client-api.md`.
+
+## Types and syntax
+
+- Integers are the fixed-width types from `<cstdint>`: `std::int32_t`, `std::uint32_t`, `std::int64_t`, `std::uint64_t`.
+  `int` is written as `std::int32_t`, except as the return type of `main`. `bool` stays `bool`.
+- `char` is for text only: C strings, names, format strings. Raw bytes, such as audio samples and shared memory, are
+  `std::byte`. Counters that are byte-sized are `std::uint8_t`.
+- Fixed-size arrays are `std::array`. A trailing array that is sized at run time (the struct hack) stays a C array.
+- `nullptr`, never `NULL`.
+- Macros are not used for constants. The macros that remain are the ones C++ cannot replace: export and attribute
+  macros, feature-test and system macros, and the statement macros that return from the caller or use `#` and `##`
+  (`CHECK`, `ThrowIf`, `CheckRes`, `CheckRead`, the constraint-enum generators).
+- Comments are `//` comments, also for the license header. There are no `/* */` comments.
 
 ## Errors
 
 - Fallible functions return `Result<T>`, which is `std::expected<T, Error>`. `Error` is an `enum class` with a
-  `to_string` function.
+  `toString` function.
 - Exceptions are used on the control plane of the server only. The realtime cycle does not throw and does not allocate.
 - An error is reported once, where it is detected. No function prints an error and also returns it.
 
@@ -48,3 +68,5 @@ style everywhere. The client code (`client/jackmini/`) is the reference.
 ## Headers
 
 - A header starts with `#pragma once`, not an include guard.
+- A header includes what it uses (`<cstdint>`, `<array>`, `<cstddef>` for `std::byte`), and does not rely on the files
+  that happen to be included before it.
