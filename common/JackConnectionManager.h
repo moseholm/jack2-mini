@@ -1,21 +1,18 @@
-/*
-Copyright (C) 2004-2008 Grame
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation; either version 2.1 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-*/
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #pragma once
 
@@ -31,9 +28,7 @@ namespace jackmini {
 
 struct JackClientControl;
 
-/*!
-\brief Utility class.
-*/
+// \brief Utility class.
 
 
 template <int SIZE>
@@ -114,9 +109,7 @@ public:
     }
 };
 
-/*!
-\brief Utility class.
-*/
+// \brief Utility class.
 
 
 template <int SIZE>
@@ -147,9 +140,7 @@ public:
     }
 };
 
-/*!
-\brief Utility class.
-*/
+// \brief Utility class.
 
 
 template <int SIZE>
@@ -197,9 +188,7 @@ public:
         fTable[index1][index2] = 0;
     }
 
-    /*!
-            \brief Get the output indexes of a given index.
-    */
+    // \brief Get the output indexes of a given index.
     void GetOutputTable(jack_int_t index, jack_int_t* output) const
     {
         int i, j;
@@ -239,9 +228,7 @@ public:
     }
 };
 
-/*!
-\brief Utility class.
-*/
+// \brief Utility class.
 
 
 template <int SIZE>
@@ -249,9 +236,7 @@ class JackLoopFeedback {
 private:
     int fTable[SIZE][3];
 
-    /*!
-            \brief Add a feedback connection between 2 refnum.
-    */
+    // \brief Add a feedback connection between 2 refnum.
     bool AddConnectionAux(int ref1, int ref2)
     {
         for (int i = 0; i < SIZE; i++) {
@@ -267,9 +252,7 @@ private:
         return false;
     }
 
-    /*!
-            \brief Remove a feedback connection between 2 refnum.
-    */
+    // \brief Remove a feedback connection between 2 refnum.
     bool RemoveConnectionAux(int ref1, int ref2)
     {
         for (int i = 0; i < SIZE; i++) {
@@ -336,9 +319,7 @@ public:
         }
     }
 
-    /*!
-            \brief Test if a connection between 2 refnum is a feedback connection.
-    */
+    // \brief Test if a connection between 2 refnum is a feedback connection.
     int GetConnectionIndex(int ref1, int ref2) const
     {
         for (int i = 0; i < SIZE; i++) {
@@ -349,9 +330,7 @@ public:
     }
 };
 
-/*!
-\brief For client timing measurements.
-*/
+// \brief For client timing measurements.
 
 
 struct JackClientTiming {
@@ -377,29 +356,27 @@ struct JackClientTiming {
     }
 };
 
-/*!
-\brief Connection manager.
-
-<UL>
-<LI>The <B>fConnection</B> array contains the list (array line) of connected ports for a given port.
-<LI>The <B>fInputPort</B> array contains the list (array line) of input connected  ports for a given client.
-<LI>The <B>fOutputPort</B> array contains the list (array line) of output connected  ports for a given client.
-<LI>The <B>fConnectionRef</B> array contains the number of ports connected between two clients.
-<LI>The <B>fInputCounter</B> array contains the number of input clients connected to a given for activation purpose.
-</UL>
-*/
+// \brief Connection manager.
+//
+// <UL>
+// <LI>The <B>fConnection</B> array contains the list (array line) of connected ports for a given port.
+// <LI>The <B>fInputPort</B> array contains the list (array line) of input connected  ports for a given client.
+// <LI>The <B>fOutputPort</B> array contains the list (array line) of output connected  ports for a given client.
+// <LI>The <B>fConnectionRef</B> array contains the number of ports connected between two clients.
+// <LI>The <B>fInputCounter</B> array contains the number of input clients connected to a given for activation purpose.
+// </UL>
 
 
 class SERVER_EXPORT JackConnectionManager {
 
 private:
-    JackFixedArray<CONNECTION_NUM_FOR_PORT> fConnection[PORT_NUM_MAX]; /*! Connection matrix: list of connected ports for a given port: needed to compute Mix buffer */
-    JackFixedArray1<PORT_NUM_FOR_CLIENT> fInputPort[CLIENT_NUM]; /*! Table of input port per refnum : to find a refnum for a given port */
-    JackFixedArray<PORT_NUM_FOR_CLIENT> fOutputPort[CLIENT_NUM]; /*! Table of output port per refnum : to find a refnum for a given port */
-    JackFixedMatrix<CLIENT_NUM> fConnectionRef; /*! Table of port connections by (refnum , refnum) */
-    alignas(UInt32) alignas(JackActivationCount) JackActivationCount fInputCounter[CLIENT_NUM]; /*! Activation counter per refnum */
-    UInt32 fInactive[CLIENT_NUM]; /*! 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed */
-    JackLoopFeedback<CONNECTION_NUM_FOR_PORT> fLoopFeedback; /*! Loop feedback connections */
+    JackFixedArray<CONNECTION_NUM_FOR_PORT> fConnection[PORT_NUM_MAX];  // Connection matrix: list of connected ports for a given port: needed to compute Mix buffer
+    JackFixedArray1<PORT_NUM_FOR_CLIENT> fInputPort[CLIENT_NUM];  // Table of input port per refnum : to find a refnum for a given port
+    JackFixedArray<PORT_NUM_FOR_CLIENT> fOutputPort[CLIENT_NUM];  // Table of output port per refnum : to find a refnum for a given port
+    JackFixedMatrix<CLIENT_NUM> fConnectionRef;  // Table of port connections by (refnum , refnum)
+    alignas(UInt32) alignas(JackActivationCount) JackActivationCount fInputCounter[CLIENT_NUM];  // Activation counter per refnum
+    UInt32 fInactive[CLIENT_NUM];  // 1 for a deactivated client: it keeps its connections, which do not count toward the clients they feed
+    JackLoopFeedback<CONNECTION_NUM_FOR_PORT> fLoopFeedback;  // Loop feedback connections
 
     bool IsLoopPathAux(int ref1, int ref2) const;
 
@@ -412,9 +389,7 @@ public:
     Result<void> Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst);
     bool IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst) const;
 
-    /*!
-      \brief Get the connection number of a given port.
-    */
+    // \brief Get the connection number of a given port.
     jack_int_t Connections(jack_port_id_t port_index) const
     {
         return fConnection[port_index].GetItemCount();

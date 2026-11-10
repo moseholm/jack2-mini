@@ -1,9 +1,9 @@
-/* Measures the process callback: start-to-start interval and callback duration.
- * Samples are stored in a preallocated buffer; the callback does not allocate.
- *
- * usage: jack_rtbench [seconds]
- * The run is seconds of audio: it counts cycles, so it holds in freewheel mode as well.  The client waits for the server
- * to come up. */
+// Measures the process callback: start-to-start interval and callback duration.
+// Samples are stored in a preallocated buffer; the callback does not allocate.
+//
+// usage: jack_rtbench [seconds]
+// The run is seconds of audio: it counts cycles, so it holds in freewheel mode as well.  The client waits for the server
+// to come up.
 #include "jackmini/jackmini.hpp"
 #include "../jackmini_wait.hpp"
 

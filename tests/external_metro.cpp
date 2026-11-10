@@ -1,20 +1,18 @@
-/*
- Copyright (C) 2002 Anthony Van Groningen
-
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
+// Copyright (C) 2002 Anthony Van Groningen
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "external_metro.h"
 
@@ -97,7 +95,7 @@ ExternalMetro::ExternalMetro(int freq_arg, double max_amp, int dur_arg, int bpm_
 
     sr = client.sample_rate();
 
-    /* setup wave table parameters */
+    // setup wave table parameters
     wave_length = 60 * sr / bpm;
     tone_length = sr * dur_arg / 1000;
     attack_length = tone_length * attack_percent / 100;
@@ -112,7 +110,7 @@ ExternalMetro::ExternalMetro(int freq_arg, double max_amp, int dur_arg, int bpm_
         return;
     }
 
-    /* Build the wave table */
+    // Build the wave table
     wave = (float*)std::malloc(wave_length * sizeof(float));
     amp = (double*)std::malloc(tone_length * sizeof(double));
 

@@ -1,22 +1,19 @@
-/*
-Copyright (C) 2001-2005 Paul Davis
-Copyright (C) 2004-2008 Grame
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-*/
+// Copyright (C) 2001-2005 Paul Davis
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "JackDriverLoader.h"
 #include "JackCString.h"
@@ -101,8 +98,8 @@ jack_driver_desc_t* jack_find_driver_descriptor(JSList* drivers, const char* nam
     return desc;
 }
 
-/* The names of the entries in a directory.  If the listing fails, ec is set
- * and the names read so far are returned. */
+// The names of the entries in a directory.  If the listing fails, ec is set
+// and the names read so far are returned.
 static std::vector<std::string> ListDirectory(const char* dir_path, std::error_code& ec)
 {
     std::vector<std::string> names;
@@ -112,7 +109,7 @@ static std::vector<std::string> ListDirectory(const char* dir_path, std::error_c
     return names;
 }
 
-/* true if the file name has an extension that starts with "so", as in "jack_x.so" */
+// true if the file name has an extension that starts with "so", as in "jack_x.so"
 static bool HasSharedObjectExtension(std::string_view name)
 {
     const auto dot = name.rfind('.');
@@ -140,7 +137,7 @@ static void* check_symbol(const char* sofile, const char* symbol, const char* dr
     return res;
 }
 
-/* Unloads a driver module when the owning pointer goes out of scope. */
+// Unloads a driver module when the owning pointer goes out of scope.
 struct DriverModuleCloser {
     void operator()(void* handle) const
     {
@@ -150,8 +147,8 @@ struct DriverModuleCloser {
     }
 };
 
-/* Loads the module of a driver file, checks its interface version, and returns its descriptor. A driver whose name is
-   already in the list is refused, so the first one is used. */
+// Loads the module of a driver file, checks its interface version, and returns its descriptor. A driver whose name is
+// already in the list is refused, so the first one is used.
 static jack_driver_desc_t* load_descriptor(JSList* drivers, const char* sofile, const char* driver_dir)
 {
     jack_driver_desc_t* descriptor = NULL;
@@ -183,13 +180,13 @@ static jack_driver_desc_t* load_descriptor(JSList* drivers, const char* sofile, 
         return NULL;
     }
 
-    /* check it doesn't exist already */
+    // check it doesn't exist already
     for (node = drivers; node; node = jack_slist_next(node)) {
         other_descriptor = (jack_driver_desc_t*)node->data;
         if (strcmp(descriptor->name, other_descriptor->name) == 0) {
             jack_error("The drivers in '%s' and '%s' both have the name '%s'; using the first",
                 other_descriptor->file, filename.data(), other_descriptor->name);
-            /* FIXME: delete the descriptor */
+            // FIXME: delete the descriptor
             return NULL;
         }
     }
@@ -209,8 +206,8 @@ JSList* jack_drivers_load(JSList* drivers)
         driver_dir = ADDON_DIR;
     }
 
-    /* search through the driver_dir and add get descriptors
-    from the .so files in it */
+    // search through the driver_dir and add get descriptors
+    // from the .so files in it
     std::error_code ec;
     const auto entries = ListDirectory(driver_dir, ec);
     if (ec) {
@@ -221,7 +218,7 @@ JSList* jack_drivers_load(JSList* drivers)
 
     for (const std::string& name : entries) {
 
-        /* check the filename is of the right format */
+        // check the filename is of the right format
         if (!std::string_view(name).starts_with("jack_")) {
             continue;
         }

@@ -1,20 +1,18 @@
-/*
-Copyright (C) 2026 JACK contributors
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
+// Copyright (C) 2026 JACK contributors
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #pragma once
 
@@ -22,9 +20,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 namespace jackmini {
 
-/*!
-\brief Parameters used to create a resampler.
-*/
+// \brief Parameters used to create a resampler.
 
 struct JackResamplerParams {
     unsigned int channels;
@@ -33,13 +29,11 @@ struct JackResamplerParams {
     int quality;
 };
 
-/*!
-\brief Multi-channel planar float sample rate converter.
-
-Implementations are created by a JackResamplerFactory and injected into the
-ALSA secondary card code.  The interface is deliberately small so that
-tests can supply fakes.
-*/
+// \brief Multi-channel planar float sample rate converter.
+//
+// Implementations are created by a JackResamplerFactory and injected into the
+// ALSA secondary card code.  The interface is deliberately small so that
+// tests can supply fakes.
 
 class JackResampler {
 
@@ -70,9 +64,7 @@ public:
     virtual unsigned int Delay() = 0;
 };
 
-/*!
-\brief Creates resamplers.  Factories are looked up by name.
-*/
+// \brief Creates resamplers.  Factories are looked up by name.
 
 class JackResamplerFactory {
 

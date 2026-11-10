@@ -1,21 +1,18 @@
-/*
- Copyright (C) 2004-2008 Grame
-
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU Lesser General Public License as published by
- the Free Software Foundation; either version 2.1 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU Lesser General Public License for more details.
-
- You should have received a copy of the GNU Lesser General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
- */
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #pragma once
 
@@ -29,9 +26,7 @@
 
 namespace jackmini {
 
-/*!
-\brief Counter for CAS
-*/
+// \brief Counter for CAS
 
 struct AtomicArrayCounter {
     union {
@@ -84,9 +79,7 @@ struct AtomicArrayCounter {
 #define IncIndex1(e, state) ((e).info.scounter.fByteVal[state]++)
 #define SwapIndex1(e, state) (((e).info.scounter.fByteVal[0] == state) ? 0 : state)
 
-/*!
-\brief Loads a shared counter atomically.  Every read of the counter goes through this.
-*/
+// \brief Loads a shared counter atomically.  Every read of the counter goes through this.
 static inline AtomicArrayCounter LoadCounter1(const AtomicArrayCounter& counter)
 {
     AtomicArrayCounter result;
@@ -94,36 +87,33 @@ static inline AtomicArrayCounter LoadCounter1(const AtomicArrayCounter& counter)
     return result;
 }
 
-/*!
-\brief A class to handle several states in a lock-free manner
-
-Requirement:
-
-        - a "current" state
-        - several possible "pending" state
-        - an TrySwitchState(int state) operation to atomically switch a "pending" to the "current" state (the pending becomes the current).
-
-        The TrySwitchState operation returns a "current" state (either the same if switch fails or the new one, one can know if the switch has succeeded)
-
-        - a WriteNextStartState(int state) returns a "pending" state to be written into
-        - a WriteNextStartStop(int state) make the written "pending" state become "switchable"
-
-        Different pending states can be written independently and concurrently.
-
-        GetCurrentIndex() *must* return an increasing value to be able to check reading current state coherency
-
-        The fCounter is an array of indexes to access the current and 3 different "pending" states.
-
-          WriteNextStateStart(int index) must return a valid state to be written into, and must invalidate state "index" ==> cur state switch.
-          WriteNextStateStop(int index) makes the "index" state become "switchable" with the current state.
-          TrySwitchState(int index) must detect that pending state is a new state, and does the switch
-          ReadCurrentState() must return the state
-          GetCurrentIndex() must return an index increased each new switch.
-          WriteNextStateStart(int index1) and WriteNextStateStart(int index2) can be interleaved
-
-        [switch counter][index state][index state][cur index]
-
-*/
+// \brief A class to handle several states in a lock-free manner
+//
+// Requirement:
+//
+// - a "current" state
+// - several possible "pending" state
+// - an TrySwitchState(int state) operation to atomically switch a "pending" to the "current" state (the pending becomes the current).
+//
+// The TrySwitchState operation returns a "current" state (either the same if switch fails or the new one, one can know if the switch has succeeded)
+//
+// - a WriteNextStartState(int state) returns a "pending" state to be written into
+// - a WriteNextStartStop(int state) make the written "pending" state become "switchable"
+//
+// Different pending states can be written independently and concurrently.
+//
+// GetCurrentIndex() *must* return an increasing value to be able to check reading current state coherency
+//
+// The fCounter is an array of indexes to access the current and 3 different "pending" states.
+//
+// WriteNextStateStart(int index) must return a valid state to be written into, and must invalidate state "index" ==> cur state switch.
+// WriteNextStateStop(int index) makes the "index" state become "switchable" with the current state.
+// TrySwitchState(int index) must detect that pending state is a new state, and does the switch
+// ReadCurrentState() must return the state
+// GetCurrentIndex() must return an index increased each new switch.
+// WriteNextStateStart(int index1) and WriteNextStateStart(int index2) can be interleaved
+//
+// [switch counter][index state][index state][cur index]
 
 // CHECK livelock
 
@@ -184,27 +174,21 @@ public:
     {
     }
 
-    /*!
-    \brief Returns the current state : only valid in the RT reader thread
-    */
+    // \brief Returns the current state : only valid in the RT reader thread
 
     T* ReadCurrentState()
     {
         return &fState[GetIndex1(LoadCounter1(fCounter), 0)];
     }
 
-    /*!
-    \brief Returns the current switch counter
-    */
+    // \brief Returns the current switch counter
 
     UInt16 GetCurrentIndex()
     {
         return GetIndex1(LoadCounter1(fCounter), 3);
     }
 
-    /*!
-    \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
-    */
+    // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
 
     T* TrySwitchState(int state)
     {
@@ -222,9 +206,7 @@ public:
         return &fState[GetIndex1(LoadCounter1(fCounter), 0)]; // Read the counter again
     }
 
-    /*!
-    \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
-    */
+    // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
 
     T* TrySwitchState(int state, bool* result)
     {
@@ -242,9 +224,7 @@ public:
         return &fState[GetIndex1(LoadCounter1(fCounter), 0)]; // Read the counter again
     }
 
-    /*!
-    \brief Start write operation : setup and returns the next state to update, check for recursive write calls.
-    */
+    // \brief Start write operation : setup and returns the next state to update, check for recursive write calls.
 
     T* WriteNextStateStart(int state)
     {
@@ -259,9 +239,7 @@ public:
         return &fState[index];
     }
 
-    /*!
-    \brief Stop write operation : make the next state ready to be used by the RT thread
-    */
+    // \brief Stop write operation : make the next state ready to be used by the RT thread
 
     void WriteNextStateStop(int state)
     {

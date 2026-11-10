@@ -1,20 +1,18 @@
-/*
-Copyright (C) 2026 JACK contributors
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation; either version 2.1 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-*/
+// Copyright (C) 2026 JACK contributors
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #pragma once
 
@@ -33,12 +31,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 namespace jackmini {
 
-/*!
-\brief Copy text into a fixed-size C string buffer.
-
-The text is truncated to fit and the result is always terminated.  The rest of
-the buffer is zero-filled, as strncpy() does.  An empty buffer is left alone.
-*/
+// \brief Copy text into a fixed-size C string buffer.
+//
+// The text is truncated to fit and the result is always terminated.  The rest of
+// the buffer is zero-filled, as strncpy() does.  An empty buffer is left alone.
 inline void CopyCString(std::span<char> dst, std::string_view src)
 {
     if (dst.empty()) {
@@ -49,12 +45,10 @@ inline void CopyCString(std::span<char> dst, std::string_view src)
     std::ranges::fill(dst.subspan(n), '\0');
 }
 
-/*!
-\brief Format into a fixed-size C string buffer.
-
-Like snprintf(): the text is truncated to fit and the result is always
-terminated.  The format string is checked at compile time.
-*/
+// \brief Format into a fixed-size C string buffer.
+//
+// Like snprintf(): the text is truncated to fit and the result is always
+// terminated.  The format string is checked at compile time.
 template <typename T>
 inline constexpr bool IsStdArray = false;
 template <typename T, std::size_t N>
@@ -72,9 +66,7 @@ void FormatCString(std::span<char> dst, std::format_string<Args...> fmt, Args&&.
     *result.out = '\0';
 }
 
-/*!
-\brief Skip the prefix that strtol() accepted: leading white space and one '+'.
-*/
+// \brief Skip the prefix that strtol() accepted: leading white space and one '+'.
 inline std::string_view SkipNumericPrefix(std::string_view text)
 {
     while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front()))) {
@@ -86,13 +78,11 @@ inline std::string_view SkipNumericPrefix(std::string_view text)
     return text;
 }
 
-/*!
-\brief Parse a leading integer the way atoi() did.
-
-Returns 0 when there are no digits or the value does not fit.  Anything after
-the digits is ignored.  Unlike strtoul(), a minus sign is not accepted for an
-unsigned type.
-*/
+// \brief Parse a leading integer the way atoi() did.
+//
+// Returns 0 when there are no digits or the value does not fit.  Anything after
+// the digits is ignored.  Unlike strtoul(), a minus sign is not accepted for an
+// unsigned type.
 template <std::integral T>
 T ParseLeadingInteger(std::string_view text)
 {

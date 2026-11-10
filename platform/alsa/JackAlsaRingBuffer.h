@@ -1,20 +1,18 @@
-/*
-Copyright (C) 2026 JACK contributors
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
+// Copyright (C) 2026 JACK contributors
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #pragma once
 
@@ -24,18 +22,16 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 namespace jackmini {
 
-/*!
-\brief Single producer / single consumer planar float ring.
-
-One writer and one reader are assumed, which is exactly the relationship
-between a secondary card I/O thread and the primary RT thread.  The ring is
-non-blocking: a full producer drops frames and an empty consumer is
-zero-filled.
-
-Storage is rounded up to a power of two so the RT path can use a mask instead
-of an integer division.  The two positions live on separate cache lines to
-avoid false sharing between the card thread and the primary RT thread.
-*/
+// \brief Single producer / single consumer planar float ring.
+//
+// One writer and one reader are assumed, which is exactly the relationship
+// between a secondary card I/O thread and the primary RT thread.  The ring is
+// non-blocking: a full producer drops frames and an empty consumer is
+// zero-filled.
+//
+// Storage is rounded up to a power of two so the RT path can use a mask instead
+// of an integer division.  The two positions live on separate cache lines to
+// avoid false sharing between the card thread and the primary RT thread.
 
 class JackAlsaRingBuffer {
 

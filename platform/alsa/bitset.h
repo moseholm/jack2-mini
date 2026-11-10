@@ -1,47 +1,42 @@
-/*
- * bitset.h -- some simple bit vector set operations.
- *
- * This is useful for sets of small non-negative integers.  There are
- * some obvious set operations that are not implemented because I
- * don't need them right now.
- *
- * These functions represent sets as arrays of unsigned 32-bit
- * integers allocated on the heap.  The first entry contains the set
- * cardinality (number of elements allowed), followed by one or more
- * words containing bit vectors.
- *
- *  $Id: bitset.h,v 1.2 2005/11/23 11:24:29 letz Exp $
- */
+// bitset.h -- some simple bit vector set operations.
+//
+// This is useful for sets of small non-negative integers.  There are
+// some obvious set operations that are not implemented because I
+// don't need them right now.
+//
+// These functions represent sets as arrays of unsigned 32-bit
+// integers allocated on the heap.  The first entry contains the set
+// cardinality (number of elements allowed), followed by one or more
+// words containing bit vectors.
+//
+//  $Id: bitset.h,v 1.2 2005/11/23 11:24:29 letz Exp $
 
-/*
- *  Copyright (C) 2005 Jack O'Quin
- *
- *  This program is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public License as
- *  published by the Free Software Foundation; either version 2 of the
- *  License, or (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+//  Copyright (C) 2005 Jack O'Quin
+//
+//  This program is free software; you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License as
+//  published by the Free Software Foundation; either version 2 of the
+//  License, or (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//  General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, write to the Free Software
+//  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #pragma once
 
-#include <assert.h> /* `#define NDEBUG' to disable */
-#include <inttypes.h> /* POSIX standard fixed-size types */
+#include <assert.h>  // `#define NDEBUG' to disable
+#include <inttypes.h>  // POSIX standard fixed-size types
 
-/* On some 64-bit machines, this implementation may be slightly
- * inefficient, depending on how compilers allocate space for
- * uint32_t.  For the set sizes I currently need, this is acceptable.
- * It should not be hard to pack the bits better, if that becomes
- * worthwhile.
- */
+// On some 64-bit machines, this implementation may be slightly
+// inefficient, depending on how compilers allocate space for
+// uint32_t.  For the set sizes I currently need, this is acceptable.
+// It should not be hard to pack the bits better, if that becomes
+// worthwhile.
 typedef uint32_t _bitset_word_t;
 typedef _bitset_word_t* bitset_t;
 

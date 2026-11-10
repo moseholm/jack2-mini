@@ -1,22 +1,19 @@
-/*
-Copyright (C) 2001-2003 Paul Davis
-Copyright (C) 2004-2008 Grame
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation; either version 2.1 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-*/
+// Copyright (C) 2001-2003 Paul Davis
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "JackPort.h"
 #include "JackCString.h"
@@ -100,9 +97,8 @@ void JackPort::SetLatency(jack_nframes_t nframes)
 {
     fLatency = nframes;
 
-    /* setup the new latency values here,
-     * so we don't need to change the backend codes.
-     */
+    // setup the new latency values here,
+    // so we don't need to change the backend codes.
     if (fFlags & JackPortIsOutput) {
         fCaptureLatency.min = nframes;
         fCaptureLatency.max = nframes;
@@ -118,18 +114,16 @@ void JackPort::SetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_r
     if (mode == JackCaptureLatency) {
         fCaptureLatency = *range;
 
-        /* hack to set latency up for
-         * backend ports
-         */
+        // hack to set latency up for
+        // backend ports
         if ((fFlags & JackPortIsOutput) && (fFlags & JackPortIsPhysical)) {
             fLatency = (range->min + range->max) / 2;
         }
     } else {
         fPlaybackLatency = *range;
 
-        /* hack to set latency up for
-         * backend ports
-         */
+        // hack to set latency up for
+        // backend ports
         if ((fFlags & JackPortIsInput) && (fFlags & JackPortIsPhysical)) {
             fLatency = (range->min + range->max) / 2;
         }
@@ -159,14 +153,12 @@ int JackPort::UnTie()
 
 int JackPort::RequestMonitor(bool onoff)
 {
-    /**
-    jackd.h
-    * If @ref JackPortCanMonitor is set for this @a port, turn input
-    * monitoring on or off. Otherwise, do nothing.
-
-    if (!(fFlags & JackPortCanMonitor))
-        return -1;
-    */
+    // jackd.h
+    // * If @ref JackPortCanMonitor is set for this @a port, turn input
+    // * monitoring on or off. Otherwise, do nothing.
+    //
+    // if (!(fFlags & JackPortCanMonitor))
+    // return -1;
 
     if (onoff) {
         fMonitorRequests++;
@@ -179,14 +171,12 @@ int JackPort::RequestMonitor(bool onoff)
 
 int JackPort::EnsureMonitor(bool onoff)
 {
-    /**
-    jackd.h
-    * If @ref JackPortCanMonitor is set for this @a port, turn input
-    * monitoring on or off. Otherwise, do nothing.
-
-    if (!(fFlags & JackPortCanMonitor))
-        return -1;
-    */
+    // jackd.h
+    // * If @ref JackPortCanMonitor is set for this @a port, turn input
+    // * monitoring on or off. Otherwise, do nothing.
+    //
+    // if (!(fFlags & JackPortCanMonitor))
+    // return -1;
 
     if (onoff) {
         if (fMonitorRequests == 0) {
@@ -208,9 +198,8 @@ const char* JackPort::GetName() const
 
 const char* JackPort::GetShortName() const
 {
-    /* we know there is always a colon, because we put
-       it there ...
-    */
+    // we know there is always a colon, because we put
+    // it there ...
     return strchr(fName, ':') + 1;
 }
 
@@ -236,12 +225,11 @@ bool JackPort::NameEquals(std::string_view target)
 {
     std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> buf { };
 
-    /* this nasty, nasty kludge is here because between 0.109.0 and 0.109.1,
-       the ALSA audio backend had the name "ALSA", whereas as before and
-       after it, it was called "alsa_pcm". this stops breakage for
-       any setups that have saved "alsa_pcm" or "ALSA" in their connection
-       state.
-    */
+    // this nasty, nasty kludge is here because between 0.109.0 and 0.109.1,
+    // the ALSA audio backend had the name "ALSA", whereas as before and
+    // after it, it was called "alsa_pcm". this stops breakage for
+    // any setups that have saved "alsa_pcm" or "ALSA" in their connection
+    // state.
 
     if (target.starts_with("ALSA:capture") || target.starts_with("ALSA:playback")) {
         FormatCString(buf, "alsa_pcm{}", target.substr(4));

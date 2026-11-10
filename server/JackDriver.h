@@ -1,22 +1,19 @@
-/*
- Copyright (C) 2001 Paul Davis
- Copyright (C) 2004-2008 Grame
-
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
- */
+// Copyright (C) 2001 Paul Davis
+// Copyright (C) 2004-2008 Grame
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #pragma once
 
@@ -36,9 +33,7 @@ class JackGraphManager;
 struct JackEngineControl;
 class JackSlaveDriverInterface;
 
-/*!
-\brief The base interface for drivers.
-*/
+// \brief The base interface for drivers.
 
 class SERVER_EXPORT JackDriverInterface {
 
@@ -107,15 +102,11 @@ public:
     virtual bool IsRunning() const = 0;
 };
 
-/*!
- \brief The base interface for drivers clients.
- */
+// \brief The base interface for drivers clients.
 
 class SERVER_EXPORT JackDriverClientInterface : public JackDriverInterface, public JackClientInterface { };
 
-/*!
- \brief The base class for drivers.
- */
+// \brief The base class for drivers.
 
 #define CaptureDriverFlags static_cast<JackPortFlags>(JackPortIsOutput | JackPortIsPhysical | JackPortIsTerminal)
 #define PlaybackDriverFlags static_cast<JackPortFlags>(JackPortIsInput | JackPortIsPhysical | JackPortIsTerminal)

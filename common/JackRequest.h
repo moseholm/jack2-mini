@@ -1,23 +1,20 @@
-/*
-Copyright (C) 2001 Paul Davis
-Copyright (C) 2004-2008 Grame
-Copyright (C) 2016-2026 Filipe Coelho
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation; either version 2.1 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-*/
+// Copyright (C) 2001 Paul Davis
+// Copyright (C) 2004-2008 Grame
+// Copyright (C) 2016-2026 Filipe Coelho
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #pragma once
 
@@ -56,9 +53,7 @@ namespace jackmini {
     }
 
 
-/*!
-\brief Request from client to server.
-*/
+// \brief Request from client to server.
 
 struct JackRequest {
 
@@ -181,9 +176,7 @@ private:
     int fPacketPos;
 };
 
-/*!
-\brief Result from the server.
-*/
+// \brief Result from the server.
 
 struct JackResult {
 
@@ -252,9 +245,7 @@ inline int ReadJackReply(detail::JackClientRequestInterface* socket, std::uint16
     return 0;
 }
 
-/*!
-\brief CheckClient request.
-*/
+// \brief CheckClient request.
 
 struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 + 3 * sizeof(int) + sizeof(jack_uuid_t)> {
 
@@ -308,9 +299,7 @@ struct JackClientCheckRequest : public JackRequestImpl<JACK_CLIENT_NAME_SIZE_1 +
     static constexpr int Size() { return sizeof(fName) + 3 * sizeof(int) + sizeof(jack_uuid_t); }
 };
 
-/*!
-\brief CheckClient result.
-*/
+// \brief CheckClient result.
 
 struct JackClientCheckResult : public JackResult {
 
@@ -348,9 +337,7 @@ struct JackClientCheckResult : public JackResult {
     }
 };
 
-/*!
-\brief NewClient request.
-*/
+// \brief NewClient request.
 
 struct JackClientOpenRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_uuid_t) + JACK_CLIENT_NAME_SIZE_1> {
 
@@ -392,11 +379,9 @@ struct JackClientOpenRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_
     }
 };
 
-/*!
-\brief NewClient result.
-
-The payload is the status and the sizes of the three segments. The descriptors go with it as SCM_RIGHTS, in one message, in the order engine, graph, client control.
-*/
+// \brief NewClient result.
+//
+// The payload is the status and the sizes of the three segments. The descriptors go with it as SCM_RIGHTS, in one message, in the order engine, graph, client control.
 
 struct JackClientOpenResultPayload {
     int32_t fResult;
@@ -447,9 +432,7 @@ struct JackClientOpenResult : public JackResult {
     }
 };
 
-/*!
-\brief CloseClient request.
-*/
+// \brief CloseClient request.
 
 struct JackClientCloseRequest : public JackRequestImpl<sizeof(int)> {
 
@@ -480,9 +463,7 @@ struct JackClientCloseRequest : public JackRequestImpl<sizeof(int)> {
     }
 };
 
-/*!
-\brief Activate request.
-*/
+// \brief Activate request.
 
 struct JackActivateRequest : public JackRequestImpl<2 * sizeof(int)> {
 
@@ -518,9 +499,7 @@ struct JackActivateRequest : public JackRequestImpl<2 * sizeof(int)> {
     }
 };
 
-/*!
-\brief Deactivate request.
-*/
+// \brief Deactivate request.
 
 struct JackDeactivateRequest : public JackRequestImpl<sizeof(int)> {
 
@@ -551,9 +530,7 @@ struct JackDeactivateRequest : public JackRequestImpl<sizeof(int)> {
     }
 };
 
-/*!
-\brief PortRegister request.
-*/
+// \brief PortRegister request.
 
 struct JackPortRegisterRequest : public JackRequestImpl<sizeof(int) + JACK_PORT_NAME_SIZE_1 + JACK_PORT_TYPE_SIZE_1 + 2 * sizeof(unsigned int)> {
 
@@ -607,9 +584,7 @@ struct JackPortRegisterRequest : public JackRequestImpl<sizeof(int) + JACK_PORT_
     }
 };
 
-/*!
-\brief PortRegister result.
-*/
+// \brief PortRegister result.
 
 struct JackPortRegisterResult : public JackResult {
 
@@ -634,9 +609,7 @@ struct JackPortRegisterResult : public JackResult {
     }
 };
 
-/*!
-\brief PortUnregister request.
-*/
+// \brief PortUnregister request.
 
 struct JackPortUnRegisterRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_port_id_t)> {
 
@@ -673,9 +646,7 @@ struct JackPortUnRegisterRequest : public JackRequestImpl<sizeof(int) + sizeof(j
     }
 };
 
-/*!
-\brief PortConnectName request.
-*/
+// \brief PortConnectName request.
 
 struct JackPortConnectNameRequest : public JackRequestImpl<sizeof(int) + 2 * REAL_JACK_PORT_NAME_SIZE_1> {
 
@@ -719,9 +690,7 @@ struct JackPortConnectNameRequest : public JackRequestImpl<sizeof(int) + 2 * REA
     }
 };
 
-/*!
-\brief PortDisconnectName request.
-*/
+// \brief PortDisconnectName request.
 
 struct JackPortDisconnectNameRequest : public JackRequestImpl<sizeof(int) + 2 * REAL_JACK_PORT_NAME_SIZE_1> {
 
@@ -765,9 +734,7 @@ struct JackPortDisconnectNameRequest : public JackRequestImpl<sizeof(int) + 2 * 
     }
 };
 
-/*!
-\brief PortConnect request.
-*/
+// \brief PortConnect request.
 
 struct JackPortConnectRequest : public JackRequestImpl<sizeof(int) + 2 * sizeof(jack_port_id_t)> {
 
@@ -809,9 +776,7 @@ struct JackPortConnectRequest : public JackRequestImpl<sizeof(int) + 2 * sizeof(
     }
 };
 
-/*!
-\brief PortDisconnect request.
-*/
+// \brief PortDisconnect request.
 
 struct JackPortDisconnectRequest : public JackRequestImpl<sizeof(int) + 2 * sizeof(jack_port_id_t)> {
 
@@ -853,9 +818,7 @@ struct JackPortDisconnectRequest : public JackRequestImpl<sizeof(int) + 2 * size
     }
 };
 
-/*!
-\brief PortRename request.
-*/
+// \brief PortRename request.
 
 struct JackPortRenameRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_port_id_t) + JACK_PORT_NAME_SIZE_1> {
 
@@ -898,9 +861,7 @@ struct JackPortRenameRequest : public JackRequestImpl<sizeof(int) + sizeof(jack_
     }
 };
 
-/*!
-\brief SetBufferSize request.
-*/
+// \brief SetBufferSize request.
 
 struct JackSetBufferSizeRequest : public JackRequestImpl<sizeof(jack_nframes_t)> {
 
@@ -931,9 +892,7 @@ struct JackSetBufferSizeRequest : public JackRequestImpl<sizeof(jack_nframes_t)>
     }
 };
 
-/*!
-\brief SetFreeWheel request.
-*/
+// \brief SetFreeWheel request.
 
 struct JackSetFreeWheelRequest : public JackRequestImpl<sizeof(int)> {
 
@@ -964,9 +923,7 @@ struct JackSetFreeWheelRequest : public JackRequestImpl<sizeof(int)> {
     }
 };
 
-/*!
-\brief ComputeTotalLatencies request.
-*/
+// \brief ComputeTotalLatencies request.
 
 struct JackComputeTotalLatenciesRequest : public JackRequestImpl<0> {
 
@@ -987,9 +944,7 @@ struct JackComputeTotalLatenciesRequest : public JackRequestImpl<0> {
     }
 };
 
-/*!
-\brief ReleaseTimebase request.
-*/
+// \brief ReleaseTimebase request.
 
 struct JackReleaseTimebaseRequest : public JackRequestImpl<sizeof(int)> {
 
@@ -1020,9 +975,7 @@ struct JackReleaseTimebaseRequest : public JackRequestImpl<sizeof(int)> {
     }
 };
 
-/*!
-\brief SetTimebaseCallback request.
-*/
+// \brief SetTimebaseCallback request.
 
 struct JackSetTimebaseCallbackRequest : public JackRequestImpl<sizeof(int) + sizeof(int)> {
 
@@ -1058,46 +1011,28 @@ struct JackSetTimebaseCallbackRequest : public JackRequestImpl<sizeof(int) + siz
     }
 };
 
-/*!
-\brief GetInternalClientName request.
-*/
+// \brief GetInternalClientName request.
 
-/*!
-\brief GetInternalClient result.
-*/
+// \brief GetInternalClient result.
 
-/*!
-\brief InternalClientHandle request.
-*/
+// \brief InternalClientHandle request.
 
-/*!
-\brief InternalClientHandle result.
-*/
+// \brief InternalClientHandle result.
 
-/*!
-\brief InternalClientLoad request.
-*/
+// \brief InternalClientLoad request.
 
 #ifndef MAX_PATH
 #define MAX_PATH 256
 #endif
 #define MAX_PATH_1 (MAX_PATH + 1)
 
-/*!
-\brief InternalClientLoad result.
-*/
+// \brief InternalClientLoad result.
 
-/*!
-\brief InternalClientUnload request.
-*/
+// \brief InternalClientUnload request.
 
-/*!
-\brief InternalClientLoad result.
-*/
+// \brief InternalClientLoad result.
 
-/*!
-\brief ClientNotification request.
-*/
+// \brief ClientNotification request.
 
 struct JackClientNotificationRequest : public JackRequestImpl<3 * sizeof(int)> {
 
@@ -1139,9 +1074,7 @@ struct JackClientNotificationRequest : public JackRequestImpl<3 * sizeof(int)> {
     }
 };
 
-/*!
-\brief SessionNotify request.
-*/
+// \brief SessionNotify request.
 
 struct JackClientNameResult : public JackResult {
     char fName[JACK_CLIENT_NAME_SIZE + 1];
@@ -1305,9 +1238,7 @@ struct JackReserveNameRequest : public JackRequestImpl<sizeof(int) + JACK_CLIENT
 };
 
 
-/*!
-\brief ClientNotification.
-*/
+// \brief ClientNotification.
 
 struct JackClientNotification {
     static constexpr int PayloadSize = (JACK_CLIENT_NAME_SIZE + 1) + 5 * sizeof(int) + (JACK_MESSAGE_SIZE + 1);
