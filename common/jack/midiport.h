@@ -17,11 +17,11 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
 #include <jack/types.h>
 #include <jack/weakmacros.h>
 #include <stdlib.h>
+#include <cstddef>
+#include <cstdint>
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,9 +33,9 @@ typedef std::byte jack_midi_data_t;
 
 // A Jack MIDI event.
 typedef struct _jack_midi_event {
-    jack_nframes_t time;  // < Sample index at which event is valid
-    size_t size;  // < Number of bytes of data in \a buffer
-    jack_midi_data_t* buffer;  // < Raw MIDI data
+    jack_nframes_t time; // < Sample index at which event is valid
+    size_t size; // < Number of bytes of data in \a buffer
+    jack_midi_data_t* buffer; // < Raw MIDI data
 } jack_midi_event_t;
 
 

@@ -135,8 +135,8 @@ headers in `client/jackmini/`. The C client library and its copied wrappers are 
 - **Shutdown.** The shutdown callback runs once: on the server's shutdown notification, when the
   notification connection is lost, or when the graph wait fails on the realtime thread.
 
-Checked by `tests/client_session_e2e.cpp` (the session), `tests/jackmini_client_e2e.cpp`, and
-`tests/jackmini_graph_e2e.cpp` (the public client), all run against a server in realtime and in
+Checked by `tests/ClientSessionE2e.cpp` (the session), `tests/JackminiClientE2e.cpp`, and
+`tests/JackminiGraphE2e.cpp` (the public client), all run against a server in realtime and in
 freewheel. Thread sanitizer: the deactivate path no longer aborts; the remaining reports are
 recorded in the handoff.
 
@@ -146,10 +146,10 @@ graph order and the freewheel callbacks of the public C API, the total latency q
 
 ## Next steps
 
-1. Done: the headers are in `client/jackmini/`, and `tests/jackmini_api_unit.cpp`
+1. Done: the headers are in `client/jackmini/`, and `tests/JackminiApiUnit.cpp`
    checks the types and overloads at compile time.
 2. Partly done: `RingBuffer`, `Uuid`, and the error text are implemented and
-   tested without a server (`tests/jackmini_unit.cpp`, TSAN clean). The
+   tested without a server (`tests/JackminiUnit.cpp`, TSAN clean). The
    server-facing tests run against a server.
 3. Done (Plan A): the client library is the session and the public client. The
    `tests/*.cpp` programs that still use the C names (`cpu`, `rtbench`, `iodelay`,

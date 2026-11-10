@@ -16,21 +16,21 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-#include <array>
-#include <cstdint>
 #include <getopt.h>
+#include <array>
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <vector>
 
-#include "JackCString.h"
-#include "JackConstants.h"
-#include "JackLog.h"
-#include "JackPlatformPlug.h"
-#include "JackTypes.h"
-#include "jackmini/control.hpp"
-#include "driver_interface.h"
+#include "CString.h"
+#include "Constants.h"
+#include "DriverInterface.h"
+#include "Log.h"
+#include "PlatformPlug.h"
+#include "Types.h"
+#include "jackmini/Control.hpp"
 
 using jackmini::control::Choice;
 using jackmini::control::Driver;
@@ -138,8 +138,7 @@ int main(std::int32_t argc, char** argv)
 
     const char* options = "-d:P:vshrRSTFt:n:p:a:c:";
 
-    std::array<struct option, 16> longOptions = {{
-        { "clock-source", 1, 0, 'c' },
+    std::array<struct option, 16> longOptions = { { { "clock-source", 1, 0, 'c' },
         { "audio-driver", 1, 0, 'd' },
         { "verbose", 0, 0, 'v' },
         { "help", 0, 0, 'h' },
@@ -154,8 +153,7 @@ int main(std::int32_t argc, char** argv)
         { "silent", 0, 0, 's' },
         { "sync", 0, 0, 'S' },
         { "autoconnect", 1, 0, 'a' },
-        { 0, 0, 0, 0 }
-    }};
+        { 0, 0, 0, 0 } } };
 
     char* masterDriverName = nullptr;
 

@@ -21,10 +21,10 @@ Findings, all fixed in `f38b6e2c`:
 
 | Sanitizer | Where | Finding | Fix |
 |---|---|---|---|
-| ASan (leak) | `tests/alsa_secondary_unit.cpp` | converter test buffers with `new[]`, never freed | `std::vector` |
-| ASan (leak) | `tests/counter_tsan_unit.cpp` | the graph and the synchro table not released | `Destroy` and `delete[]` at the end |
-| UBSan | `platform/JackSocket.h` | `JackClientSocket(int)` left `fNonBlocking` unset; reading it is undefined | in-class initializers |
-| UBSan | `common/JackConnectionManager.h` | the RT thread indexed the activation table with `-1`: a port released by the server is still in the connections of the current state until the next switch, and its owner is `-1` | `IsInactive(-1)` is true (the port is silent) |
+| ASan (leak) | `tests/AlsaSecondaryUnit.cpp` | converter test buffers with `new[]`, never freed | `std::vector` |
+| ASan (leak) | `tests/CounterTsanUnit.cpp` | the graph and the synchro table not released | `Destroy` and `delete[]` at the end |
+| UBSan | `platform/Socket.h` | `JackClientSocket(int)` left `fNonBlocking` unset; reading it is undefined | in-class initializers |
+| UBSan | `common/ConnectionManager.h` | the RT thread indexed the activation table with `-1`: a port released by the server is still in the connections of the current state until the next switch, and its owner is `-1` | `IsInactive(-1)` is true (the port is silent) |
 
 After the fixes: the 15 unit suites pass under all three sanitizers, and the server e2e tests are clean under ASan
 and UBSan (no sanitizer report, no leak report from the server).

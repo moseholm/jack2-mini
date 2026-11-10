@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include <cstdint>
 #include <sys/types.h>
+#include <cstdint>
 
 #ifdef __cplusplus
 extern "C" {

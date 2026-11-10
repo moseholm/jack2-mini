@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <cstdint>
 #include <jack/types.h>
 #include <jack/weakmacros.h>
+#include <cstdint>
 
 
 // @defgroup TransportControl Transport and Timebase control
