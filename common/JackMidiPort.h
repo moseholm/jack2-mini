@@ -53,8 +53,6 @@ LIB_EXPORT std::uint32_t jack_midi_get_lost_event_count(void* port_buffer);
 }
 #endif
 
-// A Jack MIDI port type.
-#define JACK_DEFAULT_MIDI_TYPE "8 bit raw midi"
 
 namespace jackmini {
 

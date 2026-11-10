@@ -26,7 +26,7 @@ class SERVER_EXPORT JackDriverInfo {
 
 private:
     const jackmini::driver::Module* fModule;
-    DRIVER_HANDLE fHandle;
+    DriverHandle fHandle;
     jackmini::JackDriverClientInterface* fBackend;
 
 public:

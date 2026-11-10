@@ -31,7 +31,7 @@ namespace jackmini {
 
 
 struct JackClientControl : public JackShmMemAble {
-    std::array<char, JACK_CLIENT_NAME_SIZE + 1> fName;
+    std::array<char, kClientNameSize + 1> fName;
     std::array<bool, kMaxNotification> fCallback;
     volatile jack_transport_state_t fTransportState;
     std::atomic<bool> fTransportSync;  // Will be true when slow-sync cb has to be called
@@ -54,7 +54,7 @@ struct JackClientControl : public JackShmMemAble {
 
     JackClientControl()
     {
-        Init("", 0, -1, JACK_UUID_EMPTY_INITIALIZER);
+        Init("", 0, -1, kUuidEmptyInitializer);
     }
 
     void Init(const char* name, std::int32_t pid, std::int32_t refnum, jack_uuid_t uuid)

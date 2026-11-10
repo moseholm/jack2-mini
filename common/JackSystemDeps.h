@@ -27,12 +27,33 @@
 #define UINT32_MAX 4294967295U
 #endif
 
-#define DRIVER_HANDLE void*
-#define LoadDriverModule(name) dlopen((name), RTLD_NOW | RTLD_GLOBAL)
-#define UnloadDriverModule(handle) dlclose((handle))
-#define GetDriverProc(handle, name) dlsym((handle), (name))
+using DriverHandle = void*;
+inline DriverHandle loadDriverModule(const char* name)
+{
+    return dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+}
 
-#define JACK_HANDLE void*
-#define LoadJackModule(name) dlopen((name), RTLD_NOW | RTLD_LOCAL);
-#define UnloadJackModule(handle) dlclose((handle));
-#define GetJackProc(handle, name) dlsym((handle), (name));
+inline int unloadDriverModule(DriverHandle handle)
+{
+    return dlclose(handle);
+}
+
+inline void* getDriverProc(DriverHandle handle, const char* name)
+{
+    return dlsym(handle, name);
+}
+
+inline DriverHandle loadJackModule(const char* name)
+{
+    return dlopen(name, RTLD_NOW | RTLD_LOCAL);
+}
+
+inline int unloadJackModule(DriverHandle handle)
+{
+    return dlclose(handle);
+}
+
+inline void* getJackProc(DriverHandle handle, const char* name)
+{
+    return dlsym(handle, name);
+}

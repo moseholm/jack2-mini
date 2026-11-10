@@ -16,71 +16,62 @@
 
 #pragma once
 
+#include <cstdint>
+#include <jack/uuid.h>
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
+#else
+inline constexpr std::int32_t kClientNum = 64;
+inline constexpr std::int32_t kPortNumForClient = 768;
 #endif
 
-#define BUFFER_SIZE_MAX 8192
+inline constexpr std::int32_t kBufferSizeMax = 8192;
 
-#define JACK_PORT_NAME_SIZE 256
-#define JACK_PORT_TYPE_SIZE 32
+inline constexpr std::int32_t kPortNameSize = 256;
+inline constexpr std::int32_t kPortTypeSize = 32;
 
-#define JACK_SERVER_NAME_SIZE 256
-#define JACK_CLIENT_NAME_SIZE 64
-#define JACK_MESSAGE_SIZE 256
-#define JACK_UUID_SIZE 36 // to match jack1 and uuid.h
-#define JACK_UUID_STRING_SIZE (JACK_UUID_SIZE + 1)  // includes trailing null
-#define JACK_UUID_EMPTY_INITIALIZER 0
-#define JACK_SESSION_COMMAND_SIZE 256
+inline constexpr std::int32_t kServerNameSize = 256;
+inline constexpr std::int32_t kClientNameSize = 64;
+inline constexpr std::int32_t kMessageSize = 256;
+inline constexpr std::int32_t kSessionCommandSize = 256;
 
-#define SYNC_MAX_NAME_SIZE 256
+inline constexpr std::int32_t kSyncMaxNameSize = 256;
 
-#define REAL_JACK_PORT_NAME_SIZE JACK_CLIENT_NAME_SIZE + JACK_PORT_NAME_SIZE // full name like "client_name:short_port_name"
+inline constexpr std::int32_t kRealJackPortNameSize = kClientNameSize + kPortNameSize; // full name like "client_name:short_port_name"
 
-#ifndef PORT_NUM
-#define PORT_NUM 2048
-#endif
+inline constexpr std::int32_t kPortNum = 2048;
 
-#ifndef PORT_NUM_MAX
-#define PORT_NUM_MAX 4096 // The "max" value for ports used in connection manager, although port number in graph manager is dynamic
-#endif
+inline constexpr std::int32_t kPortNumMax = 4096; // The "max" value for ports used in connection manager, although port number in graph manager is dynamic
 
-#define DRIVER_PORT_NUM 256
+inline constexpr std::int32_t kDriverPortNum = 256;
 
-#ifndef PORT_NUM_FOR_CLIENT
-#define PORT_NUM_FOR_CLIENT 768
-#endif
+inline constexpr std::int32_t kFirstAvailablePort = 1;
 
-#define FIRST_AVAILABLE_PORT 1
+inline constexpr std::int32_t kConnectionNumForPort = kPortNumForClient;
 
-#define CONNECTION_NUM_FOR_PORT PORT_NUM_FOR_CLIENT
+inline constexpr std::int32_t kAudioDriverRefnum = 0; // Audio driver is initialized first, it will get the refnum 0
+inline constexpr std::int32_t kFreewheelDriverRefnum = 1; // Freewheel driver is initialized second, it will get the refnum 1
 
-#ifndef CLIENT_NUM
-#define CLIENT_NUM 64
-#endif
+inline constexpr const char* kDefaultServerName = "default";
 
-#define AUDIO_DRIVER_REFNUM 0 // Audio driver is initialized first, it will get the refnum 0
-#define FREEWHEEL_DRIVER_REFNUM 1 // Freewheel driver is initialized second, it will get the refnum 1
+inline constexpr std::int32_t kAllClients = -1; // for notification
 
-#define JACK_DEFAULT_SERVER_NAME "default"
+inline constexpr std::int32_t kProtocolVersion = 13;
 
-#define ALL_CLIENTS -1 // for notification
+inline constexpr std::int32_t kSocketTimeOut = 2; // in sec
+inline constexpr std::int32_t kDriverOpenTimeout = 5; // in sec
+inline constexpr std::int32_t kGraphSwitchGuard = 15; // in sec: failure guard for waits on a graph switch, not the time a switch takes
+inline constexpr std::int32_t kFreewheelDriverTimeout = 10; // in sec
+inline constexpr std::int32_t kDriverTimeoutFactor = 10;
 
-#define JACK_PROTOCOL_VERSION 13
+inline constexpr const char* kServerFailure = "JACK server has been closed";
 
-#define SOCKET_TIME_OUT 2 // in sec
-#define DRIVER_OPEN_TIMEOUT 5 // in sec
-#define GRAPH_SWITCH_GUARD 15 // in sec: failure guard for waits on a graph switch, not the time a switch takes
-#define FREEWHEEL_DRIVER_TIMEOUT 10 // in sec
-#define DRIVER_TIMEOUT_FACTOR 10
+inline constexpr std::int32_t kRequestErrAborted = -13;
 
-#define JACK_SERVER_FAILURE "JACK server has been closed"
+inline constexpr std::int32_t kNoPort = 0xFFFE;
 
-#define JACK_REQUEST_ERR_ABORTED -13
+inline constexpr std::int32_t kEmpty = 0xFFFD;
+inline constexpr std::int32_t kFree = 0xFFFC;
 
-#define NO_PORT 0xFFFE
-
-#define EMPTY 0xFFFD
-#define FREE 0xFFFC
-
-#define JACK_DEFAULT_SELF_CONNECT_MODE ' '  // allow all requests
+inline constexpr char kDefaultSelfConnectMode = ' '; // allow all requests

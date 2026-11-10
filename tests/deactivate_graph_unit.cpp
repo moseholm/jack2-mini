@@ -87,9 +87,9 @@ int main()
     graph->Activate(kSinkRef);
     static_cast<GraphTestAccess*>(graph)->Switch();
 
-    const jack_port_id_t out = graph->AllocatePort(kSourceRef, "src:out", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, kFrames);
-    const jack_port_id_t in = graph->AllocatePort(kSinkRef, "sink:in", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, kFrames);
-    Check("ports allocated", out != NO_PORT && in != NO_PORT);
+    const jack_port_id_t out = graph->AllocatePort(kSourceRef, "src:out", kDefaultAudioType, JackPortIsOutput, kFrames);
+    const jack_port_id_t in = graph->AllocatePort(kSinkRef, "sink:in", kDefaultAudioType, JackPortIsInput, kFrames);
+    Check("ports allocated", out != kNoPort && in != kNoPort);
     static_cast<GraphTestAccess*>(graph)->ConnectDirect(out, in);
     static_cast<GraphTestAccess*>(graph)->Switch();
     Check("connected", graph->IsConnected(out, in));

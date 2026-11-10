@@ -51,7 +51,7 @@ public:
 
     JackShmReadWritePtr<JackEngineControl> engine;
     JackShmReadWritePtr<JackGraphManager> graph;
-    std::array<JackSynchro, CLIENT_NUM> synchro;
+    std::array<JackSynchro, kClientNum> synchro;
     std::mutex synchro_mutex; // guards the connection of the synchro entries
 
 private:

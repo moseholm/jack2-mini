@@ -52,7 +52,7 @@ private:
     JackGraphManager* fGraphManager;
     JackServerChannel fRequestChannel;
     JackConnectionManager fConnectionState;
-    std::array<JackSynchro, CLIENT_NUM> fSynchroTable;
+    std::array<JackSynchro, kClientNum> fSynchroTable;
     bool fFreewheel;
 
 

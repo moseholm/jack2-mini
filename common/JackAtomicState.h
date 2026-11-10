@@ -76,18 +76,41 @@ struct AtomicCounter {
     }
 };
 
-#define Counter(e) (e).info.fLongVal
-#define CurIndex(e) (e).info.scounter.fShortVal1
-#define NextIndex(e) (e).info.scounter.fShortVal2
+template <typename T>
+constexpr auto& longVal(T&& e)
+{
+    return e.info.fLongVal;
+}
 
-#define CurArrayIndex(e) (CurIndex(e) & 0x0001)
-#define NextArrayIndex(e) ((CurIndex(e) + 1) & 0x0001)
+template <typename T>
+constexpr auto& curIndex(T&& e)
+{
+    return e.info.scounter.fShortVal1;
+}
+
+template <typename T>
+constexpr auto& nextIndex(T&& e)
+{
+    return e.info.scounter.fShortVal2;
+}
+
+template <typename T>
+constexpr std::int32_t curArrayIndex(T&& e)
+{
+    return curIndex(e) & 0x0001;
+}
+
+template <typename T>
+constexpr std::int32_t nextArrayIndex(T&& e)
+{
+    return (curIndex(e) + 1) & 0x0001;
+}
 
 // \brief Loads a shared counter atomically.  Every read of the counter goes through this, so the 16-bit fields are never read separately from the 32-bit update.
 static inline AtomicCounter LoadCounter(const AtomicCounter& counter)
 {
     AtomicCounter result;
-    Counter(result) = std::atomic_ref<UInt32>(const_cast<UInt32&>(counter.info.fLongVal)).load();
+    longVal(result) = std::atomic_ref<UInt32>(const_cast<UInt32&>(counter.info.fLongVal)).load();
     return result;
 }
 
@@ -114,11 +137,11 @@ protected:
         do {
             old_val = LoadCounter(fCounter);
             new_val = old_val;
-            cur_index = CurArrayIndex(new_val);
-            next_index = NextArrayIndex(new_val);
-            need_copy = (CurIndex(new_val) == NextIndex(new_val));
-            NextIndex(new_val) = CurIndex(new_val); // Invalidate next index
-        } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
+            cur_index = curArrayIndex(new_val);
+            next_index = nextArrayIndex(new_val);
+            need_copy = (curIndex(new_val) == nextIndex(new_val));
+            nextIndex(new_val) = curIndex(new_val); // Invalidate next index
+        } while (!CAS(longVal(old_val), longVal(new_val), (UInt32*)&fCounter));
         if (need_copy)
             memcpy(&fState[next_index], &fState[cur_index], sizeof(T));
         return next_index;
@@ -131,8 +154,8 @@ protected:
         do {
             old_val = LoadCounter(fCounter);
             new_val = old_val;
-            NextIndex(new_val)++; // Set next index
-        } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
+            nextIndex(new_val)++; // Set next index
+        } while (!CAS(longVal(old_val), longVal(new_val), (UInt32*)&fCounter));
     }
 
 public:
@@ -141,7 +164,7 @@ public:
         static_assert(offsetof(JackAtomicState, fCounter) % sizeof(fCounter) == 0,
             "fCounter must be aligned within JackAtomicState");
         assert(reinterpret_cast<std::uintptr_t>(&fCounter) % alignof(UInt32) == 0);
-        Counter(fCounter) = 0;
+        longVal(fCounter) = 0;
         fCallWriteCounter = 0;
     }
 
@@ -152,13 +175,13 @@ public:
     // \brief Returns the current state : only valid in the RT reader thread
     T* ReadCurrentState()
     {
-        return &fState[CurArrayIndex(LoadCounter(fCounter))];
+        return &fState[curArrayIndex(LoadCounter(fCounter))];
     }
 
     // \brief Returns the current state index
     UInt16 GetCurrentIndex()
     {
-        return CurIndex(LoadCounter(fCounter));
+        return curIndex(LoadCounter(fCounter));
     }
 
     // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
@@ -169,9 +192,9 @@ public:
         do {
             old_val = LoadCounter(fCounter);
             new_val = old_val;
-            CurIndex(new_val) = NextIndex(new_val); // Prepare switch
-        } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
-        return &fState[CurArrayIndex(LoadCounter(fCounter))]; // Read the counter again
+            curIndex(new_val) = nextIndex(new_val); // Prepare switch
+        } while (!CAS(longVal(old_val), longVal(new_val), (UInt32*)&fCounter));
+        return &fState[curArrayIndex(LoadCounter(fCounter))]; // Read the counter again
     }
 
     // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
@@ -182,10 +205,10 @@ public:
         do {
             old_val = LoadCounter(fCounter);
             new_val = old_val;
-            *result = (CurIndex(new_val) != NextIndex(new_val));
-            CurIndex(new_val) = NextIndex(new_val); // Prepare switch
-        } while (!CAS(Counter(old_val), Counter(new_val), (UInt32*)&fCounter));
-        return &fState[CurArrayIndex(LoadCounter(fCounter))]; // Read the counter again
+            *result = (curIndex(new_val) != nextIndex(new_val));
+            curIndex(new_val) = nextIndex(new_val); // Prepare switch
+        } while (!CAS(longVal(old_val), longVal(new_val), (UInt32*)&fCounter));
+        return &fState[curArrayIndex(LoadCounter(fCounter))]; // Read the counter again
     }
 
     // \brief Start write operation : setup and returns the next state to update, check for recursive write calls.
@@ -193,7 +216,7 @@ public:
     {
         UInt32 next_index = (fCallWriteCounter++ == 0)
             ? WriteNextStateStartAux()
-            : NextArrayIndex(LoadCounter(fCounter)); // We are inside a wrapping WriteNextStateStart call, NextArrayIndex can be read safely
+            : nextArrayIndex(LoadCounter(fCounter)); // We are inside a wrapping WriteNextStateStart call, NextArrayIndex can be read safely
         return &fState[next_index];
     }
 
@@ -207,7 +230,7 @@ public:
     bool IsPendingChange()
     {
         const AtomicCounter counter = LoadCounter(fCounter);
-        return CurIndex(counter) != NextIndex(counter);
+        return curIndex(counter) != nextIndex(counter);
     }
 
     // // Single writer : write methods get the *next* state to be updated

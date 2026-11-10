@@ -191,7 +191,7 @@ Result<void> JackServer::Stop()
 
     fEngine->NotifyQuit();
     fRequestChannel.Stop();
-    fEngine->NotifyFailure(JackFailure | JackServerError, JACK_SERVER_FAILURE);
+    fEngine->NotifyFailure(JackFailure | JackServerError, kServerFailure);
 
     return DriverResult(res);
 }

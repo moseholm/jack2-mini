@@ -32,8 +32,8 @@ namespace jackmini {
 class JackClientInterface;
 class JackGraphManager;
 
-#define JACK_ENGINE_ROLLING_COUNT 32
-#define JACK_ENGINE_ROLLING_INTERVAL 1024
+inline constexpr std::int32_t kEngineRollingCount = 32;
+inline constexpr std::int32_t kEngineRollingInterval = 1024;
 
 // \brief Engine control in shared memory.
 
@@ -55,7 +55,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem {
     std::int32_t fServerPriority;
     std::int32_t fClientPriority;
     std::int32_t fMaxClientPriority;
-    std::array<char, JACK_SERVER_NAME_SIZE + 1> fServerName;
+    std::array<char, kServerNameSize + 1> fServerName;
     alignas(UInt32) alignas(JackTransportEngine) JackTransportEngine fTransport;
     jack_timer_type_t fClockSource;
     std::int32_t fDriverNum;
@@ -66,7 +66,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem {
     jack_time_t fCurCycleTime;
     jack_time_t fSpareUsecs;
     jack_time_t fMaxUsecs;
-    std::array<jack_time_t, JACK_ENGINE_ROLLING_COUNT> fRollingClientUsecs;
+    std::array<jack_time_t, kEngineRollingCount> fRollingClientUsecs;
     std::uint32_t fRollingClientUsecsCnt;
     std::uint32_t fRollingClientUsecsIndex;
     std::uint32_t fRollingInterval;

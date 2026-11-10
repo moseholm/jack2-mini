@@ -30,7 +30,7 @@ namespace detail {
 class JackSynchro {
 
 protected:
-    std::array<char, SYNC_MAX_NAME_SIZE> fName;
+    std::array<char, kSyncMaxNameSize> fName;
     std::atomic<bool> fFlush; // If true, signal are "flushed" : used for drivers that do no consume the signal
 
 public:

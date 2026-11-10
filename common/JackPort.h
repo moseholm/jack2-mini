@@ -26,8 +26,7 @@
 
 namespace jackmini {
 
-#define ALL_PORTS 0xFFFF
-#define NO_PORT 0xFFFE
+inline constexpr std::int32_t kAllPorts = 0xFFFF;
 
 // \brief Base class for port.
 
@@ -39,9 +38,9 @@ class SERVER_EXPORT JackPort {
 private:
     std::int32_t fTypeId;
     enum JackPortFlags fFlags;
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> fName;
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> fAlias1;
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> fAlias2;
+    std::array<char, kRealJackPortNameSize + 1> fName;
+    std::array<char, kRealJackPortNameSize + 1> fAlias1;
+    std::array<char, kRealJackPortNameSize + 1> fAlias2;
     std::int32_t fRefNum;
     jack_uuid_t fUUID; // set when the port is allocated; the UUID is reported by the client tools
 
@@ -53,7 +52,7 @@ private:
 
     bool fInUse;
     jack_port_id_t fTied; // Locally tied source port
-    std::array<jack_default_audio_sample_t, BUFFER_SIZE_MAX + 8> fBuffer;
+    std::array<jack_default_audio_sample_t, kBufferSizeMax + 8> fBuffer;
 
     bool IsUsed() const
     {

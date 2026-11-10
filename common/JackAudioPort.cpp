@@ -151,7 +151,7 @@ static size_t AudioBufferSize()
 }
 
 const JackPortType gAudioPortType = {
-    JACK_DEFAULT_AUDIO_TYPE,
+    kDefaultAudioType,
     AudioBufferSize,
     AudioBufferInit,
     AudioBufferMixdown

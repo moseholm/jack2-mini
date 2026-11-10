@@ -89,7 +89,7 @@ std::int32_t JackFreewheelDriver::ProcessWriteAsync()
 
 Result<void> JackFreewheelDriver::SuspendRefNum()
 {
-    return fGraphManager->SuspendRefNum(&fClientControl, fSynchroTable, FREEWHEEL_DRIVER_TIMEOUT * 1000000);
+    return fGraphManager->SuspendRefNum(&fClientControl, fSynchroTable, kFreewheelDriverTimeout * 1000000);
 }
 
 } // namespace jackmini

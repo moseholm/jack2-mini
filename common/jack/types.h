@@ -29,7 +29,7 @@ typedef std::int32_t jack_shmsize_t;
 typedef std::uint32_t jack_nframes_t;
 
 // Maximum value that can be stored in jack_nframes_t
-#define JACK_MAX_FRAMES (4294967295U)  // This should be UINT32_MAX, but C++ has a problem with that.
+inline constexpr std::uint32_t kMaxFrames = (4294967295U); // This should be UINT32_MAX, but C++ has a problem with that.
 
 // Type used to represent the value of free running
 // monotonic clock with units of microseconds.
@@ -81,10 +81,10 @@ enum JackOptions {
 };
 
 // Valid options for opening an external client.
-#define JackOpenOptions (JackSessionID | JackServerName | JackNoStartServer | JackUseExactName)
+inline constexpr std::int32_t kOpenOptions = (JackSessionID | JackServerName | JackNoStartServer | JackUseExactName);
 
 // Valid options for loading an internal client.
-#define JackLoadOptions (JackLoadInit | JackLoadName | JackUseExactName)
+inline constexpr std::int32_t kLoadOptions = (JackLoadInit | JackLoadName | JackUseExactName);
 
 //  Options for several JACK operations, formed by OR-ing together the
 //  relevant @ref JackOptions bits.
@@ -345,8 +345,8 @@ typedef void (*JackInfoShutdownCallback)(jack_status_t code, const char* reason,
 
 // Used for the type argument of jack_port_register() for default
 // audio ports and midi ports.
-#define JACK_DEFAULT_AUDIO_TYPE "32 bit float mono audio"
-#define JACK_DEFAULT_MIDI_TYPE "8 bit raw midi"
+inline constexpr const char* kDefaultAudioType = "32 bit float mono audio";
+inline constexpr const char* kDefaultMidiType = "8 bit raw midi";
 
 // For convenience, use this typedef if you want to be able to change
 // between float and double. You may want to typedef sample_t to
@@ -427,7 +427,7 @@ typedef enum {
 } jack_position_bits_t;
 
 // all valid position bits
-#define JACK_POSITION_MASK (JackPositionBBT | JackPositionTimecode)
+inline constexpr std::int32_t kPositionMask = (JackPositionBBT | JackPositionTimecode);
 #define EXTENDED_TIME_INFO
 
 // transport tick_double member is available for use

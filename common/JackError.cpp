@@ -52,7 +52,7 @@ SERVER_EXPORT void jack_log(const char* fmt, ...)
     if (JackGlobals::fVerbose) {
         va_list ap;
         va_start(ap, fmt);
-        jack_log_message(LOG_LEVEL_INFO, "Jack: ", fmt, ap);
+        jack_log_message(kLogLevelInfo, "Jack: ", fmt, ap);
         va_end(ap);
     }
 }

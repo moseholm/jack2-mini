@@ -66,14 +66,14 @@ public:
 
 // \brief Server socket.
 
-#define SOCKET_MAX_NAME_SIZE 256
+inline constexpr std::int32_t kSocketMaxNameSize = 256;
 
 
 class JackServerSocket {
 
 private:
     std::int32_t fSocket;
-    std::array<char, SOCKET_MAX_NAME_SIZE> fName;
+    std::array<char, kSocketMaxNameSize> fName;
     bool fPromiscuous;
     std::int32_t fPromiscuousGid;
 

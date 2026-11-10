@@ -24,7 +24,7 @@
 #include <unistd.h> // for _POSIX_PRIORITY_SCHEDULING check
 
 // #define JACK_SCHED_POLICY SCHED_RR
-#define JACK_SCHED_POLICY SCHED_FIFO
+inline constexpr std::int32_t kSchedPolicy = SCHED_FIFO;
 
 #ifndef SCHED_RESET_ON_FORK
 #define SCHED_RESET_ON_FORK 0x40000000
@@ -120,7 +120,7 @@ std::int32_t JackPosixThread::StartImp(jack_native_thread_t* thread, std::int32_
             return -1;
         }
 
-        if ((res = pthread_attr_setschedpolicy(&attributes, JACK_SCHED_POLICY))) {
+        if ((res = pthread_attr_setschedpolicy(&attributes, kSchedPolicy))) {
             jack_error("Cannot set RR scheduling class for RT thread res = %d", res);
             return -1;
         }
@@ -140,7 +140,7 @@ std::int32_t JackPosixThread::StartImp(jack_native_thread_t* thread, std::int32_
         }
     }
 
-    if ((res = pthread_attr_setstacksize(&attributes, THREAD_STACK))) {
+    if ((res = pthread_attr_setstacksize(&attributes, kThreadStack))) {
         jack_error("Cannot set thread stack size res = %d", res);
         return -1;
     }
@@ -238,12 +238,12 @@ std::int32_t JackPosixThread::AcquireRealTimeImp(jack_native_thread_t thread, st
 
     jack_log("JackPosixThread::AcquireRealTimeImp priority = %d", priority);
 
-    if ((res = pthread_setschedparam(thread, JACK_SCHED_POLICY, &rtparam)) == 0)
+    if ((res = pthread_setschedparam(thread, kSchedPolicy, &rtparam)) == 0)
         return 0;
 
 #ifdef SCHED_RESET_ON_FORK
     jack_log("pthread_setschedparam() failed (%d), trying with SCHED_RESET_ON_FORK.", res);
-    if ((res = pthread_setschedparam(thread, JACK_SCHED_POLICY | SCHED_RESET_ON_FORK, &rtparam)) == 0)
+    if ((res = pthread_setschedparam(thread, kSchedPolicy | SCHED_RESET_ON_FORK, &rtparam)) == 0)
         return 0;
 #endif
 
@@ -307,13 +307,13 @@ bool jack_get_thread_realtime_priority_range(std::int32_t* min_ptr, std::int32_t
 #if defined(_POSIX_PRIORITY_SCHEDULING)
     std::int32_t min, max;
 
-    min = sched_get_priority_min(JACK_SCHED_POLICY);
+    min = sched_get_priority_min(kSchedPolicy);
     if (min == -1) {
         jack_error("sched_get_priority_min() failed.");
         return false;
     }
 
-    max = sched_get_priority_max(JACK_SCHED_POLICY);
+    max = sched_get_priority_max(kSchedPolicy);
     if (max == -1) {
         jack_error("sched_get_priority_max() failed.");
         return false;

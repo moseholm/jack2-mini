@@ -47,7 +47,7 @@ Result<void> JackSocketServerChannel::Open(const char* server_name, JackServer* 
     jack_log("JackSocketServerChannel::Open");
 
     // Prepare request socket
-    if (fRequestListenSocket.Bind(jack_server_dir, server_name, 0) < 0) {
+    if (fRequestListenSocket.Bind(kServerDir, server_name, 0) < 0) {
         jack_log("JackSocketServerChannel::Open : cannot create result listen socket");
         return std::unexpected(Error::ServerFailure);
     }

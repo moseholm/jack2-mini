@@ -89,7 +89,7 @@ public:
 
     jack_nframes_t fBufferSize = 0;
     std::int32_t fClosedRefNum = -1;
-    jack_port_id_t fRenamedPort = NO_PORT;
+    jack_port_id_t fRenamedPort = kNoPort;
     std::string fRenamedTo;
     std::string fUUIDFor;
     std::int32_t fRequestsServed = 0;

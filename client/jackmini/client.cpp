@@ -138,7 +138,7 @@ PortFlags from_c_flags(std::uint64_t flags)
 
 const char* to_c_type(PortType type)
 {
-    return type == PortType::Midi ? JACK_DEFAULT_MIDI_TYPE : JACK_DEFAULT_AUDIO_TYPE;
+    return type == PortType::Midi ? kDefaultMidiType : kDefaultAudioType;
 }
 
 jack_latency_callback_mode_t to_c_mode(LatencyMode mode)
@@ -261,7 +261,7 @@ PortType Client::port_type(Port port) const
     if (index == 0) {
         return PortType::Audio;
     }
-    return std::strcmp(fImpl->session->port_type(index), JACK_DEFAULT_MIDI_TYPE) == 0 ? PortType::Midi : PortType::Audio;
+    return std::strcmp(fImpl->session->port_type(index), kDefaultMidiType) == 0 ? PortType::Midi : PortType::Audio;
 }
 
 PortFlags Client::port_flags(Port port) const
@@ -490,7 +490,7 @@ float Client::cpu_load() const noexcept
 std::span<float> Client::audio_buffer(Port port) noexcept
 {
     const jack_port_id_t index = fImpl ? fImpl->port_of(port) : 0;
-    if (index == 0 || std::strcmp(fImpl->session->port_type(index), JACK_DEFAULT_AUDIO_TYPE) != 0) {
+    if (index == 0 || std::strcmp(fImpl->session->port_type(index), kDefaultAudioType) != 0) {
         return { };
     }
     const jack_nframes_t frames = fImpl->session->buffer_size();
@@ -500,7 +500,7 @@ std::span<float> Client::audio_buffer(Port port) noexcept
 midi::Buffer Client::midi_buffer(Port port) noexcept
 {
     const jack_port_id_t index = fImpl ? fImpl->port_of(port) : 0;
-    if (index == 0 || std::strcmp(fImpl->session->port_type(index), JACK_DEFAULT_MIDI_TYPE) != 0) {
+    if (index == 0 || std::strcmp(fImpl->session->port_type(index), kDefaultMidiType) != 0) {
         return midi::Buffer(nullptr);
     }
     return midi::Buffer(fImpl->session->port_buffer(index, fImpl->session->buffer_size()));

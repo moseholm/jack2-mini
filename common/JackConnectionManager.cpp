@@ -35,14 +35,14 @@ JackConnectionManager::JackConnectionManager()
 
     jack_log("JackConnectionManager::InitConnections size = %ld ", sizeof(JackConnectionManager));
 
-    for (i = 0; i < PORT_NUM_MAX; i++) {
+    for (i = 0; i < kPortNumMax; i++) {
         fConnection[i].Init();
     }
 
     fLoopFeedback.Init();
 
     jack_log("JackConnectionManager::InitClients");
-    for (i = 0; i < CLIENT_NUM; i++) {
+    for (i = 0; i < kClientNum; i++) {
         InitRefNum(i);
     }
 }
@@ -64,13 +64,13 @@ bool JackConnectionManager::IsLoopPathAux(std::int32_t ref1, std::int32_t ref2) 
     } else if (ref1 == ref2) { // Same refnum
         return true;
     } else {
-        std::array<jack_int_t, CLIENT_NUM> output;
+        std::array<jack_int_t, kClientNum> output;
         fConnectionRef.GetOutputTable(ref1, output.data());
 
         if (fConnectionRef.IsInsideTable(ref2, output.data())) { // If ref2 is contained in the outputs of ref1
             return true;
         } else {
-            for (std::int32_t i = 0; i < CLIENT_NUM && output[i] != EMPTY; i++) { // Otherwise recurse for all ref1 outputs
+            for (std::int32_t i = 0; i < kClientNum && output[i] != kEmpty; i++) { // Otherwise recurse for all ref1 outputs
                 if (IsLoopPathAux(output[i], ref2)) {
                     return true; // Stop when a path is found
                 }
@@ -202,7 +202,7 @@ void JackConnectionManager::InitRefNum(std::int32_t refnum)
 void JackConnectionManager::ResetGraph(JackClientTiming* timing, std::atomic<SInt32>* live)
 {
     // Reset activation counter : must be done *before* starting to resume clients
-    for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = 0; i < kClientNum; i++) {
         live[i].store(fInputCounter[i].GetCount());
         timing[i].fStatus = NotTriggered;
     }
@@ -233,7 +233,7 @@ Result<void> JackConnectionManager::ResumeRefNum(JackClientControl* control, Jac
     timing[control->fRefNum].fStatus = Finished;
     timing[control->fRefNum].fFinishedAt = current_date;
 
-    for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = 0; i < kClientNum; i++) {
 
         // Signal connected clients or drivers
         if (output_ref[i] > 0) {
@@ -254,7 +254,7 @@ Result<void> JackConnectionManager::ResumeRefNum(JackClientControl* control, Jac
 
 static bool HasNoConnection(jack_int_t* table)
 {
-    for (std::int32_t ref = 0; ref < CLIENT_NUM; ref++) {
+    for (std::int32_t ref = 0; ref < kClientNum; ref++) {
         if (table[ref] > 0)
             return false;
     }
@@ -265,24 +265,24 @@ static bool HasNoConnection(jack_int_t* table)
 
 void JackConnectionManager::TopologicalSort(std::vector<jack_int_t>& sorted)
 {
-    JackFixedMatrix<CLIENT_NUM>* tmp = new JackFixedMatrix<CLIENT_NUM>;
+    JackFixedMatrix<kClientNum>* tmp = new JackFixedMatrix<kClientNum>;
     std::set<jack_int_t> level;
 
     fConnectionRef.Copy(*tmp);
 
     // Inputs of the graph
-    level.insert(AUDIO_DRIVER_REFNUM);
-    level.insert(FREEWHEEL_DRIVER_REFNUM);
+    level.insert(kAudioDriverRefnum);
+    level.insert(kFreewheelDriverRefnum);
 
     while (level.size() > 0) {
         jack_int_t refnum = *level.begin();
         sorted.push_back(refnum);
         level.erase(level.begin());
         const jack_int_t* output_ref1 = tmp->GetItems(refnum);
-        for (std::int32_t dst = 0; dst < CLIENT_NUM; dst++) {
+        for (std::int32_t dst = 0; dst < kClientNum; dst++) {
             if (output_ref1[dst] > 0) {
                 tmp->ClearItem(refnum, dst);
-                jack_int_t output_ref2[CLIENT_NUM];
+                jack_int_t output_ref2[kClientNum];
                 tmp->GetOutputTable1(dst, output_ref2);
                 if (HasNoConnection(output_ref2)) {
                     level.insert(dst);
@@ -348,12 +348,12 @@ void JackConnectionManager::DirectDisconnect(std::int32_t ref1, std::int32_t ref
 // follows: they stop counting while the client is inactive.
 void JackConnectionManager::SetInactive(std::int32_t refnum, bool inactive)
 {
-    assert(refnum >= 0 && refnum < CLIENT_NUM);
+    assert(refnum >= 0 && refnum < kClientNum);
     if (IsInactive(refnum) == inactive) {
         return;
     }
     const jack_int_t* outputs = fConnectionRef.GetItems(refnum);
-    for (std::int32_t ref = 0; ref < CLIENT_NUM; ref++) {
+    for (std::int32_t ref = 0; ref < kClientNum; ref++) {
         if (outputs[ref] > 0) {
             if (inactive) {
                 fInputCounter[ref].DecValue();
@@ -375,7 +375,7 @@ bool JackConnectionManager::IsDirectConnection(std::int32_t ref1, std::int32_t r
 // \brief Get the client refnum of a given input port.
 std::int32_t JackConnectionManager::GetInputRefNum(jack_port_id_t port_index) const
 {
-    for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = 0; i < kClientNum; i++) {
         if (fInputPort[i].CheckItem(port_index)) {
             return i;
         }
@@ -387,7 +387,7 @@ std::int32_t JackConnectionManager::GetInputRefNum(jack_port_id_t port_index) co
 // \brief Get the client refnum of a given output port.
 std::int32_t JackConnectionManager::GetOutputRefNum(jack_port_id_t port_index) const
 {
-    for (std::int32_t i = 0; i < CLIENT_NUM; i++) {
+    for (std::int32_t i = 0; i < kClientNum; i++) {
         if (fOutputPort[i].CheckItem(port_index)) {
             return i;
         }

@@ -38,9 +38,9 @@ class SERVER_EXPORT JackGraphManager : public JackShmMem, public JackAtomicState
 
 private:
     std::uint32_t fPortMax;
-    std::array<JackClientTiming, CLIENT_NUM> fClientTiming;
-    std::array<std::atomic<SInt32>, CLIENT_NUM> fActivation; // live activation counters, outside the copied connection state
-    std::array<jack_uuid_t, CLIENT_NUM> fClientUUID; // the UUID of each client, for the ports it owns
+    std::array<JackClientTiming, kClientNum> fClientTiming;
+    std::array<std::atomic<SInt32>, kClientNum> fActivation; // live activation counters, outside the copied connection state
+    std::array<jack_uuid_t, kClientNum> fClientUUID; // the UUID of each client, for the ports it owns
     JackPort fPortArray[0]; // The actual size depends of port_max, it will be dynamically computed and allocated using "placement" new
 
     void AssertPort(jack_port_id_t port_index);

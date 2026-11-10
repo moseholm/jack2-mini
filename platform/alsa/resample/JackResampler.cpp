@@ -20,9 +20,7 @@
 #include <cstdint>
 #include <string.h>
 
-#ifndef RESAMPLE_DEFAULT_QUALITY
-#define RESAMPLE_DEFAULT_QUALITY 4
-#endif
+static constexpr std::int32_t kResampleDefaultQuality = 4;
 
 namespace jackmini {
 
@@ -84,7 +82,7 @@ public:
 
     JackResampler* Create(const JackResamplerParams& params)
     {
-        std::int32_t quality = (params.quality < 0) ? RESAMPLE_DEFAULT_QUALITY : params.quality;
+        std::int32_t quality = (params.quality < 0) ? kResampleDefaultQuality : params.quality;
         jack_pw_resampler* handle = jack_pw_resampler_new(params.channels, params.in_rate,
             params.out_rate, quality);
         if (handle == nullptr) {

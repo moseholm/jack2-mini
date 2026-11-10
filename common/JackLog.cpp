@@ -49,7 +49,7 @@ void jack_error(const char* fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    jack_format_and_log(LOG_LEVEL_ERROR, nullptr, fmt, ap);
+    jack_format_and_log(kLogLevelError, nullptr, fmt, ap);
     va_end(ap);
 }
 
@@ -57,7 +57,7 @@ void jack_info(const char* fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    jack_format_and_log(LOG_LEVEL_INFO, nullptr, fmt, ap);
+    jack_format_and_log(kLogLevelInfo, nullptr, fmt, ap);
     va_end(ap);
 }
 
@@ -66,10 +66,10 @@ void jack_log_direct(std::int32_t level, const char* message)
     void (*log_callback)(const char*);
 
     switch (level) {
-    case LOG_LEVEL_INFO:
+    case kLogLevelInfo:
         log_callback = jack_info_callback;
         break;
-    case LOG_LEVEL_ERROR:
+    case kLogLevelError:
         log_callback = jack_error_callback;
         break;
     default:

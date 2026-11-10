@@ -99,9 +99,9 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
         buffer_size = lroundf((float(wait_time) * float(sample_rate)) / 1000000.0f);
     }
 
-    if (buffer_size > BUFFER_SIZE_MAX) {
-        buffer_size = BUFFER_SIZE_MAX;
-        jack_error("Buffer size set to %d", BUFFER_SIZE_MAX);
+    if (buffer_size > kBufferSizeMax) {
+        buffer_size = kBufferSizeMax;
+        jack_error("Buffer size set to %d", kBufferSizeMax);
     }
 
     jackmini::JackDriverClientInterface* driver = new jackmini::JackThreadedDriver(new jackmini::JackDummyDriver("system", "dummy_pcm", engine, table));

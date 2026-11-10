@@ -41,7 +41,7 @@ JackDriver::JackDriver(const char* name, const char* alias, JackLockedEngine* en
     , fClientControl(name, jack_client_uuid_generate())
     , fWithMonitorPorts(false)
 {
-    assert(strlen(name) < JACK_CLIENT_NAME_SIZE);
+    assert(strlen(name) < kClientNameSize);
     fSynchroTable = table;
     strcpy(fAliasName.data(), alias);
     fEngine = engine;
@@ -90,11 +90,11 @@ std::int32_t JackDriver::Open(jack_nframes_t buffer_size,
     jack_log("JackDriver::Open capture_driver_name = %s", capture_driver_name);
     jack_log("JackDriver::Open playback_driver_name = %s", playback_driver_name);
     std::int32_t refnum = -1;
-    std::array<char, JACK_CLIENT_NAME_SIZE + 1> name_res { };
+    std::array<char, kClientNameSize + 1> name_res { };
     std::int32_t status;
 
     // Check name and possibly rename
-    if (!fEngine->ClientCheck(fClientControl.fName.data(), -1, name_res.data(), JACK_PROTOCOL_VERSION, (std::int32_t)JackNullOption, (std::int32_t*)&status)) {
+    if (!fEngine->ClientCheck(fClientControl.fName.data(), -1, name_res.data(), kProtocolVersion, (std::int32_t)JackNullOption, (std::int32_t*)&status)) {
         jack_error("Client name = %s conflits with another running client", fClientControl.fName);
         return -1;
     }
@@ -117,8 +117,8 @@ std::int32_t JackDriver::Open(jack_nframes_t buffer_size,
     fCaptureLatency = capture_latency;
     fPlaybackLatency = playback_latency;
 
-    assert(strlen(capture_driver_name) < JACK_CLIENT_NAME_SIZE);
-    assert(strlen(playback_driver_name) < JACK_CLIENT_NAME_SIZE);
+    assert(strlen(capture_driver_name) < kClientNameSize);
+    assert(strlen(playback_driver_name) < kClientNameSize);
 
     strcpy(fCaptureDriverName.data(), capture_driver_name);
     strcpy(fPlaybackDriverName.data(), playback_driver_name);
@@ -425,10 +425,10 @@ static string RemoveLast(const string& name)
 void JackDriver::SaveConnections(std::int32_t alias)
 {
     const char** connections;
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias1 { };
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias2 { };
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> system_alias1 { };
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> system_alias2 { };
+    std::array<char, kRealJackPortNameSize + 1> alias1 { };
+    std::array<char, kRealJackPortNameSize + 1> alias2 { };
+    std::array<char, kRealJackPortNameSize + 1> system_alias1 { };
+    std::array<char, kRealJackPortNameSize + 1> system_alias2 { };
     std::array<char*, 2> aliases;
     std::array<char*, 2> system_aliases;
 
@@ -509,8 +509,8 @@ void JackDriver::SaveConnections(std::int32_t alias)
 
 string JackDriver::MatchPortName(const char* name, const char** ports, std::int32_t alias, const std::string& type)
 {
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias1 { };
-    std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias2 { };
+    std::array<char, kRealJackPortNameSize + 1> alias1 { };
+    std::array<char, kRealJackPortNameSize + 1> alias2 { };
     std::array<char*, 2> aliases;
 
     aliases[0] = alias1.data();
@@ -519,7 +519,7 @@ string JackDriver::MatchPortName(const char* name, const char** ports, std::int3
     for (std::int32_t i = 0; ports && ports[i]; ++i) {
 
         jack_port_id_t port_id2 = fGraphManager->GetPort(ports[i]);
-        JackPort* port2 = (port_id2 != NO_PORT) ? fGraphManager->GetPort(port_id2) : nullptr;
+        JackPort* port2 = (port_id2 != kNoPort) ? fGraphManager->GetPort(port_id2) : nullptr;
 
         if (port2) {
             std::int32_t res = port2->GetAliases(aliases.data());
@@ -584,7 +584,7 @@ Result<void> JackDriver::ResumeRefNum()
 
 Result<void> JackDriver::SuspendRefNum()
 {
-    return fGraphManager->SuspendRefNum(&fClientControl, fSynchroTable, DRIVER_TIMEOUT_FACTOR * fEngineControl->fTimeOutUsecs);
+    return fGraphManager->SuspendRefNum(&fClientControl, fSynchroTable, kDriverTimeoutFactor * fEngineControl->fTimeOutUsecs);
 }
 
 } // namespace jackmini

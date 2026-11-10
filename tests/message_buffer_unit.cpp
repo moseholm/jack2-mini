@@ -79,7 +79,7 @@ void TestConcurrentProducers()
         threads.emplace_back([id] {
             for (std::int64_t i = 0; i < per_producer; i++) {
                 const std::string text = "t" + std::to_string(id) + ":" + std::to_string(i);
-                jackmini::JackMessageBufferAdd(LOG_LEVEL_ERROR, text.c_str());
+                jackmini::JackMessageBufferAdd(kLogLevelError, text.c_str());
             }
         });
     }
@@ -121,7 +121,7 @@ void TestTruncation()
     g_received.clear();
 
     const std::string long_message = "L:" + std::string(400, 'x');
-    jackmini::JackMessageBufferAdd(LOG_LEVEL_ERROR, long_message.c_str());
+    jackmini::JackMessageBufferAdd(kLogLevelError, long_message.c_str());
     CHECK(jackmini::JackMessageBuffer::Destroy());
 
     const auto received = Snapshot();
