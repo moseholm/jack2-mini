@@ -138,16 +138,16 @@ TimeC getMicrosecondsFromHpet()
 
 #else
 
-bool open_hpet()
+bool openHpet()
 {
     jack_error("This version of JACK or this computer does not have HPET support.\n"
                "Please choose a different clock source.");
     return false;
 }
 
-jack_time_t get_microseconds_from_hpet()
+TimeC getMicrosecondsFromHpet()
 {
-    // Never called: open_hpet() fails on this platform.
+    // Never called: openHpet() fails on this platform.
     return 0;
 }
 

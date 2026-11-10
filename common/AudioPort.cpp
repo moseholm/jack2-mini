@@ -54,19 +54,19 @@ static inline void mixAudioBuffer(DefaultAudioSampleC* mixbuffer, DefaultAudioSa
 
         mixbuffer += 4;
         buffer += 4;
-        frames_group--;
+        framesGroup--;
 #else
-        jack_default_audio_sample_t mixFloat1 = *mixbuffer;
-        jack_default_audio_sample_t sourceFloat1 = *buffer;
-        jack_default_audio_sample_t mixFloat2 = *(mixbuffer + 1);
-        jack_default_audio_sample_t sourceFloat2 = *(buffer + 1);
-        jack_default_audio_sample_t mixFloat3 = *(mixbuffer + 2);
-        jack_default_audio_sample_t sourceFloat3 = *(buffer + 2);
-        jack_default_audio_sample_t mixFloat4 = *(mixbuffer + 3);
-        jack_default_audio_sample_t sourceFloat4 = *(buffer + 3);
+        DefaultAudioSampleC mixFloat1 = *mixbuffer;
+        DefaultAudioSampleC sourceFloat1 = *buffer;
+        DefaultAudioSampleC mixFloat2 = *(mixbuffer + 1);
+        DefaultAudioSampleC sourceFloat2 = *(buffer + 1);
+        DefaultAudioSampleC mixFloat3 = *(mixbuffer + 2);
+        DefaultAudioSampleC sourceFloat3 = *(buffer + 2);
+        DefaultAudioSampleC mixFloat4 = *(mixbuffer + 3);
+        DefaultAudioSampleC sourceFloat4 = *(buffer + 3);
 
         buffer += 4;
-        frames_group--;
+        framesGroup--;
 
         mixFloat1 += sourceFloat1;
         mixFloat2 += sourceFloat2;
@@ -117,25 +117,25 @@ static void audioBufferMixdown(void* mixbuffer, void** srcBuffers, std::int32_t 
         target[i] = source[i];
     }
 #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
-    jack_nframes_t frames_group = nframes / 4;
-    jack_nframes_t remaining_frames = nframes % 4;
+    NframesC framesGroup = nframes / 4;
+    NframesC remaining_frames = nframes % 4;
 
-    jack_default_audio_sample_t* source = static_cast<jack_default_audio_sample_t*>(src_buffers[0]);
-    jack_default_audio_sample_t* target = static_cast<jack_default_audio_sample_t*>(mixbuffer);
+    DefaultAudioSampleC* source = static_cast<DefaultAudioSampleC*>(srcBuffers[0]);
+    DefaultAudioSampleC* target = static_cast<DefaultAudioSampleC*>(mixbuffer);
 
-    while (frames_group > 0) {
+    while (framesGroup > 0) {
         float32x4_t vec = vld1q_f32(source);
         vst1q_f32(target, vec);
         source += 4;
         target += 4;
-        --frames_group;
+        --framesGroup;
     }
 
-    for (jack_nframes_t i = 0; i != remaining_frames; ++i) {
+    for (NframesC i = 0; i != remaining_frames; ++i) {
         target[i] = source[i];
     }
 #else
-    memcpy(mixbuffer, src_buffers[0], nframes * sizeof(jack_default_audio_sample_t));
+    memcpy(mixbuffer, srcBuffers[0], nframes * sizeof(DefaultAudioSampleC));
 #endif
 
     // Mix remaining buffers
