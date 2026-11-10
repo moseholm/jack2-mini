@@ -17,6 +17,7 @@
 
 #include "jackmini/jackmini.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <array>
 #include <atomic>

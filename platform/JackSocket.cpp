@@ -20,6 +20,7 @@
 #include "JackError.h"
 #include "JackTools.h"
 #include "promiscuous.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <fcntl.h>
 #include <pthread.h>

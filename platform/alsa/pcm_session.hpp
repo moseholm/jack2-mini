@@ -20,6 +20,7 @@
 
 #include "memops.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -28,9 +29,9 @@ namespace jackmini::alsa {
 
 using PcmCycle = Cycle<Device>;
 
-using ReadCopyFunction = void (*)(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples,
+using ReadCopyFunction = void (*)(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples,
     std::uint64_t src_skip);
-using WriteCopyFunction = void (*)(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples,
+using WriteCopyFunction = void (*)(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples,
     std::uint64_t dst_skip, dither_state_t* state);
 
 // One ALSA card as the JACK drivers use it: the device, the cycle core on the device, and the sample conversion

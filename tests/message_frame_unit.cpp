@@ -21,6 +21,7 @@
 #include "JackNotification.h"
 #include "JackRequest.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>

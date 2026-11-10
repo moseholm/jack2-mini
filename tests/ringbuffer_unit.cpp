@@ -15,6 +15,7 @@
 // kept empty, so a buffer of size n holds n - 1 bytes. The test checks the sizes, the wrap-around, the two-segment
 // vectors, and a transfer between two threads.
 
+#include <cstddef>
 #include <cstdint>
 #include <jack/ringbuffer.h>
 
@@ -161,29 +162,29 @@ void check_two_threads()
     bool ordered = true;
 
     std::thread writer([rb] {
-        std::vector<char> chunk(37);
+        std::vector<std::byte> chunk(37);
         size_t sent = 0;
-        unsigned char value = 0;
+        std::uint8_t value = 0;
         while (sent < kTotal) {
             const size_t want = (kTotal - sent) < chunk.size() ? kTotal - sent : chunk.size();
             for (size_t i = 0; i < want; ++i) {
-                chunk[i] = static_cast<char>(value++);
+                chunk[i] = static_cast<std::byte>(value++);
             }
             size_t done = 0;
             while (done < want) {
-                done += jack_ringbuffer_write(rb, chunk.data() + done, want - done);
+                done += jack_ringbuffer_write(rb, reinterpret_cast<const char*>(chunk.data() + done), want - done);
             }
             sent += want;
         }
     });
 
-    std::vector<char> chunk(53);
+    std::vector<std::byte> chunk(53);
     size_t received = 0;
-    unsigned char expected = 0;
+    std::uint8_t expected = 0;
     while (received < kTotal) {
-        const size_t got = jack_ringbuffer_read(rb, chunk.data(), chunk.size());
+        const size_t got = jack_ringbuffer_read(rb, reinterpret_cast<char*>(chunk.data()), chunk.size());
         for (size_t i = 0; i < got; ++i) {
-            if (static_cast<unsigned char>(chunk[i]) != expected++) {
+            if (std::to_integer<std::uint8_t>(chunk[i]) != expected++) {
                 ordered = false;
             }
         }

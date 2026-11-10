@@ -21,11 +21,12 @@
 #include "JackConstants.h"
 #include "JackPlatformPlug.h"
 #include "types.h"
+#include <cstddef>
 #include <cstdint>
 #include <stddef.h>
 
 // Type for raw event data contained in @ref jack_midi_event_t.
-typedef unsigned char jack_midi_data_t;
+typedef std::byte jack_midi_data_t;
 
 // A Jack MIDI event.
 struct jack_midi_event_t {

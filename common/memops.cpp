@@ -21,6 +21,7 @@
 #define __USE_ISOC99 1
 
 #include "memops.h"
+#include <cstddef>
 #include <cstdint>
 #include <endian.h>
 #include <limits.h>
@@ -279,7 +280,7 @@ static inline std::uint32_t fast_rand()
 
 // functions for native float sample data
 
-void sample_move_floatLE_sSs(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_floatLE_sSs(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
     while (nsamples--) {
         *dst = *((float*)src);
@@ -288,7 +289,7 @@ void sample_move_floatLE_sSs(jack_default_audio_sample_t* dst, char* src, std::u
     }
 }
 
-void sample_move_dS_floatLE(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_dS_floatLE(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
     while (nsamples--) {
         *((float*)dst) = *src;
@@ -324,28 +325,28 @@ void sample_move_dS_floatLE(char* dst, jack_default_audio_sample_t* src, std::ui
 
 // functions for native integer sample data
 
-void sample_move_d32_sSs(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_d32_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
     while (nsamples--) {
         std::int32_t z;
         float_32(*src, z);
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        dst[0] = (char)(z >> 24);
-        dst[1] = (char)(z >> 16);
-        dst[2] = (char)(z >> 8);
-        dst[3] = (char)(z);
+        dst[0] = static_cast<std::byte>(z >> 24);
+        dst[1] = static_cast<std::byte>(z >> 16);
+        dst[2] = static_cast<std::byte>(z >> 8);
+        dst[3] = static_cast<std::byte>(z);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        dst[0] = (char)(z);
-        dst[1] = (char)(z >> 8);
-        dst[2] = (char)(z >> 16);
-        dst[3] = (char)(z >> 24);
+        dst[0] = static_cast<std::byte>(z);
+        dst[1] = static_cast<std::byte>(z >> 8);
+        dst[2] = static_cast<std::byte>(z >> 16);
+        dst[3] = static_cast<std::byte>(z >> 24);
 #endif
         dst += dst_skip;
         src++;
     }
 }
 
-void sample_move_d32_sS(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_d32_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
     while (nsamples--) {
         float_32(*src, *(std::int32_t*)dst);
@@ -354,7 +355,7 @@ void sample_move_d32_sS(char* dst, jack_default_audio_sample_t* src, std::uint64
     }
 }
 
-void sample_move_d32u24_sSs(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_d32u24_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     std::uint64_t unrolled = nsamples / 4;
@@ -389,22 +390,22 @@ void sample_move_d32u24_sSs(char* dst, jack_default_audio_sample_t* src, std::ui
         float_24u32(*src, z);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        dst[0] = (char)(z >> 24);
-        dst[1] = (char)(z >> 16);
-        dst[2] = (char)(z >> 8);
-        dst[3] = (char)(z);
+        dst[0] = static_cast<std::byte>(z >> 24);
+        dst[1] = static_cast<std::byte>(z >> 16);
+        dst[2] = static_cast<std::byte>(z >> 8);
+        dst[3] = static_cast<std::byte>(z);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        dst[0] = (char)(z);
-        dst[1] = (char)(z >> 8);
-        dst[2] = (char)(z >> 16);
-        dst[3] = (char)(z >> 24);
+        dst[0] = static_cast<std::byte>(z);
+        dst[1] = static_cast<std::byte>(z >> 8);
+        dst[2] = static_cast<std::byte>(z >> 16);
+        dst[3] = static_cast<std::byte>(z >> 24);
 #endif
         dst += dst_skip;
         src++;
     }
 }
 
-void sample_move_d32u24_sS(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_d32u24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
 #if defined(__SSE2__)
     __m128 int_max = _mm_set1_ps(SAMPLE_24BIT_MAX_F);
@@ -498,7 +499,7 @@ void sample_move_d32u24_sS(char* dst, jack_default_audio_sample_t* src, std::uin
 #endif
 }
 
-void sample_move_dS_s32u24s(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_dS_s32u24s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     float32x4_t factor = vdupq_n_f32(1.0 / SAMPLE_24BIT_SCALING);
@@ -538,21 +539,21 @@ void sample_move_dS_s32u24s(jack_default_audio_sample_t* dst, char* src, std::ui
     while (nsamples--) {
         std::int32_t x;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        x = (unsigned char)(src[0]);
+        x = std::to_integer<std::uint8_t>(src[0]);
         x <<= 8;
-        x |= (unsigned char)(src[1]);
+        x |= std::to_integer<std::uint8_t>(src[1]);
         x <<= 8;
-        x |= (unsigned char)(src[2]);
+        x |= std::to_integer<std::uint8_t>(src[2]);
         x <<= 8;
-        x |= (unsigned char)(src[3]);
+        x |= std::to_integer<std::uint8_t>(src[3]);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        x = (unsigned char)(src[3]);
+        x = std::to_integer<std::uint8_t>(src[3]);
         x <<= 8;
-        x |= (unsigned char)(src[2]);
+        x |= std::to_integer<std::uint8_t>(src[2]);
         x <<= 8;
-        x |= (unsigned char)(src[1]);
+        x |= std::to_integer<std::uint8_t>(src[1]);
         x <<= 8;
-        x |= (unsigned char)(src[0]);
+        x |= std::to_integer<std::uint8_t>(src[0]);
 #endif
         *dst = (x >> 8) * scaling;
         dst++;
@@ -560,7 +561,7 @@ void sample_move_dS_s32u24s(jack_default_audio_sample_t* dst, char* src, std::ui
     }
 }
 
-void sample_move_dS_s32u24(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_dS_s32u24(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
 #if defined(__SSE2__)
     std::uint64_t unrolled = nsamples / 4;
@@ -627,7 +628,7 @@ void sample_move_dS_s32u24(jack_default_audio_sample_t* dst, char* src, std::uin
     }
 }
 
-void sample_move_d32l24_sSs(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_d32l24_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     std::uint64_t unrolled = nsamples / 4;
@@ -661,22 +662,22 @@ void sample_move_d32l24_sSs(char* dst, jack_default_audio_sample_t* src, std::ui
         float_24l32(*src, z);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        dst[0] = (char)(z >> 24);
-        dst[1] = (char)(z >> 16);
-        dst[2] = (char)(z >> 8);
-        dst[3] = (char)(z);
+        dst[0] = static_cast<std::byte>(z >> 24);
+        dst[1] = static_cast<std::byte>(z >> 16);
+        dst[2] = static_cast<std::byte>(z >> 8);
+        dst[3] = static_cast<std::byte>(z);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        dst[0] = (char)(z);
-        dst[1] = (char)(z >> 8);
-        dst[2] = (char)(z >> 16);
-        dst[3] = (char)(z >> 24);
+        dst[0] = static_cast<std::byte>(z);
+        dst[1] = static_cast<std::byte>(z >> 8);
+        dst[2] = static_cast<std::byte>(z >> 16);
+        dst[3] = static_cast<std::byte>(z >> 24);
 #endif
         dst += dst_skip;
         src++;
     }
 }
 
-void sample_move_d32l24_sS(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_d32l24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
 #if defined(__SSE2__)
     __m128 int_max = _mm_set1_ps(SAMPLE_24BIT_MAX_F);
@@ -759,27 +760,27 @@ void sample_move_d32l24_sS(char* dst, jack_default_audio_sample_t* src, std::uin
 #endif
 }
 
-void sample_move_dS_s32s(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_dS_s32s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
     const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_32BIT_SCALING;
     while (nsamples--) {
         std::int32_t x;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        x = (unsigned char)(src[0]);
+        x = std::to_integer<std::uint8_t>(src[0]);
         x <<= 8;
-        x |= (unsigned char)(src[1]);
+        x |= std::to_integer<std::uint8_t>(src[1]);
         x <<= 8;
-        x |= (unsigned char)(src[2]);
+        x |= std::to_integer<std::uint8_t>(src[2]);
         x <<= 8;
-        x |= (unsigned char)(src[3]);
+        x |= std::to_integer<std::uint8_t>(src[3]);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        x = (unsigned char)(src[3]);
+        x = std::to_integer<std::uint8_t>(src[3]);
         x <<= 8;
-        x |= (unsigned char)(src[2]);
+        x |= std::to_integer<std::uint8_t>(src[2]);
         x <<= 8;
-        x |= (unsigned char)(src[1]);
+        x |= std::to_integer<std::uint8_t>(src[1]);
         x <<= 8;
-        x |= (unsigned char)(src[0]);
+        x |= std::to_integer<std::uint8_t>(src[0]);
 #endif
         double extended = x * scaling;
         *dst = (float)extended;
@@ -788,7 +789,7 @@ void sample_move_dS_s32s(jack_default_audio_sample_t* dst, char* src, std::uint6
     }
 }
 
-void sample_move_dS_s32l24s(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_dS_s32l24s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     float32x4_t factor = vdupq_n_f32(1.0 / SAMPLE_24BIT_SCALING);
@@ -829,21 +830,21 @@ void sample_move_dS_s32l24s(jack_default_audio_sample_t* dst, char* src, std::ui
     while (nsamples--) {
         std::int32_t x;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        x = (unsigned char)(src[0]);
+        x = std::to_integer<std::uint8_t>(src[0]);
         x <<= 8;
-        x |= (unsigned char)(src[1]);
+        x |= std::to_integer<std::uint8_t>(src[1]);
         x <<= 8;
-        x |= (unsigned char)(src[2]);
+        x |= std::to_integer<std::uint8_t>(src[2]);
         x <<= 8;
-        x |= (unsigned char)(src[3]);
+        x |= std::to_integer<std::uint8_t>(src[3]);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        x = (unsigned char)(src[3]);
+        x = std::to_integer<std::uint8_t>(src[3]);
         x <<= 8;
-        x |= (unsigned char)(src[2]);
+        x |= std::to_integer<std::uint8_t>(src[2]);
         x <<= 8;
-        x |= (unsigned char)(src[1]);
+        x |= std::to_integer<std::uint8_t>(src[1]);
         x <<= 8;
-        x |= (unsigned char)(src[0]);
+        x |= std::to_integer<std::uint8_t>(src[0]);
 #endif
         *dst = (x >> 0) * scaling;
         dst++;
@@ -851,7 +852,7 @@ void sample_move_dS_s32l24s(jack_default_audio_sample_t* dst, char* src, std::ui
     }
 }
 
-void sample_move_dS_s32(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_dS_s32(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
     const double scaling = 1.0 / SAMPLE_32BIT_SCALING;
     while (nsamples--) {
@@ -863,7 +864,7 @@ void sample_move_dS_s32(jack_default_audio_sample_t* dst, char* src, std::uint64
     }
 }
 
-void sample_move_dS_s32l24(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_dS_s32l24(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
 #if defined(__SSE2__)
     std::uint64_t unrolled = nsamples / 4;
@@ -934,7 +935,7 @@ void sample_move_dS_s32l24(jack_default_audio_sample_t* dst, char* src, std::uin
     }
 }
 
-void sample_move_d24_sSs(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_d24_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     std::uint64_t unrolled = nsamples / 4;
@@ -947,7 +948,7 @@ void sample_move_d24_sSs(char* dst, jack_default_audio_sample_t* src, std::uint6
         vst1q_s32(z, converted);
 
         for (i = 0; i != 4; ++i) {
-            memcpy(dst, ((char*)(z + i)) + 1, 3);
+            memcpy(dst, ((std::byte*)(z + i)) + 1, 3);
             dst += dst_skip;
         }
         src += 4;
@@ -960,20 +961,20 @@ void sample_move_d24_sSs(char* dst, jack_default_audio_sample_t* src, std::uint6
     while (nsamples--) {
         float_24(*src, z);
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        dst[0] = (char)(z >> 16);
-        dst[1] = (char)(z >> 8);
-        dst[2] = (char)(z);
+        dst[0] = static_cast<std::byte>(z >> 16);
+        dst[1] = static_cast<std::byte>(z >> 8);
+        dst[2] = static_cast<std::byte>(z);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        dst[0] = (char)(z);
-        dst[1] = (char)(z >> 8);
-        dst[2] = (char)(z >> 16);
+        dst[0] = static_cast<std::byte>(z);
+        dst[1] = static_cast<std::byte>(z >> 8);
+        dst[2] = static_cast<std::byte>(z >> 16);
 #endif
         dst += dst_skip;
         src++;
     }
 }
 
-void sample_move_d24_sS(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_d24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
 #if defined(__SSE2__)
     _MM_SET_ROUNDING_MODE(_MM_ROUND_NEAREST);
@@ -1032,14 +1033,14 @@ void sample_move_d24_sS(char* dst, jack_default_audio_sample_t* src, std::uint64
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         memcpy(dst, &z, 3);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        memcpy(dst, (char*)&z + 1, 3);
+        memcpy(dst, (std::byte*)&z + 1, 3);
 #endif
         dst += dst_skip;
         src++;
     }
 }
 
-void sample_move_dS_s24s(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_dS_s24s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
     const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_24BIT_SCALING;
 
@@ -1052,10 +1053,10 @@ void sample_move_dS_s24s(jack_default_audio_sample_t* dst, char* src, std::uint6
     while (unrolled--) {
 #if __BYTE_ORDER == __BIG_ENDIAN  // ARM big endian??
         // right aligned / inverse sequence below -> *256
-        memcpy(((char*)&x[0]) + 1, src, 3);
-        memcpy(((char*)&x[1]) + 1, src + src_skip, 3);
-        memcpy(((char*)&x[2]) + 1, src + 2 * src_skip, 3);
-        memcpy(((char*)&x[3]) + 1, src + 3 * src_skip, 3);
+        memcpy(((std::byte*)&x[0]) + 1, src, 3);
+        memcpy(((std::byte*)&x[1]) + 1, src + src_skip, 3);
+        memcpy(((std::byte*)&x[2]) + 1, src + 2 * src_skip, 3);
+        memcpy(((std::byte*)&x[3]) + 1, src + 3 * src_skip, 3);
 #else
         memcpy(&x[0], src, 3);
         memcpy(&x[1], src + src_skip, 3);
@@ -1079,21 +1080,21 @@ void sample_move_dS_s24s(jack_default_audio_sample_t* dst, char* src, std::uint6
     while (nsamples--) {
         std::int32_t x;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        x = (unsigned char)(src[0]);
+        x = std::to_integer<std::uint8_t>(src[0]);
         x <<= 8;
-        x |= (unsigned char)(src[1]);
+        x |= std::to_integer<std::uint8_t>(src[1]);
         x <<= 8;
-        x |= (unsigned char)(src[2]);
+        x |= std::to_integer<std::uint8_t>(src[2]);
         // correct sign bit and the rest of the top byte
-        if (src[0] & 0x80) {
+        if (std::to_integer<std::uint8_t>(src[0]) & 0x80) {
             x |= 0xff << 24;
         }
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        x = (unsigned char)(src[2]);
+        x = std::to_integer<std::uint8_t>(src[2]);
         x <<= 8;
-        x |= (unsigned char)(src[1]);
+        x |= std::to_integer<std::uint8_t>(src[1]);
         x <<= 8;
-        x |= (unsigned char)(src[0]);
+        x |= std::to_integer<std::uint8_t>(src[0]);
         // correct sign bit and the rest of the top byte
         if (src[2] & 0x80) {
             x |= 0xff << 24;
@@ -1105,7 +1106,7 @@ void sample_move_dS_s24s(jack_default_audio_sample_t* dst, char* src, std::uint6
     }
 }
 
-void sample_move_dS_s24(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_dS_s24(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
     const jack_default_audio_sample_t scaling = 1.f / SAMPLE_24BIT_SCALING;
 
@@ -1114,10 +1115,10 @@ void sample_move_dS_s24(jack_default_audio_sample_t* dst, char* src, std::uint64
     while (nsamples >= 4) {
         std::int32_t x0, x1, x2, x3;
 
-        memcpy((char*)&x0 + 1, src, 3);
-        memcpy((char*)&x1 + 1, src + src_skip, 3);
-        memcpy((char*)&x2 + 1, src + 2 * src_skip, 3);
-        memcpy((char*)&x3 + 1, src + 3 * src_skip, 3);
+        memcpy((std::byte*)&x0 + 1, src, 3);
+        memcpy((std::byte*)&x1 + 1, src + src_skip, 3);
+        memcpy((std::byte*)&x2 + 1, src + 2 * src_skip, 3);
+        memcpy((std::byte*)&x3 + 1, src + 3 * src_skip, 3);
         src += 4 * src_skip;
 
         const __m128i block_i = _mm_set_epi32(x3, x2, x1, x0);
@@ -1142,10 +1143,10 @@ void sample_move_dS_s24(jack_default_audio_sample_t* dst, char* src, std::uint64
         memcpy(&x[2], src + 2 * src_skip, 3);
         memcpy(&x[3], src + 3 * src_skip, 3);
 #else
-        memcpy(((char*)&x[0]) + 1, src, 3);
-        memcpy(((char*)&x[1]) + 1, src + src_skip, 3);
-        memcpy(((char*)&x[2]) + 1, src + 2 * src_skip, 3);
-        memcpy(((char*)&x[3]) + 1, src + 3 * src_skip, 3);
+        memcpy(((std::byte*)&x[0]) + 1, src, 3);
+        memcpy(((std::byte*)&x[1]) + 1, src + src_skip, 3);
+        memcpy(((std::byte*)&x[2]) + 1, src + 2 * src_skip, 3);
+        memcpy(((std::byte*)&x[3]) + 1, src + 3 * src_skip, 3);
 #endif
         src += 4 * src_skip;
 
@@ -1161,7 +1162,7 @@ void sample_move_dS_s24(jack_default_audio_sample_t* dst, char* src, std::uint64
     while (nsamples--) {
         std::int32_t x;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        memcpy((char*)&x + 1, src, 3);
+        memcpy((std::byte*)&x + 1, src, 3);
 #elif __BYTE_ORDER == __BIG_ENDIAN
         memcpy(&x, src, 3);
 #endif
@@ -1173,7 +1174,7 @@ void sample_move_dS_s24(jack_default_audio_sample_t* dst, char* src, std::uint64
 }
 
 
-void sample_move_d16_sSs(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_d16_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     std::uint64_t unrolled = nsamples / 4;
@@ -1213,18 +1214,18 @@ void sample_move_d16_sSs(char* dst, jack_default_audio_sample_t* src, std::uint6
         }
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        dst[0] = (char)(tmp >> 8);
-        dst[1] = (char)(tmp);
+        dst[0] = static_cast<std::byte>(tmp >> 8);
+        dst[1] = static_cast<std::byte>(tmp);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        dst[0] = (char)(tmp);
-        dst[1] = (char)(tmp >> 8);
+        dst[0] = static_cast<std::byte>(tmp);
+        dst[1] = static_cast<std::byte>(tmp >> 8);
 #endif
         dst += dst_skip;
         src++;
     }
 }
 
-void sample_move_d16_sS(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_d16_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     std::uint64_t unrolled = nsamples / 4;
@@ -1256,7 +1257,7 @@ void sample_move_d16_sS(char* dst, jack_default_audio_sample_t* src, std::uint64
     }
 }
 
-void sample_move_dither_rect_d16_sSs(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_dither_rect_d16_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
     jack_default_audio_sample_t val;
     std::int16_t tmp;
@@ -1265,18 +1266,18 @@ void sample_move_dither_rect_d16_sSs(char* dst, jack_default_audio_sample_t* src
         val = (*src * SAMPLE_16BIT_SCALING) + fast_rand() / (float)UINT_MAX - 0.5f;
         float_16_scaled(val, tmp);
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        dst[0] = (char)(tmp >> 8);
-        dst[1] = (char)(tmp);
+        dst[0] = static_cast<std::byte>(tmp >> 8);
+        dst[1] = static_cast<std::byte>(tmp);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        dst[0] = (char)(tmp);
-        dst[1] = (char)(tmp >> 8);
+        dst[0] = static_cast<std::byte>(tmp);
+        dst[1] = static_cast<std::byte>(tmp >> 8);
 #endif
         dst += dst_skip;
         src++;
     }
 }
 
-void sample_move_dither_rect_d16_sS(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_dither_rect_d16_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
     jack_default_audio_sample_t val;
 
@@ -1288,7 +1289,7 @@ void sample_move_dither_rect_d16_sS(char* dst, jack_default_audio_sample_t* src,
     }
 }
 
-void sample_move_dither_tri_d16_sSs(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_dither_tri_d16_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
     jack_default_audio_sample_t val;
     std::int16_t tmp;
@@ -1298,18 +1299,18 @@ void sample_move_dither_tri_d16_sSs(char* dst, jack_default_audio_sample_t* src,
         float_16_scaled(val, tmp);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        dst[0] = (char)(tmp >> 8);
-        dst[1] = (char)(tmp);
+        dst[0] = static_cast<std::byte>(tmp >> 8);
+        dst[1] = static_cast<std::byte>(tmp);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        dst[0] = (char)(tmp);
-        dst[1] = (char)(tmp >> 8);
+        dst[0] = static_cast<std::byte>(tmp);
+        dst[1] = static_cast<std::byte>(tmp >> 8);
 #endif
         dst += dst_skip;
         src++;
     }
 }
 
-void sample_move_dither_tri_d16_sS(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_dither_tri_d16_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
     jack_default_audio_sample_t val;
 
@@ -1321,7 +1322,7 @@ void sample_move_dither_tri_d16_sS(char* dst, jack_default_audio_sample_t* src, 
     }
 }
 
-void sample_move_dither_shaped_d16_sSs(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_dither_shaped_d16_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
     jack_default_audio_sample_t x;
     jack_default_audio_sample_t xe;  // the innput sample - filtered error
@@ -1352,11 +1353,11 @@ void sample_move_dither_shaped_d16_sSs(char* dst, jack_default_audio_sample_t* s
         state->e[idx] = xp - xe;
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        dst[0] = (char)(tmp >> 8);
-        dst[1] = (char)(tmp);
+        dst[0] = static_cast<std::byte>(tmp >> 8);
+        dst[1] = static_cast<std::byte>(tmp);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        dst[0] = (char)(tmp);
-        dst[1] = (char)(tmp >> 8);
+        dst[0] = static_cast<std::byte>(tmp);
+        dst[1] = static_cast<std::byte>(tmp >> 8);
 #endif
         dst += dst_skip;
         src++;
@@ -1365,7 +1366,7 @@ void sample_move_dither_shaped_d16_sSs(char* dst, jack_default_audio_sample_t* s
     state->idx = idx;
 }
 
-void sample_move_dither_shaped_d16_sS(char* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
+void sample_move_dither_shaped_d16_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state)
 {
     jack_default_audio_sample_t x;
     jack_default_audio_sample_t xe;  // the innput sample - filtered error
@@ -1401,7 +1402,7 @@ void sample_move_dither_shaped_d16_sS(char* dst, jack_default_audio_sample_t* sr
     state->idx = idx;
 }
 
-void sample_move_dS_s16s(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_dS_s16s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
     std::int16_t z;
     const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_16BIT_SCALING;
@@ -1439,13 +1440,13 @@ void sample_move_dS_s16s(jack_default_audio_sample_t* dst, char* src, std::uint6
     // ALERT: signed sign-extension portability !!!
     while (nsamples--) {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        z = (unsigned char)(src[0]);
+        z = std::to_integer<std::uint8_t>(src[0]);
         z <<= 8;
-        z |= (unsigned char)(src[1]);
+        z |= std::to_integer<std::uint8_t>(src[1]);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        z = (unsigned char)(src[1]);
+        z = std::to_integer<std::uint8_t>(src[1]);
         z <<= 8;
-        z |= (unsigned char)(src[0]);
+        z |= std::to_integer<std::uint8_t>(src[0]);
 #endif
         *dst = z * scaling;
         dst++;
@@ -1453,7 +1454,7 @@ void sample_move_dS_s16s(jack_default_audio_sample_t* dst, char* src, std::uint6
     }
 }
 
-void sample_move_dS_s16(jack_default_audio_sample_t* dst, char* src, std::uint64_t nsamples, std::uint64_t src_skip)
+void sample_move_dS_s16(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip)
 {
     // ALERT: signed sign-extension portability !!!
     const jack_default_audio_sample_t scaling = 1.0 / SAMPLE_16BIT_SCALING;
@@ -1494,7 +1495,7 @@ void sample_move_dS_s16(jack_default_audio_sample_t* dst, char* src, std::uint64
     }
 }
 
-void memset_interleave(char* dst, char val, std::uint64_t bytes,
+void memset_interleave(std::byte* dst, std::byte val, std::uint64_t bytes,
     std::uint64_t unit_bytes,
     std::uint64_t skip_bytes)
 {
@@ -1521,7 +1522,7 @@ void memset_interleave(char* dst, char val, std::uint64_t bytes,
         break;
     default:
         while (bytes) {
-            memset(dst, val, unit_bytes);
+            memset(dst, std::to_integer<int>(val), unit_bytes);
             dst += skip_bytes;
             bytes -= unit_bytes;
         }
@@ -1535,12 +1536,12 @@ void memset_interleave(char* dst, char val, std::uint64_t bytes,
 // unless the input and output were on different audio interfaces that
 // were interleaved differently. We don't try to handle that.
 
-void memcpy_fake(char* dst, char* src, std::uint64_t src_bytes, std::uint64_t foo, std::uint64_t bar)
+void memcpy_fake(std::byte* dst, std::byte* src, std::uint64_t src_bytes, std::uint64_t foo, std::uint64_t bar)
 {
     memcpy(dst, src, src_bytes);
 }
 
-void memcpy_interleave_d16_s16(char* dst, char* src, std::uint64_t src_bytes,
+void memcpy_interleave_d16_s16(std::byte* dst, std::byte* src, std::uint64_t src_bytes,
     std::uint64_t dst_skip_bytes, std::uint64_t src_skip_bytes)
 {
     while (src_bytes) {
@@ -1551,7 +1552,7 @@ void memcpy_interleave_d16_s16(char* dst, char* src, std::uint64_t src_bytes,
     }
 }
 
-void memcpy_interleave_d24_s24(char* dst, char* src, std::uint64_t src_bytes,
+void memcpy_interleave_d24_s24(std::byte* dst, std::byte* src, std::uint64_t src_bytes,
     std::uint64_t dst_skip_bytes, std::uint64_t src_skip_bytes)
 {
     while (src_bytes) {
@@ -1562,7 +1563,7 @@ void memcpy_interleave_d24_s24(char* dst, char* src, std::uint64_t src_bytes,
     }
 }
 
-void memcpy_interleave_d32_s32(char* dst, char* src, std::uint64_t src_bytes,
+void memcpy_interleave_d32_s32(std::byte* dst, std::byte* src, std::uint64_t src_bytes,
     std::uint64_t dst_skip_bytes, std::uint64_t src_skip_bytes)
 {
     while (src_bytes) {

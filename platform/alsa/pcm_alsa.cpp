@@ -19,6 +19,7 @@
 #include "JackError.h"
 #include "JackTime.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <poll.h>
 #include <sys/time.h>
