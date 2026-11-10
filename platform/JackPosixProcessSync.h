@@ -18,6 +18,7 @@
 
 #include "JackException.h"
 #include "JackPosixMutex.h"
+#include <cstdint>
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -34,7 +35,7 @@ public:
     JackPosixProcessSync(const char* name = nullptr)
         : JackBasePosixMutex()
     {
-        int res = pthread_cond_init(&fCond, nullptr);
+        std::int32_t res = pthread_cond_init(&fCond, nullptr);
         ThrowIf(res != 0, JackException("JackBasePosixMutex: could not init the cond variable"));
     }
 
@@ -43,8 +44,8 @@ public:
         pthread_cond_destroy(&fCond);
     }
 
-    bool TimedWait(long usec);
-    bool LockedTimedWait(long usec);
+    bool TimedWait(std::int64_t usec);
+    bool LockedTimedWait(std::int64_t usec);
 
     void Wait();
     void LockedWait();

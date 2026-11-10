@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -58,12 +59,12 @@ struct JackAlsaSecondaryConfig {
     std::string playback_device;
     JackAlsaSecondaryMode mode;
 
-    int capture_channels;
-    int playback_channels;
+    std::int32_t capture_channels;
+    std::int32_t playback_channels;
 
     // 0 means "use the primary value".
-    int rate;
-    int nperiods;
+    std::int32_t rate;
+    std::int32_t nperiods;
 
     bool optional;
     bool follow_hw_rate;
@@ -109,7 +110,7 @@ bool JackAlsaSecondaryConfigLoadFile(const std::string& path,
 
 // \brief Turn an arbitrary string into a valid JACK port name component.
 // Device number of a PCM name: "hw:2,3" -> 3, "hw:CARD=X,DEV=7" -> 7, "hw:X" -> 0.
-int JackAlsaPcmDeviceNumber(std::string_view pcm);
+std::int32_t JackAlsaPcmDeviceNumber(std::string_view pcm);
 
 // True if a PCM name names the card by its ALSA id: "hw:CARD=PCH", "hw:PCH,0",
 // "plughw:CARD=PCH,DEV=0".  Numeric forms ("hw:0", "hw:2,0") are false.

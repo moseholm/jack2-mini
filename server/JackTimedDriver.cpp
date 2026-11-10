@@ -19,24 +19,25 @@
 #include "JackCompilerDeps.h"
 #include "JackEngineControl.h"
 #include "JackTime.h"
+#include <cstdint>
 #include <math.h>
 #include <unistd.h>
 #include <iostream>
 
 namespace jackmini {
 
-int JackTimedDriver::FirstCycle(jack_time_t cur_time_usec)
+std::int32_t JackTimedDriver::FirstCycle(jack_time_t cur_time_usec)
 {
     fAnchorTimeUsec = cur_time_usec;
-    return int((double(fEngineControl->fBufferSize) * 1000000) / double(fEngineControl->fSampleRate));
+    return std::int32_t((double(fEngineControl->fBufferSize) * 1000000) / double(fEngineControl->fSampleRate));
 }
 
-int JackTimedDriver::CurrentCycle(jack_time_t cur_time_usec)
+std::int32_t JackTimedDriver::CurrentCycle(jack_time_t cur_time_usec)
 {
-    return int(((double(fCycleCount) * double(fEngineControl->fBufferSize) * 1000000.) / double(fEngineControl->fSampleRate)) - (cur_time_usec - fAnchorTimeUsec));
+    return std::int32_t(((double(fCycleCount) * double(fEngineControl->fBufferSize) * 1000000.) / double(fEngineControl->fSampleRate)) - (cur_time_usec - fAnchorTimeUsec));
 }
 
-int JackTimedDriver::Start()
+std::int32_t JackTimedDriver::Start()
 {
     fCycleCount = 0;
     return JackAudioDriver::Start();
@@ -45,7 +46,7 @@ int JackTimedDriver::Start()
 void JackTimedDriver::ProcessWait()
 {
     jack_time_t cur_time_usec = get_microseconds();
-    int wait_time_usec;
+    std::int32_t wait_time_usec;
 
     if (fCycleCount++ == 0) {
         wait_time_usec = FirstCycle(cur_time_usec);

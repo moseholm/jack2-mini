@@ -17,6 +17,7 @@
 #include "JackAlsaEnumerate.h"
 #include "JackCString.h"
 #include "JackError.h"
+#include <cstdint>
 #include <array>
 
 #include <alsa/asoundlib.h>
@@ -25,10 +26,10 @@
 namespace jackmini {
 
 // Maximum channels a stream of this device supports, or 0 if it cannot be opened.
-static int ProbeChannels(const std::string& pcm, snd_pcm_stream_t stream, std::string* error)
+static std::int32_t ProbeChannels(const std::string& pcm, snd_pcm_stream_t stream, std::string* error)
 {
     snd_pcm_t* handle;
-    int err = snd_pcm_open(&handle, pcm.c_str(), stream, SND_PCM_NONBLOCK);
+    std::int32_t err = snd_pcm_open(&handle, pcm.c_str(), stream, SND_PCM_NONBLOCK);
     if (err < 0) {
         *error = snd_strerror(err);
         return 0;
@@ -36,15 +37,15 @@ static int ProbeChannels(const std::string& pcm, snd_pcm_stream_t stream, std::s
 
     snd_pcm_hw_params_t* params;
     snd_pcm_hw_params_alloca(&params);
-    unsigned int channels = 0;
+    std::uint32_t channels = 0;
     if (snd_pcm_hw_params_any(handle, params) == 0) {
         snd_pcm_hw_params_get_channels_max(params, &channels);
     }
     snd_pcm_close(handle);
-    return (int)channels;
+    return (std::int32_t)channels;
 }
 
-static bool HasStream(snd_ctl_t* ctl, int device, snd_pcm_stream_t stream)
+static bool HasStream(snd_ctl_t* ctl, std::int32_t device, snd_pcm_stream_t stream)
 {
     snd_pcm_info_t* info;
     snd_pcm_info_alloca(&info);
@@ -55,7 +56,7 @@ static bool HasStream(snd_ctl_t* ctl, int device, snd_pcm_stream_t stream)
 }
 
 static const JackAlsaPcmInfo* FindKnown(const std::vector<JackAlsaPcmInfo>& known,
-    const std::string& card_id, int device)
+    const std::string& card_id, std::int32_t device)
 {
     for (size_t i = 0; i < known.size(); i++) {
         if (known[i].card_id == card_id && known[i].device == device) {
@@ -69,7 +70,7 @@ std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcm
     bool report)
 {
     std::vector<JackAlsaPcmInfo> result;
-    int card = -1;
+    std::int32_t card = -1;
 
     while (snd_card_next(&card) >= 0 && card >= 0) {
         std::array<char, 32> ctl_name { };
@@ -88,7 +89,7 @@ std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcm
         }
         std::string card_id = snd_ctl_card_info_get_id(card_info);
 
-        int device = -1;
+        std::int32_t device = -1;
         while (snd_ctl_pcm_next_device(ctl, &device) >= 0 && device >= 0) {
             bool playback = HasStream(ctl, device, SND_PCM_STREAM_PLAYBACK);
             bool capture = HasStream(ctl, device, SND_PCM_STREAM_CAPTURE);

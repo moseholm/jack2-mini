@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -35,8 +36,8 @@ bool WaitUntil(Pred pred)
 }
 
 // Waits until a counter has moved by n.
-inline bool WaitCycles(const std::atomic<unsigned long>& counter, unsigned long n)
+inline bool WaitCycles(const std::atomic<std::uint64_t>& counter, std::uint64_t n)
 {
-    const unsigned long target = counter.load() + n;
+    const std::uint64_t target = counter.load() + n;
     return WaitUntil([&] { return counter.load() >= target; });
 }

@@ -17,6 +17,7 @@
 
 #define __STDC_FORMAT_MACROS // For inttypes.h to work in C++
 
+#include <cstdint>
 #include <errno.h>
 #include <math.h>
 #include <memory.h>
@@ -99,18 +100,18 @@ static void AlsaSetTimeThunk(void* arg, jack_time_t time)
     static_cast<JackAlsaDriver*>(arg)->SetTimetAux(time);
 }
 
-static int AlsaRestartThunk(void* arg)
+static std::int32_t AlsaRestartThunk(void* arg)
 {
     return static_cast<JackAlsaDriver*>(arg)->RestartFromRT();
 }
 
-int JackAlsaDriver::RestartFromRT()
+std::int32_t JackAlsaDriver::RestartFromRT()
 {
     // Stop and Start run inside one RT cycle here.  The RT side stays marked as
     // running throughout, so a reconfiguration waits for the cycle to finish
     // rather than freeing buffers mid-restart.
     fRestarting.store(true);
-    int res = Stop();
+    std::int32_t res = Stop();
     if (res == 0) {
         res = Start();
     }
@@ -130,7 +131,7 @@ static jackmini::alsa::PcmCycle::Callbacks AlsaCallbacks(JackAlsaDriver* driver)
     return callbacks;
 }
 
-int JackAlsaDriver::OpenPrimary(jack_nframes_t frames_per_cycle)
+std::int32_t JackAlsaDriver::OpenPrimary(jack_nframes_t frames_per_cycle)
 {
     jackmini::alsa::Request request = fRequest;
     request.frames_per_cycle = frames_per_cycle;
@@ -143,7 +144,7 @@ int JackAlsaDriver::OpenPrimary(jack_nframes_t frames_per_cycle)
     return 0;
 }
 
-int JackAlsaDriver::SetBufferSize(jack_nframes_t buffer_size)
+std::int32_t JackAlsaDriver::SetBufferSize(jack_nframes_t buffer_size)
 {
     jack_log("JackAlsaDriver::SetBufferSize %ld", buffer_size);
 
@@ -154,7 +155,7 @@ int JackAlsaDriver::SetBufferSize(jack_nframes_t buffer_size)
         return -1;
     }
     fSession.close();
-    int res = OpenPrimary(buffer_size);
+    std::int32_t res = OpenPrimary(buffer_size);
 
     if (res == 0) { // update fEngineControl and fGraphManager
         JackAudioDriver::SetBufferSize(buffer_size); // Generic change, never fails
@@ -168,7 +169,7 @@ int JackAlsaDriver::SetBufferSize(jack_nframes_t buffer_size)
     return res;
 }
 
-JackAlsaSecondaryCard* JackAlsaDriver::FindCard(int id)
+JackAlsaSecondaryCard* JackAlsaDriver::FindCard(std::int32_t id)
 {
     std::lock_guard<std::mutex> lock(fCardsMutex);
     for (size_t i = 0; i < fSecondaryCards.size(); i++) {
@@ -188,7 +189,7 @@ bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
     std::vector<jack_port_id_t>& capture_ports = card->CapturePorts();
     std::vector<jack_port_id_t>& playback_ports = card->PlaybackPorts();
 
-    for (int i = 0; i < card->CaptureChannels(); i++) {
+    for (std::int32_t i = 0; i < card->CaptureChannels(); i++) {
         jackmini::FormatCString(name, "{}:capture_{}_{}", fClientControl.fName, card->PortBase().c_str(), i + 1);
         if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)CaptureDriverFlags, fEngineControl->fBufferSize, &port_index)) {
             jack_error("driver: cannot register port for %s", name);
@@ -198,7 +199,7 @@ bool JackAlsaDriver::PromoteCard(JackAlsaSecondaryCard* card)
         capture_ports[i] = port_index;
     }
 
-    for (int i = 0; i < card->PlaybackChannels(); i++) {
+    for (std::int32_t i = 0; i < card->PlaybackChannels(); i++) {
         jackmini::FormatCString(name, "{}:playback_{}_{}", fClientControl.fName, card->PortBase().c_str(), i + 1);
         if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)PlaybackDriverFlags, fEngineControl->fBufferSize, &port_index)) {
             jack_error("driver: cannot register port for %s", name);
@@ -242,8 +243,8 @@ bool JackAlsaDriver::WaitForRTSafePoint()
     if (!fRTRunning.load()) {
         return true;
     }
-    uint64_t start = fRTEpoch.load(std::memory_order_acquire);
-    for (int i = 0; i < 2000; i++) {
+    std::uint64_t start = fRTEpoch.load(std::memory_order_acquire);
+    for (std::int32_t i = 0; i < 2000; i++) {
         if (fRTEpoch.load(std::memory_order_acquire) >= start + 2) {
             return true;
         }
@@ -287,7 +288,7 @@ void JackAlsaDriver::RetireCard(JackAlsaSecondaryCard* card)
 // The primary card's clock drives the server, so when it fails the server cannot
 // go on.  Clients are told why, and the server is stopped as on Ctrl-C.  Only the
 // first failure is reported.
-void JackAlsaDriver::PrimaryFailed(int status)
+void JackAlsaDriver::PrimaryFailed(std::int32_t status)
 {
     if (fPrimaryFailed.exchange(true)) {
         return;
@@ -299,7 +300,7 @@ void JackAlsaDriver::PrimaryFailed(int status)
     JackTools::KillServer();
 }
 
-void JackAlsaDriver::HandleCardFailure(int card_id)
+void JackAlsaDriver::HandleCardFailure(std::int32_t card_id)
 {
     JackAlsaSecondaryCard* card = FindCard(card_id);
     if (card == nullptr) {
@@ -318,12 +319,12 @@ void JackAlsaDriver::UpdateSecondaryLatencies()
         jack_latency_range_t range;
 
         range.min = range.max = card->CaptureLatency();
-        for (int i = 0; i < card->CaptureChannels(); i++) {
+        for (std::int32_t i = 0; i < card->CaptureChannels(); i++) {
             fGraphManager->GetPort(card->CapturePorts()[i])->SetLatencyRange(JackCaptureLatency, &range);
         }
 
         range.min = range.max = card->PlaybackLatency();
-        for (int i = 0; i < card->PlaybackChannels(); i++) {
+        for (std::int32_t i = 0; i < card->PlaybackChannels(); i++) {
             fGraphManager->GetPort(card->PlaybackPorts()[i])->SetLatencyRange(JackPlaybackLatency, &range);
         }
     }
@@ -334,12 +335,12 @@ void JackAlsaDriver::UpdateLatencies()
     jack_latency_range_t range;
     const jack_nframes_t frames = fSession.frames_per_cycle();
 
-    for (int i = 0; i < fCaptureChannels; i++) {
+    for (std::int32_t i = 0; i < fCaptureChannels; i++) {
         range.min = range.max = frames + fCaptureFrameLatency;
         fGraphManager->GetPort(fCapturePortList[i])->SetLatencyRange(JackCaptureLatency, &range);
     }
 
-    for (int i = 0; i < fPlaybackChannels; i++) {
+    for (std::int32_t i = 0; i < fPlaybackChannels; i++) {
         // Add one buffer more latency if "async" mode is used...
         range.min = range.max = (frames * (fRequest.periods - 1)) + ((fEngineControl->fSyncMode) ? 0 : fEngineControl->fBufferSize) + fPlaybackFrameLatency;
         fGraphManager->GetPort(fPlaybackPortList[i])->SetLatencyRange(JackPlaybackLatency, &range);
@@ -351,11 +352,11 @@ void JackAlsaDriver::UpdateLatencies()
     }
 }
 
-int JackAlsaDriver::Attach()
+std::int32_t JackAlsaDriver::Attach()
 {
     JackPort* port;
     jack_port_id_t port_index;
-    unsigned long port_flags = (unsigned long)CaptureDriverFlags;
+    std::uint64_t port_flags = (std::uint64_t)CaptureDriverFlags;
     std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> name { };
     std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias { };
 
@@ -368,7 +369,7 @@ int JackAlsaDriver::Attach()
 
     jack_log("JackAlsaDriver::Attach fBufferSize %ld fSampleRate %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
 
-    for (int i = 0; i < fCaptureChannels; i++) {
+    for (std::int32_t i = 0; i < fCaptureChannels; i++) {
         jackmini::FormatCString(alias, "{}:{}:out{}", fAliasName.data(), fCaptureDriverName.data(), i + 1);
         jackmini::FormatCString(name, "{}:capture_{}", fClientControl.fName, i + 1);
         if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)port_flags, fEngineControl->fBufferSize, &port_index)) {
@@ -381,9 +382,9 @@ int JackAlsaDriver::Attach()
         jack_log("JackAlsaDriver::Attach fCapturePortList[i] %ld ", port_index);
     }
 
-    port_flags = (unsigned long)PlaybackDriverFlags;
+    port_flags = (std::uint64_t)PlaybackDriverFlags;
 
-    for (int i = 0; i < fPlaybackChannels; i++) {
+    for (std::int32_t i = 0; i < fPlaybackChannels; i++) {
         jackmini::FormatCString(alias, "{}:{}:in{}", fAliasName.data(), fPlaybackDriverName.data(), i + 1);
         jackmini::FormatCString(name, "{}:playback_{}", fClientControl.fName, i + 1);
         if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), JACK_DEFAULT_AUDIO_TYPE, (JackPortFlags)port_flags, fEngineControl->fBufferSize, &port_index)) {
@@ -426,7 +427,7 @@ int JackAlsaDriver::Attach()
     return 0;
 }
 
-int JackAlsaDriver::Detach()
+std::int32_t JackAlsaDriver::Detach()
 {
     // Stop the threads that can change the card list before taking the cards out.
     StopControlMonitoring();
@@ -464,20 +465,20 @@ char* get_control_device_name(const char* device_name)
     } else {
         ctl_name = strndup(device_name, comma - device_name);
         if (ctl_name == nullptr) {
-            jack_error("strndup(\"%s\", %u) failed.", device_name, (unsigned int)(comma - device_name));
+            jack_error("strndup(\"%s\", %u) failed.", device_name, (std::uint32_t)(comma - device_name));
         }
     }
 
     return ctl_name;
 }
 
-static int card_to_num(const char* device)
+static std::int32_t card_to_num(const char* device)
 {
-    int err;
+    std::int32_t err;
     char* ctl_name;
     snd_ctl_card_info_t* card_info;
     snd_ctl_t* ctl_handle;
-    int i = -1;
+    std::int32_t i = -1;
 
     snd_ctl_card_info_alloca(&card_info);
 
@@ -522,7 +523,7 @@ static std::string PortBaseOf(const JackAlsaSecondaryConfig& cfg)
 // Finds the card and device of a PCM name among the enumerated devices.  Accepts
 // "hw:<index>[,n]", "hw:<id>[,n]" and "hw:CARD=<id>,DEV=<n>".
 static bool ResolvePcm(const std::string& pcm, const std::vector<JackAlsaPcmInfo>& pcms,
-    int* card, int* device)
+    std::int32_t* card, std::int32_t* device)
 {
     std::string rest = pcm.find(':') == std::string::npos ? pcm : pcm.substr(pcm.find(':') + 1);
     std::string key;
@@ -534,7 +535,7 @@ static bool ResolvePcm(const std::string& pcm, const std::vector<JackAlsaPcmInfo
     bool numeric = !key.empty() && key.find_first_not_of("0123456789") == std::string::npos;
     *device = JackAlsaPcmDeviceNumber(pcm);
     for (size_t i = 0; i < pcms.size(); i++) {
-        if ((numeric && pcms[i].card_num == jackmini::ParseLeadingInteger<int>(key)) || (!numeric && pcms[i].card_id == key)) {
+        if ((numeric && pcms[i].card_num == jackmini::ParseLeadingInteger<std::int32_t>(key)) || (!numeric && pcms[i].card_id == key)) {
             *card = pcms[i].card_num;
             return true;
         }
@@ -558,17 +559,17 @@ static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
         *listing = pcms;
     }
 
-    std::vector<std::pair<int, int>> claimed;
+    std::vector<std::pair<std::int32_t, std::int32_t>> claimed;
     const char* names[] = { primary_capture, primary_playback };
     std::vector<std::string> used;
     for (size_t i = 0; i < 2; i++) {
-        int card, device;
+        std::int32_t card, device;
         if (names[i] != nullptr && ResolvePcm(names[i], pcms, &card, &device)) {
             claimed.push_back(std::make_pair(card, device));
         }
     }
     for (size_t i = 0; i < configured.size(); i++) {
-        int card, device;
+        std::int32_t card, device;
         const std::string pcms_for[] = { configured[i].capture_device, configured[i].playback_device };
         for (size_t d = 0; d < 2; d++) {
             if (!pcms_for[d].empty() && ResolvePcm(pcms_for[d], pcms, &card, &device)) {
@@ -626,7 +627,7 @@ static std::vector<JackAlsaSecondaryConfig> BuildSecondaryPlan(
     return plan;
 }
 
-int JackAlsaDriver::Open(jack_nframes_t nframes,
+std::int32_t JackAlsaDriver::Open(jack_nframes_t nframes,
     jack_nframes_t user_nperiods,
     jack_nframes_t samplerate,
     bool hw_monitoring,
@@ -636,8 +637,8 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
     DitherAlgorithm dither,
     bool soft_mode,
     bool monitor,
-    int inchannels,
-    int outchannels,
+    std::int32_t inchannels,
+    std::int32_t outchannels,
     bool shorts_first,
     const char* capture_driver_name,
     const char* playback_driver_name,
@@ -655,8 +656,8 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
     }
 
     if (JackServerGlobals::on_device_acquire != nullptr) {
-        int capture_card = card_to_num(capture_driver_name);
-        int playback_card = card_to_num(playback_driver_name);
+        std::int32_t capture_card = card_to_num(capture_driver_name);
+        std::int32_t playback_card = card_to_num(playback_driver_name);
         std::array<char, 32> audio_name { };
 
         if (capture_card >= 0) {
@@ -776,7 +777,7 @@ int JackAlsaDriver::Open(jack_nframes_t nframes,
 
     for (size_t i = 0; i < fSecondaryCards.size(); i++) {
         JackAlsaSecondaryCard* card = fSecondaryCards[i];
-        for (int d = 0; d < 2; d++) {
+        for (std::int32_t d = 0; d < 2; d++) {
             JackAlsaRateDirection dir = (JackAlsaRateDirection)d;
             if (card->RateElementValid(dir) && fControlMonitor->AddWatch(card->Id(), card->ControlName(), card->RateElement(dir), dir) < 0) {
                 jack_error("secondary card '%s': rate control changes will not be seen",
@@ -813,7 +814,7 @@ bool JackAlsaDriver::LockCard(const char* pcm_name, bool shared)
             return false;
         }
     }
-    int fd = JackAlsaControlLockCard(ctl);
+    std::int32_t fd = JackAlsaControlLockCard(ctl);
     if (fd < 0) {
         return false;
     }
@@ -831,10 +832,10 @@ void JackAlsaDriver::UnlockCards()
     fCardLockNames.clear();
 }
 
-int JackAlsaDriver::Close()
+std::int32_t JackAlsaDriver::Close()
 {
     // Generic audio driver close
-    int res = JackAudioDriver::Close();
+    std::int32_t res = JackAudioDriver::Close();
 
     // Stop every thread that can change the cards before they are freed.
     StopControlMonitoring();
@@ -862,13 +863,13 @@ int JackAlsaDriver::Close()
 
     if (JackServerGlobals::on_device_release != nullptr) {
         std::array<char, 32> audio_name { };
-        int capture_card = card_to_num(fCaptureDriverName.data());
+        std::int32_t capture_card = card_to_num(fCaptureDriverName.data());
         if (capture_card >= 0) {
             jackmini::FormatCString(audio_name, "Audio{}", capture_card);
             JackServerGlobals::on_device_release(audio_name.data());
         }
 
-        int playback_card = card_to_num(fPlaybackDriverName.data());
+        std::int32_t playback_card = card_to_num(fPlaybackDriverName.data());
         if (playback_card >= 0 && playback_card != capture_card) {
             jackmini::FormatCString(audio_name, "Audio{}", playback_card);
             JackServerGlobals::on_device_release(audio_name.data());
@@ -878,9 +879,9 @@ int JackAlsaDriver::Close()
     return res;
 }
 
-int JackAlsaDriver::Start()
+std::int32_t JackAlsaDriver::Start()
 {
-    int res = JackAudioDriver::Start();
+    std::int32_t res = JackAudioDriver::Start();
     if (res >= 0) {
         res = fSession.start();
         if (res < 0) {
@@ -1055,7 +1056,7 @@ bool JackAlsaDriver::AddCard(const JackAlsaSecondaryConfig& cfg)
         return false;
     }
 
-    for (int d = 0; d < 2; d++) {
+    for (std::int32_t d = 0; d < 2; d++) {
         JackAlsaRateDirection dir = (JackAlsaRateDirection)d;
         if (card->RateElementValid(dir)) {
             fControlMonitor->QueueWatch(card->Id(), card->ControlName(), card->RateElement(dir), dir);
@@ -1076,13 +1077,13 @@ void JackAlsaDriver::ReportOnce(const std::string& message)
     jack_error("%s", message.c_str());
 }
 
-void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long value)
+void JackAlsaDriver::HandleRateRequest(std::int32_t card, JackAlsaRateDirection dir, std::int64_t value)
 {
     JackAlsaSecondaryCard* secondary = FindCard(card);
     if (secondary == nullptr) {
         return; // the card was removed; its watch may still have delivered this
     }
-    long current = (long)secondary->Rate();
+    std::int64_t current = (std::int64_t)secondary->Rate();
     if (value == current) {
         // Our own write echoing back, or a no-op.
         return;
@@ -1103,19 +1104,19 @@ void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long
         if (secondary->Reconfigure((jack_nframes_t)value) < 0) {
             jack_error("secondary card '%s': %s rate change to %ld Hz failed",
                 secondary->Name().c_str(), what, value);
-        } else if ((long)secondary->Rate() != current) {
+        } else if ((std::int64_t)secondary->Rate() != current) {
             UpdateSecondaryLatencies();
             // Only a change that took effect is reported.  A card whose capture and
             // playback share one stream reports both directions in one call.
-            int directions = (secondary->CaptureEnabled() ? JackSecondaryRateCapture : 0) | (secondary->PlaybackEnabled() ? JackSecondaryRatePlayback : 0);
+            std::int32_t directions = (secondary->CaptureEnabled() ? JackSecondaryRateCapture : 0) | (secondary->PlaybackEnabled() ? JackSecondaryRatePlayback : 0);
             NotifySecondarySampleRate(secondary->Name().c_str(), secondary->Rate(), directions);
         }
     }
 
     // Report the rate the card actually runs at.  The write echoes back as an
     // event with the same value, which is ignored above.
-    long actual = (long)secondary->Rate();
-    for (int d = 0; d < 2; d++) {
+    std::int64_t actual = (std::int64_t)secondary->Rate();
+    for (std::int32_t d = 0; d < 2; d++) {
         JackAlsaRateDirection each = (JackAlsaRateDirection)d;
         if (secondary->RateElementValid(each) && secondary->RateElement(each).writable) {
             if (secondary->WriteRate(each, actual) < 0) {
@@ -1125,31 +1126,31 @@ void JackAlsaDriver::HandleRateRequest(int card, JackAlsaRateDirection dir, long
     }
 }
 
-int JackAlsaDriver::Stop()
+std::int32_t JackAlsaDriver::Stop()
 {
     if (!fRestarting.load()) {
         fRTRunning.store(false);
         StopControlMonitoring();
     }
     StopSecondaryCards();
-    int res = fSession.stop();
+    std::int32_t res = fSession.stop();
     if (JackAudioDriver::Stop() < 0) {
         res = -1;
     }
     return res;
 }
 
-int JackAlsaDriver::Read()
+std::int32_t JackAlsaDriver::Read()
 {
     // Taken from alsa_driver_run_cycle
-    int wait_status;
+    std::int32_t wait_status;
     jack_nframes_t nframes;
     fDelayedUsecs = 0.f;
 
     // A real xrun recovers in one or two tries.  A device that keeps returning no frames must fail the driver
     // instead of looping here forever and holding the server without a running cycle.
-    constexpr int kMaxRecoveries = 5;
-    int recoveries = 0;
+    constexpr std::int32_t kMaxRecoveries = 5;
+    std::int32_t recoveries = 0;
 
 retry:
 
@@ -1187,7 +1188,7 @@ retry:
     // Has to be done before read
     JackDriver::CycleIncTime();
 
-    int res = fSession.read(fEngineControl->fBufferSize);
+    std::int32_t res = fSession.read(fEngineControl->fBufferSize);
     if (res < 0) {
         return res;
     }
@@ -1201,9 +1202,9 @@ retry:
     return 0;
 }
 
-int JackAlsaDriver::Write()
+std::int32_t JackAlsaDriver::Write()
 {
-    int res = fSession.write(fEngineControl->fBufferSize);
+    std::int32_t res = fSession.write(fEngineControl->fBufferSize);
     if (res < 0) {
         PrimaryFailed(res);
         return res;
@@ -1224,7 +1225,7 @@ int JackAlsaDriver::Write()
 void JackAlsaDriver::ReadInputAux(jack_nframes_t orig_nframes, const jackmini::alsa::MappedFrames& mapped,
     std::ptrdiff_t nread)
 {
-    for (int chn = 0; chn < fCaptureChannels; chn++) {
+    for (std::int32_t chn = 0; chn < fCaptureChannels; chn++) {
         if (fGraphManager->GetConnectionsNum(fCapturePortList[chn]) > 0) {
             jack_default_audio_sample_t* buf = (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fCapturePortList[chn], orig_nframes);
             fSession.read_channel(mapped.channels[chn], buf + nread, mapped.frames);
@@ -1234,7 +1235,7 @@ void JackAlsaDriver::ReadInputAux(jack_nframes_t orig_nframes, const jackmini::a
 
 void JackAlsaDriver::ClearOutputAux()
 {
-    for (int chn = 0; chn < fPlaybackChannels; chn++) {
+    for (std::int32_t chn = 0; chn < fPlaybackChannels; chn++) {
         jack_default_audio_sample_t* buf = (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fPlaybackPortList[chn], fEngineControl->fBufferSize);
         memset(buf, 0, sizeof(jack_default_audio_sample_t) * fEngineControl->fBufferSize);
     }
@@ -1248,7 +1249,7 @@ void JackAlsaDriver::SetTimetAux(jack_time_t time)
 void JackAlsaDriver::WriteOutputAux(jack_nframes_t orig_nframes, const jackmini::alsa::MappedFrames& mapped,
     std::ptrdiff_t nwritten)
 {
-    for (int chn = 0; chn < fPlaybackChannels; chn++) {
+    for (std::int32_t chn = 0; chn < fPlaybackChannels; chn++) {
         // Output ports
         if (fGraphManager->GetConnectionsNum(fPlaybackPortList[chn]) > 0) {
             jack_default_audio_sample_t* buf = (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fPlaybackPortList[chn], orig_nframes);
@@ -1272,15 +1273,15 @@ enum_alsa_devices()
     snd_ctl_card_info_t* info;
     snd_pcm_info_t* pcminfo_capture;
     snd_pcm_info_t* pcminfo_playback;
-    int card_no = -1;
+    std::int32_t card_no = -1;
     jack_driver_param_value_t card_id;
     jack_driver_param_value_t device_id;
     std::array<char, 64> description { };
-    int device_no;
+    std::int32_t device_no;
     bool has_capture;
     bool has_playback;
     jack_driver_param_constraint_desc_t* constraint_ptr;
-    uint32_t array_size = 0;
+    std::uint32_t array_size = 0;
 
     snd_ctl_card_info_alloca(&info);
     snd_pcm_info_alloca(&pcminfo_capture);
@@ -1343,7 +1344,7 @@ fail:
     return nullptr;
 }
 
-static int
+static std::int32_t
 dither_opt(char c, DitherAlgorithm* dither)
 {
     switch (c) {
@@ -1454,19 +1455,19 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
 {
     jack_nframes_t srate = 48000;
     jack_nframes_t frames_per_interrupt = 1024;
-    unsigned long user_nperiods = 2;
+    std::uint64_t user_nperiods = 2;
     const char* playback_pcm_name = "";
     const char* capture_pcm_name = "";
-    int hw_monitoring = false;
-    int hw_metering = false;
-    int capture = false;
-    int playback = false;
-    int soft_mode = false;
-    int monitor = false;
+    std::int32_t hw_monitoring = false;
+    std::int32_t hw_metering = false;
+    std::int32_t capture = false;
+    std::int32_t playback = false;
+    std::int32_t soft_mode = false;
+    std::int32_t monitor = false;
     DitherAlgorithm dither = None;
-    int user_capture_nchnls = 0;
-    int user_playback_nchnls = 0;
-    int shorts_first = false;
+    std::int32_t user_capture_nchnls = 0;
+    std::int32_t user_playback_nchnls = 0;
+    std::int32_t shorts_first = false;
     jack_nframes_t systemic_input_latency = 0;
     jack_nframes_t systemic_output_latency = 0;
     const JSList* node;

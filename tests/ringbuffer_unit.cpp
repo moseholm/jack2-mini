@@ -15,6 +15,7 @@
 // kept empty, so a buffer of size n holds n - 1 bytes. The test checks the sizes, the wrap-around, the two-segment
 // vectors, and a transfer between two threads.
 
+#include <cstdint>
 #include <jack/ringbuffer.h>
 
 #include <cstdio>
@@ -24,7 +25,7 @@
 
 namespace {
 
-int failures = 0;
+std::int32_t failures = 0;
 
 #define CHECK(cond)                                              \
     do {                                                         \

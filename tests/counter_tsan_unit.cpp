@@ -22,6 +22,7 @@
 #include "JackGraphManager.h"
 #include "JackSynchro.h"
 
+#include <cstdint>
 #include <array>
 #include <atomic>
 #include <cstdio>
@@ -31,9 +32,9 @@ using namespace jackmini;
 
 namespace {
 
-constexpr int kInputRef = 2;
-constexpr int kOutputRef = 3;
-constexpr int kRounds = 20000;
+constexpr std::int32_t kInputRef = 2;
+constexpr std::int32_t kOutputRef = 3;
+constexpr std::int32_t kRounds = 20000;
 
 } // namespace
 
@@ -46,7 +47,7 @@ int main()
     JackSynchro* table = new JackSynchro[CLIENT_NUM];
 
     std::array<char, 64> name { };
-    for (int ref : { kInputRef, kOutputRef }) {
+    for (std::int32_t ref : { kInputRef, kOutputRef }) {
         std::snprintf(name.data(), name.size(), "counter_test_%d", ref);
         if (!table[ref].Allocate(name.data(), "counter_test", 0)) {
             std::printf("cannot allocate the synchro of ref %d\n", ref);
@@ -60,11 +61,11 @@ int main()
     graph->RunNextGraph();
 
     JackClientControl output(name.data(), 0, kOutputRef, 0);
-    std::atomic<int> failures { 0 };
+    std::atomic<std::int32_t> failures { 0 };
 
     // The realtime thread: one cycle per round.
     std::thread rt([&] {
-        for (int i = 0; i < kRounds; i++) {
+        for (std::int32_t i = 0; i < kRounds; i++) {
             graph->RunNextGraph();
             if (!graph->ResumeRefNum(&output, table)) {
                 failures++;
@@ -74,7 +75,7 @@ int main()
 
     // The control thread: connections change while the cycles run.  Each change copies the configuration.
     std::thread control([&] {
-        for (int i = 0; i < kRounds; i++) {
+        for (std::int32_t i = 0; i < kRounds; i++) {
             graph->DirectDisconnect(kOutputRef, kInputRef);
             graph->DirectConnect(kOutputRef, kInputRef);
         }
@@ -84,8 +85,8 @@ int main()
     control.join();
 
     std::printf("counter test: %d failed cycles\n", failures.load());
-    const int result = failures.load() == 0 ? 0 : 1;
-    for (int ref : { kInputRef, kOutputRef }) {
+    const std::int32_t result = failures.load() == 0 ? 0 : 1;
+    for (std::int32_t ref : { kInputRef, kOutputRef }) {
         table[ref].Destroy();
     }
     delete[] table;

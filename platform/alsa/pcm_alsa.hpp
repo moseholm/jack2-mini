@@ -69,7 +69,7 @@ public:
     // A null name leaves that direction out.  A direction that cannot be opened is left out when the other one
     // works; EBUSY and EPERM are errors.  Returns 0 on success, -1 on error.  The request is updated with the rate
     // that was set.
-    int open(const char* capture_name, const char* playback_name, Request& request);
+    std::int32_t open(const char* capture_name, const char* playback_name, Request& request);
     void close();
 
     const StreamInfo& info(Stream stream) const { return state(stream).info; }
@@ -83,21 +83,21 @@ public:
     std::size_t capture_channels() const { return capture_.areas.size(); }
     std::size_t playback_channels() const { return playback_.areas.size(); }
 
-    int poll_descriptor_count(Stream stream) const;
-    int poll_descriptors(Stream stream, struct pollfd* fds, nfds_t nfds);
-    int poll_revents(Stream stream, struct pollfd* fds, nfds_t nfds, unsigned short* revents);
-    int poll(struct pollfd* fds, nfds_t nfds, int timeout_ms);
+    std::int32_t poll_descriptor_count(Stream stream) const;
+    std::int32_t poll_descriptors(Stream stream, struct pollfd* fds, nfds_t nfds);
+    std::int32_t poll_revents(Stream stream, struct pollfd* fds, nfds_t nfds, std::uint16_t* revents);
+    std::int32_t poll(struct pollfd* fds, nfds_t nfds, std::int32_t timeout_ms);
     std::uint64_t now_us() const;
 
     std::ptrdiff_t avail(Stream stream);
-    int begin(Stream stream, MappedFrames& mapped);
-    int commit(Stream stream, std::size_t offset, std::size_t frames);
+    std::int32_t begin(Stream stream, MappedFrames& mapped);
+    std::int32_t commit(Stream stream, std::size_t offset, std::size_t frames);
     void silence(Stream stream, std::size_t channel, std::size_t frames);
 
-    int prepare(Stream stream);
-    int start(Stream stream);
-    int drop(Stream stream);
-    int status(XrunStatus& out);
+    std::int32_t prepare(Stream stream);
+    std::int32_t start(Stream stream);
+    std::int32_t drop(Stream stream);
+    std::int32_t status(XrunStatus& out);
 
 private:
     struct StreamState {

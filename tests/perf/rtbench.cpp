@@ -7,6 +7,7 @@
 #include "jackmini/jackmini.hpp"
 #include "../jackmini_wait.hpp"
 
+#include <cstdint>
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
@@ -18,12 +19,12 @@
 using namespace jackmini;
 
 #define MAXS 400000
-static long long starts[MAXS], ends[MAXS];
-static std::atomic<unsigned long> nsamples { 0 }, nxruns { 0 };
+static std::int64_t starts[MAXS], ends[MAXS];
+static std::atomic<std::uint64_t> nsamples { 0 }, nxruns { 0 };
 static Port in, out;
 static Client* jack_handle;
 
-static long long now_ns()
+static std::int64_t now_ns()
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -33,12 +34,12 @@ static long long now_ns()
 static bool process(const Cycle& cycle)
 {
     const FrameCount nframes = cycle.frames;
-    unsigned long i = nsamples.fetch_add(1);
-    long long s = now_ns();
+    std::uint64_t i = nsamples.fetch_add(1);
+    std::int64_t s = now_ns();
     auto o = jack_handle->audio_buffer(out);
     auto x = jack_handle->audio_buffer(in);
     std::memcpy(o.data(), x.data(), sizeof(float) * nframes);
-    long long e = now_ns();
+    std::int64_t e = now_ns();
     if (i < MAXS) {
         starts[i] = s;
         ends[i] = e;
@@ -46,22 +47,22 @@ static bool process(const Cycle& cycle)
     return true;
 }
 
-static int cmp(const void* a, const void* b)
+static std::int32_t cmp(const void* a, const void* b)
 {
-    long long x = *(const long long*)a, y = *(const long long*)b;
+    std::int64_t x = *(const std::int64_t*)a, y = *(const std::int64_t*)b;
     return (x > y) - (x < y);
 }
 
-static void pct(const char* label, long long* v, long n)
+static void pct(const char* label, std::int64_t* v, std::int64_t n)
 {
-    std::qsort(v, n, sizeof(long long), cmp);
+    std::qsort(v, n, sizeof(std::int64_t), cmp);
     std::printf("%-22s p50 %8.1f us  p99 %8.1f us  p99.9 %8.1f us  max %8.1f us\n", label,
-        v[n / 2] / 1e3, v[(long)(n * 0.99)] / 1e3, v[(long)(n * 0.999)] / 1e3, v[n - 1] / 1e3);
+        v[n / 2] / 1e3, v[(std::int64_t)(n * 0.99)] / 1e3, v[(std::int64_t)(n * 0.999)] / 1e3, v[n - 1] / 1e3);
 }
 
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
-    int seconds = argc > 1 ? std::atoi(argv[1]) : 30;
+    std::int32_t seconds = argc > 1 ? std::atoi(argv[1]) : 30;
 
     OpenOptions options;
     options.start_server = false;
@@ -93,28 +94,28 @@ int main(int argc, char** argv)
     out = *pout;
     client->activate();
 
-    const unsigned long cycles = static_cast<unsigned long>(seconds) * client->sample_rate() / client->buffer_size();
+    const std::uint64_t cycles = static_cast<std::uint64_t>(seconds) * client->sample_rate() / client->buffer_size();
     WaitUntil([&] { return nsamples.load() >= cycles; });
     client->deactivate();
 
-    unsigned long n = nsamples.load();
+    std::uint64_t n = nsamples.load();
     if (n > MAXS) {
         n = MAXS;
     }
-    std::vector<long long> iv(n > 0 ? n - 1 : 0), du(n);
-    for (unsigned long i = 1; i < n; i++) {
+    std::vector<std::int64_t> iv(n > 0 ? n - 1 : 0), du(n);
+    for (std::uint64_t i = 1; i < n; i++) {
         iv[i - 1] = starts[i] - starts[i - 1];
     }
-    for (unsigned long i = 0; i < n; i++) {
+    for (std::uint64_t i = 0; i < n; i++) {
         du[i] = ends[i] - starts[i];
     }
     std::printf("cycles %lu  xruns %lu  period %u  rate %u\n", nsamples.load(), nxruns.load(),
         client->buffer_size(), client->sample_rate());
     if (n > 1) {
-        pct("interval (start-start)", iv.data(), (long)iv.size());
+        pct("interval (start-start)", iv.data(), (std::int64_t)iv.size());
     }
     if (n > 0) {
-        pct("callback duration", du.data(), (long)du.size());
+        pct("callback duration", du.data(), (std::int64_t)du.size());
     }
     client->close();
     return 0;

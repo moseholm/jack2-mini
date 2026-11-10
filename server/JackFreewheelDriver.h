@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "JackDriver.h"
 
 namespace jackmini {
@@ -41,13 +43,13 @@ public:
         return false;
     }
 
-    int Process();
+    std::int32_t Process();
 
-    int ProcessReadSync();
-    int ProcessWriteSync();
+    std::int32_t ProcessReadSync();
+    std::int32_t ProcessWriteSync();
 
-    int ProcessReadAsync();
-    int ProcessWriteAsync();
+    std::int32_t ProcessReadAsync();
+    std::int32_t ProcessWriteAsync();
 };
 
 } // namespace jackmini

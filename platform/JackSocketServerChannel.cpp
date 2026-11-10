@@ -24,6 +24,7 @@
 #include "JackServer.h"
 #include "JackTools.h"
 
+#include <cstdint>
 #include <assert.h>
 #include <signal.h>
 
@@ -64,10 +65,10 @@ void JackSocketServerChannel::Close()
     fRequestListenSocket.Close();
 
     // Close remaining client sockets
-    std::map<int, std::pair<int, JackClientSocket*>>::iterator it;
+    std::map<std::int32_t, std::pair<std::int32_t, JackClientSocket*>>::iterator it;
 
     for (it = fSocketTable.begin(); it != fSocketTable.end(); it++) {
-        pair<int, JackClientSocket*> elem = (*it).second;
+        pair<std::int32_t, JackClientSocket*> elem = (*it).second;
         JackClientSocket* socket = elem.second;
         assert(socket);
         socket->Close();
@@ -104,12 +105,12 @@ void JackSocketServerChannel::ClientCreate()
     }
 }
 
-int JackSocketServerChannel::GetFd(JackClientSocket* socket_aux)
+std::int32_t JackSocketServerChannel::GetFd(JackClientSocket* socket_aux)
 {
-    std::map<int, std::pair<int, JackClientSocket*>>::iterator it;
+    std::map<std::int32_t, std::pair<std::int32_t, JackClientSocket*>>::iterator it;
 
     for (it = fSocketTable.begin(); it != fSocketTable.end(); it++) {
-        pair<int, JackClientSocket*> elem = (*it).second;
+        pair<std::int32_t, JackClientSocket*> elem = (*it).second;
         JackClientSocket* socket = elem.second;
         if (socket_aux == socket) {
             return (*it).first;
@@ -120,12 +121,12 @@ int JackSocketServerChannel::GetFd(JackClientSocket* socket_aux)
 
 void JackSocketServerChannel::ClientAdd(detail::JackChannelTransactionInterface* socket_aux, JackClientOpenRequest* req, JackClientOpenResult* res)
 {
-    int refnum = -1;
+    std::int32_t refnum = -1;
     res->fResult = ReplyCode(fServer->GetEngine()->ClientExternalOpen(req->fName, req->fPID, req->fUUID, &refnum, &res->fSharedEngine, &res->fSharedClient, &res->fSharedGraph));
     if (res->fResult == 0) {
         JackClientSocket* socket = dynamic_cast<JackClientSocket*>(socket_aux);
         assert(socket);
-        int fd = GetFd(socket);
+        std::int32_t fd = GetFd(socket);
         assert(fd >= 0);
         fSocketTable[fd].first = refnum;
         fRebuild = true;
@@ -135,11 +136,11 @@ void JackSocketServerChannel::ClientAdd(detail::JackChannelTransactionInterface*
     }
 }
 
-void JackSocketServerChannel::ClientRemove(detail::JackChannelTransactionInterface* socket_aux, int refnum)
+void JackSocketServerChannel::ClientRemove(detail::JackChannelTransactionInterface* socket_aux, std::int32_t refnum)
 {
     JackClientSocket* socket = dynamic_cast<JackClientSocket*>(socket_aux);
     assert(socket);
-    int fd = GetFd(socket);
+    std::int32_t fd = GetFd(socket);
     assert(fd >= 0);
 
     jack_log("JackSocketServerChannel::ClientRemove ref = %d fd = %d", refnum, fd);
@@ -149,11 +150,11 @@ void JackSocketServerChannel::ClientRemove(detail::JackChannelTransactionInterfa
     fRebuild = true;
 }
 
-void JackSocketServerChannel::ClientKill(int fd)
+void JackSocketServerChannel::ClientKill(std::int32_t fd)
 {
-    pair<int, JackClientSocket*> elem = fSocketTable[fd];
+    pair<std::int32_t, JackClientSocket*> elem = fSocketTable[fd];
     JackClientSocket* socket = elem.second;
-    int refnum = elem.first;
+    std::int32_t refnum = elem.first;
     assert(socket);
 
     jack_log("JackSocketServerChannel::ClientKill ref = %d fd = %d", refnum, fd);
@@ -182,8 +183,8 @@ void JackSocketServerChannel::BuildPoolTable()
         fPollTable[0].events = POLLIN | POLLERR;
 
         // Next fd for clients
-        map<int, pair<int, JackClientSocket*>>::iterator it;
-        int i;
+        map<std::int32_t, pair<std::int32_t, JackClientSocket*>>::iterator it;
+        std::int32_t i;
 
         for (i = 1, it = fSocketTable.begin(); it != fSocketTable.end(); it++, i++) {
             jack_log("JackSocketServerChannel::BuildPoolTable fSocketTable i = %ld fd = %ld", i, it->first);
@@ -213,8 +214,8 @@ bool JackSocketServerChannel::Execute()
         } else {
 
             // Poll all clients
-            for (unsigned int i = 1; i < fSocketTable.size() + 1; i++) {
-                int fd = fPollTable[i].fd;
+            for (std::uint32_t i = 1; i < fSocketTable.size() + 1; i++) {
+                std::int32_t fd = fPollTable[i].fd;
                 if (fPollTable[i].revents & ~POLLIN) {
                     jack_log("JackSocketServerChannel::Execute : poll client error err = %s", strerror(errno));
                     ClientKill(fd);

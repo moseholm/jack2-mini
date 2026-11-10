@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "JackDriver.h"
 
 namespace jackmini {
@@ -35,19 +37,19 @@ namespace jackmini {
 class SERVER_EXPORT JackAudioDriver : public JackDriver {
 
 protected:
-    jack_default_audio_sample_t* GetInputBuffer(int port_index);
-    jack_default_audio_sample_t* GetOutputBuffer(int port_index);
-    jack_default_audio_sample_t* GetMonitorBuffer(int port_index);
+    jack_default_audio_sample_t* GetInputBuffer(std::int32_t port_index);
+    jack_default_audio_sample_t* GetOutputBuffer(std::int32_t port_index);
+    jack_default_audio_sample_t* GetMonitorBuffer(std::int32_t port_index);
 
-    void HandleLatencyCallback(int status);
+    void HandleLatencyCallback(std::int32_t status);
     virtual void UpdateLatencies();
 
-    int ProcessAsync();
+    std::int32_t ProcessAsync();
     void ProcessGraphAsync();
     void ProcessGraphAsyncMaster();
     void ProcessGraphAsyncSlave();
 
-    int ProcessSync();
+    std::int32_t ProcessSync();
     void ProcessGraphSync();
     void ProcessGraphSyncMaster();
     void ProcessGraphSyncSlave();
@@ -56,12 +58,12 @@ public:
     JackAudioDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table);
     virtual ~JackAudioDriver();
 
-    virtual int Open(jack_nframes_t buffer_size,
+    virtual std::int32_t Open(jack_nframes_t buffer_size,
         jack_nframes_t samplerate,
         bool capturing,
         bool playing,
-        int inchannels,
-        int outchannels,
+        std::int32_t inchannels,
+        std::int32_t outchannels,
         bool monitor,
         const char* capture_driver_name,
         const char* playback_driver_name,
@@ -70,17 +72,17 @@ public:
 
     // To be called by the underlying driver audio callback, or possibly by a RT thread (using JackThreadedDriver decorator)
     // when a blocking read/write underlying API is used (like ALSA)
-    virtual int Process();
+    virtual std::int32_t Process();
 
-    virtual int Attach();
-    virtual int Detach();
+    virtual std::int32_t Attach();
+    virtual std::int32_t Detach();
 
-    virtual int Write();
+    virtual std::int32_t Write();
 
-    virtual int SetBufferSize(jack_nframes_t buffer_size);
-    virtual int SetSampleRate(jack_nframes_t sample_rate);
+    virtual std::int32_t SetBufferSize(jack_nframes_t buffer_size);
+    virtual std::int32_t SetSampleRate(jack_nframes_t sample_rate);
 
-    virtual int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
+    virtual std::int32_t ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
 };
 
 } // namespace jackmini

@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "types.h"
 
 typedef enum {
@@ -38,14 +40,14 @@ typedef enum {
 struct _jack_hardware;
 
 typedef void (*JackHardwareReleaseFunction)(struct _jack_hardware*);
-typedef int (*JackHardwareSetInputMonitorMaskFunction)(struct _jack_hardware*, unsigned long);
-typedef int (*JackHardwareChangeSampleClockFunction)(struct _jack_hardware*, SampleClockMode);
+typedef std::int32_t (*JackHardwareSetInputMonitorMaskFunction)(struct _jack_hardware*, std::uint64_t);
+typedef std::int32_t (*JackHardwareChangeSampleClockFunction)(struct _jack_hardware*, SampleClockMode);
 typedef double (*JackHardwareGetHardwarePeak)(jack_port_t* port, jack_nframes_t frames);
 typedef double (*JackHardwareGetHardwarePower)(jack_port_t* port, jack_nframes_t frames);
 
 typedef struct _jack_hardware {
-    unsigned long capabilities;
-    unsigned long input_monitor_mask;
+    std::uint64_t capabilities;
+    std::uint64_t input_monitor_mask;
 
     JackHardwareChangeSampleClockFunction change_sample_clock;
     JackHardwareSetInputMonitorMaskFunction set_input_monitor_mask;

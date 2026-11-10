@@ -1,3 +1,5 @@
+#include <cstdint>
+
 // Copyright (C) 2026 JACK contributors
 //
 // This program is free software; you can redistribute it and/or modify
@@ -122,7 +124,7 @@ Session::~Session()
     close();
 }
 
-int Session::open(const char* capture_name, const char* playback_name, Request& request, DitherAlgorithm dither)
+std::int32_t Session::open(const char* capture_name, const char* playback_name, Request& request, DitherAlgorithm dither)
 {
     close();
     if (device_.open(capture_name, playback_name, request) < 0) {

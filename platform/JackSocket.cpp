@@ -20,6 +20,7 @@
 #include "JackError.h"
 #include "JackTools.h"
 #include "promiscuous.hpp"
+#include <cstdint>
 #include <fcntl.h>
 #include <pthread.h>
 #include <string.h>
@@ -29,7 +30,7 @@
 
 namespace jackmini {
 
-static void BuildName(const char* client_name, char* res, const char* dir, int which, int size, bool promiscuous)
+static void BuildName(const char* client_name, char* res, const char* dir, std::int32_t which, std::int32_t size, bool promiscuous)
 {
     std::array<char, SYNC_MAX_NAME_SIZE + 1> ext_client_name;
     JackTools::RewriteName(client_name, ext_client_name.data());
@@ -51,7 +52,7 @@ JackClientSocket::JackClientSocket()
     fPromiscuousGid = jackmini::group_to_gid(promiscuous);
 }
 
-JackClientSocket::JackClientSocket(int socket)
+JackClientSocket::JackClientSocket(std::int32_t socket)
     : JackClientRequestInterface()
     , fSocket(socket)
     , fTimeOut(0)
@@ -60,7 +61,7 @@ JackClientSocket::JackClientSocket(int socket)
 {
 }
 
-void JackClientSocket::SetReadTimeOut(long sec)
+void JackClientSocket::SetReadTimeOut(std::int64_t sec)
 {
     struct timeval timout;
     timout.tv_sec = sec;
@@ -70,7 +71,7 @@ void JackClientSocket::SetReadTimeOut(long sec)
     }
 }
 
-void JackClientSocket::SetWriteTimeOut(long sec)
+void JackClientSocket::SetWriteTimeOut(std::int64_t sec)
 {
     struct timeval timout;
     timout.tv_sec = sec;
@@ -84,14 +85,14 @@ void JackClientSocket::SetNonBlocking(bool onoff)
 {
     if (onoff) {
         fNonBlocking = true;
-        long flags = 0;
+        std::int64_t flags = 0;
         if (fcntl(fSocket, F_SETFL, flags | O_NONBLOCK) < 0) {
             jack_error("SetNonBlocking fd = %ld err = %s", fSocket, strerror(errno));
         }
     }
 }
 
-int JackClientSocket::Connect(const char* dir, const char* name, int which) // A revoir : utilisation de "which"
+std::int32_t JackClientSocket::Connect(const char* dir, const char* name, std::int32_t which) // A revoir : utilisation de "which"
 {
     struct sockaddr_un addr;
 
@@ -115,7 +116,7 @@ int JackClientSocket::Connect(const char* dir, const char* name, int which) // A
     return 0;
 }
 
-int JackClientSocket::Close()
+std::int32_t JackClientSocket::Close()
 {
     jack_log("JackClientSocket::Close");
     if (fSocket > 0) {
@@ -128,10 +129,10 @@ int JackClientSocket::Close()
     }
 }
 
-int JackClientSocket::Read(void* data, int len)
+std::int32_t JackClientSocket::Read(void* data, std::int32_t len)
 {
-    int res;
-    uint8_t* udata = (uint8_t*)data;
+    std::int32_t res;
+    std::uint8_t* udata = (std::uint8_t*)data;
 
 
     while (len != 0 && (res = read(fSocket, udata, len)) != len) {
@@ -160,10 +161,10 @@ int JackClientSocket::Read(void* data, int len)
     return 0;
 }
 
-int JackClientSocket::Write(void* data, int len)
+std::int32_t JackClientSocket::Write(void* data, std::int32_t len)
 {
-    int res;
-    uint8_t* udata = (uint8_t*)data;
+    std::int32_t res;
+    std::uint8_t* udata = (std::uint8_t*)data;
 
 
     while (len != 0 && (res = write(fSocket, udata, len)) != len) {
@@ -191,7 +192,7 @@ int JackClientSocket::Write(void* data, int len)
     return 0;
 }
 
-int JackClientSocket::WriteWithFds(void* data, int len, std::span<const int> fds)
+std::int32_t JackClientSocket::WriteWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds)
 {
     const std::span<const std::byte> bytes(static_cast<const std::byte*>(data), len);
     const auto sent = SendWithFds(fSocket, bytes, fds);
@@ -208,7 +209,7 @@ int JackClientSocket::WriteWithFds(void* data, int len, std::span<const int> fds
     return 0;
 }
 
-int JackClientSocket::ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds)
+std::int32_t JackClientSocket::ReadWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds)
 {
     const std::span<std::byte> bytes(static_cast<std::byte*>(data), len);
     const auto got = RecvWithFds(fSocket, bytes, fds);
@@ -221,7 +222,7 @@ int JackClientSocket::ReadWithFds(void* data, int len, std::vector<UniqueFd>& fd
         return JACK_REQUEST_ERR_ABORTED;
     }
     // The descriptors arrived with the first bytes; the rest is plain data.
-    return Read(static_cast<uint8_t*>(data) + *got, len - static_cast<int>(*got));
+    return Read(static_cast<std::uint8_t*>(data) + *got, len - static_cast<std::int32_t>(*got));
 }
 
 JackServerSocket::JackServerSocket()
@@ -232,7 +233,7 @@ JackServerSocket::JackServerSocket()
     fPromiscuousGid = jackmini::group_to_gid(promiscuous);
 }
 
-int JackServerSocket::Bind(const char* dir, const char* name, int which) // A revoir : utilisation de "which"
+std::int32_t JackServerSocket::Bind(const char* dir, const char* name, std::int32_t which) // A revoir : utilisation de "which"
 {
     struct sockaddr_un addr;
 
@@ -278,7 +279,7 @@ JackClientSocket* JackServerSocket::Accept()
 
     client_addrlen = sizeof(client_addr);
 
-    int fd = accept(fSocket, (struct sockaddr*)&client_addr, &client_addrlen);
+    std::int32_t fd = accept(fSocket, (struct sockaddr*)&client_addr, &client_addrlen);
     if (fd < 0) {
         jack_error("Cannot accept new connection err = %s", strerror(errno));
         return 0;
@@ -287,7 +288,7 @@ JackClientSocket* JackServerSocket::Accept()
     }
 }
 
-int JackServerSocket::Close()
+std::int32_t JackServerSocket::Close()
 {
     if (fSocket > 0) {
         jack_log("JackServerSocket::Close %s", fName);

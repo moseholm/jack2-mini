@@ -18,6 +18,7 @@
 
 #include "tool_common.hpp"
 
+#include <cstdint>
 #include <getopt.h>
 
 #include <chrono>
@@ -47,13 +48,13 @@ void show_usage(FILE* out)
 
 } // namespace
 
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
     std::string server;
     std::string name = kTool;
     bool wait_for_start = false;
     bool wait_for_quit = false;
-    long timeout = 0;
+    std::int64_t timeout = 0;
 
     static const char kShortOptions[] = "s:n:wqct:hv";
     static const struct option kLongOptions[] = {
@@ -68,7 +69,7 @@ int main(int argc, char** argv)
         { nullptr, 0, nullptr, 0 },
     };
 
-    int c;
+    std::int32_t c;
     while ((c = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
         switch (c) {
         case 's':

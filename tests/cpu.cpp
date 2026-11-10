@@ -25,6 +25,7 @@
 #include "jackmini/jackmini.hpp"
 #include "jackmini_wait.hpp"
 
+#include <cstdint>
 #include <getopt.h>
 #include <algorithm>
 #include <atomic>
@@ -39,13 +40,13 @@ namespace {
 Port input_port;
 Port output_port;
 Client* client = nullptr;
-int percent_cpu = 0;
-int time_to_run = 0;
-int time_before_run = 0;
+std::int32_t percent_cpu = 0;
+std::int32_t time_to_run = 0;
+std::int32_t time_before_run = 0;
 
 // The load is applied while set; the main thread sets it once the delay has passed.
 std::atomic<bool> load_on { false };
-std::atomic<unsigned long> cycles { 0 };
+std::atomic<std::uint64_t> cycles { 0 };
 
 void usage()
 {
@@ -69,7 +70,7 @@ bool process(const Cycle& cycle)
     cycles++;
     if (load_on.load(std::memory_order_relaxed)) {
         const auto sample_rate = client->sample_rate();
-        const auto idle = std::chrono::nanoseconds(static_cast<long long>(nframes) * percent_cpu * 1000000000LL / (100LL * sample_rate));
+        const auto idle = std::chrono::nanoseconds(static_cast<std::int64_t>(nframes) * percent_cpu * 1000000000LL / (100LL * sample_rate));
         while (std::chrono::steady_clock::now() - start < idle) {
         }
     }
@@ -78,10 +79,10 @@ bool process(const Cycle& cycle)
 
 } // namespace
 
-int main(int argc, char* argv[])
+int main(std::int32_t argc, char* argv[])
 {
     bool got_time = false;
-    int opt;
+    std::int32_t opt;
     const char* options = "t:t:d:c:";
     const char* client_name = "jack-cpu";
     struct option long_options[] = {
@@ -187,8 +188,8 @@ int main(int argc, char* argv[])
         std::fprintf(stderr, "cannot connect output ports\n");
     }
 
-    const unsigned long cycles_per_second = std::max<unsigned long>(1, sample_rate / buffer_size);
-    const unsigned long before_run = static_cast<unsigned long>(time_before_run) * cycles_per_second;
+    const std::uint64_t cycles_per_second = std::max<std::uint64_t>(1, sample_rate / buffer_size);
+    const std::uint64_t before_run = static_cast<std::uint64_t>(time_before_run) * cycles_per_second;
 
     if (before_run > 0) {
         WaitUntil([&] { return cycles.load() >= before_run; });
@@ -197,7 +198,7 @@ int main(int argc, char* argv[])
     std::printf("Activating cpu load...\n");
 
     if (time_to_run != 0) {
-        const unsigned long exit_at = before_run + static_cast<unsigned long>(time_to_run) * cycles_per_second;
+        const std::uint64_t exit_at = before_run + static_cast<std::uint64_t>(time_to_run) * cycles_per_second;
         WaitUntil([&] { return cycles.load() >= exit_at; });
         jack.close();
         std::printf("Exiting after a %d seconds run.\n", time_to_run);

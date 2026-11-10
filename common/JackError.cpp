@@ -19,6 +19,7 @@
 #include "JackError.h"
 #include "JackGlobals.h"
 #include "JackMessageBuffer.h"
+#include <cstdint>
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -30,12 +31,12 @@ static bool change_thread_log_function(jack_log_function_t log_function)
         && jack_tls_set(JackGlobals::fKeyLogFunction, (void*)log_function));
 }
 
-SERVER_EXPORT int set_threaded_log_function()
+SERVER_EXPORT std::int32_t set_threaded_log_function()
 {
     return change_thread_log_function(JackMessageBufferAdd);
 }
 
-void jack_log_thread_route(int level, const char* message)
+void jack_log_thread_route(std::int32_t level, const char* message)
 {
     jack_log_function_t log_function = (jack_log_function_t)jack_tls_get(JackGlobals::fKeyLogFunction);
 

@@ -30,8 +30,8 @@
 using namespace jackmini;
 
 struct Freq {
-    int p;
-    int f;
+    std::int32_t p;
+    std::int32_t f;
     float xa;
     float ya;
     float x1;
@@ -45,8 +45,8 @@ struct MTDM {
     double _del;
     double _err;
     float _wlp;
-    int _cnt;
-    int _inv;
+    std::int32_t _cnt;
+    std::int32_t _inv;
 
     struct Freq _freq[13];
 };
@@ -54,7 +54,7 @@ struct MTDM {
 
 struct MTDM* mtdm_new(double fsamp)
 {
-    int i;
+    std::int32_t i;
     struct Freq* F;
 
     struct MTDM* retval = (MTDM*)malloc(sizeof(struct MTDM));
@@ -89,9 +89,9 @@ struct MTDM* mtdm_new(double fsamp)
     return retval;
 }
 
-int mtdm_process(struct MTDM* self, size_t len, float* ip, float* op)
+std::int32_t mtdm_process(struct MTDM* self, size_t len, float* ip, float* op)
 {
-    int i;
+    std::int32_t i;
     float vip, vop, a, c, s;
     struct Freq* F;
 
@@ -123,9 +123,9 @@ int mtdm_process(struct MTDM* self, size_t len, float* ip, float* op)
     return 0;
 }
 
-int mtdm_resolve(struct MTDM* self)
+std::int32_t mtdm_resolve(struct MTDM* self)
 {
-    int i, k, m;
+    std::int32_t i, k, m;
     double d, e, f0, p;
     struct Freq* F = self->_freq;
 
@@ -146,7 +146,7 @@ int mtdm_resolve(struct MTDM* self)
             p += 0.5;
         p -= floor(p);
         p *= 2;
-        k = (int)(floor(p + 0.5));
+        k = (std::int32_t)(floor(p + 0.5));
         e = fabs(p - k);
         if (e > self->_err)
             self->_err = e;
@@ -170,7 +170,7 @@ static struct MTDM* mtdm;
 static Client* jack_handle;
 static Port jack_capt;
 static Port jack_play;
-static std::atomic<unsigned long> cycles { 0 };
+static std::atomic<std::uint64_t> cycles { 0 };
 
 LatencyRange capture_latency = { UINT32_MAX, UINT32_MAX };
 LatencyRange playback_latency = { UINT32_MAX, UINT32_MAX };
@@ -206,7 +206,7 @@ bool jack_callback(const Cycle& cycle)
     return true;
 }
 
-int main(int ac, char* av[])
+int main(std::int32_t ac, char* av[])
 {
     float t;
     OpenOptions options;
@@ -242,7 +242,7 @@ int main(int ac, char* av[])
     }
 
     // A report every quarter second of audio: counted in cycles, so it holds in freewheel mode as well.
-    const unsigned long cycles_per_report = std::max<unsigned long>(1, client.sample_rate() / 4 / client.buffer_size());
+    const std::uint64_t cycles_per_report = std::max<std::uint64_t>(1, client.sample_rate() / 4 / client.buffer_size());
     while (1) {
         if (!WaitCycles(cycles, cycles_per_report)) {
             fprintf(stderr, "The server stopped running cycles\n");

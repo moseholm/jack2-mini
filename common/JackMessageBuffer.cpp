@@ -20,6 +20,7 @@
 #include "JackError.h"
 #include "JackGlobals.h"
 #include "JackTime.h"
+#include <cstdint>
 #include <algorithm>
 #include <chrono>
 #include <string>
@@ -81,7 +82,7 @@ bool JackMessageBuffer::Stop()
 
 // Vyukov-style bounded queue.  Each slot's sequence says whether it is free for
 // the position currently being claimed (producer) or holds data for it (consumer).
-bool JackMessageBuffer::Enqueue(int level, std::string_view message)
+bool JackMessageBuffer::Enqueue(std::int32_t level, std::string_view message)
 {
     std::size_t pos = fEnqueuePos.load(std::memory_order_relaxed);
     Slot* slot = nullptr;
@@ -125,7 +126,7 @@ void JackMessageBuffer::Flush()
     }
 }
 
-void JackMessageBuffer::AddMessage(int level, std::string_view message)
+void JackMessageBuffer::AddMessage(std::int32_t level, std::string_view message)
 {
     if (!Enqueue(level, message)) {
         fOverruns.fetch_add(1, std::memory_order_relaxed);
@@ -178,7 +179,7 @@ bool JackMessageBuffer::Destroy()
     }
 }
 
-void JackMessageBufferAdd(int level, const char* message)
+void JackMessageBufferAdd(std::int32_t level, const char* message)
 {
     if (jackmini::JackMessageBuffer::fInstance == nullptr) {
         // Unable to print message with realtime safety. Complain and print it anyway.
@@ -191,7 +192,7 @@ void JackMessageBufferAdd(int level, const char* message)
     }
 }
 
-int JackMessageBuffer::SetInitCallback(JackThreadInitCallback callback, void* arg)
+std::int32_t JackMessageBuffer::SetInitCallback(JackThreadInitCallback callback, void* arg)
 {
     if (fInstance && callback && fRunning.load(std::memory_order_acquire)) {
         std::lock_guard<std::mutex> guard(fInitLock);

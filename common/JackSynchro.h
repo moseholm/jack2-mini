@@ -17,6 +17,7 @@
 #pragma once
 
 #include "JackConstants.h"
+#include <cstdint>
 #include <atomic>
 
 namespace jackmini {
@@ -52,11 +53,11 @@ public:
     {
         return true;
     }
-    bool TimedWait(long usec)
+    bool TimedWait(std::int64_t usec)
     {
         return true;
     }
-    bool Allocate(const char* name, const char* server_name, int value)
+    bool Allocate(const char* name, const char* server_name, std::int32_t value)
     {
         return true;
     }

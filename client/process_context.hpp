@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <atomic>
 #include <csignal>
 #include <memory>
@@ -60,7 +61,7 @@ private:
     static std::mutex registry_mutex_;
     static std::unique_ptr<ProcessContext> instance_;
     static std::atomic<ProcessContext*> current_;
-    static int count_;
+    static std::int32_t count_;
 };
 
 } // namespace jackmini::client

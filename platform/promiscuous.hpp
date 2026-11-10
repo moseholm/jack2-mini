@@ -16,14 +16,15 @@
 
 #pragma once
 
+#include <cstdint>
 #include <sys/types.h>
 
 namespace jackmini {
 
 // Looks up the gid of a UNIX group, given by name or by number. Returns -1 if it is unknown.
-int group_to_gid(const char* group);
+std::int32_t group_to_gid(const char* group);
 
 // Sets promiscuous permissions on the object referenced by fd, or by path when fd is negative.
-int set_promiscuous_perms(int fd, const char* path, gid_t gid);
+std::int32_t set_promiscuous_perms(std::int32_t fd, const char* path, gid_t gid);
 
 } // namespace jackmini

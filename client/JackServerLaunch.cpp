@@ -19,6 +19,7 @@
 #include "JackPlatformPlug.h"
 #include "JackSocket.h"
 #include "JackTime.h"
+#include <cstdint>
 #include <format>
 #include <fstream>
 #include <string>
@@ -119,7 +120,7 @@ static void start_server_classic_aux(const char* server_name)
     fprintf(stderr, "exec of JACK server (command = \"%s\") failed: %s\n", argv[0], strerror(errno));
 }
 
-static int start_server_classic(const char* server_name)
+static std::int32_t start_server_classic(const char* server_name)
 {
     // The double fork() forces the server to become a child of
     // init, which will always clean up zombie process state on
@@ -130,7 +131,7 @@ static int start_server_classic(const char* server_name)
     // virtual memory tricks, the overhead of the second fork() is
     // probably relatively small.
 
-    int status;
+    std::int32_t status;
     pid_t first_child_pid;
 
     first_child_pid = fork();
@@ -154,7 +155,7 @@ static int start_server_classic(const char* server_name)
     return 0;  // (probably) successful
 }
 
-static int start_server(const char* server_name, jack_options_t options)
+static std::int32_t start_server(const char* server_name, jack_options_t options)
 {
     if ((options & JackNoStartServer) || getenv("JACK_NO_START_SERVER")) {
         return 1;
@@ -163,22 +164,22 @@ static int start_server(const char* server_name, jack_options_t options)
     return start_server_classic(server_name);
 }
 
-static int server_connect(const char* server_name)
+static std::int32_t server_connect(const char* server_name)
 {
     JackClientSocket socket;
-    int res = socket.Connect(jack_server_dir, server_name, 0);
+    std::int32_t res = socket.Connect(jack_server_dir, server_name, 0);
     socket.Close();
     sleep_microseconds(2000); // Added by JE - 02-01-2009 (gives
                               // the channel some time to close)
     return res;
 }
 
-int try_start_server(const char* server_name, jack_options_t options, jack_status_t* status)
+std::int32_t try_start_server(const char* server_name, jack_options_t options, jack_status_t* status)
 {
     if (server_connect(server_name) < 0) {
-        int trys;
+        std::int32_t trys;
         if (start_server(server_name, options)) {
-            int my_status1 = *status | JackFailure | JackServerFailed;
+            std::int32_t my_status1 = *status | JackFailure | JackServerFailed;
             *status = (jack_status_t)my_status1;
             return -1;
         }
@@ -186,12 +187,12 @@ int try_start_server(const char* server_name, jack_options_t options, jack_statu
         do {
             sleep(1);
             if (--trys < 0) {
-                int my_status1 = *status | JackFailure | JackServerFailed;
+                std::int32_t my_status1 = *status | JackFailure | JackServerFailed;
                 *status = (jack_status_t)my_status1;
                 return -1;
             }
         } while (server_connect(server_name) < 0);
-        int my_status1 = *status | JackServerStarted;
+        std::int32_t my_status1 = *status | JackServerStarted;
         *status = (jack_status_t)my_status1;
     }
 

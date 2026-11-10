@@ -55,7 +55,7 @@ struct XrunStatus {
 
 struct WaitResult {
     std::ptrdiff_t frames = 0; // ready frames rounded down to a period; 0 after a recovered xrun
-    int status = -1; // 0 is a normal cycle; the negatives follow the old ALSA driver
+    std::int32_t status = -1; // 0 is a normal cycle; the negatives follow the old ALSA driver
     float delayed_usecs = 0.0f;
 };
 
@@ -74,7 +74,7 @@ concept PcmBackend = requires(B& backend,
     Stream stream,
     struct pollfd* fds,
     nfds_t nfds,
-    unsigned short* revents,
+    std::uint16_t* revents,
     MappedFrames& mapped,
     std::size_t offset,
     std::size_t frames,
@@ -84,19 +84,19 @@ concept PcmBackend = requires(B& backend,
     { backend.has_playback() } -> std::convertible_to<bool>;
     { backend.capture_channels() } -> std::convertible_to<std::size_t>;
     { backend.playback_channels() } -> std::convertible_to<std::size_t>;
-    { backend.poll_descriptor_count(stream) } -> std::convertible_to<int>;
-    { backend.poll_descriptors(stream, fds, nfds) } -> std::convertible_to<int>;
-    { backend.poll_revents(stream, fds, nfds, revents) } -> std::convertible_to<int>;
-    { backend.poll(fds, nfds, 0) } -> std::convertible_to<int>;
+    { backend.poll_descriptor_count(stream) } -> std::convertible_to<std::int32_t>;
+    { backend.poll_descriptors(stream, fds, nfds) } -> std::convertible_to<std::int32_t>;
+    { backend.poll_revents(stream, fds, nfds, revents) } -> std::convertible_to<std::int32_t>;
+    { backend.poll(fds, nfds, 0) } -> std::convertible_to<std::int32_t>;
     { backend.now_us() } -> std::convertible_to<std::uint64_t>;
     { backend.avail(stream) } -> std::convertible_to<std::ptrdiff_t>;
-    { backend.begin(stream, mapped) } -> std::convertible_to<int>;
-    { backend.commit(stream, offset, frames) } -> std::convertible_to<int>;
+    { backend.begin(stream, mapped) } -> std::convertible_to<std::int32_t>;
+    { backend.commit(stream, offset, frames) } -> std::convertible_to<std::int32_t>;
     { backend.silence(stream, channel, frames) } -> std::same_as<void>;
-    { backend.prepare(stream) } -> std::convertible_to<int>;
-    { backend.start(stream) } -> std::convertible_to<int>;
-    { backend.drop(stream) } -> std::convertible_to<int>;
-    { backend.status(xrun_status) } -> std::convertible_to<int>;
+    { backend.prepare(stream) } -> std::convertible_to<std::int32_t>;
+    { backend.start(stream) } -> std::convertible_to<std::int32_t>;
+    { backend.drop(stream) } -> std::convertible_to<std::int32_t>;
+    { backend.status(xrun_status) } -> std::convertible_to<std::int32_t>;
 };
 
 // The device cycle: start, wait, read, write, stop, and the xrun recovery.  The cycle itself allocates only in its
@@ -112,7 +112,7 @@ public:
         void (*write_output)(void* arg, Cycle& cycle, const MappedFrames& mapped,
             std::uint32_t orig_frames, std::ptrdiff_t nwritten) = nullptr;
         void (*clear_output)(void* arg) = nullptr;
-        int (*restart)(void* arg) = nullptr;
+        std::int32_t (*restart)(void* arg) = nullptr;
         void (*set_time)(void* arg, std::uint64_t usecs) = nullptr;
     };
 
@@ -122,28 +122,28 @@ public:
 
     void set_callbacks(const Callbacks& callbacks) { callbacks_ = callbacks; }
 
-    int start();
-    int stop();
+    std::int32_t start();
+    std::int32_t stop();
 
     // Waits for the next period.  A returned frames == 0 with status == 0 means an xrun was recovered.
     WaitResult wait();
 
-    int read(std::uint32_t frames);
-    int write(std::uint32_t frames);
+    std::int32_t read(std::uint32_t frames);
+    std::int32_t write(std::uint32_t frames);
 
     // The adapter calls this for each channel it has filled in write_output().
     void mark_channel_done(std::size_t channel);
 
-    int xrun_count() const { return xrun_count_; }
-    int poll_late() const { return poll_late_; }
-    int process_count() const { return process_count_; }
+    std::int32_t xrun_count() const { return xrun_count_; }
+    std::int32_t poll_late() const { return poll_late_; }
+    std::int32_t process_count() const { return process_count_; }
     std::uint64_t last_wait_usecs() const { return last_wait_usecs_; }
 
 private:
-    static constexpr int kMaxRetryCount = 5;
-    static constexpr int kXrunReportDelay = 0;
+    static constexpr std::int32_t kMaxRetryCount = 5;
+    static constexpr std::int32_t kXrunReportDelay = 0;
 
-    int xrun_recovery(float* delayed_usecs);
+    std::int32_t xrun_recovery(float* delayed_usecs);
     void silence_untouched(std::size_t frames);
     void reset_channels_not_done();
     bool channel_not_done(std::size_t channel) const;
@@ -152,7 +152,7 @@ private:
     Config config_;
     Callbacks callbacks_;
 
-    int poll_timeout_ms_;
+    std::int32_t poll_timeout_ms_;
     std::vector<struct pollfd> poll_fds_;
     std::vector<ChannelArea> capture_areas_;
     std::vector<ChannelArea> playback_areas_;
@@ -165,9 +165,9 @@ private:
     std::uint64_t poll_last_ = 0;
     std::uint64_t poll_next_ = 0;
     std::uint64_t last_wait_usecs_ = 0;
-    int poll_late_ = 0;
-    int xrun_count_ = 0;
-    int process_count_ = 0;
+    std::int32_t poll_late_ = 0;
+    std::int32_t xrun_count_ = 0;
+    std::int32_t process_count_ = 0;
 };
 
 template <PcmBackend Backend>
@@ -175,8 +175,8 @@ Cycle<Backend>::Cycle(Backend& backend, const Config& config)
     : backend_(backend)
     , config_(config)
 {
-    const int capture_nfds = backend_.has_capture() ? backend_.poll_descriptor_count(Stream::Capture) : 0;
-    const int playback_nfds = backend_.has_playback() ? backend_.poll_descriptor_count(Stream::Playback) : 0;
+    const std::int32_t capture_nfds = backend_.has_capture() ? backend_.poll_descriptor_count(Stream::Capture) : 0;
+    const std::int32_t playback_nfds = backend_.has_playback() ? backend_.poll_descriptor_count(Stream::Playback) : 0;
     poll_fds_.resize(static_cast<std::size_t>(std::max(0, capture_nfds) + std::max(0, playback_nfds)));
 
     capture_areas_.resize(backend_.capture_channels());
@@ -199,11 +199,11 @@ Cycle<Backend>::Cycle(Backend& backend, const Config& config)
 
     // One and a half periods, rounded up to whole milliseconds.  The old driver passed microseconds as milliseconds,
     // so its timeout was a thousand times longer; the PCM descriptor wakes the poll long before either timeout.
-    poll_timeout_ms_ = std::max(1, static_cast<int>((config_.period_usecs * 3 + 1999) / 2000));
+    poll_timeout_ms_ = std::max(1, static_cast<std::int32_t>((config_.period_usecs * 3 + 1999) / 2000));
 }
 
 template <PcmBackend Backend>
-int Cycle<Backend>::start()
+std::int32_t Cycle<Backend>::start()
 {
     poll_last_ = 0;
     poll_next_ = 0;
@@ -257,7 +257,7 @@ int Cycle<Backend>::start()
 }
 
 template <PcmBackend Backend>
-int Cycle<Backend>::stop()
+std::int32_t Cycle<Backend>::stop()
 {
     if (callbacks_.clear_output) {
         callbacks_.clear_output(callbacks_.arg);
@@ -287,7 +287,7 @@ WaitResult Cycle<Backend>::wait()
     bool need_capture = backend_.has_capture();
     bool need_playback = backend_.has_playback();
     bool xrun_detected = false;
-    int retry_count = 0;
+    std::int32_t retry_count = 0;
     std::uint64_t poll_ret = 0;
 
     while ((need_playback || need_capture) && !xrun_detected) {
@@ -296,7 +296,7 @@ WaitResult Cycle<Backend>::wait()
         std::size_t capture_index = 0;
 
         if (need_playback) {
-            const int count = backend_.poll_descriptors(
+            const std::int32_t count = backend_.poll_descriptors(
                 Stream::Playback, poll_fds_.data() + nfds,
                 static_cast<nfds_t>(poll_fds_.size() - nfds));
             if (count < 0) {
@@ -309,7 +309,7 @@ WaitResult Cycle<Backend>::wait()
 
         if (need_capture) {
             capture_index = nfds;
-            const int count = backend_.poll_descriptors(
+            const std::int32_t count = backend_.poll_descriptors(
                 Stream::Capture, poll_fds_.data() + nfds,
                 static_cast<nfds_t>(poll_fds_.size() - nfds));
             if (count < 0) {
@@ -331,7 +331,7 @@ WaitResult Cycle<Backend>::wait()
             ++poll_late_;
         }
 
-        const int poll_result = backend_.poll(poll_fds_.data(), static_cast<nfds_t>(nfds), poll_timeout_ms_);
+        const std::int32_t poll_result = backend_.poll(poll_fds_.data(), static_cast<nfds_t>(nfds), poll_timeout_ms_);
         if (poll_result < 0) {
             result.status = (errno == EINTR) ? -2 : -3;
             return result;
@@ -345,7 +345,7 @@ WaitResult Cycle<Backend>::wait()
                 result.status = -5;
                 return result;
             }
-            const int status = xrun_recovery(&result.delayed_usecs);
+            const std::int32_t status = xrun_recovery(&result.delayed_usecs);
             if (status != 0) {
                 result.status = status;
                 return result;
@@ -363,7 +363,7 @@ WaitResult Cycle<Backend>::wait()
         poll_next_ = poll_ret + config_.period_usecs;
 
         if (need_playback) {
-            unsigned short revents = 0;
+            std::uint16_t revents = 0;
             if (backend_.poll_revents(Stream::Playback, poll_fds_.data(), static_cast<nfds_t>(playback_nfds),
                     &revents)
                 < 0) {
@@ -383,7 +383,7 @@ WaitResult Cycle<Backend>::wait()
         }
 
         if (need_capture) {
-            unsigned short revents = 0;
+            std::uint16_t revents = 0;
             if (backend_.poll_revents(Stream::Capture, poll_fds_.data() + capture_index,
                     static_cast<nfds_t>(nfds - capture_index), &revents)
                 < 0) {
@@ -429,7 +429,7 @@ WaitResult Cycle<Backend>::wait()
 }
 
 template <PcmBackend Backend>
-int Cycle<Backend>::xrun_recovery(float* delayed_usecs)
+std::int32_t Cycle<Backend>::xrun_recovery(float* delayed_usecs)
 {
     XrunStatus status;
     // A failed status call is not fatal: the restart below still has a chance to recover the device.
@@ -462,7 +462,7 @@ int Cycle<Backend>::xrun_recovery(float* delayed_usecs)
 }
 
 template <PcmBackend Backend>
-int Cycle<Backend>::read(std::uint32_t frames)
+std::int32_t Cycle<Backend>::read(std::uint32_t frames)
 {
     if (frames > config_.frames_per_cycle) {
         return -1;
@@ -501,7 +501,7 @@ int Cycle<Backend>::read(std::uint32_t frames)
 }
 
 template <PcmBackend Backend>
-int Cycle<Backend>::write(std::uint32_t frames)
+std::int32_t Cycle<Backend>::write(std::uint32_t frames)
 {
     ++process_count_;
 
@@ -532,7 +532,7 @@ int Cycle<Backend>::write(std::uint32_t frames)
 
         silence_untouched(contiguous);
 
-        const int err = backend_.commit(Stream::Playback, playback_map_.offset, contiguous);
+        const std::int32_t err = backend_.commit(Stream::Playback, playback_map_.offset, contiguous);
         if (err < 0 && err != -EPIPE && err != -ESTRPIPE) {
             return -1;
         }

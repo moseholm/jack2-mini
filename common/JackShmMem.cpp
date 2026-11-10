@@ -17,15 +17,16 @@
 #include "JackShmMem.h"
 #include "JackCString.h"
 #include "JackError.h"
+#include <cstdint>
 #include <stdio.h>
 #include <array>
 
 namespace jackmini {
 
-static unsigned int fSegmentNum = 0;
+static std::uint32_t fSegmentNum = 0;
 static std::uint32_t gSize = 0;
 static void* gAddress = nullptr;
-static int gFd = -1;
+static std::int32_t gFd = -1;
 
 JackShmMem::JackShmMem()
 {

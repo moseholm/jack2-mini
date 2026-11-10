@@ -1,3 +1,5 @@
+#include <cstdint>
+
 // Copyright (C) 2026 JACK contributors
 //
 // This program is free software; you can redistribute it and/or modify
@@ -26,7 +28,7 @@ namespace jackmini::client {
 std::mutex ProcessContext::registry_mutex_;
 std::unique_ptr<ProcessContext> ProcessContext::instance_;
 std::atomic<ProcessContext*> ProcessContext::current_ { nullptr };
-int ProcessContext::count_ = 0;
+std::int32_t ProcessContext::count_ = 0;
 
 ProcessContext::ProcessContext()
 {

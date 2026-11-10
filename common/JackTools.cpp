@@ -18,6 +18,7 @@
 #include "JackCString.h"
 #include "JackConstants.h"
 #include "JackError.h"
+#include <cstdint>
 #include <array>
 #include <filesystem>
 #include <string>
@@ -44,19 +45,19 @@ void JackTools::KillServer()
     kill(GetPID(), SIGINT);
 }
 
-int JackTools::MkDir(const char* path)
+std::int32_t JackTools::MkDir(const char* path)
 {
     std::error_code ec;
     // create_directory() reports an existing directory as "not created", which is an error here.
     return !std::filesystem::create_directory(path, ec);
 }
 
-int JackTools::GetPID()
+std::int32_t JackTools::GetPID()
 {
     return getpid();
 }
 
-int JackTools::GetUID()
+std::int32_t JackTools::GetUID()
 {
     return geteuid();
 }
@@ -149,7 +150,7 @@ void JackTools::CleanupFiles(const char* server_name)
     }
 }
 
-int JackTools::GetTmpdir()
+std::int32_t JackTools::GetTmpdir()
 {
     FILE* in;
     size_t len;
@@ -196,7 +197,7 @@ void PrintLoadError(const char* so_name)
     jack_log("error loading %s err = %s", so_name, dlerror());
 }
 
-void BuildClientPath(char* path_to_so, int path_len, const char* so_name)
+void BuildClientPath(char* path_to_so, std::int32_t path_len, const char* so_name)
 {
     const char* internal_dir;
     if ((internal_dir = getenv("JACK_INTERNAL_DIR")) == 0) {

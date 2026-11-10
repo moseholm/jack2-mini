@@ -30,6 +30,7 @@
 
 #include "JackFrameTimer.h"
 
+#include <cstdint>
 #include <sys/socket.h>
 #include <array>
 #include <cerrno>
@@ -57,11 +58,11 @@ thread_local bool on_realtime_thread = false;
 
 // The realtime class (SCHED_FIFO) for a thread: the same request as the thread of the server, with the reset on fork
 // when the system knows it.
-int acquire_realtime(pthread_t thread, int priority)
+std::int32_t acquire_realtime(pthread_t thread, std::int32_t priority)
 {
     sched_param param { };
     param.sched_priority = priority;
-    const int res = pthread_setschedparam(thread, SCHED_FIFO, &param);
+    const std::int32_t res = pthread_setschedparam(thread, SCHED_FIFO, &param);
     if (res == 0) {
         return 0;
     }
@@ -87,9 +88,9 @@ std::string default_server_name()
 }
 
 // The bits of the options that the server reads when it checks a new client.
-int option_bits(const OpenOptions& options)
+std::int32_t option_bits(const OpenOptions& options)
 {
-    int bits = 0;
+    std::int32_t bits = 0;
     if (!options.start_server) {
         bits |= JackNoStartServer;
     }
@@ -102,7 +103,7 @@ int option_bits(const OpenOptions& options)
     return bits;
 }
 
-void shut_down_fd(int fd)
+void shut_down_fd(std::int32_t fd)
 {
     if (fd >= 0) {
         ::shutdown(fd, SHUT_RDWR);
@@ -126,7 +127,7 @@ void setup_driver_sync(ProcessContext& context, bool freewheel)
     // In "async" mode the server does not wait for the drivers, so their synchro is set to flush: it keeps no
     // activations that nobody consumes. See JackClient::SetupDriverSync.
     const bool flush = !freewheel && !context.engine->fSyncMode;
-    for (int i = 0; i < context.engine->fDriverNum; i++) {
+    for (std::int32_t i = 0; i < context.engine->fDriverNum; i++) {
         context.synchro[i].SetFlush(flush);
     }
 }
@@ -161,7 +162,7 @@ Result<void> ClientSession::connect_and_register(std::string_view name_view, con
 {
     const std::string name(name_view);
     server_name_ = options.server_name.empty() ? default_server_name() : options.server_name;
-    const int bits = option_bits(options);
+    const std::int32_t bits = option_bits(options);
 
     jack_status_t status = static_cast<jack_status_t>(0);
     if (try_start_server(server_name_.c_str(), static_cast<jack_options_t>(bits), &status) < 0) {
@@ -265,7 +266,7 @@ void ClientSession::notification_loop()
 
     while (true) {
         JackMsgHeader header { };
-        if (int err = ReadJackMsgHeader(notify_.get(), header); err < 0) {
+        if (std::int32_t err = ReadJackMsgHeader(notify_.get(), header); err < 0) {
             if (err != JACK_REQUEST_ERR_ABORTED && !closing_) {
                 jack_error("JackSocketClientChannel read fail");
             }
@@ -311,10 +312,10 @@ void ClientSession::deliver_shutdown()
     }
 }
 
-int ClientSession::handle_notification(const JackClientNotification& event)
+std::int32_t ClientSession::handle_notification(const JackClientNotification& event)
 {
     ProcessContext& context = *context_;
-    int res = 0;
+    std::int32_t res = 0;
     switch (event.fNotify) {
     case kAddClient: {
         std::lock_guard lock(context.synchro_mutex);
@@ -376,7 +377,7 @@ int ClientSession::handle_notification(const JackClientNotification& event)
     return res;
 }
 
-int ClientSession::transact(JackRequest& request, JackResult& reply)
+std::int32_t ClientSession::transact(JackRequest& request, JackResult& reply)
 {
     if (on_notification_thread) {
         jack_error("Cannot callback the server in notification thread!");
@@ -399,7 +400,7 @@ int ClientSession::transact(JackRequest& request, JackResult& reply)
     return 0;
 }
 
-Result<jack_port_id_t> ClientSession::register_port(std::string_view short_name, const char* type, unsigned long flags, unsigned long buffer_size)
+Result<jack_port_id_t> ClientSession::register_port(std::string_view short_name, const char* type, std::uint64_t flags, std::uint64_t buffer_size)
 {
     if (short_name.empty()) {
         jack_error("port_name is empty");
@@ -411,7 +412,7 @@ Result<jack_port_id_t> ClientSession::register_port(std::string_view short_name,
         return std::unexpected(Error::InvalidArgument);
     }
 
-    JackPortRegisterRequest request(ref_, full_name.c_str(), type, static_cast<unsigned int>(flags), static_cast<unsigned int>(buffer_size));
+    JackPortRegisterRequest request(ref_, full_name.c_str(), type, static_cast<std::uint32_t>(flags), static_cast<std::uint32_t>(buffer_size));
     JackPortRegisterResult reply;
     if (transact(request, reply) < 0 || reply.fResult < 0) {
         return std::unexpected(Error::ServerFailure);
@@ -481,7 +482,7 @@ const char* ClientSession::port_type(jack_port_id_t port) const
     return context_->graph->GetPort(port)->GetType();
 }
 
-unsigned long ClientSession::port_flags(jack_port_id_t port) const
+std::uint64_t ClientSession::port_flags(jack_port_id_t port) const
 {
     return context_->graph->GetPort(port)->GetFlags();
 }
@@ -515,7 +516,7 @@ std::vector<std::string> take_names(const char** list)
 
 } // end of anonymous namespace
 
-std::vector<std::string> ClientSession::port_names(const char* type, unsigned long flags) const
+std::vector<std::string> ClientSession::port_names(const char* type, std::uint64_t flags) const
 {
     return take_names(context_->graph->GetPorts(nullptr, type, flags));
 }
@@ -546,8 +547,8 @@ std::vector<ClientSession::PortRecord> ClientSession::port_records() const
 
         std::array<char, REAL_JACK_PORT_NAME_SIZE + 1> alias1 { }, alias2 { };
         char* const aliases[2] = { alias1.data(), alias2.data() };
-        const int count = port->GetAliases(aliases);
-        for (int i = 0; i < count; i++) {
+        const std::int32_t count = port->GetAliases(aliases);
+        for (std::int32_t i = 0; i < count; i++) {
             record.aliases.emplace_back(aliases[i]);
         }
 
@@ -578,13 +579,13 @@ void ClientSession::wait_graph_change() const
         return;
     }
     if (context_->graph->IsPendingChange()) {
-        sleep_microseconds(int(context_->engine->fPeriodUsecs * 1.1f));
+        sleep_microseconds(std::int32_t(context_->engine->fPeriodUsecs * 1.1f));
     }
 }
 
 // The server asks for the latency of the ports, in one direction (status 0 is capture, the others playback). The ports
 // measured in that direction get their range from their connections first; then the handler decides, or the default does.
-int ClientSession::handle_latency(int status)
+std::int32_t ClientSession::handle_latency(std::int32_t status)
 {
     const jack_latency_callback_mode_t mode = (status == 0) ? JackCaptureLatency : JackPlaybackLatency;
     ProcessContext& context = *context_;
@@ -592,7 +593,7 @@ int ClientSession::handle_latency(int status)
     context.graph->GetOwnedPorts(ref_, ports);
 
     for (jack_port_id_t port : ports) {
-        const unsigned long flags = context.graph->GetPort(port)->GetFlags();
+        const std::uint64_t flags = context.graph->GetPort(port)->GetFlags();
         if ((flags & JackPortIsOutput) && mode == JackPlaybackLatency) {
             context.graph->RecalculateLatency(port, mode);
         }
@@ -609,8 +610,8 @@ int ClientSession::handle_latency(int status)
     // Playback: the input ports take the widest range of the output ports. Capture: the output ports take the widest
     // range of the input ports. This is the default that every port without a handler gets.
     const bool playback = mode == JackPlaybackLatency;
-    const unsigned long measured = playback ? JackPortIsOutput : JackPortIsInput;
-    const unsigned long set_on = playback ? JackPortIsInput : JackPortIsOutput;
+    const std::uint64_t measured = playback ? JackPortIsOutput : JackPortIsInput;
+    const std::uint64_t set_on = playback ? JackPortIsInput : JackPortIsOutput;
     jack_latency_range_t latency = { UINT32_MAX, 0 };
     for (jack_port_id_t port : ports) {
         JackPort* p = context.graph->GetPort(port);
@@ -926,7 +927,7 @@ Result<void> ClientSession::close()
     notify_listen_.Close();
     notify_fd_ = -1;
 
-    int result = 0;
+    std::int32_t result = 0;
     if (ref_ >= 0) {
         if (server_alive()) {
             JackClientCloseRequest close_request(ref_);

@@ -46,7 +46,7 @@ void UnlockAllMemory();
 // The server keeps the descriptor of each segment it owns. A client receives its own descriptors with the open reply, maps them, and closes them.
 
 struct JackShmSegment {
-    int fFd = -1;
+    std::int32_t fFd = -1;
     std::uint32_t fSize = 0;
 };
 
@@ -56,12 +56,12 @@ class JackShmMemAble {
 protected:
     std::uint32_t fSize;
     void* fAddress;
-    int fFd;
+    std::int32_t fFd;
 
 public:
     void Init();
 
-    int GetShmFd() const
+    std::int32_t GetShmFd() const
     {
         return fFd;
     }

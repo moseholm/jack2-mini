@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "jackmini/jackmini.hpp"
 
 // \brief A class to test external clients
@@ -27,15 +29,15 @@ public:
     jackmini::Port input_port;
     jackmini::Port output_port;
 
-    unsigned long sr;
-    int freq;
-    int bpm;
+    std::uint64_t sr;
+    std::int32_t freq;
+    std::int32_t bpm;
     jackmini::FrameCount tone_length, wave_length;
     float* wave;
     double* amp;
-    long offset;
+    std::int64_t offset;
 
-    ExternalMetro(int freq, double max_amp, int dur_arg, int bpm, const char* client_name = "metro");
+    ExternalMetro(std::int32_t freq, double max_amp, std::int32_t dur_arg, std::int32_t bpm, const char* client_name = "metro");
     virtual ~ExternalMetro();
 
 private:

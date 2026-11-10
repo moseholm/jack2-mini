@@ -19,6 +19,7 @@
 #include "JackCompilerDeps.h"
 #include "JackDriverLoader.h"
 #include "JackThreadedDriver.h"
+#include <cstdint>
 #include <math.h>
 #include <unistd.h>
 #include <iostream>
@@ -56,9 +57,9 @@ static jackmini::JackDriverClientInterface* initialize_driver(jackmini::JackLock
 {
     jack_nframes_t sample_rate = 48000;
     jack_nframes_t buffer_size = 1024;
-    unsigned int capture_ports = 2;
-    unsigned int playback_ports = 2;
-    int wait_time = 0;
+    std::uint32_t capture_ports = 2;
+    std::uint32_t playback_ports = 2;
+    std::int32_t wait_time = 0;
     const JSList* node;
     const jack_driver_param_t* param;
     bool monitor = false;

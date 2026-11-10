@@ -22,6 +22,7 @@
 // one the MIDI code and the clients use; the logic lives in RingBuffer.
 
 #include "JackCompilerDeps.h"
+#include <cstdint>
 #include <jack/ringbuffer.h>
 
 #include <algorithm>
@@ -220,7 +221,7 @@ LIB_EXPORT void jack_ringbuffer_free(jack_ringbuffer_t* rb)
     delete rb;
 }
 
-LIB_EXPORT int jack_ringbuffer_mlock(jack_ringbuffer_t* rb)
+LIB_EXPORT std::int32_t jack_ringbuffer_mlock(jack_ringbuffer_t* rb)
 {
     return rb->mlock() ? 0 : -1;
 }

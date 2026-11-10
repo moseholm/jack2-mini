@@ -17,6 +17,7 @@
 
 #include "JackFrameTimer.h"
 #include "JackError.h"
+#include <cstdint>
 #include <math.h>
 #include <stdio.h>
 
@@ -44,9 +45,9 @@ jack_nframes_t JackTimer::Time2Frames(jack_time_t usecs, jack_nframes_t buffer_s
         // types below are inherently fragile and there is no automatic way to
         // check they are the correct ones. The only way is to check manually
         // against jack/types.h.  FA - 16/02/2012
-        int64_t du = usecs - fCurrentWakeup;
-        int64_t dp = fNextWakeUp - fCurrentWakeup;
-        return fFrames + (int32_t)rint((double)du / (double)dp * buffer_size);
+        std::int64_t du = usecs - fCurrentWakeup;
+        std::int64_t dp = fNextWakeUp - fCurrentWakeup;
+        return fFrames + (std::int32_t)rint((double)du / (double)dp * buffer_size);
     } else {
         return 0;
     }
@@ -63,15 +64,15 @@ jack_time_t JackTimer::Frames2Time(jack_nframes_t frames, jack_nframes_t buffer_
         // types below are inherently fragile and there is no automatic way to
         // check they are the correct ones. The only way is to check manually
         // against jack/types.h.  FA - 16/02/2012
-        int32_t df = frames - fFrames;
-        int64_t dp = fNextWakeUp - fCurrentWakeup;
-        return fCurrentWakeup + (int64_t)rint((double)df * (double)dp / buffer_size);
+        std::int32_t df = frames - fFrames;
+        std::int64_t dp = fNextWakeUp - fCurrentWakeup;
+        return fCurrentWakeup + (std::int64_t)rint((double)df * (double)dp / buffer_size);
     } else {
         return 0;
     }
 }
 
-int JackTimer::GetCycleTimes(jack_nframes_t* current_frames, jack_time_t* current_usecs, jack_time_t* next_usecs, float* period_usecs)
+std::int32_t JackTimer::GetCycleTimes(jack_nframes_t* current_frames, jack_time_t* current_usecs, jack_time_t* next_usecs, float* period_usecs)
 {
     if (fInitialized) {
         *current_frames = fFrames;
@@ -196,13 +197,13 @@ void JackFrameTimer::IncFrameTimeAux(jack_nframes_t buffer_size, jack_time_t cal
     //
     // FA 13/02/2012
 
-    float delta = (float)((int64_t)callback_usecs - (int64_t)timer->fNextWakeUp);
+    float delta = (float)((std::int64_t)callback_usecs - (std::int64_t)timer->fNextWakeUp);
     delta *= timer->fFilterOmega;
     timer->fCurrentWakeup = timer->fNextWakeUp;
     timer->fCurrentCallback = callback_usecs;
     timer->fFrames += buffer_size;
     timer->fPeriodUsecs += timer->fFilterOmega * delta;
-    timer->fNextWakeUp += (int64_t)floorf(timer->fPeriodUsecs + 1.41f * delta + 0.5f);
+    timer->fNextWakeUp += (std::int64_t)floorf(timer->fPeriodUsecs + 1.41f * delta + 0.5f);
     timer->fInitialized = true;
 
     WriteNextStateStop();

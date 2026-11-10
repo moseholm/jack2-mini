@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <algorithm>
 #include <array>
 #include <cctype>

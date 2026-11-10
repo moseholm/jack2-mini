@@ -21,24 +21,20 @@
 #include "JackCompilerDeps.h"
 #include "types.h"
 
+#include <cstdint>
 #include <pthread.h>
-#include <stdint.h>
+#include <cstdint>
 
-typedef unsigned short UInt16;
-#if __LP64__
-typedef unsigned int UInt32;
-typedef signed int SInt32;
-#else
-typedef unsigned long UInt32;
-typedef signed long SInt32;
-#endif
+typedef std::uint16_t UInt16;
+typedef std::uint32_t UInt32;
+typedef std::int32_t SInt32;
 
-typedef unsigned long long UInt64;
+typedef std::uint64_t UInt64;
 typedef pthread_key_t jack_tls_key;
 
-typedef int (*jack_thread_creator_t)(pthread_t*, const pthread_attr_t*, void* (*function)(void*), void* arg);
+typedef std::int32_t (*jack_thread_creator_t)(pthread_t*, const pthread_attr_t*, void* (*function)(void*), void* arg);
 
-typedef uint16_t jack_int_t; // Internal type for ports and refnum
+typedef std::uint16_t jack_int_t; // Internal type for ports and refnum
 
 typedef enum {
     JACK_TIMER_SYSTEM_CLOCK,

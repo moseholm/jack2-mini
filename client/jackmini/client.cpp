@@ -25,6 +25,7 @@
 #include "JackMidiPort.h"
 #include "jack/transport.h"
 
+#include <cstdint>
 #include <array>
 #include <atomic>
 #include <cstring>
@@ -92,9 +93,9 @@ struct Client::Impl {
 
 namespace {
 
-unsigned long to_c_flags(PortFlags flags)
+std::uint64_t to_c_flags(PortFlags flags)
 {
-    unsigned long result = 0;
+    std::uint64_t result = 0;
     if (has_flag(flags, PortFlags::Input)) {
         result |= JackPortIsInput;
     }
@@ -113,7 +114,7 @@ unsigned long to_c_flags(PortFlags flags)
     return result;
 }
 
-PortFlags from_c_flags(unsigned long flags)
+PortFlags from_c_flags(std::uint64_t flags)
 {
     PortFlags result = PortFlags::None;
     if (flags & JackPortIsInput) {

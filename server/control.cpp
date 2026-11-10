@@ -29,6 +29,7 @@
 #include "jslist.h"
 #include "driver_interface.h"
 
+#include <cstdint>
 #include <getopt.h>
 #include <pthread.h>
 #include <signal.h>
@@ -121,10 +122,10 @@ jack_driver_param_value_t value_to_c(const Value& value)
     jack_driver_param_value_t out { };
     switch (value.index()) {
     case kInt:
-        out.i = static_cast<int32_t>(std::get<std::int64_t>(value));
+        out.i = static_cast<std::int32_t>(std::get<std::int64_t>(value));
         break;
     case kUInt:
-        out.ui = static_cast<uint32_t>(std::get<std::uint64_t>(value));
+        out.ui = static_cast<std::uint32_t>(std::get<std::uint64_t>(value));
         break;
     case kBool:
         out.i = std::get<bool>(value) ? 1 : 0;
@@ -238,7 +239,7 @@ std::optional<DriverEntry> make_driver(DescriptorPtr descriptor)
     entry.view.description = desc.desc;
     entry.view.master = desc.type == JackDriverMaster;
 
-    for (uint32_t i = 0; i < desc.nparams; i++) {
+    for (std::uint32_t i = 0; i < desc.nparams; i++) {
         const jack_driver_param_desc_t& descriptor_param = desc.params[i];
         const std::size_t kind = kind_of(descriptor_param.type);
 
@@ -254,7 +255,7 @@ std::optional<DriverEntry> make_driver(DescriptorPtr descriptor)
             entry.constraints.emplace_back(constraint);
             const bool is_range = (constraint->flags & JACK_CONSTRAINT_FLAG_RANGE) != 0;
             if (!is_range) {
-                for (uint32_t c = 0; c < constraint->constraint.enumeration.count; c++) {
+                for (std::uint32_t c = 0; c < constraint->constraint.enumeration.count; c++) {
                     const jack_driver_param_value_enum_t& possible = constraint->constraint.enumeration.possible_values_array[c];
                     parameter.choices.push_back(Choice { value_from_c(kind, possible.value),
                         possible.short_desc ? possible.short_desc : "" });
@@ -422,7 +423,7 @@ Result<void> Server::select_driver(std::string_view driver_name)
         fImpl->selected = i;
         return { };
     }
-    jack_error("Unknown driver \"%.*s\"", static_cast<int>(driver_name.size()), driver_name.data());
+    jack_error("Unknown driver \"%.*s\"", static_cast<std::int32_t>(driver_name.size()), driver_name.data());
     return std::unexpected(Error::NotFound);
 }
 
@@ -466,7 +467,7 @@ Result<void> Server::set_driver_parameter(std::string_view name, Value value)
     return { };
 }
 
-Result<void> Server::parse_driver_arguments(int argc, char* argv[])
+Result<void> Server::parse_driver_arguments(std::int32_t argc, char* argv[])
 {
     if (!fImpl || fImpl->selected == kNoDriver) {
         return std::unexpected(Error::InvalidState);
@@ -481,7 +482,7 @@ Result<void> Server::parse_driver_arguments(int argc, char* argv[])
 
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         if (argc > 2) {
-            for (uint32_t i = 0; i < desc.nparams; i++) {
+            for (std::uint32_t i = 0; i < desc.nparams; i++) {
                 if (strcmp(desc.params[i].name, argv[2]) == 0) {
                     jack_print_driver_param_usage(&desc, i, stdout);
                     return std::unexpected(Error::InvalidArgument);
@@ -509,7 +510,7 @@ Result<void> Server::parse_driver_arguments(int argc, char* argv[])
 
     optind = 0;
     opterr = 0;
-    int opt = 0;
+    std::int32_t opt = 0;
     while ((opt = getopt_long(argc, argv, options.data(), long_options.data(), nullptr)) != -1) {
         if (opt == ':' || opt == '?') {
             if (opt == ':') {
@@ -540,10 +541,10 @@ Result<void> Server::parse_driver_arguments(int argc, char* argv[])
         if (optarg) {
             switch (parameter->value.index()) {
             case kInt:
-                assign(*parameter, static_cast<std::int64_t>(jackmini::ParseLeadingInteger<int>(optarg)));
+                assign(*parameter, static_cast<std::int64_t>(jackmini::ParseLeadingInteger<std::int32_t>(optarg)));
                 break;
             case kUInt:
-                assign(*parameter, static_cast<std::uint64_t>(jackmini::ParseLeadingInteger<unsigned int>(optarg)));
+                assign(*parameter, static_cast<std::uint64_t>(jackmini::ParseLeadingInteger<std::uint32_t>(optarg)));
                 break;
             case kChar:
                 assign(*parameter, optarg[0]);
@@ -614,7 +615,7 @@ Result<void> Server::start()
     }
     if (port_max > PORT_NUM_MAX) {
         jack_error("Jack server started with too much ports %llu (when port max can be %d)",
-            static_cast<unsigned long long>(port_max), PORT_NUM_MAX);
+            static_cast<std::uint64_t>(port_max), PORT_NUM_MAX);
         return fail(Error::InvalidArgument);
     }
 
@@ -622,10 +623,10 @@ Result<void> Server::start()
         impl.engine = std::make_unique<JackServer>(
             std::get<bool>(find_parameter(impl.parameters, "sync")->value),
             std::get<bool>(find_parameter(impl.parameters, "temporary")->value),
-            static_cast<int>(client_timeout),
+            static_cast<std::int32_t>(client_timeout),
             realtime,
-            static_cast<int>(std::get<std::int64_t>(find_parameter(impl.parameters, "realtime-priority")->value)),
-            static_cast<int>(port_max),
+            static_cast<std::int32_t>(std::get<std::int64_t>(find_parameter(impl.parameters, "realtime-priority")->value)),
+            static_cast<std::int32_t>(port_max),
             std::get<bool>(find_parameter(impl.parameters, "verbose")->value),
             static_cast<jack_timer_type_t>(std::get<std::uint64_t>(find_parameter(impl.parameters, "clock-source")->value)),
             std::get<char>(find_parameter(impl.parameters, "self-connect-mode")->value),
@@ -690,10 +691,10 @@ SignalSet setup_signals()
 
     // A handler that does nothing: the signals must have one before sigwait() is entered.
     struct sigaction action { };
-    action.sa_handler = [](int) { };
+    action.sa_handler = [](std::int32_t) { };
     sigfillset(&action.sa_mask);
     action.sa_flags = SA_RESTART | SA_RESETHAND;
-    for (int i = 1; i < NSIG; i++) {
+    for (std::int32_t i = 1; i < NSIG; i++) {
         if (sigismember(&set.signals, i)) {
             sigaction(i, &action, nullptr);
         }
@@ -703,7 +704,7 @@ SignalSet setup_signals()
 
 void wait_for_signal(const SignalSet& set)
 {
-    int sig = 0;
+    std::int32_t sig = 0;
     for (;;) {
         sigwait(&set.signals, &sig);
         fprintf(stderr, "Jack main caught signal %d\n", sig);

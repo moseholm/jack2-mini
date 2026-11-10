@@ -22,6 +22,7 @@
 #include "JackShmMem.h"
 #include "JackTransportEngine.h"
 #include "types.h"
+#include <cstdint>
 #include <stdio.h>
 #include <atomic>
 
@@ -50,13 +51,13 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem {
     bool fRealTime;
     bool fSavedRealTime; // RT state saved and restored during Freewheel mode
     std::atomic<bool> fFreewheel; // Freewheel mode is on: clients opened now must use the normal (not flushed) driver synchro
-    int fServerPriority;
-    int fClientPriority;
-    int fMaxClientPriority;
+    std::int32_t fServerPriority;
+    std::int32_t fClientPriority;
+    std::int32_t fMaxClientPriority;
     char fServerName[JACK_SERVER_NAME_SIZE + 1];
     alignas(UInt32) alignas(JackTransportEngine) JackTransportEngine fTransport;
     jack_timer_type_t fClockSource;
-    int fDriverNum;
+    std::int32_t fDriverNum;
     bool fVerbose;
 
     // CPU Load
@@ -65,9 +66,9 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem {
     jack_time_t fSpareUsecs;
     jack_time_t fMaxUsecs;
     jack_time_t fRollingClientUsecs[JACK_ENGINE_ROLLING_COUNT];
-    unsigned int fRollingClientUsecsCnt;
-    unsigned int fRollingClientUsecsIndex;
-    unsigned int fRollingInterval;
+    std::uint32_t fRollingClientUsecsCnt;
+    std::uint32_t fRollingClientUsecsIndex;
+    std::uint32_t fRollingInterval;
     float fCPULoad;
     float fMaxCPULoad;
 
@@ -79,7 +80,7 @@ struct SERVER_EXPORT JackEngineControl : public JackShmMem {
     // Timer
     alignas(UInt32) alignas(JackFrameTimer) JackFrameTimer fFrameTimer;
 
-    JackEngineControl(bool sync, bool temporary, long timeout, bool rt, long priority, bool verbose, jack_timer_type_t clock, const char* server_name)
+    JackEngineControl(bool sync, bool temporary, std::int64_t timeout, bool rt, std::int64_t priority, bool verbose, jack_timer_type_t clock, const char* server_name)
     {
         static_assert(offsetof(JackEngineControl, fTransport) % sizeof(UInt32) == 0,
             "fTransport must be aligned within JackEngineControl");

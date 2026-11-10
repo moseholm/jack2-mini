@@ -19,6 +19,7 @@
 
 #include "JackPlatformPlug.h"
 
+#include <cstdint>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -41,7 +42,7 @@ std::string JackAlsaControlDeviceName(const std::string& pcm)
     return result;
 }
 
-int JackAlsaControlLockCard(const std::string& ctl_name)
+std::int32_t JackAlsaControlLockCard(const std::string& ctl_name)
 {
     std::string file = std::string(jack_server_dir) + "/jack_alsa_";
     for (size_t i = 0; i < ctl_name.size(); i++) {
@@ -50,7 +51,7 @@ int JackAlsaControlLockCard(const std::string& ctl_name)
     }
     file += ".lock";
 
-    int fd = open(file.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
+    std::int32_t fd = open(file.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
     if (fd < 0) {
         jack_error("cannot open card lock %s (%s)", file.c_str(), strerror(errno));
         return -1;
@@ -65,14 +66,14 @@ int JackAlsaControlLockCard(const std::string& ctl_name)
     return fd;
 }
 
-void JackAlsaControlUnlockCard(int fd)
+void JackAlsaControlUnlockCard(std::int32_t fd)
 {
     if (fd >= 0) {
         close(fd);
     }
 }
 
-std::string JackAlsaRateElementName(JackAlsaRateDirection dir, int device)
+std::string JackAlsaRateElementName(JackAlsaRateDirection dir, std::int32_t device)
 {
     std::string name = (dir == RateCapture) ? "JACK Secondary Capture Rate" : "JACK Secondary Playback Rate";
     if (device >= 0) {
@@ -82,9 +83,9 @@ std::string JackAlsaRateElementName(JackAlsaRateDirection dir, int device)
 }
 
 struct ElementMatch {
-    unsigned int numid;
-    unsigned int iface;
-    unsigned int index;
+    std::uint32_t numid;
+    std::uint32_t iface;
+    std::uint32_t index;
 };
 
 // Prefer a MIXER element; fall back to a CARD element of the same name.
@@ -101,7 +102,7 @@ static bool FindElement(snd_ctl_t* ctl, const std::string& name, ElementMatch* m
         snd_ctl_elem_list_free(list);
         return false;
     }
-    unsigned int count = snd_ctl_elem_list_get_count(list);
+    std::uint32_t count = snd_ctl_elem_list_get_count(list);
     snd_ctl_elem_list_alloc_space(list, count);
     if (snd_ctl_elem_list(ctl, list) < 0) {
         snd_ctl_elem_list_free_space(list);
@@ -110,11 +111,11 @@ static bool FindElement(snd_ctl_t* ctl, const std::string& name, ElementMatch* m
     }
 
     count = snd_ctl_elem_list_get_count(list);
-    for (unsigned int i = 0; i < count; i++) {
+    for (std::uint32_t i = 0; i < count; i++) {
         if (name != snd_ctl_elem_list_get_name(list, i)) {
             continue;
         }
-        unsigned int iface = snd_ctl_elem_list_get_interface(list, i);
+        std::uint32_t iface = snd_ctl_elem_list_get_interface(list, i);
         if (iface == SND_CTL_ELEM_IFACE_MIXER && !found_mixer) {
             match->numid = snd_ctl_elem_list_get_numid(list, i);
             match->iface = iface;
@@ -134,7 +135,7 @@ static bool FindElement(snd_ctl_t* ctl, const std::string& name, ElementMatch* m
     return found;
 }
 
-static int ElementInfo(snd_ctl_t* ctl, unsigned int numid, snd_ctl_elem_info_t* info)
+static std::int32_t ElementInfo(snd_ctl_t* ctl, std::uint32_t numid, snd_ctl_elem_info_t* info)
 {
     snd_ctl_elem_info_set_numid(info, numid);
     return snd_ctl_elem_info(ctl, info);
@@ -174,7 +175,7 @@ static const char* const kPlaybackProbe[] = {
     "Playback Rate", "Sample Rate", "Rate", "Clock Rate", "Sample Clock Rate", "IEC958 Sample Rate", nullptr
 };
 
-int JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection dir,
+std::int32_t JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection dir,
     const std::string& configured,
     JackAlsaRateElement* out, std::string* error)
 {
@@ -195,7 +196,7 @@ int JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection dir,
     }
 
     const char* const* probe = (dir == RateCapture) ? kCaptureProbe : kPlaybackProbe;
-    for (int i = 0; probe[i] != nullptr; i++) {
+    for (std::int32_t i = 0; probe[i] != nullptr; i++) {
         if (FindElement(ctl, probe[i], &match) && Usable(ctl, match, dir, &writable)) {
             Fill(out, match, probe[i], writable);
             return 0;
@@ -204,14 +205,14 @@ int JackAlsaControlResolveRate(snd_ctl_t* ctl, JackAlsaRateDirection dir,
     return 1;
 }
 
-static void SetId(snd_ctl_elem_id_t* id, const std::string& name, unsigned int iface, unsigned int index)
+static void SetId(snd_ctl_elem_id_t* id, const std::string& name, std::uint32_t iface, std::uint32_t index)
 {
     snd_ctl_elem_id_set_interface(id, (snd_ctl_elem_iface_t)iface);
     snd_ctl_elem_id_set_name(id, name.c_str());
     snd_ctl_elem_id_set_index(id, index);
 }
 
-int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, int device, long initial,
+std::int32_t JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, std::int32_t device, std::int64_t initial,
     JackAlsaRateElement* out)
 {
     std::string name = JackAlsaRateElementName(dir, device);
@@ -219,7 +220,7 @@ int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, int dev
     snd_ctl_elem_id_alloca(&id);
     SetId(id, name, SND_CTL_ELEM_IFACE_MIXER, 0);
 
-    int err = snd_ctl_elem_add_integer(ctl, id, 1, 1, 768000, 1);
+    std::int32_t err = snd_ctl_elem_add_integer(ctl, id, 1, 1, 768000, 1);
     if (err == -EBUSY) {
         // Another client already holds an element with this name.  If nobody
         // owns it, it was left behind by a crashed JACK and can be replaced.
@@ -230,7 +231,7 @@ int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, int dev
             // Only a server that holds the card lock reaches this point, so an
             // element left behind by a crashed server can be replaced.  The
             // kernel reports an unowned element with owner -1.
-            int owner = (ElementInfo(ctl, stale.numid, info) == 0) ? (int)snd_ctl_elem_info_get_owner(info) : -1;
+            std::int32_t owner = (ElementInfo(ctl, stale.numid, info) == 0) ? (std::int32_t)snd_ctl_elem_info_get_owner(info) : -1;
             if (owner > 0) {
                 jack_error("ALSA control '%s' is in use by process %d; another JACK server may be using this card",
                     name.c_str(), owner);
@@ -269,7 +270,7 @@ int JackAlsaControlCreateRate(snd_ctl_t* ctl, JackAlsaRateDirection dir, int dev
     return 0;
 }
 
-int JackAlsaControlRemoveRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem)
+std::int32_t JackAlsaControlRemoveRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem)
 {
     snd_ctl_elem_id_t* id;
     snd_ctl_elem_id_alloca(&id);
@@ -278,12 +279,12 @@ int JackAlsaControlRemoveRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem)
     return snd_ctl_elem_remove(ctl, id);
 }
 
-int JackAlsaControlReadRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, long* value)
+std::int32_t JackAlsaControlReadRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, std::int64_t* value)
 {
     snd_ctl_elem_value_t* v;
     snd_ctl_elem_value_alloca(&v);
     snd_ctl_elem_value_set_numid(v, elem.numid);
-    int err = snd_ctl_elem_read(ctl, v);
+    std::int32_t err = snd_ctl_elem_read(ctl, v);
     if (err < 0) {
         return err;
     }
@@ -291,7 +292,7 @@ int JackAlsaControlReadRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, lon
     return 0;
 }
 
-int JackAlsaControlWriteRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, long value)
+std::int32_t JackAlsaControlWriteRate(snd_ctl_t* ctl, const JackAlsaRateElement& elem, std::int64_t value)
 {
     snd_ctl_elem_value_t* v;
     snd_ctl_elem_value_alloca(&v);

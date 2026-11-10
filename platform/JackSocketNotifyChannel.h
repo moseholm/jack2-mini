@@ -40,7 +40,7 @@ private:
         std::shared_ptr<JackClientNotification> event;
         std::uint32_t request = 0;
         bool done = false;
-        int result = -1;
+        std::int32_t result = -1;
     };
 
     JackClientSocket fNotifySocket; // Socket to communicate with the server : from server to client
@@ -53,8 +53,8 @@ private:
     std::thread fWriter;
 
     void Writer();
-    int Send(Pending& pending, std::uint32_t dropped);
-    int Start();
+    std::int32_t Send(Pending& pending, std::uint32_t dropped);
+    std::int32_t Start();
 
 public:
     // Notifications queued for one client.  When it is full, the oldest is dropped and counted; the client is told
@@ -65,12 +65,12 @@ public:
     {
     }
 
-    int Open(const char* name); // Open the Server/Client connection
+    std::int32_t Open(const char* name); // Open the Server/Client connection
     // Uses a connected socket instead of connecting one: the tests attach one end of a socket pair.
-    int Attach(int fd);
+    std::int32_t Attach(std::int32_t fd);
     void Close(); // Close the Server/Client connection
 
-    void ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2, int* result);
+    void ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2, std::int32_t* result);
 };
 
 } // namespace jackmini

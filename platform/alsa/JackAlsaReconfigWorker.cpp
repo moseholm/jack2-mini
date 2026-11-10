@@ -1,3 +1,5 @@
+#include <cstdint>
+
 // Copyright (C) 2026 JACK contributors
 //
 // This program is free software; you can redistribute it and/or modify
@@ -32,11 +34,11 @@ JackAlsaReconfigWorker::~JackAlsaReconfigWorker()
     Stop();
 }
 
-void JackAlsaReconfigWorker::OnRateEvent(int card, JackAlsaRateDirection dir, long value)
+void JackAlsaReconfigWorker::OnRateEvent(std::int32_t card, JackAlsaRateDirection dir, std::int64_t value)
 {
     {
         std::lock_guard<std::mutex> lock(fMutex);
-        fPending[Key(card, (int)dir)] = value;
+        fPending[Key(card, (std::int32_t)dir)] = value;
     }
     fCond.notify_one();
 }
@@ -50,7 +52,7 @@ void JackAlsaReconfigWorker::OnSoundChanged()
     fCond.notify_one();
 }
 
-void JackAlsaReconfigWorker::OnCardFailed(int card_id)
+void JackAlsaReconfigWorker::OnCardFailed(std::int32_t card_id)
 {
     {
         std::lock_guard<std::mutex> lock(fMutex);
@@ -66,8 +68,8 @@ bool JackAlsaReconfigWorker::Init()
 
 bool JackAlsaReconfigWorker::Execute()
 {
-    std::map<Key, long> batch;
-    std::vector<int> failures;
+    std::map<Key, std::int64_t> batch;
+    std::vector<std::int32_t> failures;
     bool sound = false;
     {
         std::unique_lock<std::mutex> lock(fMutex);
@@ -89,7 +91,7 @@ bool JackAlsaReconfigWorker::Execute()
     if (sound && fHandler) {
         fHandler->HandleSoundChanged();
     }
-    for (std::map<Key, long>::const_iterator it = batch.begin(); it != batch.end(); ++it) {
+    for (std::map<Key, std::int64_t>::const_iterator it = batch.begin(); it != batch.end(); ++it) {
         if (fHandler) {
             fHandler->HandleRateRequest(it->first.first, (JackAlsaRateDirection)it->first.second, it->second);
         }
@@ -97,7 +99,7 @@ bool JackAlsaReconfigWorker::Execute()
     return true;
 }
 
-int JackAlsaReconfigWorker::Start()
+std::int32_t JackAlsaReconfigWorker::Start()
 {
     {
         std::lock_guard<std::mutex> lock(fMutex);
@@ -112,7 +114,7 @@ int JackAlsaReconfigWorker::Start()
     return 0;
 }
 
-int JackAlsaReconfigWorker::Stop()
+std::int32_t JackAlsaReconfigWorker::Stop()
 {
     {
         std::lock_guard<std::mutex> lock(fMutex);

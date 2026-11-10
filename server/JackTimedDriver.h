@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "JackAudioDriver.h"
 
 namespace jackmini {
@@ -25,11 +27,11 @@ namespace jackmini {
 
 class SERVER_EXPORT JackTimedDriver : public JackAudioDriver {
 protected:
-    int fCycleCount;
+    std::int32_t fCycleCount;
     jack_time_t fAnchorTimeUsec;
 
-    int FirstCycle(jack_time_t cur_time);
-    int CurrentCycle(jack_time_t cur_time);
+    std::int32_t FirstCycle(jack_time_t cur_time);
+    std::int32_t CurrentCycle(jack_time_t cur_time);
 
     void ProcessWait();
 
@@ -50,7 +52,7 @@ public:
         return false;
     }
 
-    int Start();
+    std::int32_t Start();
 };
 
 } // namespace jackmini

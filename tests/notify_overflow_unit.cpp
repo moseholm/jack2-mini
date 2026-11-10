@@ -23,6 +23,7 @@
 #include "JackSocket.h"
 #include "JackSocketNotifyChannel.h"
 
+#include <cstdint>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cstdio>
@@ -33,7 +34,7 @@ using namespace jackmini;
 
 namespace {
 
-int gFailures = 0;
+std::int32_t gFailures = 0;
 
 #define CHECK(cond)                                                     \
     do {                                                                \
@@ -44,15 +45,15 @@ int gFailures = 0;
     } while (0)
 
 // Sent in order: value1 is the index.  The kind is a registration notification, nothing special for the client.
-constexpr int kNotify = kPortRegistrationOnCallback;
+constexpr std::int32_t kNotify = kPortRegistrationOnCallback;
 
 // The reader: parses the notifications from the client's end of the socket pair, as the client does.
 struct Received {
-    std::vector<int> delivered; // value1 of the notifications that came through, in order
-    unsigned long dropped = 0; // the sum of the kDropped counts
+    std::vector<std::int32_t> delivered; // value1 of the notifications that came through, in order
+    std::uint64_t dropped = 0; // the sum of the kDropped counts
 };
 
-Received ReadAll(JackClientSocket& socket, int last)
+Received ReadAll(JackClientSocket& socket, std::int32_t last)
 {
     Received got;
     while (true) {
@@ -66,7 +67,7 @@ Received ReadAll(JackClientSocket& socket, int last)
             break;
         }
         if (event.fNotify == kDropped) {
-            got.dropped += static_cast<unsigned long>(event.fValue1);
+            got.dropped += static_cast<std::uint64_t>(event.fValue1);
             continue;
         }
         got.delivered.push_back(event.fValue1);
@@ -79,9 +80,9 @@ Received ReadAll(JackClientSocket& socket, int last)
 
 
 // Sends sent notifications while the client does not read, then reads them all.  Returns what came through.
-Received Run(int sent)
+Received Run(std::int32_t sent)
 {
-    int fd[2];
+    std::int32_t fd[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd) != 0) {
         std::printf("socketpair failed\n");
         return { };
@@ -89,14 +90,14 @@ Received Run(int sent)
 
     // A small send buffer, so that the writer stops early: the rest waits in the queue.  The count of what fits is
     // not checked, only the invariants.
-    int small = 4096;
+    std::int32_t small = 4096;
     setsockopt(fd[0], SOL_SOCKET, SO_SNDBUF, &small, sizeof(small));
 
     JackSocketNotifyChannel channel;
     CHECK(channel.Attach(fd[0]) == 0);
 
-    for (int i = 0; i < sent; i++) {
-        int result = -1;
+    for (std::int32_t i = 0; i < sent; i++) {
+        std::int32_t result = -1;
         channel.ClientNotify(1, "", kNotify, 0, nullptr, i, 0, &result);
         CHECK(result == 0);
     }
@@ -125,10 +126,10 @@ int main()
 {
     // Over the queue: the oldest are dropped and counted, the newest is delivered.
     {
-        constexpr int sent = 1000;
+        constexpr std::int32_t sent = 1000;
         const Received got = Run(sent);
-        const unsigned long delivered = got.delivered.size();
-        CHECK(delivered + got.dropped == static_cast<unsigned long>(sent));
+        const std::uint64_t delivered = got.delivered.size();
+        CHECK(delivered + got.dropped == static_cast<std::uint64_t>(sent));
         CHECK(got.dropped > 0);
         CHECK(!got.delivered.empty() && got.delivered.back() == sent - 1);
         CheckOrdered(got);
@@ -139,7 +140,7 @@ int main()
 
     // Under the queue: nothing is dropped and every notification comes through in order.
     {
-        constexpr int sent = 100;
+        constexpr std::int32_t sent = 100;
         const Received got = Run(sent);
         CHECK(got.dropped == 0);
         CHECK(got.delivered.size() == static_cast<std::size_t>(sent));

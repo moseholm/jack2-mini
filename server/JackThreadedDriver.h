@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "JackDriver.h"
 #include "JackPlatformPlug.h"
 
@@ -36,34 +38,34 @@ public:
     JackThreadedDriver(JackDriver* driver);
     virtual ~JackThreadedDriver();
 
-    virtual int Open();
-    virtual int Open(jack_nframes_t buffer_size,
+    virtual std::int32_t Open();
+    virtual std::int32_t Open(jack_nframes_t buffer_size,
         jack_nframes_t samplerate,
         bool capturing,
         bool playing,
-        int inchannels,
-        int outchannels,
+        std::int32_t inchannels,
+        std::int32_t outchannels,
         bool monitor,
         const char* capture_driver_name,
         const char* playback_driver_name,
         jack_nframes_t capture_latency,
         jack_nframes_t playback_latency);
-    virtual int Close();
+    virtual std::int32_t Close();
 
-    virtual int Process();
+    virtual std::int32_t Process();
 
-    virtual int Attach();
-    virtual int Detach();
+    virtual std::int32_t Attach();
+    virtual std::int32_t Detach();
 
-    virtual int Read();
-    virtual int Write();
+    virtual std::int32_t Read();
+    virtual std::int32_t Write();
 
-    virtual int Start();
-    virtual int Stop();
+    virtual std::int32_t Start();
+    virtual std::int32_t Stop();
 
     virtual bool IsFixedBufferSize();
-    virtual int SetBufferSize(jack_nframes_t buffer_size);
-    virtual int SetSampleRate(jack_nframes_t sample_rate);
+    virtual std::int32_t SetBufferSize(jack_nframes_t buffer_size);
+    virtual std::int32_t SetSampleRate(jack_nframes_t sample_rate);
 
     virtual void SetMaster(bool onoff);
     virtual bool GetMaster();
@@ -73,19 +75,19 @@ public:
 
     virtual std::list<JackDriverInterface*> GetSlaves();
 
-    virtual int ProcessReadSlaves();
-    virtual int ProcessWriteSlaves();
+    virtual std::int32_t ProcessReadSlaves();
+    virtual std::int32_t ProcessWriteSlaves();
 
-    virtual int ProcessRead();
-    virtual int ProcessWrite();
+    virtual std::int32_t ProcessRead();
+    virtual std::int32_t ProcessWrite();
 
-    virtual int ProcessReadSync();
-    virtual int ProcessWriteSync();
+    virtual std::int32_t ProcessReadSync();
+    virtual std::int32_t ProcessWriteSync();
 
-    virtual int ProcessReadAsync();
-    virtual int ProcessWriteAsync();
+    virtual std::int32_t ProcessReadAsync();
+    virtual std::int32_t ProcessWriteAsync();
 
-    virtual int ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2);
+    virtual std::int32_t ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
     virtual JackClientControl* GetClientControl() const;
     virtual bool IsRealTime() const;
     virtual bool IsRunning() const;

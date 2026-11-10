@@ -16,6 +16,7 @@
 
 #include "JackFdSegment.h"
 
+#include <cstdint>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -50,14 +51,14 @@ UniqueFd::~UniqueFd()
     reset();
 }
 
-int UniqueFd::release() noexcept
+std::int32_t UniqueFd::release() noexcept
 {
-    const int fd = fFd;
+    const std::int32_t fd = fFd;
     fFd = -1;
     return fd;
 }
 
-void UniqueFd::reset(int fd) noexcept
+void UniqueFd::reset(std::int32_t fd) noexcept
 {
     if (fFd >= 0) {
         ::close(fFd);
@@ -65,9 +66,9 @@ void UniqueFd::reset(int fd) noexcept
     fFd = fd;
 }
 
-std::expected<void, std::error_code> SendWithFds(int socket,
+std::expected<void, std::error_code> SendWithFds(std::int32_t socket,
     std::span<const std::byte> data,
-    std::span<const int> fds)
+    std::span<const std::int32_t> fds)
 {
     if (fds.size() > kMaxFds) {
         return std::unexpected(std::make_error_code(std::errc::invalid_argument));
@@ -80,18 +81,18 @@ std::expected<void, std::error_code> SendWithFds(int socket,
         iov.iov_base = const_cast<std::byte*>(data.data() + done);
         iov.iov_len = data.size() - done;
 
-        alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(int))> control { };
+        alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(std::int32_t))> control { };
         msghdr msg { };
         msg.msg_iov = &iov;
         msg.msg_iovlen = 1;
         if (done == 0 && !fds.empty()) {
             msg.msg_control = control.data();
-            msg.msg_controllen = CMSG_SPACE(fds.size() * sizeof(int));
+            msg.msg_controllen = CMSG_SPACE(fds.size() * sizeof(std::int32_t));
             cmsghdr* header = CMSG_FIRSTHDR(&msg);
             header->cmsg_level = SOL_SOCKET;
             header->cmsg_type = SCM_RIGHTS;
-            header->cmsg_len = CMSG_LEN(fds.size() * sizeof(int));
-            std::memcpy(CMSG_DATA(header), fds.data(), fds.size() * sizeof(int));
+            header->cmsg_len = CMSG_LEN(fds.size() * sizeof(std::int32_t));
+            std::memcpy(CMSG_DATA(header), fds.data(), fds.size() * sizeof(std::int32_t));
         }
 
         ssize_t sent;
@@ -106,7 +107,7 @@ std::expected<void, std::error_code> SendWithFds(int socket,
     return { };
 }
 
-std::expected<std::size_t, std::error_code> RecvWithFds(int socket,
+std::expected<std::size_t, std::error_code> RecvWithFds(std::int32_t socket,
     std::span<std::byte> data,
     std::vector<UniqueFd>& fds)
 {
@@ -114,7 +115,7 @@ std::expected<std::size_t, std::error_code> RecvWithFds(int socket,
     iov.iov_base = data.data();
     iov.iov_len = data.size();
 
-    alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(int))> control { };
+    alignas(cmsghdr) std::array<char, CMSG_SPACE(kMaxFds * sizeof(std::int32_t))> control { };
     msghdr msg { };
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
@@ -131,9 +132,9 @@ std::expected<std::size_t, std::error_code> RecvWithFds(int socket,
 
     for (cmsghdr* header = CMSG_FIRSTHDR(&msg); header != nullptr; header = CMSG_NXTHDR(&msg, header)) {
         if (header->cmsg_level == SOL_SOCKET && header->cmsg_type == SCM_RIGHTS) {
-            const std::size_t count = (header->cmsg_len - CMSG_LEN(0)) / sizeof(int);
-            int received[kMaxFds];
-            std::memcpy(received, CMSG_DATA(header), count * sizeof(int));
+            const std::size_t count = (header->cmsg_len - CMSG_LEN(0)) / sizeof(std::int32_t);
+            std::int32_t received[kMaxFds];
+            std::memcpy(received, CMSG_DATA(header), count * sizeof(std::int32_t));
             for (std::size_t i = 0; i < count; i++) {
                 fds.emplace_back(received[i]);
             }
@@ -144,7 +145,7 @@ std::expected<std::size_t, std::error_code> RecvWithFds(int socket,
 
 std::expected<UniqueFd, std::error_code> CreateSegment(std::size_t size, const char* name)
 {
-    const int fd = memfd_create(name, MFD_CLOEXEC);
+    const std::int32_t fd = memfd_create(name, MFD_CLOEXEC);
     if (fd < 0) {
         return std::unexpected(LastError());
     }
@@ -155,7 +156,7 @@ std::expected<UniqueFd, std::error_code> CreateSegment(std::size_t size, const c
     return segment;
 }
 
-std::expected<void*, std::error_code> MapSegment(int fd, std::size_t size)
+std::expected<void*, std::error_code> MapSegment(std::int32_t fd, std::size_t size)
 {
     void* address = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (address == MAP_FAILED) {

@@ -21,6 +21,7 @@
 #include "JackNotification.h"
 #include "JackRequest.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -29,7 +30,7 @@ using namespace jackmini;
 
 namespace {
 
-int gFailures = 0;
+std::int32_t gFailures = 0;
 
 #define CHECK(cond)                                                     \
     do {                                                                \
@@ -45,7 +46,7 @@ public:
     std::vector<std::byte> fBytes;
     std::size_t fPos = 0;
 
-    int Read(void* data, int len) override
+    std::int32_t Read(void* data, std::int32_t len) override
     {
         if (fPos + len > fBytes.size()) {
             return -1;
@@ -55,14 +56,14 @@ public:
         return 0;
     }
 
-    int Write(void* data, int len) override
+    std::int32_t Write(void* data, std::int32_t len) override
     {
         const auto* bytes = static_cast<const std::byte*>(data);
         fBytes.insert(fBytes.end(), bytes, bytes + len);
         return 0;
     }
 
-    int WriteWithFds(void* data, int len, std::span<const int> fds) override
+    std::int32_t WriteWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) override
     {
         return Write(data, len);
     }
@@ -182,9 +183,9 @@ void TestSyncReplyEchoesRequest()
             : fWire(wire)
         {
         }
-        int Read(void* data, int len) override { return fWire.Read(data, len); }
-        int Write(void* data, int len) override { return fWire.Write(data, len); }
-        int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) override { return fWire.Read(data, len); }
+        std::int32_t Read(void* data, std::int32_t len) override { return fWire.Read(data, len); }
+        std::int32_t Write(void* data, std::int32_t len) override { return fWire.Write(data, len); }
+        std::int32_t ReadWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) override { return fWire.Read(data, len); }
     } socket(wire);
 
     JackResult back;

@@ -34,20 +34,20 @@ class FakePcmBackend {
 public:
     struct StreamState {
         bool present = false;
-        int channels = 0;
+        std::int32_t channels = 0;
         std::ptrdiff_t avail = 0;
         std::deque<std::ptrdiff_t> avail_script;
-        unsigned short revents = 0;
+        std::uint16_t revents = 0;
         std::size_t contiguous = 0; // 0 means "as much as requested"
         std::vector<std::vector<float>> data;
-        int prepare_result = 0;
-        int start_result = 0;
-        int drop_result = 0;
-        int begin_result = 0;
-        int commit_result = 0;
+        std::int32_t prepare_result = 0;
+        std::int32_t start_result = 0;
+        std::int32_t drop_result = 0;
+        std::int32_t begin_result = 0;
+        std::int32_t commit_result = 0;
     };
 
-    FakePcmBackend(bool capture, int capture_channels, bool playback, int playback_channels,
+    FakePcmBackend(bool capture, std::int32_t capture_channels, bool playback, std::int32_t playback_channels,
         std::size_t buffer_frames)
         : buffer_frames_(buffer_frames)
     {
@@ -70,9 +70,9 @@ public:
     std::size_t capture_channels() const { return static_cast<std::size_t>(capture_.channels); }
     std::size_t playback_channels() const { return static_cast<std::size_t>(playback_.channels); }
 
-    int poll_descriptor_count(Stream) const { return 1; }
+    std::int32_t poll_descriptor_count(Stream) const { return 1; }
 
-    int poll_descriptors(Stream stream, struct pollfd* fds, nfds_t nfds)
+    std::int32_t poll_descriptors(Stream stream, struct pollfd* fds, nfds_t nfds)
     {
         if (nfds == 0) {
             return -1;
@@ -83,7 +83,7 @@ public:
         return 1;
     }
 
-    int poll(struct pollfd*, nfds_t, int timeout)
+    std::int32_t poll(struct pollfd*, nfds_t, std::int32_t timeout)
     {
         log_.push_back("poll:" + std::to_string(timeout));
         if (poll_script_.empty()) {
@@ -96,7 +96,7 @@ public:
     }
 
     // A poll that timed out reports no events, as the kernel does.
-    int poll_revents(Stream stream, struct pollfd*, nfds_t nfds, unsigned short* revents)
+    std::int32_t poll_revents(Stream stream, struct pollfd*, nfds_t nfds, std::uint16_t* revents)
     {
         StreamState& state = stream_state(stream);
         revents_nfds_[stream == Stream::Capture ? 1 : 0] = nfds;
@@ -122,7 +122,7 @@ public:
         return value;
     }
 
-    int begin(Stream stream, MappedFrames& mapped)
+    std::int32_t begin(Stream stream, MappedFrames& mapped)
     {
         StreamState& state = stream_state(stream);
         log_.push_back(std::string("begin:") + name(stream) + ":" + std::to_string(mapped.requested));
@@ -139,7 +139,7 @@ public:
         return 0;
     }
 
-    int commit(Stream stream, std::size_t offset, std::size_t frames)
+    std::int32_t commit(Stream stream, std::size_t offset, std::size_t frames)
     {
         StreamState& state = stream_state(stream);
         log_.push_back(std::string("commit:") + name(stream) + ":" + std::to_string(offset) + ":" + std::to_string(frames));
@@ -153,28 +153,28 @@ public:
         std::fill_n(state.data[channel].begin(), std::min(frames, state.data[channel].size()), 0.0f);
     }
 
-    int prepare(Stream stream)
+    std::int32_t prepare(Stream stream)
     {
         StreamState& state = stream_state(stream);
         log_.push_back(std::string("prepare:") + name(stream));
         return state.prepare_result;
     }
 
-    int start(Stream stream)
+    std::int32_t start(Stream stream)
     {
         StreamState& state = stream_state(stream);
         log_.push_back(std::string("start:") + name(stream));
         return state.start_result;
     }
 
-    int drop(Stream stream)
+    std::int32_t drop(Stream stream)
     {
         StreamState& state = stream_state(stream);
         log_.push_back(std::string("drop:") + name(stream));
         return state.drop_result;
     }
 
-    int status(XrunStatus& out)
+    std::int32_t status(XrunStatus& out)
     {
         log_.push_back("status");
         out = status_;
@@ -187,10 +187,10 @@ public:
     const std::vector<std::string>& log() const { return log_; }
     nfds_t revents_nfds(Stream stream) const { return revents_nfds_[stream == Stream::Capture ? 1 : 0]; }
     void clear_log() { log_.clear(); }
-    void script_poll(int result) { poll_script_.push_back(result); }
-    void set_poll_result(int result) { poll_result_ = result; }
+    void script_poll(std::int32_t result) { poll_script_.push_back(result); }
+    void set_poll_result(std::int32_t result) { poll_result_ = result; }
     void set_status(const XrunStatus& status) { status_ = status; }
-    void set_status_result(int result) { status_result_ = result; }
+    void set_status_result(std::int32_t result) { status_result_ = result; }
     std::size_t buffer_frames() const { return buffer_frames_; }
 
     bool has_call(std::string_view text) const
@@ -218,12 +218,12 @@ private:
     StreamState capture_;
     StreamState playback_;
     std::vector<std::string> log_;
-    std::deque<int> poll_script_;
-    int poll_result_ = 1;
-    int last_poll_ = 1;
+    std::deque<std::int32_t> poll_script_;
+    std::int32_t poll_result_ = 1;
+    std::int32_t last_poll_ = 1;
     nfds_t revents_nfds_[2] = { 0, 0 };
     XrunStatus status_;
-    int status_result_ = 0;
+    std::int32_t status_result_ = 0;
     std::uint64_t now_ = 0;
 };
 

@@ -18,6 +18,7 @@
 
 #include "jackmini/jackmini.hpp"
 
+#include <cstdint>
 #include <cstdio>
 #include <string>
 #include <string_view>
@@ -35,14 +36,14 @@ inline Result<Client> open_client(std::string_view name, std::string_view server
 }
 
 // Prints "<tool>: <message>" to stderr, and returns the exit status a tool gives after an error.
-inline int fail(const char* tool, std::string_view message)
+inline std::int32_t fail(const char* tool, std::string_view message)
 {
-    std::fprintf(stderr, "%s: %.*s\n", tool, static_cast<int>(message.size()), message.data());
+    std::fprintf(stderr, "%s: %.*s\n", tool, static_cast<std::int32_t>(message.size()), message.data());
     return 1;
 }
 
 // The message for a failed call: the error's text, from the client library.
-inline int fail(const char* tool, Error error)
+inline std::int32_t fail(const char* tool, Error error)
 {
     return fail(tool, to_string(error));
 }

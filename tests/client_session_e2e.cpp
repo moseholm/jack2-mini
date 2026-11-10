@@ -21,6 +21,7 @@
 
 #include "jackmini/client.hpp"
 
+#include <cstdint>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -30,7 +31,7 @@
 
 namespace {
 
-int failures = 0;
+std::int32_t failures = 0;
 
 #define CHECK(cond)                                              \
     do {                                                         \
@@ -50,7 +51,7 @@ namespace {
 template <class F>
 bool wait_for(F condition)
 {
-    for (int i = 0; i < 10000; ++i) {
+    for (std::int32_t i = 0; i < 10000; ++i) {
         if (condition()) {
             return true;
         }
@@ -70,7 +71,7 @@ void check_activation(const jackmini::OpenOptions& exact)
         return;
     }
 
-    std::atomic<int> cycles { 0 };
+    std::atomic<std::int32_t> cycles { 0 };
     std::atomic<bool> bad_frames { false };
     (*client)->set_process([&](const jackmini::Cycle& cycle) {
         if (cycle.frames == 0) {
@@ -87,7 +88,7 @@ void check_activation(const jackmini::OpenOptions& exact)
     CHECK((*client)->deactivate().has_value());
     CHECK(!(*client)->is_active());
     // The thread is joined by deactivate, so the count does not change after it returns.
-    const int after_deactivate = cycles.load();
+    const std::int32_t after_deactivate = cycles.load();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     CHECK(cycles.load() == after_deactivate);
 
@@ -105,7 +106,7 @@ void check_activation(const jackmini::OpenOptions& exact)
     auto failing = ClientSession::open("session_fail", exact);
     CHECK(failing.has_value());
     if (failing) {
-        std::atomic<int> calls { 0 };
+        std::atomic<std::int32_t> calls { 0 };
         (*failing)->set_process([&](const jackmini::Cycle&) {
             return calls.fetch_add(1) < 3;
         });
@@ -122,8 +123,8 @@ void check_ports(const jackmini::OpenOptions& exact)
 {
     using jackmini::client::ClientSession;
     constexpr const char* kAudio = "32 bit float mono audio";
-    constexpr unsigned long kOutput = 0x2; // JackPortIsOutput
-    constexpr unsigned long kInput = 0x1; // JackPortIsInput
+    constexpr std::uint64_t kOutput = 0x2; // JackPortIsOutput
+    constexpr std::uint64_t kInput = 0x1; // JackPortIsInput
     constexpr jack_port_id_t kNone = 0;
 
     auto source = ClientSession::open("ports_src", exact);
@@ -201,23 +202,23 @@ void check_buffers(const jackmini::OpenOptions& exact)
     const jack_port_id_t out_port = *out;
     const jack_port_id_t in_port = *in;
 
-    std::atomic<int> sent_frames { 0 };
-    std::atomic<int> received_frames { 0 };
+    std::atomic<std::int32_t> sent_frames { 0 };
+    std::atomic<std::int32_t> received_frames { 0 };
     std::atomic<float> received { 0.0f };
-    std::atomic<int> cycles { 0 };
+    std::atomic<std::int32_t> cycles { 0 };
     out_session.set_process([&](const jackmini::Cycle& cycle) {
         auto* buffer = static_cast<float*>(out_session.port_buffer(out_port, cycle.frames));
         for (jackmini::FrameCount i = 0; buffer && i < cycle.frames; ++i) {
             buffer[i] = 0.5f;
         }
-        sent_frames = static_cast<int>(cycle.frames);
+        sent_frames = static_cast<std::int32_t>(cycle.frames);
         return true;
     });
     in_session.set_process([&](const jackmini::Cycle& cycle) {
         auto* buffer = static_cast<float*>(in_session.port_buffer(in_port, cycle.frames));
         if (buffer) {
             received = buffer[cycle.frames - 1];
-            received_frames = static_cast<int>(cycle.frames);
+            received_frames = static_cast<std::int32_t>(cycle.frames);
         }
         cycles.fetch_add(1);
         return true;
@@ -244,8 +245,8 @@ void check_latency(const jackmini::OpenOptions& exact)
 {
     using jackmini::client::ClientSession;
     constexpr const char* kAudio = "32 bit float mono audio";
-    constexpr unsigned long kOutput = 0x2;
-    constexpr unsigned long kInput = 0x1;
+    constexpr std::uint64_t kOutput = 0x2;
+    constexpr std::uint64_t kInput = 0x1;
 
     auto client = ClientSession::open("lat_test", exact);
     CHECK(client.has_value());
@@ -282,7 +283,7 @@ void check_latency(const jackmini::OpenOptions& exact)
     CHECK(session.port_latency_range(*out_a, kPlayback).max == 0);
 
     // A handler replaces the default: it is called for the mode the server asks about.
-    std::atomic<int> handler_calls { 0 };
+    std::atomic<std::int32_t> handler_calls { 0 };
     session.set_latency_handler([&](jackmini::LatencyMode) { handler_calls.fetch_add(1); });
     CHECK(session.recompute_latencies().has_value());
     CHECK(wait_for([&] { return handler_calls.load() >= 1; }));
@@ -338,10 +339,10 @@ void check_callbacks(const jackmini::OpenOptions& exact)
         return;
     }
     ClientSession& session = **client;
-    std::atomic<int> size_calls { 0 };
-    std::atomic<int> reported_size { 0 };
+    std::atomic<std::int32_t> size_calls { 0 };
+    std::atomic<std::int32_t> reported_size { 0 };
     session.set_buffer_size_handler([&](jackmini::FrameCount frames) {
-        reported_size = static_cast<int>(frames);
+        reported_size = static_cast<std::int32_t>(frames);
         size_calls.fetch_add(1);
         return true;
     });
@@ -366,7 +367,7 @@ int main()
     auto first = ClientSession::open("session_e2e", exact);
     CHECK(first.has_value());
     if (!first) {
-        std::fprintf(stderr, "no server? error %d\n", static_cast<int>(first.error()));
+        std::fprintf(stderr, "no server? error %d\n", static_cast<std::int32_t>(first.error()));
         return 1;
     }
     CHECK((*first)->ref() >= 0);

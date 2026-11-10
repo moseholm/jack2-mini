@@ -129,7 +129,7 @@ protected:
     T fState[3];
     alignas(UInt32) alignas(AtomicArrayCounter) AtomicArrayCounter fCounter;
 
-    UInt32 WriteNextStateStartAux(int state, bool* result)
+    UInt32 WriteNextStateStartAux(std::int32_t state, bool* result)
     {
         AtomicArrayCounter old_val;
         AtomicArrayCounter new_val;
@@ -150,7 +150,7 @@ protected:
         return next_index;
     }
 
-    void WriteNextStateStopAux(int state)
+    void WriteNextStateStopAux(std::int32_t state)
     {
         AtomicArrayCounter old_val;
         AtomicArrayCounter new_val;
@@ -190,7 +190,7 @@ public:
 
     // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
 
-    T* TrySwitchState(int state)
+    T* TrySwitchState(std::int32_t state)
     {
         AtomicArrayCounter old_val;
         AtomicArrayCounter new_val;
@@ -208,7 +208,7 @@ public:
 
     // \brief Tries to switch to the next state and returns the new current state (either the same as before if case of switch failure or the new one)
 
-    T* TrySwitchState(int state, bool* result)
+    T* TrySwitchState(std::int32_t state, bool* result)
     {
         AtomicArrayCounter old_val;
         AtomicArrayCounter new_val;
@@ -226,14 +226,14 @@ public:
 
     // \brief Start write operation : setup and returns the next state to update, check for recursive write calls.
 
-    T* WriteNextStateStart(int state)
+    T* WriteNextStateStart(std::int32_t state)
     {
         bool tmp;
         UInt32 index = WriteNextStateStartAux(state, &tmp);
         return &fState[index];
     }
 
-    T* WriteNextStateStart(int state, bool* result)
+    T* WriteNextStateStart(std::int32_t state, bool* result)
     {
         UInt32 index = WriteNextStateStartAux(state, result);
         return &fState[index];
@@ -241,7 +241,7 @@ public:
 
     // \brief Stop write operation : make the next state ready to be used by the RT thread
 
-    void WriteNextStateStop(int state)
+    void WriteNextStateStop(std::int32_t state)
     {
         WriteNextStateStopAux(state);
     }

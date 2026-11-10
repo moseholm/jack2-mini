@@ -1,3 +1,5 @@
+#include <cstdint>
+
 // Copyright (C) 2001 Paul Davis
 // Copyright (C) 2004-2008 Grame
 //
@@ -24,7 +26,7 @@ namespace jackmini {
 
 // When used in "master" mode
 
-int JackFreewheelDriver::Process()
+std::int32_t JackFreewheelDriver::Process()
 {
     jack_log("JackFreewheelDriver::Process master %lld", fEngineControl->fTimeOutUsecs);
     JackDriver::CycleTakeBeginTime();
@@ -50,7 +52,7 @@ int JackFreewheelDriver::Process()
 
 // When used in "slave" mode
 
-int JackFreewheelDriver::ProcessReadSync()
+std::int32_t JackFreewheelDriver::ProcessReadSync()
 {
     // Resume connected clients in the graph
     if (!ResumeRefNum()) { // Signal all clients
@@ -60,7 +62,7 @@ int JackFreewheelDriver::ProcessReadSync()
     return 0;
 }
 
-int JackFreewheelDriver::ProcessWriteSync()
+std::int32_t JackFreewheelDriver::ProcessWriteSync()
 {
     // Generic "SuspendRefNum" here
     if (!JackDriver::SuspendRefNum()) {
@@ -70,7 +72,7 @@ int JackFreewheelDriver::ProcessWriteSync()
     return 0;
 }
 
-int JackFreewheelDriver::ProcessReadAsync()
+std::int32_t JackFreewheelDriver::ProcessReadAsync()
 {
     // Resume connected clients in the graph
     if (!ResumeRefNum()) { // Signal all clients
@@ -80,7 +82,7 @@ int JackFreewheelDriver::ProcessReadAsync()
     return 0;
 }
 
-int JackFreewheelDriver::ProcessWriteAsync()
+std::int32_t JackFreewheelDriver::ProcessWriteAsync()
 {
     return 0;
 }

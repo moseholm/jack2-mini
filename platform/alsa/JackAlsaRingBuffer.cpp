@@ -24,7 +24,7 @@
 
 namespace jackmini {
 
-JackAlsaRingBuffer::JackAlsaRingBuffer(int channels, jack_nframes_t capacity)
+JackAlsaRingBuffer::JackAlsaRingBuffer(std::int32_t channels, jack_nframes_t capacity)
     : fChannels(0)
     , fCapacity(0)
     , fMask(0)
@@ -43,7 +43,7 @@ JackAlsaRingBuffer::~JackAlsaRingBuffer()
 void JackAlsaRingBuffer::Free()
 {
     if (fData) {
-        for (int i = 0; i < fChannels; i++) {
+        for (std::int32_t i = 0; i < fChannels; i++) {
             delete[] fData[i];
         }
         delete[] fData;
@@ -54,7 +54,7 @@ void JackAlsaRingBuffer::Free()
     fMask = 0;
 }
 
-bool JackAlsaRingBuffer::Init(int channels, jack_nframes_t capacity)
+bool JackAlsaRingBuffer::Init(std::int32_t channels, jack_nframes_t capacity)
 {
     Free();
 
@@ -62,7 +62,7 @@ bool JackAlsaRingBuffer::Init(int channels, jack_nframes_t capacity)
         return false;
     }
 
-    const uint64_t rounded = std::bit_ceil(static_cast<uint64_t>(capacity));
+    const std::uint64_t rounded = std::bit_ceil(static_cast<std::uint64_t>(capacity));
     if (rounded > UINT_MAX) {
         return false;
     }
@@ -71,7 +71,7 @@ bool JackAlsaRingBuffer::Init(int channels, jack_nframes_t capacity)
     fCapacity = static_cast<jack_nframes_t>(rounded);
     fMask = rounded - 1;
     fData = new float*[channels];
-    for (int i = 0; i < channels; i++) {
+    for (std::int32_t i = 0; i < channels; i++) {
         fData[i] = new float[fCapacity];
         std::memset(fData[i], 0, sizeof(float) * fCapacity);
     }
@@ -92,7 +92,7 @@ bool JackAlsaRingBuffer::LockMemory() const noexcept
     }
 
     bool locked = mlock(fData, sizeof(float*) * fChannels) == 0;
-    for (int i = 0; i < fChannels; i++) {
+    for (std::int32_t i = 0; i < fChannels; i++) {
         if (fData[i] != nullptr) {
             locked = (mlock(fData[i], sizeof(float) * fCapacity) == 0) && locked;
         }
@@ -102,9 +102,9 @@ bool JackAlsaRingBuffer::LockMemory() const noexcept
 
 jack_nframes_t JackAlsaRingBuffer::AvailableRead() const noexcept
 {
-    const uint64_t write = fWritePos.load(std::memory_order_acquire);
-    const uint64_t read = fReadPos.load(std::memory_order_relaxed);
-    uint64_t avail = write - read;
+    const std::uint64_t write = fWritePos.load(std::memory_order_acquire);
+    const std::uint64_t read = fReadPos.load(std::memory_order_relaxed);
+    std::uint64_t avail = write - read;
     if (avail > fCapacity) [[unlikely]] {
         avail = fCapacity;
     }
@@ -118,9 +118,9 @@ jack_nframes_t JackAlsaRingBuffer::AvailableWrite() const noexcept
 
 jack_nframes_t JackAlsaRingBuffer::Write(const float* const* src, jack_nframes_t nframes) noexcept
 {
-    const uint64_t write = fWritePos.load(std::memory_order_relaxed);
-    const uint64_t read = fReadPos.load(std::memory_order_acquire);
-    const uint64_t free_frames = fCapacity - (write - read);
+    const std::uint64_t write = fWritePos.load(std::memory_order_relaxed);
+    const std::uint64_t read = fReadPos.load(std::memory_order_acquire);
+    const std::uint64_t free_frames = fCapacity - (write - read);
 
     if (nframes > free_frames) [[unlikely]] {
         nframes = static_cast<jack_nframes_t>(free_frames);
@@ -129,14 +129,14 @@ jack_nframes_t JackAlsaRingBuffer::Write(const float* const* src, jack_nframes_t
         return 0;
     }
 
-    const uint64_t offset = write & fMask;
-    uint64_t first = fCapacity - offset;
+    const std::uint64_t offset = write & fMask;
+    std::uint64_t first = fCapacity - offset;
     if (first > nframes) {
         first = nframes;
     }
-    const uint64_t second = nframes - first;
+    const std::uint64_t second = nframes - first;
 
-    for (int ch = 0; ch < fChannels; ch++) {
+    for (std::int32_t ch = 0; ch < fChannels; ch++) {
         std::memcpy(fData[ch] + offset, src[ch], sizeof(float) * first);
         if (second) [[unlikely]] {
             std::memcpy(fData[ch], src[ch] + first, sizeof(float) * second);
@@ -149,9 +149,9 @@ jack_nframes_t JackAlsaRingBuffer::Write(const float* const* src, jack_nframes_t
 
 jack_nframes_t JackAlsaRingBuffer::Read(float* const* dst, jack_nframes_t nframes) noexcept
 {
-    const uint64_t write = fWritePos.load(std::memory_order_acquire);
-    const uint64_t read = fReadPos.load(std::memory_order_relaxed);
-    uint64_t avail = write - read;
+    const std::uint64_t write = fWritePos.load(std::memory_order_acquire);
+    const std::uint64_t read = fReadPos.load(std::memory_order_relaxed);
+    std::uint64_t avail = write - read;
 
     if (avail > fCapacity) [[unlikely]] {
         avail = fCapacity;
@@ -161,14 +161,14 @@ jack_nframes_t JackAlsaRingBuffer::Read(float* const* dst, jack_nframes_t nframe
     const jack_nframes_t to_read = std::min(nframes, available);
 
     if (to_read) {
-        const uint64_t offset = read & fMask;
-        uint64_t first = fCapacity - offset;
+        const std::uint64_t offset = read & fMask;
+        std::uint64_t first = fCapacity - offset;
         if (first > to_read) {
             first = to_read;
         }
-        const uint64_t second = to_read - first;
+        const std::uint64_t second = to_read - first;
 
-        for (int ch = 0; ch < fChannels; ch++) {
+        for (std::int32_t ch = 0; ch < fChannels; ch++) {
             std::memcpy(dst[ch], fData[ch] + offset, sizeof(float) * first);
             if (second) [[unlikely]] {
                 std::memcpy(dst[ch] + first, fData[ch], sizeof(float) * second);
@@ -179,7 +179,7 @@ jack_nframes_t JackAlsaRingBuffer::Read(float* const* dst, jack_nframes_t nframe
     }
 
     if (to_read < nframes) [[unlikely]] {
-        for (int ch = 0; ch < fChannels; ch++) {
+        for (std::int32_t ch = 0; ch < fChannels; ch++) {
             std::memset(dst[ch] + to_read, 0, sizeof(float) * (nframes - to_read));
         }
     }

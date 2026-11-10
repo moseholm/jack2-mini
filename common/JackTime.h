@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "JackCompilerDeps.h"
 #include "JackTypes.h"
 
@@ -25,7 +27,7 @@ namespace jackmini {
 SERVER_EXPORT void init_time();
 SERVER_EXPORT void end_time();
 SERVER_EXPORT jack_time_t get_microseconds();
-SERVER_EXPORT void sleep_microseconds(long usec);
+SERVER_EXPORT void sleep_microseconds(std::int64_t usec);
 
 void set_clock_source(jack_timer_type_t source);
 const char* clock_source_name(jack_timer_type_t source);

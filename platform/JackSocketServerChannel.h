@@ -20,6 +20,7 @@
 #include "JackRequestDecoder.h"
 #include "JackSocket.h"
 
+#include <cstdint>
 #include <poll.h>
 #include <map>
 #include <memory>
@@ -41,17 +42,17 @@ private:
 
     std::vector<pollfd> fPollTable;
     bool fRebuild;
-    std::map<int, std::pair<int, JackClientSocket*>> fSocketTable;
+    std::map<std::int32_t, std::pair<std::int32_t, JackClientSocket*>> fSocketTable;
 
     void BuildPoolTable();
 
     void ClientCreate();
-    void ClientKill(int fd);
+    void ClientKill(std::int32_t fd);
 
     void ClientAdd(detail::JackChannelTransactionInterface* socket, JackClientOpenRequest* req, JackClientOpenResult* res);
-    void ClientRemove(detail::JackChannelTransactionInterface* socket, int refnum);
+    void ClientRemove(detail::JackChannelTransactionInterface* socket, std::int32_t refnum);
 
-    int GetFd(JackClientSocket* socket);
+    std::int32_t GetFd(JackClientSocket* socket);
 
 public:
     JackSocketServerChannel();

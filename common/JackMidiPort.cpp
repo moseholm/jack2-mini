@@ -19,6 +19,7 @@
 #include "JackMidiPort.h"
 #include "JackError.h"
 #include "JackPortType.h"
+#include <cstdint>
 #include <assert.h>
 #include <string.h>
 
@@ -86,7 +87,7 @@ void MidiBufferInit(void* buffer, size_t buffer_size, jack_nframes_t nframes)
 // So, let's listen to D.Knuth about premature optimisation, a leave the current
 // implementation as is, until it is proved to be a bottleneck.
 // Dmitry Baikov.
-static void MidiBufferMixdown(void* mixbuffer, void** src_buffers, int src_count, jack_nframes_t nframes)
+static void MidiBufferMixdown(void* mixbuffer, void** src_buffers, std::int32_t src_count, jack_nframes_t nframes)
 {
     JackMidiBuffer* mix = static_cast<JackMidiBuffer*>(mixbuffer);
     if (!mix->IsValid()) {
@@ -95,9 +96,9 @@ static void MidiBufferMixdown(void* mixbuffer, void** src_buffers, int src_count
     }
     mix->Reset(nframes);
 
-    uint32_t mix_index[src_count];
-    int event_count = 0;
-    for (int i = 0; i < src_count; ++i) {
+    std::uint32_t mix_index[src_count];
+    std::int32_t event_count = 0;
+    for (std::int32_t i = 0; i < src_count; ++i) {
         JackMidiBuffer* buf = static_cast<JackMidiBuffer*>(src_buffers[i]);
         if (!buf->IsValid()) {
             jack_error("jackmini::MidiBufferMixdown - invalid source buffer");
@@ -108,14 +109,14 @@ static void MidiBufferMixdown(void* mixbuffer, void** src_buffers, int src_count
         mix->lost_events += buf->lost_events;
     }
 
-    int events_done;
+    std::int32_t events_done;
     for (events_done = 0; events_done < event_count; ++events_done) {
         JackMidiBuffer* next_buf = 0;
         JackMidiEvent* next_event = 0;
-        uint32_t next_buf_index = 0;
+        std::uint32_t next_buf_index = 0;
 
         // find the earliest event
-        for (int i = 0; i < src_count; ++i) {
+        for (std::int32_t i = 0; i < src_count; ++i) {
             JackMidiBuffer* buf = static_cast<JackMidiBuffer*>(src_buffers[i]);
             if (mix_index[i] >= buf->event_count)
                 continue;

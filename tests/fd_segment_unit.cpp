@@ -28,8 +28,8 @@
 
 namespace {
 
-int g_failures = 0;
-int g_checks = 0;
+std::int32_t g_failures = 0;
+std::int32_t g_checks = 0;
 
 #define CHECK(cond)                                                                       \
     do {                                                                                  \
@@ -42,9 +42,9 @@ int g_checks = 0;
 
 using namespace jackmini;
 
-void SocketPair(int (&pair)[2])
+void SocketPair(std::int32_t (&pair)[2])
 {
-    const int rc = socketpair(AF_UNIX, SOCK_SEQPACKET, 0, pair);
+    const std::int32_t rc = socketpair(AF_UNIX, SOCK_SEQPACKET, 0, pair);
     if (rc != 0) {
         std::perror("socketpair");
         std::exit(1);
@@ -91,11 +91,11 @@ void TestDescriptorArrivesAndMapsToSameMemory()
         words[i] = 0x1000 + i;
     }
 
-    int pair[2];
+    std::int32_t pair[2];
     SocketPair(pair);
 
     const std::array<std::byte, 5> message { std::byte { 'h' }, std::byte { 'e' }, std::byte { 'l' }, std::byte { 'l' }, std::byte { 'o' } };
-    const std::array<int, 1> fds { segment->get() };
+    const std::array<std::int32_t, 1> fds { segment->get() };
     CHECK(SendWithFds(pair[0], message, fds).has_value());
 
     std::array<std::byte, 16> got { };
@@ -126,7 +126,7 @@ void TestDescriptorArrivesAndMapsToSameMemory()
 
 void TestClosedPeerReadsZero()
 {
-    int pair[2];
+    std::int32_t pair[2];
     SocketPair(pair);
     close(pair[0]);
     std::array<std::byte, 8> buf { };
@@ -138,9 +138,9 @@ void TestClosedPeerReadsZero()
 
 void TestTooManyDescriptorsRejected()
 {
-    int pair[2];
+    std::int32_t pair[2];
     SocketPair(pair);
-    std::array<int, 9> fds { };
+    std::array<std::int32_t, 9> fds { };
     for (auto& fd : fds)
         fd = pair[0];
     const std::array<std::byte, 1> one { std::byte { 1 } };
@@ -152,9 +152,9 @@ void TestTooManyDescriptorsRejected()
 
 void TestUniqueFdClosesOnDestruction()
 {
-    int pair[2];
+    std::int32_t pair[2];
     SocketPair(pair);
-    int raw = pair[0];
+    std::int32_t raw = pair[0];
     {
         UniqueFd owned(raw);
         CHECK(owned.valid());

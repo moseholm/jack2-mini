@@ -60,8 +60,8 @@ inline JackMsgHeader MakeJackMsgHeader(std::uint16_t type, std::uint32_t length,
 }
 
 // Sends a header and its payload together, with the descriptors (if any) in the same message.
-inline int SendJackMessage(detail::JackChannelTransactionInterface* trans, const JackMsgHeader& header,
-    const void* payload, std::uint32_t length, std::span<const int> fds = { })
+inline std::int32_t SendJackMessage(detail::JackChannelTransactionInterface* trans, const JackMsgHeader& header,
+    const void* payload, std::uint32_t length, std::span<const std::int32_t> fds = { })
 {
     if (length > kJackMsgMaxPayload) {
         return -1;
@@ -71,11 +71,11 @@ inline int SendJackMessage(detail::JackChannelTransactionInterface* trans, const
     if (length != 0) {
         std::memcpy(frame.data() + sizeof(JackMsgHeader), payload, length);
     }
-    return trans->WriteWithFds(frame.data(), static_cast<int>(sizeof(JackMsgHeader) + length), fds);
+    return trans->WriteWithFds(frame.data(), static_cast<std::int32_t>(sizeof(JackMsgHeader) + length), fds);
 }
 
 // Reads a header.  A header without the magic number is not one of ours, and the read fails.
-inline int ReadJackMsgHeader(detail::JackChannelTransactionInterface* trans, JackMsgHeader& header)
+inline std::int32_t ReadJackMsgHeader(detail::JackChannelTransactionInterface* trans, JackMsgHeader& header)
 {
     if (trans->Read(&header, sizeof(JackMsgHeader)) < 0) {
         return -1;
@@ -87,21 +87,21 @@ inline int ReadJackMsgHeader(detail::JackChannelTransactionInterface* trans, Jac
 class JackPayloadWriter : public detail::JackChannelTransactionInterface {
 public:
     std::vector<std::byte> fData;
-    std::vector<int> fFds;
+    std::vector<std::int32_t> fFds;
 
-    int Read(void* data, int len) override
+    std::int32_t Read(void* data, std::int32_t len) override
     {
         return -1;
     }
 
-    int Write(void* data, int len) override
+    std::int32_t Write(void* data, std::int32_t len) override
     {
         const auto* bytes = static_cast<const std::byte*>(data);
         fData.insert(fData.end(), bytes, bytes + len);
         return 0;
     }
 
-    int WriteWithFds(void* data, int len, std::span<const int> fds) override
+    std::int32_t WriteWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) override
     {
         fFds.insert(fFds.end(), fds.begin(), fds.end());
         return Write(data, len);
@@ -120,22 +120,22 @@ public:
     {
     }
 
-    int Read(void* data, int len) override
+    std::int32_t Read(void* data, std::int32_t len) override
     {
         if (static_cast<std::uint32_t>(len) > fRemaining) {
             return -1;
         }
-        const int res = fSocket->Read(data, len);
+        const std::int32_t res = fSocket->Read(data, len);
         fRemaining -= static_cast<std::uint32_t>(len);
         return res;
     }
 
-    int Write(void* data, int len) override
+    std::int32_t Write(void* data, std::int32_t len) override
     {
         return -1;
     }
 
-    int ReadWithFds(void* data, int len, std::vector<UniqueFd>& fds) override
+    std::int32_t ReadWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) override
     {
         fds = std::move(fFds);
         fFds.clear();

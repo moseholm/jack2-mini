@@ -1,3 +1,5 @@
+#include <cstdint>
+
 // Copyright (C) 2004-2008 Grame
 //
 // This program is free software; you can redistribute it and/or modify
@@ -42,7 +44,7 @@ void JackSocketServerNotifyChannel::Close()
 // Can the write operation block?
 // A non blocking write operation should be used : check if write can succeed, and ignore the notification otherwise
 // (since its mainly used for XRun, ignoring a notification is OK, successive XRun will come...)
-void JackSocketServerNotifyChannel::Notify(int refnum, int notify, int value)
+void JackSocketServerNotifyChannel::Notify(std::int32_t refnum, std::int32_t notify, std::int32_t value)
 {
     JackClientNotificationRequest req(refnum, notify, value);
     if (req.Write(&fRequestSocket) < 0) {

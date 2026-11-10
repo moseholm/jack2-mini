@@ -48,7 +48,7 @@ std::atomic<bool> gStop { false };
 std::atomic<std::uint64_t> gTooLarge { 0 };
 std::atomic<std::uint64_t> gRingFull { 0 };
 
-void on_signal(int)
+void on_signal(std::int32_t)
 {
     gStop.store(true);
 }
@@ -96,10 +96,10 @@ void describe(const Message& m)
 
 } // namespace
 
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
     std::string server;
-    int time_format = 0; // 0: frame in the cycle, 1: absolute, 2: relative
+    std::int32_t time_format = 0; // 0: frame in the cycle, 1: absolute, 2: relative
     static const char kShortOptions[] = "arhs:v";
     static const struct option kLongOptions[] = {
         { "server", required_argument, nullptr, 's' },
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
         { nullptr, 0, nullptr, 0 },
     };
 
-    int c;
+    std::int32_t c;
     while ((c = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
         switch (c) {
         case 'a':

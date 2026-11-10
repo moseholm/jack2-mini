@@ -25,6 +25,7 @@
 #include "JackRequestDecoder.h"
 #include "JackSocket.h"
 
+#include <cstdint>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cstdio>
@@ -36,7 +37,7 @@ using namespace jackmini;
 
 namespace {
 
-int gFailures = 0;
+std::int32_t gFailures = 0;
 
 #define CHECK(cond)                                                     \
     do {                                                                \
@@ -48,7 +49,7 @@ int gFailures = 0;
 
 // A connected pair of stream sockets, closed on destruction.
 struct SocketPair {
-    int fd[2] = { -1, -1 };
+    std::int32_t fd[2] = { -1, -1 };
 
     SocketPair()
     {
@@ -68,7 +69,7 @@ struct SocketPair {
 // so the test can check what the client's request carried.
 class FakeServer {
 public:
-    explicit FakeServer(int fd)
+    explicit FakeServer(std::int32_t fd)
         : fSocket(fd)
     {
     }
@@ -86,11 +87,11 @@ public:
     }
 
     jack_nframes_t fBufferSize = 0;
-    int fClosedRefNum = -1;
+    std::int32_t fClosedRefNum = -1;
     jack_port_id_t fRenamedPort = NO_PORT;
     std::string fRenamedTo;
     std::string fUUIDFor;
-    int fRequestsServed = 0;
+    std::int32_t fRequestsServed = 0;
 
 private:
     JackClientSocket fSocket;

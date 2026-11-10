@@ -21,6 +21,7 @@
 #include "JackPort.h"
 #include "JackShmMem.h"
 #include "JackSynchro.h"
+#include <cstdint>
 #include <atomic>
 
 namespace jackmini {
@@ -34,13 +35,13 @@ struct JackClientControl : public JackShmMemAble {
     volatile jack_transport_state_t fTransportState;
     std::atomic<bool> fTransportSync;  // Will be true when slow-sync cb has to be called
     std::atomic<bool> fTransportTimebase;  // Will be true when timebase cb is called with new_pos on
-    int fRefNum;
-    int fPID;
+    std::int32_t fRefNum;
+    std::int32_t fPID;
     bool fActive;
 
     jack_uuid_t fSessionID;
 
-    JackClientControl(const char* name, int pid, int refnum, jack_uuid_t uuid)
+    JackClientControl(const char* name, std::int32_t pid, std::int32_t refnum, jack_uuid_t uuid)
     {
         Init(name, pid, refnum, uuid);
     }
@@ -55,10 +56,10 @@ struct JackClientControl : public JackShmMemAble {
         Init("", 0, -1, JACK_UUID_EMPTY_INITIALIZER);
     }
 
-    void Init(const char* name, int pid, int refnum, jack_uuid_t uuid)
+    void Init(const char* name, std::int32_t pid, std::int32_t refnum, jack_uuid_t uuid)
     {
         strcpy(fName, name);
-        for (int i = 0; i < kMaxNotification; i++) {
+        for (std::int32_t i = 0; i < kMaxNotification; i++) {
             fCallback[i] = false;
         }
         // Always activated

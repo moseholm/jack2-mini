@@ -27,8 +27,8 @@
 
 namespace {
 
-int g_failures = 0;
-int g_checks = 0;
+std::int32_t g_failures = 0;
+std::int32_t g_checks = 0;
 
 #define CHECK(cond)                                                                       \
     do {                                                                                  \
@@ -43,18 +43,18 @@ using jackmini::RingBuffer;
 
 void TestRingCapacity()
 {
-    CHECK(RingBuffer<int>(0).capacity() == 2);
-    CHECK(RingBuffer<int>(5).capacity() == 8);
-    CHECK(RingBuffer<int>(8).capacity() == 8);
+    CHECK(RingBuffer<std::int32_t>(0).capacity() == 2);
+    CHECK(RingBuffer<std::int32_t>(5).capacity() == 8);
+    CHECK(RingBuffer<std::int32_t>(8).capacity() == 8);
 }
 
 void TestRingSingleThread()
 {
-    RingBuffer<int> ring(4);
+    RingBuffer<std::int32_t> ring(4);
     CHECK(ring.read_space() == 0);
     CHECK(ring.write_space() == 4);
 
-    const std::array<int, 3> in { 1, 2, 3 };
+    const std::array<std::int32_t, 3> in { 1, 2, 3 };
     CHECK(ring.write(in) == 3);
     CHECK(ring.read_space() == 3);
 
@@ -62,16 +62,16 @@ void TestRingSingleThread()
     CHECK(ring.write(in) == 1);
     CHECK(ring.write_space() == 0);
 
-    std::array<int, 8> out { };
+    std::array<std::int32_t, 8> out { };
     CHECK(ring.read(out) == 4);
     CHECK(out[0] == 1 && out[1] == 2 && out[2] == 3 && out[3] == 1);
     CHECK(ring.read(out) == 0);
 
     // Indices wrap around the storage many times.
-    for (int round = 0; round < 1000; round++) {
-        const std::array<int, 2> pair { round, round + 1 };
+    for (std::int32_t round = 0; round < 1000; round++) {
+        const std::array<std::int32_t, 2> pair { round, round + 1 };
         CHECK(ring.write(pair) == 2);
-        std::array<int, 2> got { };
+        std::array<std::int32_t, 2> got { };
         CHECK(ring.read(got) == 2);
         CHECK(got == pair);
     }

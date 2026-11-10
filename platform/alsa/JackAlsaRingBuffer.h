@@ -17,6 +17,7 @@
 #pragma once
 
 #include "types.h"
+#include <cstdint>
 #include <atomic>
 #include <cstddef>
 
@@ -41,13 +42,13 @@ private:
     // builds), and every target we ship has 64-byte cache lines.
     static constexpr std::size_t kCacheLine = 64;
 
-    int fChannels;
+    std::int32_t fChannels;
     jack_nframes_t fCapacity;
-    uint64_t fMask;
+    std::uint64_t fMask;
     float** fData;
 
-    alignas(kCacheLine) std::atomic<uint64_t> fReadPos;
-    alignas(kCacheLine) std::atomic<uint64_t> fWritePos;
+    alignas(kCacheLine) std::atomic<std::uint64_t> fReadPos;
+    alignas(kCacheLine) std::atomic<std::uint64_t> fWritePos;
 
     JackAlsaRingBuffer(const JackAlsaRingBuffer&);
     JackAlsaRingBuffer& operator=(const JackAlsaRingBuffer&);
@@ -55,17 +56,17 @@ private:
     void Free();
 
 public:
-    JackAlsaRingBuffer(int channels, jack_nframes_t capacity);
+    JackAlsaRingBuffer(std::int32_t channels, jack_nframes_t capacity);
     ~JackAlsaRingBuffer();
 
-    bool Init(int channels, jack_nframes_t capacity);
+    bool Init(std::int32_t channels, jack_nframes_t capacity);
     void Reset() noexcept;
 
     // Best-effort mlock() of the sample storage.  Returns false when any
     // page could not be locked; the ring remains usable either way.
     bool LockMemory() const noexcept;
 
-    int Channels() const noexcept { return fChannels; }
+    std::int32_t Channels() const noexcept { return fChannels; }
     jack_nframes_t Capacity() const noexcept { return fCapacity; }
     jack_nframes_t AvailableRead() const noexcept;
     jack_nframes_t AvailableWrite() const noexcept;

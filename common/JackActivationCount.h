@@ -56,7 +56,7 @@ public:
     // Decrements the live counter; signals the client when it reaches zero.
     static bool Signal(std::atomic<SInt32>& live, JackSynchro* synchro, JackClientControl* control);
 
-    inline void SetValue(int val)
+    inline void SetValue(std::int32_t val)
     {
         std::atomic_ref<SInt32>(*CountPtr()).store(val);
     }
@@ -68,7 +68,7 @@ public:
     {
         std::atomic_ref<SInt32>(*CountPtr()).fetch_sub(1);
     }
-    inline int GetCount() const
+    inline std::int32_t GetCount() const
     {
         return std::atomic_ref<SInt32>(*const_cast<JackActivationCount*>(this)->CountPtr()).load();
     }

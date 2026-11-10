@@ -21,12 +21,13 @@
 
 #pragma once
 
+#include <cstdint>
 #include <jack/systemdeps.h>
 #include <stdlib.h>
 
 typedef struct _JSList JSList;
 
-typedef int (*JCompareFunc)(void* a, void* b);
+typedef std::int32_t (*JCompareFunc)(void* a, void* b);
 struct _JSList {
     void* data;
     JSList* next;
@@ -148,10 +149,10 @@ jack_slist_remove(JSList* list,
     return list;
 }
 
-static __inline__ unsigned int
+static __inline__ std::uint32_t
 jack_slist_length(JSList* list)
 {
-    unsigned int length;
+    std::uint32_t length;
 
     length = 0;
     while (list) {

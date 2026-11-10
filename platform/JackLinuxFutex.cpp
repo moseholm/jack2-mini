@@ -21,6 +21,7 @@
 #include "JackError.h"
 #include "JackTools.h"
 #include "promiscuous.hpp"
+#include <cstdint>
 #include <fcntl.h>
 #include <linux/futex.h>
 #include <stdio.h>
@@ -46,7 +47,7 @@ JackLinuxFutex::JackLinuxFutex()
     fPromiscuousGid = jackmini::group_to_gid(promiscuous);
 }
 
-void JackLinuxFutex::BuildName(const char* client_name, const char* server_name, char* res, int size)
+void JackLinuxFutex::BuildName(const char* client_name, const char* server_name, char* res, std::int32_t size)
 {
     std::array<char, SYNC_MAX_NAME_SIZE + 1> ext_client_name { };
     JackTools::RewriteName(client_name, ext_client_name.data());
@@ -95,7 +96,7 @@ bool JackLinuxFutex::Wait()
         fFutex->internal = !fFutex->internal;
     }
 
-    const int wait_mode = fFutex->internal ? FUTEX_WAIT_PRIVATE : FUTEX_WAIT;
+    const std::int32_t wait_mode = fFutex->internal ? FUTEX_WAIT_PRIVATE : FUTEX_WAIT;
 
     for (;;) {
         if (__sync_bool_compare_and_swap(&fFutex->futex, 1, 0))
@@ -107,7 +108,7 @@ bool JackLinuxFutex::Wait()
     }
 }
 
-bool JackLinuxFutex::TimedWait(long usec)
+bool JackLinuxFutex::TimedWait(std::int64_t usec)
 {
     if (usec == LONG_MAX)
         return Wait();
@@ -123,10 +124,10 @@ bool JackLinuxFutex::TimedWait(long usec)
     }
 
     const uint secs = usec / 1000000;
-    const int nsecs = (usec % 1000000) * 1000;
+    const std::int32_t nsecs = (usec % 1000000) * 1000;
 
     const timespec timeout = { static_cast<time_t>(secs), nsecs };
-    const int wait_mode = fFutex->internal ? FUTEX_WAIT_PRIVATE : FUTEX_WAIT;
+    const std::int32_t wait_mode = fFutex->internal ? FUTEX_WAIT_PRIVATE : FUTEX_WAIT;
 
     for (;;) {
         if (__sync_bool_compare_and_swap(&fFutex->futex, 1, 0))
@@ -139,7 +140,7 @@ bool JackLinuxFutex::TimedWait(long usec)
 }
 
 // Server side : publish the futex in the global namespace
-bool JackLinuxFutex::Allocate(const char* name, const char* server_name, int value, bool internal)
+bool JackLinuxFutex::Allocate(const char* name, const char* server_name, std::int32_t value, bool internal)
 {
     BuildName(name, server_name, fName, sizeof(fName));
     jack_log("JackLinuxFutex::Allocate name = %s val = %ld", fName, value);

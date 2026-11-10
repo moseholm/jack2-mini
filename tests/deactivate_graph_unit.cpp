@@ -25,17 +25,18 @@
 #include "JackGraphManager.h"
 #include "JackSynchro.h"
 
+#include <cstdint>
 #include <cstdio>
 
 using namespace jackmini;
 
 namespace {
 
-constexpr int kSourceRef = 2;
-constexpr int kSinkRef = 3;
+constexpr std::int32_t kSourceRef = 2;
+constexpr std::int32_t kSinkRef = 3;
 constexpr jack_nframes_t kFrames = 64;
 
-int gFailures = 0;
+std::int32_t gFailures = 0;
 
 // The same object as a JackGraphManager, with the connection steps of JackGraphManager::Connect for a loop-free
 // connection.  It adds no members, so the layout is the same.

@@ -19,6 +19,7 @@
 
 #include "JackCompilerDeps.h"
 #include "JackSynchro.h"
+#include <cstdint>
 #include <stddef.h>
 
 namespace jackmini {
@@ -35,21 +36,21 @@ class SERVER_EXPORT JackLinuxFutex : public detail::JackSynchro {
 
 private:
     struct FutexData {
-        int futex; // futex, needs to be 1st member
+        std::int32_t futex; // futex, needs to be 1st member
         bool internal; // current internal state
         bool wasInternal; // initial internal state, only changes in allocate
         bool needsChange; // change state on next wait call
-        int externalCount; // how many external clients have connected
+        std::int32_t externalCount; // how many external clients have connected
     };
 
-    int fSharedMem;
+    std::int32_t fSharedMem;
     FutexData* fFutex;
     bool fPrivate;
     bool fPromiscuous;
-    int fPromiscuousGid;
+    std::int32_t fPromiscuousGid;
 
 protected:
-    void BuildName(const char* name, const char* server_name, char* res, int size);
+    void BuildName(const char* name, const char* server_name, char* res, std::int32_t size);
 
 public:
     JackLinuxFutex();
@@ -57,9 +58,9 @@ public:
     bool Signal();
     bool SignalAll();
     bool Wait();
-    bool TimedWait(long usec);
+    bool TimedWait(std::int64_t usec);
 
-    bool Allocate(const char* name, const char* server_name, int value, bool internal = false);
+    bool Allocate(const char* name, const char* server_name, std::int32_t value, bool internal = false);
     bool Connect(const char* name, const char* server_name);
     bool ConnectInput(const char* name, const char* server_name);
     bool ConnectOutput(const char* name, const char* server_name);

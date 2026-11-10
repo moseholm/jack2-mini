@@ -1,3 +1,5 @@
+#include <cstdint>
+
 // Copyright (C) 2001-2003 Paul Davis
 // Copyright (C) 2004-2008 Grame
 //
@@ -32,15 +34,15 @@ JackExternalClient::~JackExternalClient()
 {
 }
 
-int JackExternalClient::ClientNotify(int refnum, const char* name, int notify, int sync, const char* message, int value1, int value2)
+std::int32_t JackExternalClient::ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2)
 {
-    int result = -1;
+    std::int32_t result = -1;
     jack_log("JackExternalClient::ClientNotify ref = %ld client = %s name = %s notify = %ld", refnum, fClientControl->fName, name, notify);
     fChannel.ClientNotify(refnum, name, notify, sync, message, value1, value2, &result);
     return result;
 }
 
-Result<void> JackExternalClient::OpenClient(const char* name, int pid, int refnum, jack_uuid_t uuid, JackShmSegment* shared_client)
+Result<void> JackExternalClient::OpenClient(const char* name, std::int32_t pid, std::int32_t refnum, jack_uuid_t uuid, JackShmSegment* shared_client)
 {
     try {
 
@@ -73,7 +75,7 @@ Result<void> JackExternalClient::OpenChannel(const char* name)
     return { };
 }
 
-int JackExternalClient::Close()
+std::int32_t JackExternalClient::Close()
 {
     jack_log("JackExternalClient::Close");
     fChannel.Close();

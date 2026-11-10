@@ -21,6 +21,7 @@
 #include "JackCompilerDeps.h"
 #include "jackmini/error.hpp"
 #include "types.h"
+#include <cstdint>
 #include <atomic>
 
 namespace jackmini {
@@ -91,8 +92,8 @@ private:
     volatile transport_command_t fTransportCmd;
     transport_command_t fPreviousCmd;  // previous transport_cmd
     jack_time_t fSyncTimeout;
-    int fSyncTimeLeft;
-    int fTimeBaseMaster;
+    std::int32_t fSyncTimeLeft;
+    std::int32_t fTimeBaseMaster;
     bool fPendingPos;
     bool fNetworkSync;
     bool fConditionnal;
@@ -128,12 +129,12 @@ public:
     }
 
     // \brief
-    Result<void> ResetTimebase(int refnum);
+    Result<void> ResetTimebase(std::int32_t refnum);
 
     // \brief
-    Result<void> SetTimebaseMaster(int refnum, bool conditionnal);
+    Result<void> SetTimebaseMaster(std::int32_t refnum, bool conditionnal);
 
-    void GetTimebaseMaster(int& refnum, bool& conditionnal)
+    void GetTimebaseMaster(std::int32_t& refnum, bool& conditionnal)
     {
         refnum = fTimeBaseMaster;
         conditionnal = fConditionnal;

@@ -23,6 +23,7 @@
 #include "JackPlatformPlug.h"
 #include "JackThread.h"
 
+#include <cstdint>
 #include <condition_variable>
 #include <map>
 #include <mutex>
@@ -38,8 +39,8 @@ public:
     virtual ~JackAlsaRateRequestHandler()
     {
     }
-    virtual void HandleRateRequest(int card, JackAlsaRateDirection dir, long value) = 0;
-    virtual void HandleCardFailure(int card) = 0;
+    virtual void HandleRateRequest(std::int32_t card, JackAlsaRateDirection dir, std::int64_t value) = 0;
+    virtual void HandleCardFailure(std::int32_t card) = 0;
     virtual void HandleSoundChanged() = 0;
 };
 
@@ -53,13 +54,13 @@ public:
 class JackAlsaReconfigWorker : public JackRunnableInterface, public JackAlsaControlListener, public JackAlsaCardFailureSink, public JackAlsaHotplugListener {
 
 private:
-    typedef std::pair<int, int> Key;
+    typedef std::pair<std::int32_t, std::int32_t> Key;
 
     JackAlsaRateRequestHandler* fHandler;
     std::mutex fMutex;
     std::condition_variable fCond;
-    std::map<Key, long> fPending;
-    std::vector<int> fFailures;
+    std::map<Key, std::int64_t> fPending;
+    std::vector<std::int32_t> fFailures;
     bool fSoundChanged;
     bool fRunning;
     JackThread fThread;
@@ -72,16 +73,16 @@ public:
     virtual ~JackAlsaReconfigWorker();
 
     // JackAlsaControlListener
-    virtual void OnRateEvent(int card, JackAlsaRateDirection dir, long value);
+    virtual void OnRateEvent(std::int32_t card, JackAlsaRateDirection dir, std::int64_t value);
 
     // JackAlsaCardFailureSink.  Failures are handled before rate requests.
-    virtual void OnCardFailed(int card_id);
+    virtual void OnCardFailed(std::int32_t card_id);
 
     // JackAlsaHotplugListener.  Handled after failures, before rate requests.
     virtual void OnSoundChanged();
 
-    int Start();
-    int Stop();
+    std::int32_t Start();
+    std::int32_t Stop();
 
     virtual bool Init();
     virtual bool Execute();

@@ -32,8 +32,8 @@
 
 namespace {
 
-int g_failures = 0;
-int g_checks = 0;
+std::int32_t g_failures = 0;
+std::int32_t g_checks = 0;
 
 #define CHECK(cond)                                                                       \
     do {                                                                                  \
@@ -68,16 +68,16 @@ bool IsProducerMessage(const std::string& text)
 
 void TestConcurrentProducers()
 {
-    constexpr int producers = 4;
-    constexpr long per_producer = 20000;
+    constexpr std::int32_t producers = 4;
+    constexpr std::int64_t per_producer = 20000;
 
     CHECK(jackmini::JackMessageBuffer::Create());
     g_received.clear();
 
     std::vector<std::thread> threads;
-    for (int id = 0; id < producers; id++) {
+    for (std::int32_t id = 0; id < producers; id++) {
         threads.emplace_back([id] {
-            for (long i = 0; i < per_producer; i++) {
+            for (std::int64_t i = 0; i < per_producer; i++) {
                 const std::string text = "t" + std::to_string(id) + ":" + std::to_string(i);
                 jackmini::JackMessageBufferAdd(LOG_LEVEL_ERROR, text.c_str());
             }
@@ -91,7 +91,7 @@ void TestConcurrentProducers()
     const std::uint64_t dropped = jackmini::JackMessageBuffer::fInstance->Overruns();
     CHECK(jackmini::JackMessageBuffer::Destroy());
 
-    std::vector<long> last(producers, -1);
+    std::vector<std::int64_t> last(producers, -1);
     std::uint64_t delivered = 0;
     bool ordered = true;
     for (const auto& text : Snapshot()) {
@@ -99,8 +99,8 @@ void TestConcurrentProducers()
             continue;
         }
         const auto colon = text.find(':');
-        const int id = std::atoi(text.c_str() + 1);
-        const long seq = std::strtol(text.c_str() + colon + 1, nullptr, 10);
+        const std::int32_t id = std::atoi(text.c_str() + 1);
+        const std::int64_t seq = std::strtol(text.c_str() + colon + 1, nullptr, 10);
         if (id < 0 || id >= producers || seq <= last[id] || text != "t" + std::to_string(id) + ":" + std::to_string(seq)) {
             ordered = false;
             break;

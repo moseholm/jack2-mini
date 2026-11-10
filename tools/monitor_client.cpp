@@ -20,6 +20,7 @@
 
 #include "tool_common.hpp"
 
+#include <cstdint>
 #include <getopt.h>
 
 #include <atomic>
@@ -38,7 +39,7 @@ constexpr const char* kTool = "jackmini_monitor_client";
 
 std::atomic<bool> gStop { false };
 
-void on_signal(int)
+void on_signal(std::int32_t)
 {
     gStop.store(true);
 }
@@ -54,7 +55,7 @@ void show_usage(FILE* out)
 
 } // namespace
 
-int main(int argc, char** argv)
+int main(std::int32_t argc, char** argv)
 {
     std::string server;
     static const char kShortOptions[] = "s:hv";
@@ -65,7 +66,7 @@ int main(int argc, char** argv)
         { nullptr, 0, nullptr, 0 },
     };
 
-    int c;
+    std::int32_t c;
     while ((c = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
         switch (c) {
         case 's':
