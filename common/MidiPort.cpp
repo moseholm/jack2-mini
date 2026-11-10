@@ -21,6 +21,7 @@
 #include "PortType.h"
 #include <assert.h>
 #include <string.h>
+#include <array>
 #include <cstdint>
 
 namespace jackmini {
@@ -96,7 +97,11 @@ static void midiBufferMixdown(void* mixbuffer, void** srcBuffers, std::int32_t s
     }
     mix->reset(nframes);
 
-    std::uint32_t mixIndex[srcCount];
+    if (srcCount > kConnectionNumForPort) {
+        jack_error("jackmini::MidiBufferMixdown - too many sources");
+        return;
+    }
+    std::array<std::uint32_t, kConnectionNumForPort> mixIndex { };
     std::int32_t eventCount = 0;
     for (std::int32_t i = 0; i < srcCount; ++i) {
         MidiBuffer* buf = static_cast<MidiBuffer*>(srcBuffers[i]);

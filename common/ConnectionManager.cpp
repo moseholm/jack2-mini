@@ -282,9 +282,9 @@ void ConnectionManager::topologicalSort(std::vector<Int>& sorted)
         for (std::int32_t dst = 0; dst < kClientNum; dst++) {
             if (outputRef1[dst] > 0) {
                 tmp->clearItem(refnum, dst);
-                Int outputRef2[kClientNum];
-                tmp->getOutputTable1(dst, outputRef2);
-                if (hasNoConnection(outputRef2)) {
+                std::array<Int, kClientNum> outputRef2;
+                tmp->getOutputTable1(dst, outputRef2.data());
+                if (hasNoConnection(outputRef2.data())) {
                     level.insert(dst);
                 }
             }

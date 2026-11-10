@@ -968,7 +968,7 @@ void sampleMoveD24SSs(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t ns
     std::uint64_t unrolled = nsamples / 4;
     while (unrolled--) {
         std::int32_t i;
-        std::int32_t z[4];
+        std::array<std::int32_t, 4> z;
         float32x4_t samples = vld1q_f32(src);
         int32x4_t converted = float_24_neon(samples);
         converted = vreinterpretq_s32_u8(vrev32q_u8(vreinterpretq_u8_s32(converted)));
@@ -1039,7 +1039,7 @@ void sampleMoveD24SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsa
     std::uint64_t unrolled = nsamples / 4;
     while (unrolled--) {
         std::int32_t i;
-        std::int32_t z[4];
+        std::array<std::int32_t, 4> z;
         float32x4_t samples = vld1q_f32(src);
         int32x4_t converted = float_24_neon(samples);
         vst1q_s32(z, converted);
@@ -1074,7 +1074,7 @@ void sampleMoveDSS24s(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t ns
 #if defined(__ARM_NEON__) || defined(__ARM_NEON)
     // we shift 8 to the right by dividing by 256.0 -> no sign extra handling
     const float32x4_t vscaling = vdupq_n_f32(scaling / 256.0);
-    std::int32_t x[4];
+    std::array<std::int32_t, 4> x;
     memset(x, 0, sizeof(x));
     std::uint64_t unrolled = nsamples / 4;
     while (unrolled--) {
@@ -1159,7 +1159,7 @@ void sampleMoveDSS24(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsa
 #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
     // we shift 8 to the right by dividing by 256.0 -> no sign extra handling
     const float32x4_t vscaling = vdupq_n_f32(scaling / 256.0);
-    std::int32_t x[4];
+    std::array<std::int32_t, 4> x;
     memset(x, 0, sizeof(x));
     std::uint64_t unrolled = nsamples / 4;
     while (unrolled--) {
@@ -1549,7 +1549,7 @@ void memsetInterleave(std::byte* dst, std::byte val, std::uint64_t bytes,
         break;
     default:
         while (bytes) {
-            memset(dst, std::to_integer<int>(val), unitBytes);
+            memset(dst, std::to_integer<std::int32_t>(val), unitBytes);
             dst += skipBytes;
             bytes -= unitBytes;
         }

@@ -33,7 +33,7 @@ inline DriverHandle loadDriverModule(const char* name)
     return dlopen(name, RTLD_NOW | RTLD_GLOBAL);
 }
 
-inline int unloadDriverModule(DriverHandle handle)
+inline std::int32_t unloadDriverModule(DriverHandle handle)
 {
     return dlclose(handle);
 }
@@ -48,7 +48,7 @@ inline DriverHandle loadJackModule(const char* name)
     return dlopen(name, RTLD_NOW | RTLD_LOCAL);
 }
 
-inline int unloadJackModule(DriverHandle handle)
+inline std::int32_t unloadJackModule(DriverHandle handle)
 {
     return dlclose(handle);
 }

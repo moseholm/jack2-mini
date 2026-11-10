@@ -74,7 +74,7 @@ const char* Tools::defaultServerName()
 // returns the name of the per-user subdirectory of jack_tmpdir
 const char* Tools::userDir()
 {
-    static char userDir[kPathMax + 1] = "";
+    static std::array<char, kPathMax + 1> userDir { };
 
     // format the path name on the first call
     if (userDir[0] == '\0') {
@@ -85,7 +85,7 @@ const char* Tools::userDir()
         }
     }
 
-    return userDir;
+    return userDir.data();
 }
 
 // returns the name of the per-server subdirectory of jack_user_dir()

@@ -1,5 +1,6 @@
 // Counts malloc and free calls in a process. Load it with LD_PRELOAD and send SIGURG to print the counts to stderr.
 #include <unistd.h>
+#include <array>
 #include <atomic>
 #include <csignal>
 #include <cstddef>
@@ -19,7 +20,7 @@ std::atomic<std::int64_t> n_free { 0 };
 extern "C" void on_usr1(std::int32_t sig)
 {
     (void)sig;
-    char buf[128];
+    std::array<char, 128> buf;
     const std::int32_t len = std::snprintf(buf, sizeof buf, "ALLOCS malloc=%ld free=%ld\n", n_malloc.load(), n_free.load());
     if (write(2, buf, len) < 0) {
     }
