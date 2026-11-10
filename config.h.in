@@ -1,5 +1,4 @@
-#ifndef JACK_CONFIG_H
-#define JACK_CONFIG_H
+#pragma once
 
 #include <cstdint>
 
@@ -12,4 +11,3 @@ inline constexpr std::int32_t kPortNumForClient = @JACK_PORTS_PER_APPLICATION@;
 #define JACKMP 1
 #define JACK_VERSION "@JACK_VERSION@"
 
-#endif /* JACK_CONFIG_H */
