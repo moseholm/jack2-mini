@@ -25,70 +25,70 @@
 
 namespace jackmini {
 
-JackExternalClient::JackExternalClient()
-    : fClientControl(nullptr)
+ExternalClient::ExternalClient()
+    : m_clientControl(nullptr)
 {
 }
 
-JackExternalClient::~JackExternalClient()
+ExternalClient::~ExternalClient()
 {
 }
 
-std::int32_t JackExternalClient::ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2)
+std::int32_t ExternalClient::clientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2)
 {
     std::int32_t result = -1;
-    jack_log("JackExternalClient::ClientNotify ref = %ld client = %s name = %s notify = %ld", refnum, fClientControl->fName, name, notify);
-    fChannel.ClientNotify(refnum, name, notify, sync, message, value1, value2, &result);
+    jack_log("JackExternalClient::ClientNotify ref = %ld client = %s name = %s notify = %ld", refnum, m_clientControl->m_name, name, notify);
+    m_channel.clientNotify(refnum, name, notify, sync, message, value1, value2, &result);
     return result;
 }
 
-Result<void> JackExternalClient::OpenClient(const char* name, std::int32_t pid, std::int32_t refnum, jack_uuid_t uuid, JackShmSegment* shared_client)
+Result<void> ExternalClient::openClient(const char* name, std::int32_t pid, std::int32_t refnum, UuidC uuid, ShmSegment* sharedClient)
 {
     try {
 
         // Use "placement new" to allocate object in shared memory
-        JackShmMemAble* shared_mem = static_cast<JackShmMemAble*>(JackShmMem::operator new(sizeof(JackClientControl)));
-        shared_mem->Init();
-        const JackShmSegment segment { shared_mem->GetShmFd(), shared_mem->GetShmSize() };
-        fClientControl = new (shared_mem) JackClientControl(name, pid, refnum, uuid);
+        ShmMemAble* sharedMem = static_cast<ShmMemAble*>(ShmMem::operator new(sizeof(ClientControl)));
+        sharedMem->init();
+        const ShmSegment segment { sharedMem->getShmFd(), sharedMem->getShmSize() };
+        m_clientControl = new (sharedMem) ClientControl(name, pid, refnum, uuid);
 
-        if (!fClientControl) {
+        if (!m_clientControl) {
             jack_error("Cannot allocate client shared memory segment");
-            return std::unexpected(Error::ServerFailure);
+            return std::unexpected(Error::kServerFailure);
         }
 
-        *shared_client = segment;
-        jack_log("JackExternalClient::Open name = %s fd = %d size = %u base = %p", name, segment.fFd, segment.fSize, shared_mem->GetShmAddress());
+        *sharedClient = segment;
+        jack_log("JackExternalClient::Open name = %s fd = %d size = %u base = %p", name, segment.m_fd, segment.m_size, sharedMem->getShmAddress());
         return { };
 
     } catch (std::exception&) {
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     }
 }
 
-Result<void> JackExternalClient::OpenChannel(const char* name)
+Result<void> ExternalClient::openChannel(const char* name)
 {
-    if (fChannel.Open(name) < 0) {
+    if (m_channel.open(name) < 0) {
         jack_error("Cannot connect to client name = %s\n", name);
-        return std::unexpected(Error::ServerFailure);
+        return std::unexpected(Error::kServerFailure);
     }
     return { };
 }
 
-std::int32_t JackExternalClient::Close()
+std::int32_t ExternalClient::close()
 {
     jack_log("JackExternalClient::Close");
-    fChannel.Close();
-    if (fClientControl) {
-        fClientControl->~JackClientControl();
-        JackShmMem::operator delete(fClientControl);
+    m_channel.close();
+    if (m_clientControl) {
+        m_clientControl->~ClientControl();
+        ShmMem::operator delete(m_clientControl);
     }
     return 0;
 }
 
-JackClientControl* JackExternalClient::GetClientControl() const
+ClientControl* ExternalClient::getClientControl() const
 {
-    return fClientControl;
+    return m_clientControl;
 }
 
 } // namespace jackmini

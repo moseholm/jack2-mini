@@ -35,198 +35,198 @@ namespace jackmini::alsa {
 class FakePcmBackend {
 public:
     struct StreamState {
-        bool present = false;
-        std::int32_t channels = 0;
-        std::ptrdiff_t avail = 0;
-        std::deque<std::ptrdiff_t> avail_script;
-        std::uint16_t revents = 0;
-        std::size_t contiguous = 0; // 0 means "as much as requested"
-        std::vector<std::vector<float>> data;
-        std::int32_t prepare_result = 0;
-        std::int32_t start_result = 0;
-        std::int32_t drop_result = 0;
-        std::int32_t begin_result = 0;
-        std::int32_t commit_result = 0;
+        bool m_present = false;
+        std::int32_t m_channels = 0;
+        std::ptrdiff_t m_avail = 0;
+        std::deque<std::ptrdiff_t> m_availScript;
+        std::uint16_t m_revents = 0;
+        std::size_t m_contiguous = 0; // 0 means "as much as requested"
+        std::vector<std::vector<float>> m_data;
+        std::int32_t m_prepareResult = 0;
+        std::int32_t m_startResult = 0;
+        std::int32_t m_dropResult = 0;
+        std::int32_t m_beginResult = 0;
+        std::int32_t m_commitResult = 0;
     };
 
-    FakePcmBackend(bool capture, std::int32_t capture_channels, bool playback, std::int32_t playback_channels,
-        std::size_t buffer_frames)
-        : buffer_frames_(buffer_frames)
+    FakePcmBackend(bool capture, std::int32_t captureChannels, bool playback, std::int32_t playbackChannels,
+        std::size_t bufferFrames)
+        : m_bufferFrames(bufferFrames)
     {
-        capture_.present = capture;
-        capture_.channels = capture_channels;
-        capture_.avail = static_cast<std::ptrdiff_t>(buffer_frames);
-        capture_.revents = POLLIN;
-        capture_.data.resize(static_cast<std::size_t>(capture_channels), std::vector<float>(buffer_frames, 0.0f));
+        m_capture.m_present = capture;
+        m_capture.m_channels = captureChannels;
+        m_capture.m_avail = static_cast<std::ptrdiff_t>(bufferFrames);
+        m_capture.m_revents = POLLIN;
+        m_capture.m_data.resize(static_cast<std::size_t>(captureChannels), std::vector<float>(bufferFrames, 0.0f));
 
-        playback_.present = playback;
-        playback_.channels = playback_channels;
-        playback_.avail = static_cast<std::ptrdiff_t>(buffer_frames);
-        playback_.revents = POLLOUT;
-        playback_.data.resize(static_cast<std::size_t>(playback_channels), std::vector<float>(buffer_frames, 0.0f));
+        m_playback.m_present = playback;
+        m_playback.m_channels = playbackChannels;
+        m_playback.m_avail = static_cast<std::ptrdiff_t>(bufferFrames);
+        m_playback.m_revents = POLLOUT;
+        m_playback.m_data.resize(static_cast<std::size_t>(playbackChannels), std::vector<float>(bufferFrames, 0.0f));
     }
 
     // The backend concept.
-    bool has_capture() const { return capture_.present; }
-    bool has_playback() const { return playback_.present; }
-    std::size_t capture_channels() const { return static_cast<std::size_t>(capture_.channels); }
-    std::size_t playback_channels() const { return static_cast<std::size_t>(playback_.channels); }
+    bool hasCapture() const { return m_capture.m_present; }
+    bool hasPlayback() const { return m_playback.m_present; }
+    std::size_t captureChannels() const { return static_cast<std::size_t>(m_capture.m_channels); }
+    std::size_t playbackChannels() const { return static_cast<std::size_t>(m_playback.m_channels); }
 
-    std::int32_t poll_descriptor_count(Stream) const { return 1; }
+    std::int32_t pollDescriptorCount(Stream) const { return 1; }
 
-    std::int32_t poll_descriptors(Stream stream, struct pollfd* fds, nfds_t nfds)
+    std::int32_t pollDescriptors(Stream stream, struct pollfd* fds, nfds_t nfds)
     {
         if (nfds == 0) {
             return -1;
         }
-        fds[0].fd = stream == Stream::Capture ? 101 : 100;
-        fds[0].events = stream == Stream::Capture ? POLLIN : POLLOUT;
+        fds[0].fd = stream == Stream::kCapture ? 101 : 100;
+        fds[0].events = stream == Stream::kCapture ? POLLIN : POLLOUT;
         fds[0].revents = 0;
         return 1;
     }
 
     std::int32_t poll(struct pollfd*, nfds_t, std::int32_t timeout)
     {
-        log_.push_back("poll:" + std::to_string(timeout));
-        if (poll_script_.empty()) {
-            last_poll_ = poll_result_;
+        m_log.push_back("poll:" + std::to_string(timeout));
+        if (m_pollScript.empty()) {
+            m_lastPoll = m_pollResult;
         } else {
-            last_poll_ = poll_script_.front();
-            poll_script_.pop_front();
+            m_lastPoll = m_pollScript.front();
+            m_pollScript.pop_front();
         }
-        return last_poll_;
+        return m_lastPoll;
     }
 
     // A poll that timed out reports no events, as the kernel does.
-    std::int32_t poll_revents(Stream stream, struct pollfd*, nfds_t nfds, std::uint16_t* revents)
+    std::int32_t pollRevents(Stream stream, struct pollfd*, nfds_t nfds, std::uint16_t* revents)
     {
-        StreamState& state = stream_state(stream);
-        revents_nfds_[stream == Stream::Capture ? 1 : 0] = nfds;
-        *revents = last_poll_ == 0 ? 0 : state.revents;
+        StreamState& state = streamState(stream);
+        m_reventsNfds[stream == Stream::kCapture ? 1 : 0] = nfds;
+        *revents = m_lastPoll == 0 ? 0 : state.m_revents;
         return 0;
     }
 
-    std::uint64_t now_us()
+    std::uint64_t nowUs()
     {
-        const std::uint64_t now = now_;
-        now_ += 500;
+        const std::uint64_t now = m_now;
+        m_now += 500;
         return now;
     }
 
     std::ptrdiff_t avail(Stream stream)
     {
-        StreamState& state = stream_state(stream);
-        if (state.avail_script.empty()) {
-            return state.avail;
+        StreamState& state = streamState(stream);
+        if (state.m_availScript.empty()) {
+            return state.m_avail;
         }
-        const std::ptrdiff_t value = state.avail_script.front();
-        state.avail_script.pop_front();
+        const std::ptrdiff_t value = state.m_availScript.front();
+        state.m_availScript.pop_front();
         return value;
     }
 
     std::int32_t begin(Stream stream, MappedFrames& mapped)
     {
-        StreamState& state = stream_state(stream);
-        log_.push_back(std::string("begin:") + name(stream) + ":" + std::to_string(mapped.requested));
-        if (state.begin_result < 0) {
-            return state.begin_result;
+        StreamState& state = streamState(stream);
+        m_log.push_back(std::string("begin:") + name(stream) + ":" + std::to_string(mapped.m_requested));
+        if (state.m_beginResult < 0) {
+            return state.m_beginResult;
         }
-        mapped.offset = 0;
-        mapped.frames = state.contiguous == 0 ? mapped.requested
-                                              : std::min(mapped.requested, state.contiguous);
-        for (std::size_t channel = 0; channel < mapped.channel_count; ++channel) {
-            mapped.channels[channel].data = reinterpret_cast<std::byte*>(state.data[channel].data() + mapped.offset);
-            mapped.channels[channel].stride = sizeof(float);
+        mapped.m_offset = 0;
+        mapped.m_frames = state.m_contiguous == 0 ? mapped.m_requested
+                                              : std::min(mapped.m_requested, state.m_contiguous);
+        for (std::size_t channel = 0; channel < mapped.m_channelCount; ++channel) {
+            mapped.m_channels[channel].m_data = reinterpret_cast<std::byte*>(state.m_data[channel].data() + mapped.m_offset);
+            mapped.m_channels[channel].m_stride = sizeof(float);
         }
         return 0;
     }
 
     std::int32_t commit(Stream stream, std::size_t offset, std::size_t frames)
     {
-        StreamState& state = stream_state(stream);
-        log_.push_back(std::string("commit:") + name(stream) + ":" + std::to_string(offset) + ":" + std::to_string(frames));
-        return state.commit_result;
+        StreamState& state = streamState(stream);
+        m_log.push_back(std::string("commit:") + name(stream) + ":" + std::to_string(offset) + ":" + std::to_string(frames));
+        return state.m_commitResult;
     }
 
     void silence(Stream stream, std::size_t channel, std::size_t frames)
     {
-        StreamState& state = stream_state(stream);
-        log_.push_back(std::string("silence:") + name(stream) + ":" + std::to_string(channel) + ":" + std::to_string(frames));
-        std::fill_n(state.data[channel].begin(), std::min(frames, state.data[channel].size()), 0.0f);
+        StreamState& state = streamState(stream);
+        m_log.push_back(std::string("silence:") + name(stream) + ":" + std::to_string(channel) + ":" + std::to_string(frames));
+        std::fill_n(state.m_data[channel].begin(), std::min(frames, state.m_data[channel].size()), 0.0f);
     }
 
     std::int32_t prepare(Stream stream)
     {
-        StreamState& state = stream_state(stream);
-        log_.push_back(std::string("prepare:") + name(stream));
-        return state.prepare_result;
+        StreamState& state = streamState(stream);
+        m_log.push_back(std::string("prepare:") + name(stream));
+        return state.m_prepareResult;
     }
 
     std::int32_t start(Stream stream)
     {
-        StreamState& state = stream_state(stream);
-        log_.push_back(std::string("start:") + name(stream));
-        return state.start_result;
+        StreamState& state = streamState(stream);
+        m_log.push_back(std::string("start:") + name(stream));
+        return state.m_startResult;
     }
 
     std::int32_t drop(Stream stream)
     {
-        StreamState& state = stream_state(stream);
-        log_.push_back(std::string("drop:") + name(stream));
-        return state.drop_result;
+        StreamState& state = streamState(stream);
+        m_log.push_back(std::string("drop:") + name(stream));
+        return state.m_dropResult;
     }
 
     std::int32_t status(XrunStatus& out)
     {
-        log_.push_back("status");
-        out = status_;
-        return status_result_;
+        m_log.push_back("status");
+        out = m_status;
+        return m_statusResult;
     }
 
     // Test controls.
-    StreamState& capture() { return capture_; }
-    StreamState& playback() { return playback_; }
-    const std::vector<std::string>& log() const { return log_; }
-    nfds_t revents_nfds(Stream stream) const { return revents_nfds_[stream == Stream::Capture ? 1 : 0]; }
-    void clear_log() { log_.clear(); }
-    void script_poll(std::int32_t result) { poll_script_.push_back(result); }
-    void set_poll_result(std::int32_t result) { poll_result_ = result; }
-    void set_status(const XrunStatus& status) { status_ = status; }
-    void set_status_result(std::int32_t result) { status_result_ = result; }
-    std::size_t buffer_frames() const { return buffer_frames_; }
+    StreamState& capture() { return m_capture; }
+    StreamState& playback() { return m_playback; }
+    const std::vector<std::string>& log() const { return m_log; }
+    nfds_t reventsNfds(Stream stream) const { return m_reventsNfds[stream == Stream::kCapture ? 1 : 0]; }
+    void clearLog() { m_log.clear(); }
+    void scriptPoll(std::int32_t result) { m_pollScript.push_back(result); }
+    void setPollResult(std::int32_t result) { m_pollResult = result; }
+    void setStatus(const XrunStatus& status) { m_status = status; }
+    void setStatusResult(std::int32_t result) { m_statusResult = result; }
+    std::size_t bufferFrames() const { return m_bufferFrames; }
 
-    bool has_call(std::string_view text) const
+    bool hasCall(std::string_view text) const
     {
-        return std::find(log_.begin(), log_.end(), text) != log_.end();
+        return std::find(m_log.begin(), m_log.end(), text) != m_log.end();
     }
 
-    std::size_t count_calls(std::string_view text) const
+    std::size_t countCalls(std::string_view text) const
     {
-        return static_cast<std::size_t>(std::count(log_.begin(), log_.end(), text));
+        return static_cast<std::size_t>(std::count(m_log.begin(), m_log.end(), text));
     }
 
 private:
     static const char* name(Stream stream)
     {
-        return stream == Stream::Capture ? "capture" : "playback";
+        return stream == Stream::kCapture ? "capture" : "playback";
     }
 
-    StreamState& stream_state(Stream stream)
+    StreamState& streamState(Stream stream)
     {
-        return stream == Stream::Capture ? capture_ : playback_;
+        return stream == Stream::kCapture ? m_capture : m_playback;
     }
 
-    std::size_t buffer_frames_;
-    StreamState capture_;
-    StreamState playback_;
-    std::vector<std::string> log_;
-    std::deque<std::int32_t> poll_script_;
-    std::int32_t poll_result_ = 1;
-    std::int32_t last_poll_ = 1;
-    std::array<nfds_t, 2> revents_nfds_ = { 0, 0 };
-    XrunStatus status_;
-    std::int32_t status_result_ = 0;
-    std::uint64_t now_ = 0;
+    std::size_t m_bufferFrames;
+    StreamState m_capture;
+    StreamState m_playback;
+    std::vector<std::string> m_log;
+    std::deque<std::int32_t> m_pollScript;
+    std::int32_t m_pollResult = 1;
+    std::int32_t m_lastPoll = 1;
+    std::array<nfds_t, 2> m_reventsNfds = { 0, 0 };
+    XrunStatus m_status;
+    std::int32_t m_statusResult = 0;
+    std::uint64_t m_now = 0;
 };
 
 } // namespace jackmini::alsa

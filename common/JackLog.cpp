@@ -23,7 +23,7 @@
 #include <string.h>
 #include <array>
 
-static void jack_format_and_log(std::int32_t level, const char* prefix, const char* fmt, va_list ap)
+static void formatAndLog(std::int32_t level, const char* prefix, const char* fmt, va_list ap)
 {
     std::array<char, 256> buffer { };
     size_t len;
@@ -37,19 +37,19 @@ static void jack_format_and_log(std::int32_t level, const char* prefix, const ch
     }
 
     vsnprintf(buffer.data() + len, sizeof(buffer) - len, fmt, ap);
-    jack_log_router(level, buffer.data());
+    gJackLogRouter(level, buffer.data());
 }
 
-void jack_log_message(std::int32_t level, const char* prefix, const char* fmt, va_list ap)
+void logMessage(std::int32_t level, const char* prefix, const char* fmt, va_list ap)
 {
-    jack_format_and_log(level, prefix, fmt, ap);
+    formatAndLog(level, prefix, fmt, ap);
 }
 
 void jack_error(const char* fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    jack_format_and_log(kLogLevelError, nullptr, fmt, ap);
+    formatAndLog(kLogLevelError, nullptr, fmt, ap);
     va_end(ap);
 }
 
@@ -57,49 +57,49 @@ void jack_info(const char* fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    jack_format_and_log(kLogLevelInfo, nullptr, fmt, ap);
+    formatAndLog(kLogLevelInfo, nullptr, fmt, ap);
     va_end(ap);
 }
 
-void jack_log_direct(std::int32_t level, const char* message)
+void logDirect(std::int32_t level, const char* message)
 {
-    void (*log_callback)(const char*);
+    void (*logCallback)(const char*);
 
     switch (level) {
     case kLogLevelInfo:
-        log_callback = jack_info_callback;
+        logCallback = gJackInfoCallback;
         break;
     case kLogLevelError:
-        log_callback = jack_error_callback;
+        logCallback = gJackErrorCallback;
         break;
     default:
         return;
     }
 
-    log_callback(message);
+    logCallback(message);
 }
 
-jack_log_function_t jack_log_router = &jack_log_direct;
+LogFunction gJackLogRouter = &logDirect;
 
-void default_jack_error_callback(const char* desc)
+void defaultJackErrorCallback(const char* desc)
 {
     fprintf(stderr, "%s\n", desc);
     fflush(stderr);
 }
 
-void default_jack_info_callback(const char* desc)
+void defaultJackInfoCallback(const char* desc)
 {
     fprintf(stdout, "%s\n", desc);
     fflush(stdout);
 }
 
-void silent_jack_error_callback(const char* desc)
+void silentJackErrorCallback(const char* desc)
 {
 }
 
-void silent_jack_info_callback(const char* desc)
+void silentJackInfoCallback(const char* desc)
 {
 }
 
-void (*jack_error_callback)(const char* desc) = &default_jack_error_callback;
-void (*jack_info_callback)(const char* desc) = &default_jack_info_callback;
+void (*gJackErrorCallback)(const char* desc) = &defaultJackErrorCallback;
+void (*gJackInfoCallback)(const char* desc) = &defaultJackInfoCallback;

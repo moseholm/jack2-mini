@@ -27,64 +27,64 @@ namespace detail {
 
 // \brief An inter process synchronization primitive.
 
-class JackSynchro {
+class Synchro {
 
 protected:
-    std::array<char, kSyncMaxNameSize> fName;
-    std::atomic<bool> fFlush; // If true, signal are "flushed" : used for drivers that do no consume the signal
+    std::array<char, kSyncMaxNameSize> m_name;
+    std::atomic<bool> m_flush; // If true, signal are "flushed" : used for drivers that do no consume the signal
 
 public:
-    JackSynchro()
-        : fFlush(false)
+    Synchro()
+        : m_flush(false)
     {
     }
-    ~JackSynchro()
-    {
-    }
-
-    bool Signal()
-    {
-        return true;
-    }
-    bool SignalAll()
-    {
-        return true;
-    }
-    bool Wait()
-    {
-        return true;
-    }
-    bool TimedWait(std::int64_t usec)
-    {
-        return true;
-    }
-    bool Allocate(const char* name, const char* server_name, std::int32_t value)
-    {
-        return true;
-    }
-    bool Connect(const char* name, const char* server_name)
-    {
-        return true;
-    }
-    bool ConnectInput(const char* name, const char* server_name)
-    {
-        return true;
-    }
-    bool ConnectOutput(const char* name, const char* server_name)
-    {
-        return true;
-    }
-    bool Disconnect()
-    {
-        return true;
-    }
-    void Destroy()
+    ~Synchro()
     {
     }
 
-    void SetFlush(bool mode)
+    bool signal()
     {
-        fFlush = mode;
+        return true;
+    }
+    bool signalAll()
+    {
+        return true;
+    }
+    bool wait()
+    {
+        return true;
+    }
+    bool timedWait(std::int64_t usec)
+    {
+        return true;
+    }
+    bool allocate(const char* name, const char* serverName, std::int32_t value)
+    {
+        return true;
+    }
+    bool connect(const char* name, const char* serverName)
+    {
+        return true;
+    }
+    bool connectInput(const char* name, const char* serverName)
+    {
+        return true;
+    }
+    bool connectOutput(const char* name, const char* serverName)
+    {
+        return true;
+    }
+    bool disconnect()
+    {
+        return true;
+    }
+    void destroy()
+    {
+    }
+
+    void setFlush(bool mode)
+    {
+        m_flush = mode;
     }
 };
 

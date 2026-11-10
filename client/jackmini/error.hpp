@@ -24,19 +24,19 @@ namespace jackmini {
 // Failure reasons for every operation that can fail.  Operations on the
 // realtime path do not return errors.
 enum class Error {
-    InvalidArgument, // a name, port, or value is not acceptable
-    InvalidState, // the operation is not allowed in the client's current state
-    NameTaken, // a client or port with this name exists
-    NotFound, // no such client, port, or parameter
-    NoServer, // the server is not running and could not be started
-    ServerFailure, // the server refused or failed the request
-    Protocol, // the server's reply did not match the protocol
-    Io, // the connection to the server failed
+    kInvalidArgument, // a name, port, or value is not acceptable
+    kInvalidState, // the operation is not allowed in the client's current state
+    kNameTaken, // a client or port with this name exists
+    kNotFound, // no such client, port, or parameter
+    kNoServer, // the server is not running and could not be started
+    kServerFailure, // the server refused or failed the request
+    kProtocol, // the server's reply did not match the protocol
+    kIo, // the connection to the server failed
 };
 
 template <class T>
 using Result = std::expected<T, Error>;
 
-std::string_view to_string(Error error);
+std::string_view toString(Error error);
 
 } // namespace jackmini

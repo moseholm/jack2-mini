@@ -27,33 +27,33 @@
 namespace jackmini::alsa {
 
 enum class SampleFormat {
-    Any,
-    Float,
-    S32,
-    S16,
+    kAny,
+    kFloat,
+    kS32,
+    kS16,
 };
 
 struct Request {
-    std::uint32_t rate = 48000;
-    std::uint32_t frames_per_cycle = 1024;
-    std::uint32_t periods = 2;
-    std::uint32_t capture_channels = 0; // 0 takes the device maximum
-    std::uint32_t playback_channels = 0;
-    SampleFormat format = SampleFormat::Any;
-    std::uint32_t sample_bytes = 4; // 4 tries the 32-bit formats first, 2 the 16-bit ones first
-    bool soft_mode = false; // the stop threshold is never reached: the stream runs until dropped
+    std::uint32_t m_rate = 48000;
+    std::uint32_t m_framesPerCycle = 1024;
+    std::uint32_t m_periods = 2;
+    std::uint32_t m_captureChannels = 0; // 0 takes the device maximum
+    std::uint32_t m_playbackChannels = 0;
+    SampleFormat m_format = SampleFormat::kAny;
+    std::uint32_t m_sampleBytes = 4; // 4 tries the 32-bit formats first, 2 the 16-bit ones first
+    bool m_softMode = false; // the stop threshold is never reached: the stream runs until dropped
 };
 
 // What the device gave back for one stream.
 struct StreamInfo {
-    std::uint32_t rate = 0;
-    std::uint32_t channels = 0;
-    std::uint32_t periods = 0;
-    std::uint32_t sample_bytes = 0;
-    std::uint32_t sbits = 0; // significant bits of a sample: 24 for a 32-bit format on a 24-bit device
-    snd_pcm_format_t format = SND_PCM_FORMAT_UNKNOWN;
-    bool interleaved = false;
-    bool byte_swapped = false;
+    std::uint32_t m_rate = 0;
+    std::uint32_t m_channels = 0;
+    std::uint32_t m_periods = 0;
+    std::uint32_t m_sampleBytes = 0;
+    std::uint32_t m_sbits = 0; // significant bits of a sample: 24 for a 32-bit format on a 24-bit device
+    snd_pcm_format_t m_format = SND_PCM_FORMAT_UNKNOWN;
+    bool m_interleaved = false;
+    bool m_byteSwapped = false;
 };
 
 // The libasound side of the cycle core: one capture and one playback stream, both memory-mapped.  It is the only
@@ -69,25 +69,25 @@ public:
     // A null name leaves that direction out.  A direction that cannot be opened is left out when the other one
     // works; EBUSY and EPERM are errors.  Returns 0 on success, -1 on error.  The request is updated with the rate
     // that was set.
-    std::int32_t open(const char* capture_name, const char* playback_name, Request& request);
+    std::int32_t open(const char* captureName, const char* playbackName, Request& request);
     void close();
 
-    const StreamInfo& info(Stream stream) const { return state(stream).info; }
+    const StreamInfo& info(Stream stream) const { return state(stream).m_info; }
 
     // True when the two streams could not be linked, so each one is started and dropped on its own.
-    bool capture_and_playback_not_synced() const { return not_synced_; }
+    bool captureAndPlaybackNotSynced() const { return m_notSynced; }
 
     // The PcmBackend concept.
-    bool has_capture() const { return capture_.handle != nullptr; }
-    bool has_playback() const { return playback_.handle != nullptr; }
-    std::size_t capture_channels() const { return capture_.areas.size(); }
-    std::size_t playback_channels() const { return playback_.areas.size(); }
+    bool hasCapture() const { return m_capture.m_handle != nullptr; }
+    bool hasPlayback() const { return m_playback.m_handle != nullptr; }
+    std::size_t captureChannels() const { return m_capture.m_areas.size(); }
+    std::size_t playbackChannels() const { return m_playback.m_areas.size(); }
 
-    std::int32_t poll_descriptor_count(Stream stream) const;
-    std::int32_t poll_descriptors(Stream stream, struct pollfd* fds, nfds_t nfds);
-    std::int32_t poll_revents(Stream stream, struct pollfd* fds, nfds_t nfds, std::uint16_t* revents);
-    std::int32_t poll(struct pollfd* fds, nfds_t nfds, std::int32_t timeout_ms);
-    std::uint64_t now_us() const;
+    std::int32_t pollDescriptorCount(Stream stream) const;
+    std::int32_t pollDescriptors(Stream stream, struct pollfd* fds, nfds_t nfds);
+    std::int32_t pollRevents(Stream stream, struct pollfd* fds, nfds_t nfds, std::uint16_t* revents);
+    std::int32_t poll(struct pollfd* fds, nfds_t nfds, std::int32_t timeoutMs);
+    std::uint64_t nowUs() const;
 
     std::ptrdiff_t avail(Stream stream);
     std::int32_t begin(Stream stream, MappedFrames& mapped);
@@ -101,17 +101,17 @@ public:
 
 private:
     struct StreamState {
-        snd_pcm_t* handle = nullptr;
-        StreamInfo info;
-        std::vector<ChannelArea> areas; // the areas of the current mapping, set by begin()
+        snd_pcm_t* m_handle = nullptr;
+        StreamInfo m_info;
+        std::vector<ChannelArea> m_areas; // the areas of the current mapping, set by begin()
     };
 
-    StreamState& state(Stream stream) { return stream == Stream::Capture ? capture_ : playback_; }
-    const StreamState& state(Stream stream) const { return stream == Stream::Capture ? capture_ : playback_; }
+    StreamState& state(Stream stream) { return stream == Stream::kCapture ? m_capture : m_playback; }
+    const StreamState& state(Stream stream) const { return stream == Stream::kCapture ? m_capture : m_playback; }
 
-    StreamState capture_;
-    StreamState playback_;
-    bool not_synced_ = false;
+    StreamState m_capture;
+    StreamState m_playback;
+    bool m_notSynced = false;
 };
 
 } // namespace jackmini::alsa

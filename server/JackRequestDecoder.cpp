@@ -29,287 +29,287 @@ namespace jackmini {
 
 #define CheckRead(req, socket)                                                                 \
     {                                                                                          \
-        if (header.length != static_cast<std::uint32_t>(req.Size()) || req.Read(socket) < 0) { \
+        if (header.m_length != static_cast<std::uint32_t>(req.size()) || req.read(socket) < 0) { \
             jack_error("CheckRead error");                                                     \
             return -1;                                                                         \
         }                                                                                      \
     }
 #define CheckWriteName(error, socket)                                 \
     {                                                                 \
-        if (SendJackReply(socket, res, header) < 0) {                 \
-            jack_error("%s write error name = %s", error, req.fName); \
+        if (sendJackReply(socket, res, header) < 0) {                 \
+            jack_error("%s write error name = %s", error, req.m_name); \
         }                                                             \
     }
 #define CheckWriteRefNum(error, socket)                                \
     {                                                                  \
-        if (SendJackReply(socket, res, header) < 0) {                  \
-            jack_error("%s write error ref = %d", error, req.fRefNum); \
+        if (sendJackReply(socket, res, header) < 0) {                  \
+            jack_error("%s write error ref = %d", error, req.m_refNum); \
         }                                                              \
     }
 #define CheckWrite(error, socket)                     \
     {                                                 \
-        if (SendJackReply(socket, res, header) < 0) { \
+        if (sendJackReply(socket, res, header) < 0) { \
             jack_error("%s write error", error);      \
         }                                             \
     }
 
-JackRequestDecoder::JackRequestDecoder(JackServer* server, JackClientHandlerInterface* handler)
-    : fServer(server)
-    , fHandler(handler)
+RequestDecoder::RequestDecoder(ServerCore* server, ClientHandlerInterface* handler)
+    : m_server(server)
+    , m_handler(handler)
 {
 }
 
-JackRequestDecoder::~JackRequestDecoder()
+RequestDecoder::~RequestDecoder()
 {
 }
 
-std::int32_t JackRequestDecoder::Refuse(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header)
+std::int32_t RequestDecoder::refuse(detail::ChannelTransactionInterface* socket, const MsgHeader& header)
 {
-    jack_error("JACK protocol mismatch: request version %d, server version %d", header.version, kJackMsgVersion);
-    JackResult res(kJackMsgProtocolError);
-    return SendJackReply(socket, res, header);
+    jack_error("JACK protocol mismatch: request version %d, server version %d", header.m_version, kJackMsgVersion);
+    Reply res(kJackMsgProtocolError);
+    return sendJackReply(socket, res, header);
 }
 
-std::int32_t JackRequestDecoder::HandleRequest(detail::JackChannelTransactionInterface* socket, const JackMsgHeader& header)
+std::int32_t RequestDecoder::handleRequest(detail::ChannelTransactionInterface* socket, const MsgHeader& header)
 {
-    if (header.version != kJackMsgVersion) {
-        Refuse(socket, header);
+    if (header.m_version != kJackMsgVersion) {
+        refuse(socket, header);
         return -1;
     }
 
-    JackRequest::RequestType type = (JackRequest::RequestType)header.type;
+    Request::RequestType type = (Request::RequestType)header.m_type;
 
     // Read data
     switch (type) {
 
-    case JackRequest::kClientCheck: {
+    case Request::kClientCheck: {
         jack_log("JackRequest::ClientCheck");
-        JackClientCheckRequest req;
-        JackClientCheckResult res;
+        ClientCheckRequest req;
+        ClientCheckResult res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->ClientCheck(req.fName.data(), req.fUUID, res.fName.data(), req.fProtocol, req.fOptions, &res.fStatus));
+        res.m_result = replyCode(m_server->getEngine()->clientCheck(req.m_name.data(), req.m_uUID, res.m_name.data(), req.m_protocol, req.m_options, &res.m_status));
         CheckWriteName("JackRequest::ClientCheck", socket);
         // Atomic ClientCheck followed by ClientOpen on same socket
-        if (req.fOpen) {
-            JackMsgHeader next;
-            if (ReadJackMsgHeader(socket, next) < 0) {
+        if (req.m_open) {
+            MsgHeader next;
+            if (readJackMsgHeader(socket, next) < 0) {
                 return -1;
             }
-            return HandleRequest(socket, next);
+            return handleRequest(socket, next);
         }
         break;
     }
 
-    case JackRequest::kClientOpen: {
+    case Request::kClientOpen: {
         jack_log("JackRequest::ClientOpen");
-        JackClientOpenRequest req;
-        JackClientOpenResult res;
+        ClientOpenRequest req;
+        ClientOpenResult res;
         CheckRead(req, socket);
-        fHandler->ClientAdd(socket, &req, &res);
+        m_handler->clientAdd(socket, &req, &res);
         CheckWriteName("JackRequest::ClientOpen", socket);
         break;
     }
 
-    case JackRequest::kClientClose: {
+    case Request::kClientClose: {
         jack_log("JackRequest::ClientClose");
-        JackClientCloseRequest req;
-        JackResult res;
+        ClientCloseRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->ClientExternalClose(req.fRefNum));
+        res.m_result = replyCode(m_server->getEngine()->clientExternalClose(req.m_refNum));
         CheckWriteRefNum("JackRequest::ClientClose", socket);
-        fHandler->ClientRemove(socket, req.fRefNum);
+        m_handler->clientRemove(socket, req.m_refNum);
         // Will cause the wrapping thread to stop
         return -1;
     }
 
-    case JackRequest::kActivateClient: {
-        JackActivateRequest req;
-        JackResult res;
+    case Request::kActivateClient: {
+        ActivateRequest req;
+        Reply res;
         jack_log("JackRequest::ActivateClient");
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->ClientActivate(req.fRefNum, req.fIsRealTime, fServer->IsRunning()));
+        res.m_result = replyCode(m_server->getEngine()->clientActivate(req.m_refNum, req.m_isRealTime, m_server->isRunning()));
         CheckWriteRefNum("JackRequest::ActivateClient", socket);
         break;
     }
 
-    case JackRequest::kDeactivateClient: {
+    case Request::kDeactivateClient: {
         jack_log("JackRequest::DeactivateClient");
-        JackDeactivateRequest req;
-        JackResult res;
+        DeactivateRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->ClientDeactivate(req.fRefNum, fServer->IsRunning()));
+        res.m_result = replyCode(m_server->getEngine()->clientDeactivate(req.m_refNum, m_server->isRunning()));
         CheckWriteRefNum("JackRequest::DeactivateClient", socket);
         break;
     }
 
-    case JackRequest::kRegisterPort: {
+    case Request::kRegisterPort: {
         jack_log("JackRequest::RegisterPort");
-        JackPortRegisterRequest req;
-        JackPortRegisterResult res;
+        PortRegisterRequest req;
+        PortRegisterResult res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->PortRegister(req.fRefNum, req.fName.data(), req.fPortType.data(), req.fFlags, req.fBufferSize, &res.fPortIndex));
+        res.m_result = replyCode(m_server->getEngine()->portRegister(req.m_refNum, req.m_name.data(), req.m_portType.data(), req.m_flags, req.m_bufferSize, &res.m_portIndex));
         CheckWriteRefNum("JackRequest::RegisterPort", socket);
         break;
     }
 
-    case JackRequest::kUnRegisterPort: {
+    case Request::kUnRegisterPort: {
         jack_log("JackRequest::UnRegisterPort");
-        JackPortUnRegisterRequest req;
-        JackResult res;
+        PortUnRegisterRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->PortUnRegister(req.fRefNum, req.fPortIndex));
+        res.m_result = replyCode(m_server->getEngine()->portUnRegister(req.m_refNum, req.m_portIndex));
         CheckWriteRefNum("JackRequest::UnRegisterPort", socket);
         break;
     }
 
-    case JackRequest::kConnectNamePorts: {
+    case Request::kConnectNamePorts: {
         jack_log("JackRequest::ConnectNamePorts");
-        JackPortConnectNameRequest req;
-        JackResult res;
+        PortConnectNameRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->PortConnect(req.fRefNum, req.fSrc.data(), req.fDst.data()));
+        res.m_result = replyCode(m_server->getEngine()->portConnect(req.m_refNum, req.m_src.data(), req.m_dst.data()));
         CheckWriteRefNum("JackRequest::ConnectNamePorts", socket);
         break;
     }
 
-    case JackRequest::kDisconnectNamePorts: {
+    case Request::kDisconnectNamePorts: {
         jack_log("JackRequest::DisconnectNamePorts");
-        JackPortDisconnectNameRequest req;
-        JackResult res;
+        PortDisconnectNameRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->PortDisconnect(req.fRefNum, req.fSrc.data(), req.fDst.data()));
+        res.m_result = replyCode(m_server->getEngine()->portDisconnect(req.m_refNum, req.m_src.data(), req.m_dst.data()));
         CheckWriteRefNum("JackRequest::DisconnectNamePorts", socket);
         break;
     }
 
-    case JackRequest::kConnectPorts: {
+    case Request::kConnectPorts: {
         jack_log("JackRequest::ConnectPorts");
-        JackPortConnectRequest req;
-        JackResult res;
+        PortConnectRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->PortConnect(req.fRefNum, req.fSrc, req.fDst));
+        res.m_result = replyCode(m_server->getEngine()->portConnect(req.m_refNum, req.m_src, req.m_dst));
         CheckWriteRefNum("JackRequest::ConnectPorts", socket);
         break;
     }
 
-    case JackRequest::kDisconnectPorts: {
+    case Request::kDisconnectPorts: {
         jack_log("JackRequest::DisconnectPorts");
-        JackPortDisconnectRequest req;
-        JackResult res;
+        PortDisconnectRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->PortDisconnect(req.fRefNum, req.fSrc, req.fDst));
+        res.m_result = replyCode(m_server->getEngine()->portDisconnect(req.m_refNum, req.m_src, req.m_dst));
         CheckWriteRefNum("JackRequest::DisconnectPorts", socket);
         break;
     }
 
-    case JackRequest::kPortRename: {
+    case Request::kPortRename: {
         jack_log("JackRequest::PortRename");
-        JackPortRenameRequest req;
-        JackResult res;
+        PortRenameRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->PortRename(req.fRefNum, req.fPort, req.fName.data()));
+        res.m_result = replyCode(m_server->getEngine()->portRename(req.m_refNum, req.m_port, req.m_name.data()));
         CheckWriteRefNum("JackRequest::PortRename", socket);
         break;
     }
 
-    case JackRequest::kSetBufferSize: {
+    case Request::kSetBufferSize: {
         jack_log("JackRequest::SetBufferSize");
-        JackSetBufferSizeRequest req;
-        JackResult res;
+        SetBufferSizeRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->SetBufferSize(req.fBufferSize));
+        res.m_result = replyCode(m_server->setBufferSize(req.m_bufferSize));
         CheckWrite("JackRequest::SetBufferSize", socket);
         break;
     }
 
-    case JackRequest::kSetFreeWheel: {
+    case Request::kSetFreeWheel: {
         jack_log("JackRequest::SetFreeWheel");
-        JackSetFreeWheelRequest req;
-        JackResult res;
+        SetFreeWheelRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->SetFreewheel(req.fOnOff));
+        res.m_result = replyCode(m_server->setFreewheel(req.m_onOff));
         CheckWrite("JackRequest::SetFreeWheel", socket);
         break;
     }
 
-    case JackRequest::kComputeTotalLatencies: {
+    case Request::kComputeTotalLatencies: {
         jack_log("JackRequest::ComputeTotalLatencies");
-        JackComputeTotalLatenciesRequest req;
-        JackResult res;
+        ComputeTotalLatenciesRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->ComputeTotalLatencies());
+        res.m_result = replyCode(m_server->getEngine()->computeTotalLatencies());
         CheckWrite("JackRequest::ComputeTotalLatencies", socket);
         break;
     }
 
-    case JackRequest::kReleaseTimebase: {
+    case Request::kReleaseTimebase: {
         jack_log("JackRequest::ReleaseTimebase");
-        JackReleaseTimebaseRequest req;
-        JackResult res;
+        ReleaseTimebaseRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->ReleaseTimebase(req.fRefNum));
+        res.m_result = replyCode(m_server->releaseTimebase(req.m_refNum));
         CheckWriteRefNum("JackRequest::ReleaseTimebase", socket);
         break;
     }
 
-    case JackRequest::kSetTimebaseCallback: {
+    case Request::kSetTimebaseCallback: {
         jack_log("JackRequest::SetTimebaseCallback");
-        JackSetTimebaseCallbackRequest req;
-        JackResult res;
+        SetTimebaseCallbackRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->SetTimebaseCallback(req.fRefNum, req.fConditionnal));
+        res.m_result = replyCode(m_server->setTimebaseCallback(req.m_refNum, req.m_conditionnal));
         CheckWriteRefNum("JackRequest::SetTimebaseCallback", socket);
         break;
     }
 
 
-    case JackRequest::kNotification: {
+    case Request::kNotification: {
         jack_log("JackRequest::Notification");
-        JackClientNotificationRequest req;
+        ClientNotificationRequest req;
         CheckRead(req, socket);
-        if (req.fNotify == kQUIT) {
+        if (req.m_notify == kQUIT) {
             jack_log("JackRequest::Notification kQUIT");
-            throw JackQuitException();
+            throw QuitException();
         } else {
-            fServer->Notify(req.fRefNum, req.fNotify, req.fValue);
+            m_server->notify(req.m_refNum, req.m_notify, req.m_value);
         }
         break;
     }
 
 
-    case JackRequest::kGetClientByUUID: {
+    case Request::kGetClientByUUID: {
         jack_log("JackRequest::GetClientByUUID");
-        JackGetClientNameRequest req;
-        JackClientNameResult res;
+        GetClientNameRequest req;
+        ClientNameResult res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->GetClientNameForUUID(req.fUUID.data(), res.fName.data()));
+        res.m_result = replyCode(m_server->getEngine()->getClientNameForUUID(req.m_uUID.data(), res.m_name.data()));
         CheckWrite("JackRequest::GetClientByUUID", socket);
         break;
     }
 
-    case JackRequest::kGetUUIDByClient: {
+    case Request::kGetUUIDByClient: {
         jack_log("JackRequest::GetUUIDByClient");
-        JackGetUUIDRequest req;
-        JackUUIDResult res;
+        GetUUIDRequest req;
+        UUIDResult res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->GetUUIDForClientName(req.fName.data(), res.fUUID.data()));
+        res.m_result = replyCode(m_server->getEngine()->getUUIDForClientName(req.m_name.data(), res.m_uUID.data()));
         CheckWrite("JackRequest::GetUUIDByClient", socket);
         break;
     }
 
-    case JackRequest::kReserveClientName: {
+    case Request::kReserveClientName: {
         jack_log("JackRequest::ReserveClientName");
-        JackReserveNameRequest req;
-        JackResult res;
+        ReserveNameRequest req;
+        Reply res;
         CheckRead(req, socket);
-        res.fResult = ReplyCode(fServer->GetEngine()->ReserveClientName(req.fName.data(), req.fUUID.data()));
+        res.m_result = replyCode(m_server->getEngine()->reserveClientName(req.m_name.data(), req.m_uUID.data()));
         CheckWrite("JackRequest::ReserveClientName", socket);
         break;
     }
 
 
     default:
-        jack_error("Unknown request %d", header.type);
+        jack_error("Unknown request %d", header.m_type);
         return -1;
     }
 

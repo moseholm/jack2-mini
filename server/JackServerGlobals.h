@@ -20,15 +20,15 @@
 
 namespace jackmini {
 
-class JackServer;
+class ServerCore;
 
 // \brief The server instance and the device reservation hooks.  The hooks are set by the control API.
-struct SERVER_EXPORT JackServerGlobals {
-    static JackServer* fInstance;
+struct SERVER_EXPORT ServerGlobals {
+    static ServerCore* s_instance;
 
-    static bool (*on_device_acquire)(const char* device_name);
-    static void (*on_device_release)(const char* device_name);
-    static void (*on_device_reservation_loop)(void);
+    static bool (*s_onDeviceAcquire)(const char* deviceName);
+    static void (*s_onDeviceRelease)(const char* deviceName);
+    static void (*s_onDeviceReservationLoop)(void);
 };
 
 } // namespace jackmini

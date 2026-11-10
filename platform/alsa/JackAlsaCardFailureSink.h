@@ -22,12 +22,12 @@ namespace jackmini {
 
 // \brief Told when a card's I/O fails.  Called from the card's thread.
 
-class JackAlsaCardFailureSink {
+class AlsaCardFailureSink {
 public:
-    virtual ~JackAlsaCardFailureSink()
+    virtual ~AlsaCardFailureSink()
     {
     }
-    virtual void OnCardFailed(std::int32_t card_id) = 0;
+    virtual void onCardFailed(std::int32_t cardId) = 0;
 };
 
 } // namespace jackmini

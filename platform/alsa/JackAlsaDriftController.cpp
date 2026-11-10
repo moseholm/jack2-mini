@@ -18,7 +18,7 @@
 
 namespace jackmini {
 
-static double Clamp(double v, double limit)
+static double clamp(double v, double limit)
 {
     if (v > limit) {
         return limit;
@@ -29,38 +29,38 @@ static double Clamp(double v, double limit)
     return v;
 }
 
-JackAlsaDriftController::JackAlsaDriftController(double kp, double ki,
-    double max_correction, double slew)
-    : fKp(kp)
-    , fKi(ki)
-    , fMaxCorrection(max_correction)
-    , fSlew(slew)
-    , fIntegral(0.0)
-    , fApplied(0.0)
+AlsaDriftController::AlsaDriftController(double kp, double ki,
+    double maxCorrection, double slew)
+    : m_kp(kp)
+    , m_ki(ki)
+    , m_maxCorrection(maxCorrection)
+    , m_slew(slew)
+    , m_integral(0.0)
+    , m_applied(0.0)
 {
 }
 
-void JackAlsaDriftController::Reset()
+void AlsaDriftController::reset()
 {
-    fIntegral = 0.0;
-    fApplied = 0.0;
+    m_integral = 0.0;
+    m_applied = 0.0;
 }
 
-double JackAlsaDriftController::Update(double fill, double target, double period)
+double AlsaDriftController::update(double fill, double target, double period)
 {
     if (period <= 0.0) {
-        return 1.0 + fApplied;
+        return 1.0 + m_applied;
     }
 
     double error = (fill - target) / period;
 
-    fIntegral = Clamp(fIntegral + fKi * error, fMaxCorrection);
-    double wanted = Clamp(-(fKp * error + fIntegral), fMaxCorrection);
+    m_integral = clamp(m_integral + m_ki * error, m_maxCorrection);
+    double wanted = clamp(-(m_kp * error + m_integral), m_maxCorrection);
 
-    double step = Clamp(wanted - fApplied, fSlew);
-    fApplied = Clamp(fApplied + step, fMaxCorrection);
+    double step = clamp(wanted - m_applied, m_slew);
+    m_applied = clamp(m_applied + step, m_maxCorrection);
 
-    return 1.0 + fApplied;
+    return 1.0 + m_applied;
 }
 
 } // namespace jackmini

@@ -35,71 +35,71 @@ namespace jackmini {
 template <class T>
 class RingBuffer {
 public:
-    explicit RingBuffer(std::size_t min_capacity)
-        : fCapacity(std::bit_ceil(std::max<std::size_t>(min_capacity, 2)))
-        , fMask(fCapacity - 1)
-        , fStorage(std::make_unique<T[]>(fCapacity))
+    explicit RingBuffer(std::size_t minCapacity)
+        : m_capacity(std::bit_ceil(std::max<std::size_t>(minCapacity, 2)))
+        , m_mask(m_capacity - 1)
+        , m_storage(std::make_unique<T[]>(m_capacity))
     {
     }
 
     RingBuffer(const RingBuffer&) = delete;
     RingBuffer& operator=(const RingBuffer&) = delete;
 
-    std::size_t capacity() const noexcept { return fCapacity; }
+    std::size_t capacity() const noexcept { return m_capacity; }
 
-    std::size_t read_space() const noexcept
+    std::size_t readSpace() const noexcept
     {
-        const std::size_t w = fWrite.load(std::memory_order_acquire);
-        const std::size_t r = fRead.load(std::memory_order_relaxed);
+        const std::size_t w = m_write.load(std::memory_order_acquire);
+        const std::size_t r = m_read.load(std::memory_order_relaxed);
         return w - r;
     }
 
-    std::size_t write_space() const noexcept
+    std::size_t writeSpace() const noexcept
     {
-        const std::size_t w = fWrite.load(std::memory_order_relaxed);
-        const std::size_t r = fRead.load(std::memory_order_acquire);
-        return fCapacity - (w - r);
+        const std::size_t w = m_write.load(std::memory_order_relaxed);
+        const std::size_t r = m_read.load(std::memory_order_acquire);
+        return m_capacity - (w - r);
     }
 
     // Each returns the number of items actually moved, which may be less than
     // requested.  Only one thread may write and only one may read.
     std::size_t write(std::span<const T> items) noexcept
     {
-        const std::size_t w = fWrite.load(std::memory_order_relaxed);
-        const std::size_t r = fRead.load(std::memory_order_acquire);
-        const std::size_t n = std::min(items.size(), fCapacity - (w - r));
+        const std::size_t w = m_write.load(std::memory_order_relaxed);
+        const std::size_t r = m_read.load(std::memory_order_acquire);
+        const std::size_t n = std::min(items.size(), m_capacity - (w - r));
         for (std::size_t i = 0; i < n; i++) {
-            fStorage[(w + i) & fMask] = items[i];
+            m_storage[(w + i) & m_mask] = items[i];
         }
-        fWrite.store(w + n, std::memory_order_release);
+        m_write.store(w + n, std::memory_order_release);
         return n;
     }
 
     std::size_t read(std::span<T> items) noexcept
     {
-        const std::size_t r = fRead.load(std::memory_order_relaxed);
-        const std::size_t w = fWrite.load(std::memory_order_acquire);
+        const std::size_t r = m_read.load(std::memory_order_relaxed);
+        const std::size_t w = m_write.load(std::memory_order_acquire);
         const std::size_t n = std::min(items.size(), w - r);
         for (std::size_t i = 0; i < n; i++) {
-            items[i] = fStorage[(r + i) & fMask];
+            items[i] = m_storage[(r + i) & m_mask];
         }
-        fRead.store(r + n, std::memory_order_release);
+        m_read.store(r + n, std::memory_order_release);
         return n;
     }
 
     // Only when neither side is running.
     void reset() noexcept
     {
-        fWrite.store(0, std::memory_order_relaxed);
-        fRead.store(0, std::memory_order_relaxed);
+        m_write.store(0, std::memory_order_relaxed);
+        m_read.store(0, std::memory_order_relaxed);
     }
 
 private:
-    const std::size_t fCapacity;
-    const std::size_t fMask;
-    std::unique_ptr<T[]> fStorage;
-    alignas(64) std::atomic<std::size_t> fWrite { 0 };
-    alignas(64) std::atomic<std::size_t> fRead { 0 };
+    const std::size_t m_capacity;
+    const std::size_t m_mask;
+    std::unique_ptr<T[]> m_storage;
+    alignas(64) std::atomic<std::size_t> m_write { 0 };
+    alignas(64) std::atomic<std::size_t> m_read { 0 };
 };
 
 } // namespace jackmini

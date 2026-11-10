@@ -26,7 +26,7 @@
 namespace jackmini {
 
 // Maximum channels a stream of this device supports, or 0 if it cannot be opened.
-static std::int32_t ProbeChannels(const std::string& pcm, snd_pcm_stream_t stream, std::string* error)
+static std::int32_t probeChannels(const std::string& pcm, snd_pcm_stream_t stream, std::string* error)
 {
     snd_pcm_t* handle;
     std::int32_t err = snd_pcm_open(&handle, pcm.c_str(), stream, SND_PCM_NONBLOCK);
@@ -45,7 +45,7 @@ static std::int32_t ProbeChannels(const std::string& pcm, snd_pcm_stream_t strea
     return (std::int32_t)channels;
 }
 
-static bool HasStream(snd_ctl_t* ctl, std::int32_t device, snd_pcm_stream_t stream)
+static bool hasStream(snd_ctl_t* ctl, std::int32_t device, snd_pcm_stream_t stream)
 {
     snd_pcm_info_t* info;
     snd_pcm_info_alloca(&info);
@@ -55,86 +55,86 @@ static bool HasStream(snd_ctl_t* ctl, std::int32_t device, snd_pcm_stream_t stre
     return snd_ctl_pcm_info(ctl, info) >= 0;
 }
 
-static const JackAlsaPcmInfo* FindKnown(const std::vector<JackAlsaPcmInfo>& known,
-    const std::string& card_id, std::int32_t device)
+static const AlsaPcmInfo* findKnown(const std::vector<AlsaPcmInfo>& known,
+    const std::string& cardId, std::int32_t device)
 {
     for (size_t i = 0; i < known.size(); i++) {
-        if (known[i].card_id == card_id && known[i].device == device) {
+        if (known[i].m_cardId == cardId && known[i].m_device == device) {
             return &known[i];
         }
     }
     return nullptr;
 }
 
-std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcmInfo>& known,
+std::vector<AlsaPcmInfo> alsaEnumeratePcms(const std::vector<AlsaPcmInfo>& known,
     bool report)
 {
-    std::vector<JackAlsaPcmInfo> result;
+    std::vector<AlsaPcmInfo> result;
     std::int32_t card = -1;
 
     while (snd_card_next(&card) >= 0 && card >= 0) {
-        std::array<char, 32> ctl_name { };
-        jackmini::FormatCString(ctl_name, "hw:{}", card);
+        std::array<char, 32> ctlName { };
+        jackmini::formatCString(ctlName, "hw:{}", card);
 
         snd_ctl_t* ctl;
-        if (snd_ctl_open(&ctl, ctl_name.data(), 0) < 0) {
+        if (snd_ctl_open(&ctl, ctlName.data(), 0) < 0) {
             continue;
         }
 
-        snd_ctl_card_info_t* card_info;
-        snd_ctl_card_info_alloca(&card_info);
-        if (snd_ctl_card_info(ctl, card_info) < 0) {
+        snd_ctl_card_info_t* cardInfo;
+        snd_ctl_card_info_alloca(&cardInfo);
+        if (snd_ctl_card_info(ctl, cardInfo) < 0) {
             snd_ctl_close(ctl);
             continue;
         }
-        std::string card_id = snd_ctl_card_info_get_id(card_info);
+        std::string cardId = snd_ctl_card_info_get_id(cardInfo);
 
         std::int32_t device = -1;
         while (snd_ctl_pcm_next_device(ctl, &device) >= 0 && device >= 0) {
-            bool playback = HasStream(ctl, device, SND_PCM_STREAM_PLAYBACK);
-            bool capture = HasStream(ctl, device, SND_PCM_STREAM_CAPTURE);
+            bool playback = hasStream(ctl, device, SND_PCM_STREAM_PLAYBACK);
+            bool capture = hasStream(ctl, device, SND_PCM_STREAM_CAPTURE);
             if (!playback && !capture) {
                 continue;
             }
 
-            JackAlsaPcmInfo info;
-            info.card_id = card_id;
-            info.card_num = card;
-            info.device = device;
-            info.pcm = "hw:CARD=" + card_id + ",DEV=" + std::to_string(device);
-            info.playback = playback;
-            info.capture = capture;
-            info.playback_channels = 0;
-            info.capture_channels = 0;
+            AlsaPcmInfo info;
+            info.m_cardId = cardId;
+            info.m_cardNum = card;
+            info.m_device = device;
+            info.m_pcm = "hw:CARD=" + cardId + ",DEV=" + std::to_string(device);
+            info.m_playback = playback;
+            info.m_capture = capture;
+            info.m_playbackChannels = 0;
+            info.m_captureChannels = 0;
 
             std::string error;
             if (playback) {
-                info.playback_channels = ProbeChannels(info.pcm, SND_PCM_STREAM_PLAYBACK, &error);
+                info.m_playbackChannels = probeChannels(info.m_pcm, SND_PCM_STREAM_PLAYBACK, &error);
             }
             if (capture) {
-                info.capture_channels = ProbeChannels(info.pcm, SND_PCM_STREAM_CAPTURE, &error);
+                info.m_captureChannels = probeChannels(info.m_pcm, SND_PCM_STREAM_CAPTURE, &error);
             }
 
             // Busy now: use what was known.  A device in use by this server is busy by design.
-            const JackAlsaPcmInfo* old = FindKnown(known, card_id, device);
+            const AlsaPcmInfo* old = findKnown(known, cardId, device);
             if (old != nullptr) {
-                if (info.playback_channels == 0) {
-                    info.playback_channels = old->playback_channels;
+                if (info.m_playbackChannels == 0) {
+                    info.m_playbackChannels = old->m_playbackChannels;
                 }
-                if (info.capture_channels == 0) {
-                    info.capture_channels = old->capture_channels;
+                if (info.m_captureChannels == 0) {
+                    info.m_captureChannels = old->m_captureChannels;
                 }
             }
 
-            if (info.playback_channels == 0 && info.capture_channels == 0) {
+            if (info.m_playbackChannels == 0 && info.m_captureChannels == 0) {
                 if (report) {
                     jack_info("ALSA device %s is not available now (%s); skipped",
-                        info.pcm.c_str(), error.c_str());
+                        info.m_pcm.c_str(), error.c_str());
                 }
                 continue;
             }
-            info.playback = info.playback_channels > 0;
-            info.capture = info.capture_channels > 0;
+            info.m_playback = info.m_playbackChannels > 0;
+            info.m_capture = info.m_captureChannels > 0;
             result.push_back(info);
         }
         snd_ctl_close(ctl);

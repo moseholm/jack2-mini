@@ -34,14 +34,14 @@ namespace jackmini {
 
 // \brief Handles a rate request on the worker thread.  Not real-time.
 
-class JackAlsaRateRequestHandler {
+class AlsaRateRequestHandler {
 public:
-    virtual ~JackAlsaRateRequestHandler()
+    virtual ~AlsaRateRequestHandler()
     {
     }
-    virtual void HandleRateRequest(std::int32_t card, JackAlsaRateDirection dir, std::int64_t value) = 0;
-    virtual void HandleCardFailure(std::int32_t card) = 0;
-    virtual void HandleSoundChanged() = 0;
+    virtual void handleRateRequest(std::int32_t card, AlsaRateDirection dir, std::int64_t value) = 0;
+    virtual void handleCardFailure(std::int32_t card) = 0;
+    virtual void handleSoundChanged() = 0;
 };
 
 // \brief Serialises rate requests from the control monitor.
@@ -51,41 +51,41 @@ public:
 // writes results in one handler call with the latest value.  The handler runs on
 // the worker thread, never on the RT thread.
 
-class JackAlsaReconfigWorker : public JackRunnableInterface, public JackAlsaControlListener, public JackAlsaCardFailureSink, public JackAlsaHotplugListener {
+class AlsaReconfigWorker : public RunnableInterface, public AlsaControlListener, public AlsaCardFailureSink, public AlsaHotplugListener {
 
 private:
     typedef std::pair<std::int32_t, std::int32_t> Key;
 
-    JackAlsaRateRequestHandler* fHandler;
-    std::mutex fMutex;
-    std::condition_variable fCond;
-    std::map<Key, std::int64_t> fPending;
-    std::vector<std::int32_t> fFailures;
-    bool fSoundChanged;
-    bool fRunning;
-    JackThread fThread;
+    AlsaRateRequestHandler* m_handler;
+    std::mutex m_mutex;
+    std::condition_variable m_cond;
+    std::map<Key, std::int64_t> m_pending;
+    std::vector<std::int32_t> m_failures;
+    bool m_soundChanged;
+    bool m_running;
+    Thread m_thread;
 
-    JackAlsaReconfigWorker(const JackAlsaReconfigWorker&);
-    JackAlsaReconfigWorker& operator=(const JackAlsaReconfigWorker&);
+    AlsaReconfigWorker(const AlsaReconfigWorker&);
+    AlsaReconfigWorker& operator=(const AlsaReconfigWorker&);
 
 public:
-    explicit JackAlsaReconfigWorker(JackAlsaRateRequestHandler* handler);
-    virtual ~JackAlsaReconfigWorker();
+    explicit AlsaReconfigWorker(AlsaRateRequestHandler* handler);
+    virtual ~AlsaReconfigWorker();
 
     // JackAlsaControlListener
-    virtual void OnRateEvent(std::int32_t card, JackAlsaRateDirection dir, std::int64_t value);
+    virtual void onRateEvent(std::int32_t card, AlsaRateDirection dir, std::int64_t value);
 
     // JackAlsaCardFailureSink.  Failures are handled before rate requests.
-    virtual void OnCardFailed(std::int32_t card_id);
+    virtual void onCardFailed(std::int32_t cardId);
 
     // JackAlsaHotplugListener.  Handled after failures, before rate requests.
-    virtual void OnSoundChanged();
+    virtual void onSoundChanged();
 
-    std::int32_t Start();
-    std::int32_t Stop();
+    std::int32_t start();
+    std::int32_t stop();
 
-    virtual bool Init();
-    virtual bool Execute();
+    virtual bool init();
+    virtual bool execute();
 };
 
 } // namespace jackmini

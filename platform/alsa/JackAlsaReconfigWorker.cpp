@@ -21,107 +21,107 @@
 
 namespace jackmini {
 
-JackAlsaReconfigWorker::JackAlsaReconfigWorker(JackAlsaRateRequestHandler* handler)
-    : fHandler(handler)
-    , fRunning(false)
-    , fSoundChanged(false)
-    , fThread(this)
+AlsaReconfigWorker::AlsaReconfigWorker(AlsaRateRequestHandler* handler)
+    : m_handler(handler)
+    , m_running(false)
+    , m_soundChanged(false)
+    , m_thread(this)
 {
 }
 
-JackAlsaReconfigWorker::~JackAlsaReconfigWorker()
+AlsaReconfigWorker::~AlsaReconfigWorker()
 {
-    Stop();
+    stop();
 }
 
-void JackAlsaReconfigWorker::OnRateEvent(std::int32_t card, JackAlsaRateDirection dir, std::int64_t value)
-{
-    {
-        std::lock_guard<std::mutex> lock(fMutex);
-        fPending[Key(card, (std::int32_t)dir)] = value;
-    }
-    fCond.notify_one();
-}
-
-void JackAlsaReconfigWorker::OnSoundChanged()
+void AlsaReconfigWorker::onRateEvent(std::int32_t card, AlsaRateDirection dir, std::int64_t value)
 {
     {
-        std::lock_guard<std::mutex> lock(fMutex);
-        fSoundChanged = true;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_pending[Key(card, (std::int32_t)dir)] = value;
     }
-    fCond.notify_one();
+    m_cond.notify_one();
 }
 
-void JackAlsaReconfigWorker::OnCardFailed(std::int32_t card_id)
+void AlsaReconfigWorker::onSoundChanged()
 {
     {
-        std::lock_guard<std::mutex> lock(fMutex);
-        fFailures.push_back(card_id);
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_soundChanged = true;
     }
-    fCond.notify_one();
+    m_cond.notify_one();
 }
 
-bool JackAlsaReconfigWorker::Init()
+void AlsaReconfigWorker::onCardFailed(std::int32_t cardId)
+{
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_failures.push_back(cardId);
+    }
+    m_cond.notify_one();
+}
+
+bool AlsaReconfigWorker::init()
 {
     return true;
 }
 
-bool JackAlsaReconfigWorker::Execute()
+bool AlsaReconfigWorker::execute()
 {
     std::map<Key, std::int64_t> batch;
     std::vector<std::int32_t> failures;
     bool sound = false;
     {
-        std::unique_lock<std::mutex> lock(fMutex);
-        fCond.wait(lock, [this] { return !fPending.empty() || !fFailures.empty() || fSoundChanged || !fRunning; });
-        if (!fRunning) {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_cond.wait(lock, [this] { return !m_pending.empty() || !m_failures.empty() || m_soundChanged || !m_running; });
+        if (!m_running) {
             return false;
         }
-        failures.swap(fFailures);
-        sound = fSoundChanged;
-        fSoundChanged = false;
-        batch.swap(fPending);
+        failures.swap(m_failures);
+        sound = m_soundChanged;
+        m_soundChanged = false;
+        batch.swap(m_pending);
     }
 
     for (size_t i = 0; i < failures.size(); i++) {
-        if (fHandler) {
-            fHandler->HandleCardFailure(failures[i]);
+        if (m_handler) {
+            m_handler->handleCardFailure(failures[i]);
         }
     }
-    if (sound && fHandler) {
-        fHandler->HandleSoundChanged();
+    if (sound && m_handler) {
+        m_handler->handleSoundChanged();
     }
     for (std::map<Key, std::int64_t>::const_iterator it = batch.begin(); it != batch.end(); ++it) {
-        if (fHandler) {
-            fHandler->HandleRateRequest(it->first.first, (JackAlsaRateDirection)it->first.second, it->second);
+        if (m_handler) {
+            m_handler->handleRateRequest(it->first.first, (AlsaRateDirection)it->first.second, it->second);
         }
     }
     return true;
 }
 
-std::int32_t JackAlsaReconfigWorker::Start()
+std::int32_t AlsaReconfigWorker::start()
 {
     {
-        std::lock_guard<std::mutex> lock(fMutex);
-        fRunning = true;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_running = true;
     }
-    if (fThread.StartSync() < 0) {
+    if (m_thread.startSync() < 0) {
         jack_error("rate worker: cannot start thread");
-        std::lock_guard<std::mutex> lock(fMutex);
-        fRunning = false;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_running = false;
         return -1;
     }
     return 0;
 }
 
-std::int32_t JackAlsaReconfigWorker::Stop()
+std::int32_t AlsaReconfigWorker::stop()
 {
     {
-        std::lock_guard<std::mutex> lock(fMutex);
-        fRunning = false;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_running = false;
     }
-    fCond.notify_all();
-    return fThread.Stop();
+    m_cond.notify_all();
+    return m_thread.stop();
 }
 
 } // namespace jackmini

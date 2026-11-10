@@ -28,229 +28,229 @@
 
 namespace jackmini {
 
-static void AssertBufferSize(jack_nframes_t buffer_size)
+static void assertBufferSize(NframesC bufferSize)
 {
-    if (buffer_size > kBufferSizeMax) {
-        jack_log("JackGraphManager::AssertBufferSize frames = %ld", buffer_size);
+    if (bufferSize > kBufferSizeMax) {
+        jack_log("JackGraphManager::AssertBufferSize frames = %ld", bufferSize);
         assert(buffer_size <= kBufferSizeMax);
     }
 }
 
-void JackGraphManager::AssertPort(jack_port_id_t port_index)
+void GraphManager::assertPort(PortIdC portIndex)
 {
-    if (port_index >= fPortMax) {
-        jack_log("JackGraphManager::AssertPort port_index = %ld", port_index);
+    if (portIndex >= m_portMax) {
+        jack_log("JackGraphManager::AssertPort port_index = %ld", portIndex);
         assert(port_index < fPortMax);
     }
 }
 
-JackGraphManager* JackGraphManager::Allocate(std::int32_t port_max)
+GraphManager* GraphManager::allocate(std::int32_t portMax)
 {
     // Using "Placement" new
-    void* shared_ptr = JackShmMem::operator new(sizeof(JackGraphManager) + port_max * sizeof(JackPort));
-    return new (shared_ptr) JackGraphManager(port_max);
+    void* sharedPtr = ShmMem::operator new(sizeof(GraphManager) + portMax * sizeof(ServerPort));
+    return new (sharedPtr) GraphManager(portMax);
 }
 
-void JackGraphManager::Destroy(JackGraphManager* manager)
+void GraphManager::destroy(GraphManager* manager)
 {
     // "Placement" new was used
-    manager->~JackGraphManager();
-    JackShmMem::operator delete(manager);
+    manager->~GraphManager();
+    ShmMem::operator delete(manager);
 }
 
-JackGraphManager::JackGraphManager(std::int32_t port_max)
+GraphManager::GraphManager(std::int32_t portMax)
 {
     assert(port_max <= kPortNumMax);
 
-    for (std::int32_t i = 0; i < port_max; i++) {
-        fPortArray[i].Release();
+    for (std::int32_t i = 0; i < portMax; i++) {
+        m_portArray[i].release();
     }
 
-    fPortMax = port_max;
+    m_portMax = portMax;
     for (std::int32_t i = 0; i < kClientNum; i++) {
-        fActivation[i].store(0);
-        fClientUUID[i] = 0;
+        m_activation[i].store(0);
+        m_clientUUID[i] = 0;
     }
 }
 
-void JackGraphManager::SetClientUUID(std::int32_t refnum, jack_uuid_t uuid)
+void GraphManager::setClientUUID(std::int32_t refnum, UuidC uuid)
 {
-    fClientUUID[refnum] = uuid;
+    m_clientUUID[refnum] = uuid;
 }
 
-JackPort* JackGraphManager::GetPort(jack_port_id_t port_index)
+ServerPort* GraphManager::getPort(PortIdC portIndex)
 {
-    AssertPort(port_index);
-    return &fPortArray[port_index];
+    assertPort(portIndex);
+    return &m_portArray[portIndex];
 }
 
-void JackGraphManager::GetOwnedPorts(std::int32_t refnum, std::vector<jack_port_id_t>& ports)
+void GraphManager::getOwnedPorts(std::int32_t refnum, std::vector<PortIdC>& ports)
 {
     ports.clear();
-    for (std::uint32_t i = kFirstAvailablePort; i < fPortMax; i++) {
-        const JackPort& port = fPortArray[i];
-        if (port.IsUsed() && port.GetRefNum() == refnum) {
+    for (std::uint32_t i = kFirstAvailablePort; i < m_portMax; i++) {
+        const ServerPort& port = m_portArray[i];
+        if (port.isUsed() && port.getRefNum() == refnum) {
             ports.push_back(i);
         }
     }
 }
 
-jack_default_audio_sample_t* JackGraphManager::GetBuffer(jack_port_id_t port_index)
+DefaultAudioSampleC* GraphManager::getBuffer(PortIdC portIndex)
 {
-    return fPortArray[port_index].GetBuffer();
+    return m_portArray[portIndex].getBuffer();
 }
 
 // Server
-void JackGraphManager::InitRefNum(std::int32_t refnum)
+void GraphManager::initRefNum(std::int32_t refnum)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    manager->InitRefNum(refnum);
-    WriteNextStateStop();
+    ConnectionManager* manager = writeNextStateStart();
+    manager->initRefNum(refnum);
+    writeNextStateStop();
 }
 
 // RT
-void JackGraphManager::RunCurrentGraph()
+void GraphManager::runCurrentGraph()
 {
-    JackConnectionManager* manager = ReadCurrentState();
-    manager->ResetGraph(fClientTiming.data(), fActivation.data());
+    ConnectionManager* manager = readCurrentState();
+    manager->resetGraph(m_clientTiming.data(), m_activation.data());
 }
 
 // RT
-bool JackGraphManager::RunNextGraph()
+bool GraphManager::runNextGraph()
 {
     bool res;
-    JackConnectionManager* manager = TrySwitchState(&res);
-    manager->ResetGraph(fClientTiming.data(), fActivation.data());
+    ConnectionManager* manager = trySwitchState(&res);
+    manager->resetGraph(m_clientTiming.data(), m_activation.data());
     return res;
 }
 
 // RT
-bool JackGraphManager::IsFinishedGraph()
+bool GraphManager::isFinishedGraph()
 {
-    return (fActivation[kFreewheelDriverRefnum].load() == 0);
+    return (m_activation[kFreewheelDriverRefnum].load() == 0);
 }
 
 // RT
-Result<void> JackGraphManager::ResumeRefNum(JackClientControl* control, JackSynchro* table)
+Result<void> GraphManager::resumeRefNum(ClientControl* control, Synchro* table)
 {
-    JackConnectionManager* manager = ReadCurrentState();
-    return manager->ResumeRefNum(control, table, fClientTiming.data(), fActivation.data());
+    ConnectionManager* manager = readCurrentState();
+    return manager->resumeRefNum(control, table, m_clientTiming.data(), m_activation.data());
 }
 
 // RT
-Result<void> JackGraphManager::SuspendRefNum(JackClientControl* control, JackSynchro* table, std::int64_t usec)
+Result<void> GraphManager::suspendRefNum(ClientControl* control, Synchro* table, std::int64_t usec)
 {
-    JackConnectionManager* manager = ReadCurrentState();
-    return manager->SuspendRefNum(control, table, fClientTiming.data(), usec);
+    ConnectionManager* manager = readCurrentState();
+    return manager->suspendRefNum(control, table, m_clientTiming.data(), usec);
 }
 
-void JackGraphManager::TopologicalSort(std::vector<jack_int_t>& sorted)
+void GraphManager::topologicalSort(std::vector<Int>& sorted)
 {
-    UInt16 cur_index;
-    UInt16 next_index;
+    UInt16 curIndex;
+    UInt16 nextIndex;
 
     do {
-        cur_index = GetCurrentIndex();
+        curIndex = getCurrentIndex();
         sorted.clear();
-        ReadCurrentState()->TopologicalSort(sorted);
-        next_index = GetCurrentIndex();
-    } while (cur_index != next_index); // Until a coherent state has been read
+        readCurrentState()->topologicalSort(sorted);
+        nextIndex = getCurrentIndex();
+    } while (curIndex != nextIndex); // Until a coherent state has been read
 }
 
 // Server
-void JackGraphManager::DirectConnect(std::int32_t ref1, std::int32_t ref2)
+void GraphManager::directConnect(std::int32_t ref1, std::int32_t ref2)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    manager->DirectConnect(ref1, ref2);
-    jack_log("JackGraphManager::ConnectRefNum cur_index = %ld ref1 = %ld ref2 = %ld", curIndex(LoadCounter(fCounter)), ref1, ref2);
-    WriteNextStateStop();
+    ConnectionManager* manager = writeNextStateStart();
+    manager->directConnect(ref1, ref2);
+    jack_log("JackGraphManager::ConnectRefNum cur_index = %ld ref1 = %ld ref2 = %ld", curIndexOf(loadCounter(m_counter)), ref1, ref2);
+    writeNextStateStop();
 }
 
 // Server
-void JackGraphManager::DirectDisconnect(std::int32_t ref1, std::int32_t ref2)
+void GraphManager::directDisconnect(std::int32_t ref1, std::int32_t ref2)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    manager->DirectDisconnect(ref1, ref2);
-    jack_log("JackGraphManager::DisconnectRefNum cur_index = %ld ref1 = %ld ref2 = %ld", curIndex(LoadCounter(fCounter)), ref1, ref2);
-    WriteNextStateStop();
+    ConnectionManager* manager = writeNextStateStart();
+    manager->directDisconnect(ref1, ref2);
+    jack_log("JackGraphManager::DisconnectRefNum cur_index = %ld ref1 = %ld ref2 = %ld", curIndexOf(loadCounter(m_counter)), ref1, ref2);
+    writeNextStateStop();
 }
 
 // Server
-bool JackGraphManager::IsDirectConnection(std::int32_t ref1, std::int32_t ref2)
+bool GraphManager::isDirectConnection(std::int32_t ref1, std::int32_t ref2)
 {
-    JackConnectionManager* manager = ReadCurrentState();
-    return manager->IsDirectConnection(ref1, ref2);
+    ConnectionManager* manager = readCurrentState();
+    return manager->isDirectConnection(ref1, ref2);
 }
 
 // RT
-void* JackGraphManager::GetBuffer(jack_port_id_t port_index, jack_nframes_t buffer_size)
+void* GraphManager::getBuffer(PortIdC portIndex, NframesC bufferSize)
 {
-    AssertPort(port_index);
-    AssertBufferSize(buffer_size);
+    assertPort(portIndex);
+    assertBufferSize(bufferSize);
 
-    JackConnectionManager* manager = ReadCurrentState();
-    JackPort* port = GetPort(port_index);
+    ConnectionManager* manager = readCurrentState();
+    ServerPort* port = getPort(portIndex);
 
     // This happens when a port has just been unregistered and is still used by the RT code
-    if (!port->IsUsed()) {
-        jack_log("JackGraphManager::GetBuffer : port = %ld is released state", port_index);
-        return GetBuffer(0); // port_index 0 is not used
+    if (!port->isUsed()) {
+        jack_log("JackGraphManager::GetBuffer : port = %ld is released state", portIndex);
+        return getBuffer(0); // port_index 0 is not used
     }
 
     // Output port
-    if (port->fFlags & JackPortIsOutput) {
-        return (port->fTied != kNoPort) ? GetBuffer(port->fTied, buffer_size) : GetBuffer(port_index);
+    if (port->m_flags & kPortIsOutput) {
+        return (port->m_tied != kNoPort) ? getBuffer(port->m_tied, bufferSize) : getBuffer(portIndex);
     }
 
     // The input of a deactivated client is silent; the outputs of deactivated clients are not mixed in.
-    std::array<jack_port_id_t, kConnectionNumForPort> active;
-    jack_int_t len = 0;
-    if (!manager->IsInactive(port->GetRefNum())) {
-        const jack_int_t connections = manager->Connections(port_index);
-        for (jack_int_t i = 0; i < connections; i++) {
-            const jack_port_id_t src_index = manager->GetPort(port_index, i);
-            if (!manager->IsInactive(GetPort(src_index)->GetRefNum())) {
-                active[len++] = src_index;
+    std::array<PortIdC, kConnectionNumForPort> active;
+    Int len = 0;
+    if (!manager->isInactive(port->getRefNum())) {
+        const Int connections = manager->connections(portIndex);
+        for (Int i = 0; i < connections; i++) {
+            const PortIdC srcIndex = manager->getPort(portIndex, i);
+            if (!manager->isInactive(getPort(srcIndex)->getRefNum())) {
+                active[len++] = srcIndex;
             }
         }
     }
 
     // No connections : return a zero-filled buffer
     if (len == 0) {
-        port->ClearBuffer(buffer_size);
-        return port->GetBuffer();
+        port->clearBuffer(bufferSize);
+        return port->getBuffer();
 
         // One connection
     } else if (len == 1) {
-        jack_port_id_t src_index = active[0];
+        PortIdC srcIndex = active[0];
 
         // Ports in same client : copy the buffer
-        if (GetPort(src_index)->GetRefNum() == port->GetRefNum()) {
+        if (getPort(srcIndex)->getRefNum() == port->getRefNum()) {
             std::array<void*, 1> buffers;
-            buffers[0] = GetBuffer(src_index, buffer_size);
-            port->MixBuffers(buffers.data(), 1, buffer_size);
-            return port->GetBuffer();
+            buffers[0] = getBuffer(srcIndex, bufferSize);
+            port->mixBuffers(buffers.data(), 1, bufferSize);
+            return port->getBuffer();
             // Otherwise, use zero-copy mode, just pass the buffer of the connected (output) port.
         } else {
-            return GetBuffer(src_index, buffer_size);
+            return getBuffer(srcIndex, bufferSize);
         }
 
         // Multiple connections : mix all buffers
     } else {
         std::array<void*, kConnectionNumForPort> buffers;
-        for (jack_int_t i = 0; i < len; i++) {
-            buffers[i] = GetBuffer(active[i], buffer_size);
+        for (Int i = 0; i < len; i++) {
+            buffers[i] = getBuffer(active[i], bufferSize);
         }
-        port->MixBuffers(buffers.data(), len, buffer_size);
-        return port->GetBuffer();
+        port->mixBuffers(buffers.data(), len, bufferSize);
+        return port->getBuffer();
     }
 }
 
 // Server
-void JackGraphManager::RequestMonitor(jack_port_id_t port_index, bool onoff) // Client
+void GraphManager::requestMonitor(PortIdC portIndex, bool onoff) // Client
 {
-    AssertPort(port_index);
-    JackPort* port = GetPort(port_index);
+    assertPort(portIndex);
+    ServerPort* port = getPort(portIndex);
 
     // jackd.h
     // * If @ref JackPortCanMonitor is set for this @a port, turn input
@@ -259,511 +259,511 @@ void JackGraphManager::RequestMonitor(jack_port_id_t port_index, bool onoff) // 
     // if (!(fFlags & JackPortCanMonitor))
     // return -1;
 
-    port->RequestMonitor(onoff);
+    port->requestMonitor(onoff);
 
-    const jack_int_t* connections = ReadCurrentState()->GetConnections(port_index);
-    if ((port->fFlags & JackPortIsOutput) == 0) { // ?? Taken from jack, why not (port->fFlags  & JackPortIsInput) ?
-        jack_port_id_t src_index;
-        for (std::int32_t i = 0; (i < kConnectionNumForPort) && ((src_index = connections[i]) != kEmpty); i++) {
+    const Int* connections = readCurrentState()->getConnections(portIndex);
+    if ((port->m_flags & kPortIsOutput) == 0) { // ?? Taken from jack, why not (port->fFlags  & JackPortIsInput) ?
+        PortIdC srcIndex;
+        for (std::int32_t i = 0; (i < kConnectionNumForPort) && ((srcIndex = connections[i]) != kEmpty); i++) {
             // XXX much worse things will happen if there is a feedback loop !!!
-            RequestMonitor(src_index, onoff);
+            requestMonitor(srcIndex, onoff);
         }
     }
 }
 
 // Client
-jack_nframes_t JackGraphManager::ComputeTotalLatencyAux(jack_port_id_t port_index, jack_port_id_t src_port_index, JackConnectionManager* manager, std::int32_t hop_count)
+NframesC GraphManager::computeTotalLatencyAux(PortIdC portIndex, PortIdC srcPortIndex, ConnectionManager* manager, std::int32_t hopCount)
 {
-    const jack_int_t* connections = ReadCurrentState()->GetConnections(port_index);
-    jack_nframes_t max_latency = 0;
-    jack_port_id_t dst_index;
+    const Int* connections = readCurrentState()->getConnections(portIndex);
+    NframesC maxLatency = 0;
+    PortIdC dstIndex;
 
-    if (hop_count > 8)
-        return GetPort(port_index)->GetLatency();
+    if (hopCount > 8)
+        return getPort(portIndex)->getLatency();
 
-    for (std::int32_t i = 0; (i < kConnectionNumForPort) && ((dst_index = connections[i]) != kEmpty); i++) {
-        if (src_port_index != dst_index) {
-            AssertPort(dst_index);
-            JackPort* dst_port = GetPort(dst_index);
-            jack_nframes_t this_latency = (dst_port->fFlags & JackPortIsTerminal)
-                ? dst_port->GetLatency()
-                : ComputeTotalLatencyAux(dst_index, port_index, manager, hop_count + 1);
-            max_latency = ((max_latency > this_latency) ? max_latency : this_latency);
+    for (std::int32_t i = 0; (i < kConnectionNumForPort) && ((dstIndex = connections[i]) != kEmpty); i++) {
+        if (srcPortIndex != dstIndex) {
+            assertPort(dstIndex);
+            ServerPort* dstPort = getPort(dstIndex);
+            NframesC thisLatency = (dstPort->m_flags & kPortIsTerminal)
+                ? dstPort->getLatency()
+                : computeTotalLatencyAux(dstIndex, portIndex, manager, hopCount + 1);
+            maxLatency = ((maxLatency > thisLatency) ? maxLatency : thisLatency);
         }
     }
 
-    return max_latency + GetPort(port_index)->GetLatency();
+    return maxLatency + getPort(portIndex)->getLatency();
 }
 
 // Client
-void JackGraphManager::ComputeTotalLatency(jack_port_id_t port_index)
+void GraphManager::computeTotalLatency(PortIdC portIndex)
 {
-    UInt16 cur_index;
-    UInt16 next_index;
-    JackPort* port = GetPort(port_index);
-    AssertPort(port_index);
+    UInt16 curIndex;
+    UInt16 nextIndex;
+    ServerPort* port = getPort(portIndex);
+    assertPort(portIndex);
 
     do {
-        cur_index = GetCurrentIndex();
-        port->fTotalLatency = ComputeTotalLatencyAux(port_index, port_index, ReadCurrentState(), 0);
-        next_index = GetCurrentIndex();
-    } while (cur_index != next_index); // Until a coherent state has been read
+        curIndex = getCurrentIndex();
+        port->m_totalLatency = computeTotalLatencyAux(portIndex, portIndex, readCurrentState(), 0);
+        nextIndex = getCurrentIndex();
+    } while (curIndex != nextIndex); // Until a coherent state has been read
 
-    jack_log("JackGraphManager::GetTotalLatency port_index = %ld total latency = %ld", port_index, port->fTotalLatency);
+    jack_log("JackGraphManager::GetTotalLatency port_index = %ld total latency = %ld", portIndex, port->m_totalLatency);
 }
 
 // Client
-void JackGraphManager::ComputeTotalLatencies()
+void GraphManager::computeTotalLatencies()
 {
-    jack_port_id_t port_index;
-    for (port_index = kFirstAvailablePort; port_index < fPortMax; port_index++) {
-        JackPort* port = GetPort(port_index);
-        if (port->IsUsed()) {
-            ComputeTotalLatency(port_index);
+    PortIdC portIndex;
+    for (portIndex = kFirstAvailablePort; portIndex < m_portMax; portIndex++) {
+        ServerPort* port = getPort(portIndex);
+        if (port->isUsed()) {
+            computeTotalLatency(portIndex);
         }
     }
 }
 
-void JackGraphManager::RecalculateLatencyAux(jack_port_id_t port_index, jack_latency_callback_mode_t mode)
+void GraphManager::recalculateLatencyAux(PortIdC portIndex, LatencyCallbackModeC mode)
 {
-    const jack_int_t* connections = ReadCurrentState()->GetConnections(port_index);
-    JackPort* port = GetPort(port_index);
-    jack_latency_range_t latency = { UINT32_MAX, 0 };
-    jack_port_id_t dst_index;
+    const Int* connections = readCurrentState()->getConnections(portIndex);
+    ServerPort* port = getPort(portIndex);
+    LatencyRangeC latency = { UINT32_MAX, 0 };
+    PortIdC dstIndex;
 
-    for (std::int32_t i = 0; (i < kConnectionNumForPort) && ((dst_index = connections[i]) != kEmpty); i++) {
-        AssertPort(dst_index);
-        JackPort* dst_port = GetPort(dst_index);
-        jack_latency_range_t other_latency;
+    for (std::int32_t i = 0; (i < kConnectionNumForPort) && ((dstIndex = connections[i]) != kEmpty); i++) {
+        assertPort(dstIndex);
+        ServerPort* dstPort = getPort(dstIndex);
+        LatencyRangeC otherLatency;
 
-        dst_port->GetLatencyRange(mode, &other_latency);
+        dstPort->getLatencyRange(mode, &otherLatency);
 
-        if (other_latency.max > latency.max) {
-            latency.max = other_latency.max;
+        if (otherLatency.m_max > latency.m_max) {
+            latency.m_max = otherLatency.m_max;
         }
-        if (other_latency.min < latency.min) {
-            latency.min = other_latency.min;
+        if (otherLatency.m_min < latency.m_min) {
+            latency.m_min = otherLatency.m_min;
         }
     }
 
-    if (latency.min == UINT32_MAX) {
-        latency.min = 0;
+    if (latency.m_min == UINT32_MAX) {
+        latency.m_min = 0;
     }
 
-    port->SetLatencyRange(mode, &latency);
+    port->setLatencyRange(mode, &latency);
 }
 
-void JackGraphManager::RecalculateLatency(jack_port_id_t port_index, jack_latency_callback_mode_t mode)
+void GraphManager::recalculateLatency(PortIdC portIndex, LatencyCallbackModeC mode)
 {
-    UInt16 cur_index;
-    UInt16 next_index;
+    UInt16 curIndex;
+    UInt16 nextIndex;
 
     do {
-        cur_index = GetCurrentIndex();
-        RecalculateLatencyAux(port_index, mode);
-        next_index = GetCurrentIndex();
-    } while (cur_index != next_index); // Until a coherent state has been read
+        curIndex = getCurrentIndex();
+        recalculateLatencyAux(portIndex, mode);
+        nextIndex = getCurrentIndex();
+    } while (curIndex != nextIndex); // Until a coherent state has been read
 
     // jack_log("JackGraphManager::RecalculateLatency port_index = %ld", port_index);
 }
 
 // Server
-void JackGraphManager::SetBufferSize(jack_nframes_t buffer_size)
+void GraphManager::setBufferSize(NframesC bufferSize)
 {
-    jack_log("JackGraphManager::SetBufferSize size = %ld", buffer_size);
+    jack_log("JackGraphManager::SetBufferSize size = %ld", bufferSize);
 
-    jack_port_id_t port_index;
-    for (port_index = kFirstAvailablePort; port_index < fPortMax; port_index++) {
-        JackPort* port = GetPort(port_index);
-        if (port->IsUsed()) {
-            port->ClearBuffer(buffer_size);
+    PortIdC portIndex;
+    for (portIndex = kFirstAvailablePort; portIndex < m_portMax; portIndex++) {
+        ServerPort* port = getPort(portIndex);
+        if (port->isUsed()) {
+            port->clearBuffer(bufferSize);
         }
     }
 }
 
 // Server
-jack_port_id_t JackGraphManager::AllocatePortAux(std::int32_t refnum, const char* port_name, const char* port_type, JackPortFlags flags)
+PortIdC GraphManager::allocatePortAux(std::int32_t refnum, const char* portName, const char* portType, PortFlagsC flags)
 {
-    jack_port_id_t port_index;
+    PortIdC portIndex;
 
     // Available ports start at FIRST_AVAILABLE_PORT (= 1), otherwise a port_index of 0 is "seen" as a nullptr port by the external API...
-    for (port_index = kFirstAvailablePort; port_index < fPortMax; port_index++) {
-        JackPort* port = GetPort(port_index);
-        if (!port->IsUsed()) {
-            jack_log("JackGraphManager::AllocatePortAux port_index = %ld name = %s type = %s", port_index, port_name, port_type);
-            if (!port->Allocate(refnum, port_name, port_type, flags)) {
+    for (portIndex = kFirstAvailablePort; portIndex < m_portMax; portIndex++) {
+        ServerPort* port = getPort(portIndex);
+        if (!port->isUsed()) {
+            jack_log("JackGraphManager::AllocatePortAux port_index = %ld name = %s type = %s", portIndex, portName, portType);
+            if (!port->allocate(refnum, portName, portType, flags)) {
                 return kNoPort;
             }
-            port->fUUID = jack_port_uuid_generate(port_index);
+            port->m_uUID = jack_port_uuid_generate(portIndex);
             break;
         }
     }
 
-    return (port_index < fPortMax) ? port_index : kNoPort;
+    return (portIndex < m_portMax) ? portIndex : kNoPort;
 }
 
 // Server
-jack_port_id_t JackGraphManager::AllocatePort(std::int32_t refnum, const char* port_name, const char* port_type, JackPortFlags flags, jack_nframes_t buffer_size)
+PortIdC GraphManager::allocatePort(std::int32_t refnum, const char* portName, const char* portType, PortFlagsC flags, NframesC bufferSize)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    jack_port_id_t port_index = AllocatePortAux(refnum, port_name, port_type, flags);
+    ConnectionManager* manager = writeNextStateStart();
+    PortIdC portIndex = allocatePortAux(refnum, portName, portType, flags);
 
-    if (port_index != kNoPort) {
-        JackPort* port = GetPort(port_index);
+    if (portIndex != kNoPort) {
+        ServerPort* port = getPort(portIndex);
         assert(port);
-        port->ClearBuffer(buffer_size);
+        port->clearBuffer(bufferSize);
 
         Result<void> res;
-        if (flags & JackPortIsOutput) {
-            res = manager->AddOutputPort(refnum, port_index);
+        if (flags & kPortIsOutput) {
+            res = manager->addOutputPort(refnum, portIndex);
         } else {
-            res = manager->AddInputPort(refnum, port_index);
+            res = manager->addInputPort(refnum, portIndex);
         }
         // Insertion failure
         if (!res) {
-            port->Release();
-            port_index = kNoPort;
+            port->release();
+            portIndex = kNoPort;
         }
     }
 
-    WriteNextStateStop();
-    return port_index;
+    writeNextStateStop();
+    return portIndex;
 }
 
 // Server
-Result<void> JackGraphManager::ReleasePort(std::int32_t refnum, jack_port_id_t port_index)
+Result<void> GraphManager::releasePort(std::int32_t refnum, PortIdC portIndex)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    JackPort* port = GetPort(port_index);
+    ConnectionManager* manager = writeNextStateStart();
+    ServerPort* port = getPort(portIndex);
     Result<void> res;
 
-    if (port->fFlags & JackPortIsOutput) {
-        DisconnectAllOutput(port_index);
-        res = manager->RemoveOutputPort(refnum, port_index);
+    if (port->m_flags & kPortIsOutput) {
+        disconnectAllOutput(portIndex);
+        res = manager->removeOutputPort(refnum, portIndex);
     } else {
-        DisconnectAllInput(port_index);
-        res = manager->RemoveInputPort(refnum, port_index);
+        disconnectAllInput(portIndex);
+        res = manager->removeInputPort(refnum, portIndex);
     }
 
-    port->Release();
-    WriteNextStateStop();
+    port->release();
+    writeNextStateStop();
     return res;
 }
 
-void JackGraphManager::GetInputPorts(std::int32_t refnum, jack_int_t* res)
+void GraphManager::getInputPorts(std::int32_t refnum, Int* res)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    const jack_int_t* input = manager->GetInputPorts(refnum);
-    memcpy(res, input, sizeof(jack_int_t) * kPortNumForClient);
-    WriteNextStateStop();
+    ConnectionManager* manager = writeNextStateStart();
+    const Int* input = manager->getInputPorts(refnum);
+    memcpy(res, input, sizeof(Int) * kPortNumForClient);
+    writeNextStateStop();
 }
 
-void JackGraphManager::GetOutputPorts(std::int32_t refnum, jack_int_t* res)
+void GraphManager::getOutputPorts(std::int32_t refnum, Int* res)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    const jack_int_t* output = manager->GetOutputPorts(refnum);
-    memcpy(res, output, sizeof(jack_int_t) * kPortNumForClient);
-    WriteNextStateStop();
+    ConnectionManager* manager = writeNextStateStart();
+    const Int* output = manager->getOutputPorts(refnum);
+    memcpy(res, output, sizeof(Int) * kPortNumForClient);
+    writeNextStateStop();
 }
 
 // Server
-void JackGraphManager::RemoveAllPorts(std::int32_t refnum)
+void GraphManager::removeAllPorts(std::int32_t refnum)
 {
     jack_log("JackGraphManager::RemoveAllPorts ref = %ld", refnum);
-    JackConnectionManager* manager = WriteNextStateStart();
-    jack_port_id_t port_index;
+    ConnectionManager* manager = writeNextStateStart();
+    PortIdC portIndex;
 
     // Warning : ReleasePort shift port to left, thus we always remove the first port until the "input" table is empty
-    const jack_int_t* input = manager->GetInputPorts(refnum);
-    while ((port_index = input[0]) != kEmpty) {
-        if (!ReleasePort(refnum, port_index)) {
-            jack_error("JackGraphManager::RemoveAllPorts failure ref = %ld port_index = %ld", refnum, port_index);
+    const Int* input = manager->getInputPorts(refnum);
+    while ((portIndex = input[0]) != kEmpty) {
+        if (!releasePort(refnum, portIndex)) {
+            jack_error("JackGraphManager::RemoveAllPorts failure ref = %ld port_index = %ld", refnum, portIndex);
             assert(true);
             break;
         }
     }
 
     // Warning : ReleasePort shift port to left, thus we always remove the first port until the "output" table is empty
-    const jack_int_t* output = manager->GetOutputPorts(refnum);
-    while ((port_index = output[0]) != kEmpty) {
-        if (!ReleasePort(refnum, port_index)) {
-            jack_error("JackGraphManager::RemoveAllPorts failure ref = %ld port_index = %ld", refnum, port_index);
+    const Int* output = manager->getOutputPorts(refnum);
+    while ((portIndex = output[0]) != kEmpty) {
+        if (!releasePort(refnum, portIndex)) {
+            jack_error("JackGraphManager::RemoveAllPorts failure ref = %ld port_index = %ld", refnum, portIndex);
             assert(true);
             break;
         }
     }
 
-    WriteNextStateStop();
+    writeNextStateStop();
 }
 
 // Server
-void JackGraphManager::DisconnectAllPorts(std::int32_t refnum)
+void GraphManager::disconnectAllPorts(std::int32_t refnum)
 {
     std::int32_t i;
     jack_log("JackGraphManager::DisconnectAllPorts ref = %ld", refnum);
-    JackConnectionManager* manager = WriteNextStateStart();
+    ConnectionManager* manager = writeNextStateStart();
 
-    const jack_int_t* input = manager->GetInputPorts(refnum);
+    const Int* input = manager->getInputPorts(refnum);
     for (i = 0; i < kPortNumForClient && input[i] != kEmpty; i++) {
-        DisconnectAllInput(input[i]);
+        disconnectAllInput(input[i]);
     }
 
-    const jack_int_t* output = manager->GetOutputPorts(refnum);
+    const Int* output = manager->getOutputPorts(refnum);
     for (i = 0; i < kPortNumForClient && output[i] != kEmpty; i++) {
-        DisconnectAllOutput(output[i]);
+        disconnectAllOutput(output[i]);
     }
 
-    WriteNextStateStop();
+    writeNextStateStop();
 }
 
 // Server
-void JackGraphManager::DisconnectAllInput(jack_port_id_t port_index)
+void GraphManager::disconnectAllInput(PortIdC portIndex)
 {
-    jack_log("JackGraphManager::DisconnectAllInput port_index = %ld", port_index);
-    JackConnectionManager* manager = WriteNextStateStart();
+    jack_log("JackGraphManager::DisconnectAllInput port_index = %ld", portIndex);
+    ConnectionManager* manager = writeNextStateStart();
 
-    for (std::uint32_t i = 0; i < fPortMax; i++) {
-        if (manager->IsConnected(i, port_index)) {
-            jack_log("JackGraphManager::Disconnect i = %ld  port_index = %ld", i, port_index);
-            Disconnect(i, port_index);
+    for (std::uint32_t i = 0; i < m_portMax; i++) {
+        if (manager->isConnected(i, portIndex)) {
+            jack_log("JackGraphManager::Disconnect i = %ld  port_index = %ld", i, portIndex);
+            disconnect(i, portIndex);
         }
     }
-    WriteNextStateStop();
+    writeNextStateStop();
 }
 
 // Server
-void JackGraphManager::DisconnectAllOutput(jack_port_id_t port_index)
+void GraphManager::disconnectAllOutput(PortIdC portIndex)
 {
-    jack_log("JackGraphManager::DisconnectAllOutput port_index = %ld ", port_index);
-    JackConnectionManager* manager = WriteNextStateStart();
+    jack_log("JackGraphManager::DisconnectAllOutput port_index = %ld ", portIndex);
+    ConnectionManager* manager = writeNextStateStart();
 
-    const jack_int_t* connections = manager->GetConnections(port_index);
+    const Int* connections = manager->getConnections(portIndex);
     while (connections[0] != kEmpty) {
-        Disconnect(port_index, connections[0]); // Warning : Disconnect shift port to left
+        disconnect(portIndex, connections[0]); // Warning : Disconnect shift port to left
     }
-    WriteNextStateStop();
+    writeNextStateStop();
 }
 
 // Server
-void JackGraphManager::DisconnectAll(jack_port_id_t port_index)
+void GraphManager::disconnectAll(PortIdC portIndex)
 {
-    AssertPort(port_index);
+    assertPort(portIndex);
 
-    JackPort* port = GetPort(port_index);
-    if (port->fFlags & JackPortIsOutput) {
-        DisconnectAllOutput(port_index);
+    ServerPort* port = getPort(portIndex);
+    if (port->m_flags & kPortIsOutput) {
+        disconnectAllOutput(portIndex);
     } else {
-        DisconnectAllInput(port_index);
+        disconnectAllInput(portIndex);
     }
 }
 
 // Server
-void JackGraphManager::GetConnections(jack_port_id_t port_index, jack_int_t* res)
+void GraphManager::getConnections(PortIdC portIndex, Int* res)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    const jack_int_t* connections = manager->GetConnections(port_index);
-    memcpy(res, connections, sizeof(jack_int_t) * kConnectionNumForPort);
-    WriteNextStateStop();
+    ConnectionManager* manager = writeNextStateStart();
+    const Int* connections = manager->getConnections(portIndex);
+    memcpy(res, connections, sizeof(Int) * kConnectionNumForPort);
+    writeNextStateStop();
 }
 
 // Server
-void JackGraphManager::Activate(std::int32_t refnum)
+void GraphManager::activate(std::int32_t refnum)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    manager->SetInactive(refnum, false);
-    manager->DirectConnect(kFreewheelDriverRefnum, refnum);
-    manager->DirectConnect(refnum, kFreewheelDriverRefnum);
-    WriteNextStateStop();
+    ConnectionManager* manager = writeNextStateStart();
+    manager->setInactive(refnum, false);
+    manager->directConnect(kFreewheelDriverRefnum, refnum);
+    manager->directConnect(refnum, kFreewheelDriverRefnum);
+    writeNextStateStop();
 }
 
 // Disconnection from the FW must be done in last otherwise an intermediate "unconnected"
 // (thus unactivated) state may happen where the client is still checked for its end.
 
 // Server
-void JackGraphManager::Deactivate(std::int32_t refnum)
+void GraphManager::deactivate(std::int32_t refnum)
 {
     // The activation edges go while the client still counts; then it is inactive. Disconnection from the FW must be done
     // last, as in Activate, so that no intermediate state is seen where the client is unactivated and still checked.
-    JackConnectionManager* manager = WriteNextStateStart();
-    if (manager->IsDirectConnection(refnum, kFreewheelDriverRefnum)) {
-        manager->DirectDisconnect(refnum, kFreewheelDriverRefnum);
+    ConnectionManager* manager = writeNextStateStart();
+    if (manager->isDirectConnection(refnum, kFreewheelDriverRefnum)) {
+        manager->directDisconnect(refnum, kFreewheelDriverRefnum);
     } else {
         jack_log("JackServer::Deactivate client = %ld was not activated", refnum);
     }
-    if (manager->IsDirectConnection(kFreewheelDriverRefnum, refnum)) {
-        manager->DirectDisconnect(kFreewheelDriverRefnum, refnum);
+    if (manager->isDirectConnection(kFreewheelDriverRefnum, refnum)) {
+        manager->directDisconnect(kFreewheelDriverRefnum, refnum);
     } else {
         jack_log("JackServer::Deactivate client = %ld was not activated", refnum);
     }
-    manager->SetInactive(refnum, true);
-    WriteNextStateStop();
+    manager->setInactive(refnum, true);
+    writeNextStateStop();
 }
 
 // Server
-std::int32_t JackGraphManager::GetInputRefNum(jack_port_id_t port_index)
+std::int32_t GraphManager::getInputRefNum(PortIdC portIndex)
 {
-    AssertPort(port_index);
-    JackConnectionManager* manager = WriteNextStateStart();
-    std::int32_t res = manager->GetInputRefNum(port_index);
-    WriteNextStateStop();
+    assertPort(portIndex);
+    ConnectionManager* manager = writeNextStateStart();
+    std::int32_t res = manager->getInputRefNum(portIndex);
+    writeNextStateStop();
     return res;
 }
 
 // Server
-std::int32_t JackGraphManager::GetOutputRefNum(jack_port_id_t port_index)
+std::int32_t GraphManager::getOutputRefNum(PortIdC portIndex)
 {
-    AssertPort(port_index);
-    JackConnectionManager* manager = WriteNextStateStart();
-    std::int32_t res = manager->GetOutputRefNum(port_index);
-    WriteNextStateStop();
+    assertPort(portIndex);
+    ConnectionManager* manager = writeNextStateStart();
+    std::int32_t res = manager->getOutputRefNum(portIndex);
+    writeNextStateStop();
     return res;
 }
 
-Result<void> JackGraphManager::Connect(jack_port_id_t port_src, jack_port_id_t port_dst)
+Result<void> GraphManager::connect(PortIdC portSrc, PortIdC portDst)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    jack_log("JackGraphManager::Connect port_src = %ld port_dst = %ld", port_src, port_dst);
-    JackPort* src = GetPort(port_src);
-    JackPort* dst = GetPort(port_dst);
+    ConnectionManager* manager = writeNextStateStart();
+    jack_log("JackGraphManager::Connect port_src = %ld port_dst = %ld", portSrc, portDst);
+    ServerPort* src = getPort(portSrc);
+    ServerPort* dst = getPort(portDst);
     Result<void> res;
 
-    if (!src->fInUse || !dst->fInUse) {
-        if (!src->fInUse)
-            jack_error("JackGraphManager::Connect port_src = %ld not used name = %s", port_src, GetPort(port_src)->fName);
-        if (!dst->fInUse)
-            jack_error("JackGraphManager::Connect port_dst = %ld not used name = %s", port_dst, GetPort(port_dst)->fName);
-        res = std::unexpected(Error::NotFound);
+    if (!src->m_inUse || !dst->m_inUse) {
+        if (!src->m_inUse)
+            jack_error("JackGraphManager::Connect port_src = %ld not used name = %s", portSrc, getPort(portSrc)->m_name);
+        if (!dst->m_inUse)
+            jack_error("JackGraphManager::Connect port_dst = %ld not used name = %s", portDst, getPort(portDst)->m_name);
+        res = std::unexpected(Error::kNotFound);
         goto end;
     }
-    if (src->fTypeId != dst->fTypeId) {
-        jack_error("JackGraphManager::Connect different port types port_src = %ld port_dst = %ld", port_src, port_dst);
-        res = std::unexpected(Error::InvalidArgument);
+    if (src->m_typeId != dst->m_typeId) {
+        jack_error("JackGraphManager::Connect different port types port_src = %ld port_dst = %ld", portSrc, portDst);
+        res = std::unexpected(Error::kInvalidArgument);
         goto end;
     }
-    if (manager->IsConnected(port_src, port_dst)) {
-        jack_error("JackGraphManager::Connect already connected port_src = %ld port_dst = %ld", port_src, port_dst);
-        res = std::unexpected(Error::InvalidState);
-        goto end;
-    }
-
-    res = manager->Connect(port_src, port_dst);
-    if (!res) {
-        jack_error("JackGraphManager::Connect failed port_src = %ld port_dst = %ld", port_src, port_dst);
-        goto end;
-    }
-    res = manager->Connect(port_dst, port_src);
-    if (!res) {
-        jack_error("JackGraphManager::Connect failed port_dst = %ld port_src = %ld", port_dst, port_src);
+    if (manager->isConnected(portSrc, portDst)) {
+        jack_error("JackGraphManager::Connect already connected port_src = %ld port_dst = %ld", portSrc, portDst);
+        res = std::unexpected(Error::kInvalidState);
         goto end;
     }
 
-    if (manager->IsLoopPath(port_src, port_dst)) {
+    res = manager->connect(portSrc, portDst);
+    if (!res) {
+        jack_error("JackGraphManager::Connect failed port_src = %ld port_dst = %ld", portSrc, portDst);
+        goto end;
+    }
+    res = manager->connect(portDst, portSrc);
+    if (!res) {
+        jack_error("JackGraphManager::Connect failed port_dst = %ld port_src = %ld", portDst, portSrc);
+        goto end;
+    }
+
+    if (manager->isLoopPath(portSrc, portDst)) {
         jack_log("JackGraphManager::Connect: LOOP detected");
-        manager->IncFeedbackConnection(port_src, port_dst);
+        manager->incFeedbackConnection(portSrc, portDst);
     } else {
-        manager->IncDirectConnection(port_src, port_dst);
+        manager->incDirectConnection(portSrc, portDst);
     }
 
 end:
-    WriteNextStateStop();
+    writeNextStateStop();
     return res;
 }
 
 // Server
-Result<void> JackGraphManager::Disconnect(jack_port_id_t port_src, jack_port_id_t port_dst)
+Result<void> GraphManager::disconnect(PortIdC portSrc, PortIdC portDst)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    jack_log("JackGraphManager::Disconnect port_src = %ld port_dst = %ld", port_src, port_dst);
-    bool in_use_src = GetPort(port_src)->fInUse;
-    bool in_use_dst = GetPort(port_dst)->fInUse;
+    ConnectionManager* manager = writeNextStateStart();
+    jack_log("JackGraphManager::Disconnect port_src = %ld port_dst = %ld", portSrc, portDst);
+    bool inUseSrc = getPort(portSrc)->m_inUse;
+    bool inUseDst = getPort(portDst)->m_inUse;
     Result<void> res;
 
-    if (!in_use_src || !in_use_dst) {
-        if (!in_use_src)
-            jack_error("JackGraphManager::Disconnect: port_src = %ld not used name = %s", port_src, GetPort(port_src)->fName);
-        if (!in_use_dst)
-            jack_error("JackGraphManager::Disconnect: port_src = %ld not used name = %s", port_dst, GetPort(port_dst)->fName);
-        res = std::unexpected(Error::NotFound);
+    if (!inUseSrc || !inUseDst) {
+        if (!inUseSrc)
+            jack_error("JackGraphManager::Disconnect: port_src = %ld not used name = %s", portSrc, getPort(portSrc)->m_name);
+        if (!inUseDst)
+            jack_error("JackGraphManager::Disconnect: port_src = %ld not used name = %s", portDst, getPort(portDst)->m_name);
+        res = std::unexpected(Error::kNotFound);
         goto end;
     }
-    if (!manager->IsConnected(port_src, port_dst)) {
-        jack_error("JackGraphManager::Disconnect not connected port_src = %ld port_dst = %ld", port_src, port_dst);
-        res = std::unexpected(Error::NotFound);
-        goto end;
-    }
-
-    res = manager->Disconnect(port_src, port_dst);
-    if (!res) {
-        jack_error("JackGraphManager::Disconnect failed port_src = %ld port_dst = %ld", port_src, port_dst);
-        goto end;
-    }
-    res = manager->Disconnect(port_dst, port_src);
-    if (!res) {
-        jack_error("JackGraphManager::Disconnect failed port_dst = %ld port_src = %ld", port_dst, port_src);
+    if (!manager->isConnected(portSrc, portDst)) {
+        jack_error("JackGraphManager::Disconnect not connected port_src = %ld port_dst = %ld", portSrc, portDst);
+        res = std::unexpected(Error::kNotFound);
         goto end;
     }
 
-    if (manager->IsFeedbackConnection(port_src, port_dst)) {
+    res = manager->disconnect(portSrc, portDst);
+    if (!res) {
+        jack_error("JackGraphManager::Disconnect failed port_src = %ld port_dst = %ld", portSrc, portDst);
+        goto end;
+    }
+    res = manager->disconnect(portDst, portSrc);
+    if (!res) {
+        jack_error("JackGraphManager::Disconnect failed port_dst = %ld port_src = %ld", portDst, portSrc);
+        goto end;
+    }
+
+    if (manager->isFeedbackConnection(portSrc, portDst)) {
         jack_log("JackGraphManager::Disconnect: FEEDBACK removed");
-        manager->DecFeedbackConnection(port_src, port_dst);
+        manager->decFeedbackConnection(portSrc, portDst);
     } else {
-        manager->DecDirectConnection(port_src, port_dst);
+        manager->decDirectConnection(portSrc, portDst);
     }
 
 end:
-    WriteNextStateStop();
+    writeNextStateStop();
     return res;
 }
 
 // Client
-bool JackGraphManager::IsConnected(jack_port_id_t port_src, jack_port_id_t port_dst)
+bool GraphManager::isConnected(PortIdC portSrc, PortIdC portDst)
 {
-    JackConnectionManager* manager = ReadCurrentState();
-    return manager->IsConnected(port_src, port_dst);
+    ConnectionManager* manager = readCurrentState();
+    return manager->isConnected(portSrc, portDst);
 }
 
 // Server
-Result<void> JackGraphManager::CheckPorts(jack_port_id_t port_src, jack_port_id_t port_dst)
+Result<void> GraphManager::checkPorts(PortIdC portSrc, PortIdC portDst)
 {
-    JackPort* src = GetPort(port_src);
-    JackPort* dst = GetPort(port_dst);
+    ServerPort* src = getPort(portSrc);
+    ServerPort* dst = getPort(portDst);
 
-    if ((dst->fFlags & JackPortIsInput) == 0) {
-        jack_error("Destination port in attempted (dis)connection of %s and %s is not an input port", src->fName, dst->fName);
-        return std::unexpected(Error::InvalidArgument);
+    if ((dst->m_flags & kPortIsInput) == 0) {
+        jack_error("Destination port in attempted (dis)connection of %s and %s is not an input port", src->m_name, dst->m_name);
+        return std::unexpected(Error::kInvalidArgument);
     }
 
-    if ((src->fFlags & JackPortIsOutput) == 0) {
-        jack_error("Source port in attempted (dis)connection of %s and %s is not an output port", src->fName, dst->fName);
-        return std::unexpected(Error::InvalidArgument);
+    if ((src->m_flags & kPortIsOutput) == 0) {
+        jack_error("Source port in attempted (dis)connection of %s and %s is not an output port", src->m_name, dst->m_name);
+        return std::unexpected(Error::kInvalidArgument);
     }
 
     return { };
 }
 
-Result<void> JackGraphManager::GetTwoPorts(const char* src_name, const char* dst_name, jack_port_id_t* port_src, jack_port_id_t* port_dst)
+Result<void> GraphManager::getTwoPorts(const char* srcName, const char* dstName, PortIdC* portSrc, PortIdC* portDst)
 {
-    jack_log("JackGraphManager::CheckConnect src_name = %s dst_name = %s", src_name, dst_name);
+    jack_log("JackGraphManager::CheckConnect src_name = %s dst_name = %s", srcName, dstName);
 
-    if ((*port_src = GetPort(src_name)) == kNoPort) {
-        jack_error("Unknown source port in attempted (dis)connection src_name [%s] dst_name [%s]", src_name, dst_name);
-        return std::unexpected(Error::NotFound);
+    if ((*portSrc = getPort(srcName)) == kNoPort) {
+        jack_error("Unknown source port in attempted (dis)connection src_name [%s] dst_name [%s]", srcName, dstName);
+        return std::unexpected(Error::kNotFound);
     }
 
-    if ((*port_dst = GetPort(dst_name)) == kNoPort) {
-        jack_error("Unknown destination port in attempted (dis)connection src_name [%s] dst_name [%s]", src_name, dst_name);
-        return std::unexpected(Error::NotFound);
+    if ((*portDst = getPort(dstName)) == kNoPort) {
+        jack_error("Unknown destination port in attempted (dis)connection src_name [%s] dst_name [%s]", srcName, dstName);
+        return std::unexpected(Error::kNotFound);
     }
 
     return { };
 }
 
 // Client : port array
-jack_port_id_t JackGraphManager::GetPort(const char* name)
+PortIdC GraphManager::getPort(const char* name)
 {
-    for (std::uint32_t i = 0; i < fPortMax; i++) {
-        JackPort* port = GetPort(i);
-        if (port->IsUsed() && port->NameEquals(name)) {
+    for (std::uint32_t i = 0; i < m_portMax; i++) {
+        ServerPort* port = getPort(i);
+        if (port->isUsed() && port->nameEquals(name)) {
             return i;
         }
     }
@@ -773,18 +773,18 @@ jack_port_id_t JackGraphManager::GetPort(const char* name)
 // \brief Get the connection port name array.
 
 // Client
-void JackGraphManager::GetConnectionsAux(JackConnectionManager* manager, const char** res, jack_port_id_t port_index)
+void GraphManager::getConnectionsAux(ConnectionManager* manager, const char** res, PortIdC portIndex)
 {
-    const jack_int_t* connections = manager->GetConnections(port_index);
-    jack_int_t index;
+    const Int* connections = manager->getConnections(portIndex);
+    Int index;
     std::int32_t i;
 
     // Cleanup connection array
     memset(res, 0, sizeof(char*) * kConnectionNumForPort);
 
     for (i = 0; (i < kConnectionNumForPort) && ((index = connections[i]) != kEmpty); i++) {
-        JackPort* port = GetPort(index);
-        res[i] = port->fName.data();
+        ServerPort* port = getPort(index);
+        res[i] = port->m_name.data();
     }
 
     res[i] = nullptr;
@@ -795,19 +795,19 @@ void JackGraphManager::GetConnectionsAux(JackConnectionManager* manager, const c
 // read to loop forever.
 
 // Client
-const char** JackGraphManager::GetConnections(jack_port_id_t port_index)
+const char** GraphManager::getConnections(PortIdC portIndex)
 {
     const char** res = (const char**)malloc(sizeof(char*) * kConnectionNumForPort);
-    UInt16 cur_index, next_index;
+    UInt16 curIndex, nextIndex;
 
     if (!res)
         return nullptr;
 
     do {
-        cur_index = GetCurrentIndex();
-        GetConnectionsAux(ReadCurrentState(), res, port_index);
-        next_index = GetCurrentIndex();
-    } while (cur_index != next_index); // Until a coherent state has been read
+        curIndex = getCurrentIndex();
+        getConnectionsAux(readCurrentState(), res, portIndex);
+        nextIndex = getCurrentIndex();
+    } while (curIndex != nextIndex); // Until a coherent state has been read
 
     if (res[0]) { // At least one connection
         return res;
@@ -818,63 +818,63 @@ const char** JackGraphManager::GetConnections(jack_port_id_t port_index)
 }
 
 // Client
-void JackGraphManager::GetPortsAux(const char** matching_ports, const char* port_name_pattern, const char* type_name_pattern, std::uint64_t flags)
+void GraphManager::getPortsAux(const char** matchingPorts, const char* portNamePattern, const char* typeNamePattern, std::uint64_t flags)
 {
     // Cleanup port array
-    memset(matching_ports, 0, sizeof(char*) * fPortMax);
+    memset(matchingPorts, 0, sizeof(char*) * m_portMax);
 
-    std::int32_t match_cnt = 0;
-    regex_t port_regex, type_regex;
+    std::int32_t matchCnt = 0;
+    regex_t portRegex, typeRegex;
 
-    if (port_name_pattern && port_name_pattern[0]) {
-        if (regcomp(&port_regex, port_name_pattern, REG_EXTENDED | REG_NOSUB) != 0) {
-            jack_log("JackGraphManager::GetPortsAux could not compile regex for port_name_pattern '%s'", port_name_pattern);
+    if (portNamePattern && portNamePattern[0]) {
+        if (regcomp(&portRegex, portNamePattern, REG_EXTENDED | REG_NOSUB) != 0) {
+            jack_log("JackGraphManager::GetPortsAux could not compile regex for port_name_pattern '%s'", portNamePattern);
             return;
         }
     }
-    if (type_name_pattern && type_name_pattern[0]) {
-        if (regcomp(&type_regex, type_name_pattern, REG_EXTENDED | REG_NOSUB) != 0) {
-            jack_log("JackGraphManager::GetPortsAux could not compile regex for type_name_pattern '%s'", type_name_pattern);
+    if (typeNamePattern && typeNamePattern[0]) {
+        if (regcomp(&typeRegex, typeNamePattern, REG_EXTENDED | REG_NOSUB) != 0) {
+            jack_log("JackGraphManager::GetPortsAux could not compile regex for type_name_pattern '%s'", typeNamePattern);
             return;
         }
     }
 
-    for (std::uint32_t i = 0; i < fPortMax; i++) {
+    for (std::uint32_t i = 0; i < m_portMax; i++) {
         bool matching = true;
-        JackPort* port = GetPort(i);
+        ServerPort* port = getPort(i);
 
-        if (port->IsUsed()) {
+        if (port->isUsed()) {
 
             if (flags) {
-                if ((port->fFlags & flags) != flags) {
+                if ((port->m_flags & flags) != flags) {
                     matching = false;
                 }
             }
 
-            if (matching && port_name_pattern && port_name_pattern[0]) {
-                if (regexec(&port_regex, port->GetName(), 0, nullptr, 0)) {
+            if (matching && portNamePattern && portNamePattern[0]) {
+                if (regexec(&portRegex, port->getName(), 0, nullptr, 0)) {
                     matching = false;
                 }
             }
-            if (matching && type_name_pattern && type_name_pattern[0]) {
-                if (regexec(&type_regex, port->GetType(), 0, nullptr, 0)) {
+            if (matching && typeNamePattern && typeNamePattern[0]) {
+                if (regexec(&typeRegex, port->getType(), 0, nullptr, 0)) {
                     matching = false;
                 }
             }
 
             if (matching) {
-                matching_ports[match_cnt++] = port->fName.data();
+                matchingPorts[matchCnt++] = port->m_name.data();
             }
         }
     }
 
-    matching_ports[match_cnt] = 0;
+    matchingPorts[matchCnt] = 0;
 
-    if (port_name_pattern && port_name_pattern[0]) {
-        regfree(&port_regex);
+    if (portNamePattern && portNamePattern[0]) {
+        regfree(&portRegex);
     }
-    if (type_name_pattern && type_name_pattern[0]) {
-        regfree(&type_regex);
+    if (typeNamePattern && typeNamePattern[0]) {
+        regfree(&typeRegex);
     }
 }
 
@@ -882,19 +882,19 @@ void JackGraphManager::GetPortsAux(const char** matching_ports, const char* port
 // Check that the state was not changed during the read operation.
 // The operation is lock-free since there is no intermediate state in the write operation that could cause the
 // read to loop forever.
-const char** JackGraphManager::GetPorts(const char* port_name_pattern, const char* type_name_pattern, std::uint64_t flags)
+const char** GraphManager::getPorts(const char* portNamePattern, const char* typeNamePattern, std::uint64_t flags)
 {
-    const char** res = (const char**)malloc(sizeof(char*) * fPortMax);
-    UInt16 cur_index, next_index;
+    const char** res = (const char**)malloc(sizeof(char*) * m_portMax);
+    UInt16 curIndex, nextIndex;
 
     if (!res)
         return nullptr;
 
     do {
-        cur_index = GetCurrentIndex();
-        GetPortsAux(res, port_name_pattern, type_name_pattern, flags);
-        next_index = GetCurrentIndex();
-    } while (cur_index != next_index); // Until a coherent state has been read
+        curIndex = getCurrentIndex();
+        getPortsAux(res, portNamePattern, typeNamePattern, flags);
+        nextIndex = getCurrentIndex();
+    } while (curIndex != nextIndex); // Until a coherent state has been read
 
     if (res[0]) { // At least one port
         return res;
@@ -905,19 +905,19 @@ const char** JackGraphManager::GetPorts(const char* port_name_pattern, const cha
 }
 
 // Server
-void JackGraphManager::Save(JackConnectionManager* dst)
+void GraphManager::save(ConnectionManager* dst)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    memcpy(dst, manager, sizeof(JackConnectionManager));
-    WriteNextStateStop();
+    ConnectionManager* manager = writeNextStateStart();
+    memcpy(dst, manager, sizeof(ConnectionManager));
+    writeNextStateStop();
 }
 
 // Server
-void JackGraphManager::Restore(JackConnectionManager* src)
+void GraphManager::restore(ConnectionManager* src)
 {
-    JackConnectionManager* manager = WriteNextStateStart();
-    memcpy(manager, src, sizeof(JackConnectionManager));
-    WriteNextStateStop();
+    ConnectionManager* manager = writeNextStateStart();
+    memcpy(manager, src, sizeof(ConnectionManager));
+    writeNextStateStop();
 }
 
 } // namespace jackmini

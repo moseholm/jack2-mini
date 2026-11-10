@@ -25,62 +25,62 @@
 
 namespace jackmini {
 
-class JackClientInterface;
-class JackServer;
-struct JackEngineControl;
-class JackGraphManager;
-struct JackShmSegment;
+class ClientInterface;
+class ServerCore;
+struct EngineControl;
+class GraphManager;
+struct ShmSegment;
 
 namespace detail {
 
-class JackChannelTransactionInterface {
+class ChannelTransactionInterface {
 
 public:
-    JackChannelTransactionInterface()
+    ChannelTransactionInterface()
     {
     }
-    virtual ~JackChannelTransactionInterface()
+    virtual ~ChannelTransactionInterface()
     {
     }
 
-    virtual std::int32_t Read(void* data, std::int32_t len) = 0;
-    virtual std::int32_t Write(void* data, std::int32_t len) = 0;
+    virtual std::int32_t read(void* data, std::int32_t len) = 0;
+    virtual std::int32_t write(void* data, std::int32_t len) = 0;
 
     // Writes data with descriptors, in one message. The receiver gets its own copies.
-    virtual std::int32_t WriteWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) { return -1; }
+    virtual std::int32_t writeWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) { return -1; }
     // Reads data and the descriptors sent with it. The caller owns the descriptors it gets.
-    virtual std::int32_t ReadWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) { return -1; }
+    virtual std::int32_t readWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) { return -1; }
 };
 
-class JackRequestInterface {
+class RequestInterface {
 
 public:
-    JackRequestInterface()
+    RequestInterface()
     {
     }
-    virtual ~JackRequestInterface()
+    virtual ~RequestInterface()
     {
     }
 
-    virtual std::int32_t Connect(const char* dir, const char* name, std::int32_t which) = 0;
-    virtual std::int32_t Close() = 0;
+    virtual std::int32_t connect(const char* dir, const char* name, std::int32_t which) = 0;
+    virtual std::int32_t close() = 0;
 };
 
-class JackClientRequestInterface : public JackChannelTransactionInterface, public JackRequestInterface {
+class ClientRequestInterface : public ChannelTransactionInterface, public RequestInterface {
 
 public:
-    JackClientRequestInterface()
+    ClientRequestInterface()
     {
     }
-    virtual ~JackClientRequestInterface()
+    virtual ~ClientRequestInterface()
     {
     }
 
-    virtual std::int32_t Read(void* data, std::int32_t len) { return -1; }
-    virtual std::int32_t Write(void* data, std::int32_t len) { return -1; }
+    virtual std::int32_t read(void* data, std::int32_t len) { return -1; }
+    virtual std::int32_t write(void* data, std::int32_t len) { return -1; }
 
-    virtual std::int32_t Connect(const char* dir, const char* name, std::int32_t which) { return -1; }
-    virtual std::int32_t Close() { return -1; }
+    virtual std::int32_t connect(const char* dir, const char* name, std::int32_t which) { return -1; }
+    virtual std::int32_t close() { return -1; }
 };
 
 // \brief Inter process channel for server/client bidirectionnal communication : request and (receiving) notifications.

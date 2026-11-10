@@ -49,20 +49,20 @@ public:
     ProcessContext(const ProcessContext&) = delete;
     ProcessContext& operator=(const ProcessContext&) = delete;
 
-    JackShmReadWritePtr<JackEngineControl> engine;
-    JackShmReadWritePtr<JackGraphManager> graph;
-    std::array<JackSynchro, kClientNum> synchro;
-    std::mutex synchro_mutex; // guards the connection of the synchro entries
+    ShmReadWritePtr<EngineControl> m_engine;
+    ShmReadWritePtr<GraphManager> m_graph;
+    std::array<Synchro, kClientNum> m_synchro;
+    std::mutex m_synchroMutex; // guards the connection of the synchro entries
 
 private:
     ProcessContext();
 
-    sigset_t saved_signals_;
+    sigset_t m_savedSignals;
 
-    static std::mutex registry_mutex_;
-    static std::unique_ptr<ProcessContext> instance_;
-    static std::atomic<ProcessContext*> current_;
-    static std::int32_t count_;
+    static std::mutex s_registryMutex;
+    static std::unique_ptr<ProcessContext> s_instance;
+    static std::atomic<ProcessContext*> s_current;
+    static std::int32_t s_count;
 };
 
 } // namespace jackmini::client

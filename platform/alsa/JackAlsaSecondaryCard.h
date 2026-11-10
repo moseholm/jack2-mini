@@ -36,7 +36,7 @@
 
 namespace jackmini {
 
-class JackGraphManager;
+class GraphManager;
 
 // \brief One secondary ALSA card.
 //
@@ -45,191 +45,191 @@ class JackGraphManager;
 // rings and the JACK port buffers; all ALSA calls happen on the card's own
 // thread.
 
-class JackAlsaSecondaryCard : public JackRunnableInterface {
+class AlsaSecondaryCard : public RunnableInterface {
 
 private:
-    JackAlsaSecondaryConfig fConfig;
-    jackmini::alsa::Session fSession;
-    JackThread fThread;
-    std::atomic<bool> fRunning;
+    AlsaSecondaryConfig m_config;
+    jackmini::alsa::Session m_session;
+    Thread m_thread;
+    std::atomic<bool> m_running;
 
-    bool fOpened;
-    bool fRealTime;
-    std::int32_t fPriority;
-    bool fCaptureEnabled;
-    bool fPlaybackEnabled;
+    bool m_opened;
+    bool m_realTime;
+    std::int32_t m_priority;
+    bool m_captureEnabled;
+    bool m_playbackEnabled;
 
-    jack_nframes_t fPeriod;
-    jack_nframes_t fNperiods;
-    jack_nframes_t fRate;
-    std::int32_t fCaptureChannels;
-    std::int32_t fPlaybackChannels;
+    NframesC m_period;
+    NframesC m_nperiods;
+    NframesC m_rate;
+    std::int32_t m_captureChannels;
+    std::int32_t m_playbackChannels;
 
-    JackAlsaRingBuffer* fCaptureRing;
-    JackAlsaRingBuffer* fPlaybackRing;
+    AlsaRingBuffer* m_captureRing;
+    AlsaRingBuffer* m_playbackRing;
 
-    JackResamplerFactory* fFactory;
-    JackAlsaRateConverter* fCaptureConverter;
-    JackAlsaRateConverter* fPlaybackConverter;
-    float** fCaptureConvIn;
-    float** fPlaybackConvOut;
-    std::uint32_t fConvCap;
+    ResamplerFactory* m_factory;
+    AlsaRateConverter* m_captureConverter;
+    AlsaRateConverter* m_playbackConverter;
+    float** m_captureConvIn;
+    float** m_playbackConvOut;
+    std::uint32_t m_convCap;
 
-    JackAlsaDriftController fDrift;
-    std::atomic<std::uint32_t> fXrunGeneration;
-    std::uint32_t fSeenXrunGeneration;
+    AlsaDriftController m_drift;
+    std::atomic<std::uint32_t> m_xrunGeneration;
+    std::uint32_t m_seenXrunGeneration;
 
     // Counters for the realtime threads.  The audio callbacks only bump
     // these; the messages are emitted later from a non-realtime thread.
-    std::atomic<std::uint64_t> fCaptureDropped;
-    std::atomic<std::uint64_t> fPlaybackDropped;
+    std::atomic<std::uint64_t> m_captureDropped;
+    std::atomic<std::uint64_t> m_playbackDropped;
 
     enum class IoError : std::int32_t {
-        None = 0,
-        Wait,
-        Read,
-        Write
+        kNone = 0,
+        kWait,
+        kRead,
+        kWrite
     };
-    std::atomic<IoError> fIoError;
-    std::atomic<std::int32_t> fIoErrorStatus;
+    std::atomic<IoError> m_ioError;
+    std::atomic<std::int32_t> m_ioErrorStatus;
 
-    snd_ctl_t* fCtl;
-    std::string fCtlName;
-    std::array<JackAlsaRateElement, 2> fRateElem;
-    std::array<bool, 2> fRateValid;
+    snd_ctl_t* m_ctl;
+    std::string m_ctlName;
+    std::array<AlsaRateElement, 2> m_rateElem;
+    std::array<bool, 2> m_rateValid;
 
-    float** fCaptureTemp;
-    float** fPlaybackTemp;
-    float** fPortScratch;
-    float* fSilence;
+    float** m_captureTemp;
+    float** m_playbackTemp;
+    float** m_portScratch;
+    float* m_silence;
 
-    std::vector<jack_port_id_t> fCapturePorts;
-    std::vector<jack_port_id_t> fPlaybackPorts;
+    std::vector<PortIdC> m_capturePorts;
+    std::vector<PortIdC> m_playbackPorts;
 
-    void FreeBuffers();
-    void FreeStreamObjects();
-    std::int32_t OpenStream(jack_nframes_t requested_rate, jack_nframes_t primary_buffer_size,
-        jack_nframes_t primary_rate);
-    std::int32_t BuildBuffers(jack_nframes_t primary_buffer_size, jack_nframes_t primary_rate);
-    bool ReopenAt(jack_nframes_t rate, std::int32_t capture_channels, std::int32_t playback_channels);
-    bool WaitForRTCycles(std::uint32_t cycles);
+    void freeBuffers();
+    void freeStreamObjects();
+    std::int32_t openStream(NframesC requestedRate, NframesC primaryBufferSize,
+        NframesC primaryRate);
+    std::int32_t buildBuffers(NframesC primaryBufferSize, NframesC primaryRate);
+    bool reopenAt(NframesC rate, std::int32_t captureChannels, std::int32_t playbackChannels);
+    bool waitForRTCycles(std::uint32_t cycles);
 
-    jack_nframes_t fPrimaryBufferSize;
-    jack_nframes_t fPrimaryRate;
-    std::atomic<bool> fSilent;
-    const std::atomic<std::uint64_t>* fRTEpoch;
-    const std::atomic<bool>* fRTRunning;
-    std::int32_t fId;
-    std::int32_t fDevice;
-    JackAlsaCardFailureSink* fFailureSink;
+    NframesC m_primaryBufferSize;
+    NframesC m_primaryRate;
+    std::atomic<bool> m_silent;
+    const std::atomic<std::uint64_t>* m_rTEpoch;
+    const std::atomic<bool>* m_rTRunning;
+    std::int32_t m_id;
+    std::int32_t m_device;
+    AlsaCardFailureSink* m_failureSink;
 
     // Stops the card after an I/O error and tells the driver.
-    void MarkFailed();
+    void markFailed();
     // Non-realtime reporting of conditions collected by the RT threads.
-    void ReportDrops();
-    void ReportPendingIoError();
-    void UpdateDrift(bool capture_side);
-    void CloseControls();
+    void reportDrops();
+    void reportPendingIoError();
+    void updateDrift(bool captureSide);
+    void closeControls();
 
     // ALSA core callbacks
-    void ReadInput(const jackmini::alsa::MappedFrames& mapped, std::ptrdiff_t nread);
-    void ClearOutput();
-    void WriteOutput(const jackmini::alsa::MappedFrames& mapped, std::ptrdiff_t nwritten);
-    void SetTime(jack_time_t time);
-    std::int32_t Restart();
+    void readInput(const jackmini::alsa::MappedFrames& mapped, std::ptrdiff_t nread);
+    void clearOutput();
+    void writeOutput(const jackmini::alsa::MappedFrames& mapped, std::ptrdiff_t nwritten);
+    void setTime(TimeC time);
+    std::int32_t restart();
 
-    static void ReadInputThunk(void* arg, jackmini::alsa::PcmCycle& cycle, const jackmini::alsa::MappedFrames& mapped,
-        std::uint32_t orig_frames, std::ptrdiff_t nread);
-    static void ClearOutputThunk(void* arg);
-    static void WriteOutputThunk(void* arg, jackmini::alsa::PcmCycle& cycle,
-        const jackmini::alsa::MappedFrames& mapped, std::uint32_t orig_frames,
+    static void readInputThunk(void* arg, jackmini::alsa::PcmCycle& cycle, const jackmini::alsa::MappedFrames& mapped,
+        std::uint32_t origFrames, std::ptrdiff_t nread);
+    static void clearOutputThunk(void* arg);
+    static void writeOutputThunk(void* arg, jackmini::alsa::PcmCycle& cycle,
+        const jackmini::alsa::MappedFrames& mapped, std::uint32_t origFrames,
         std::ptrdiff_t nwritten);
-    static void SetTimeThunk(void* arg, jack_time_t time);
-    static std::int32_t RestartThunk(void* arg);
+    static void setTimeThunk(void* arg, TimeC time);
+    static std::int32_t restartThunk(void* arg);
 
-    JackAlsaSecondaryCard(const JackAlsaSecondaryCard&);
-    JackAlsaSecondaryCard& operator=(const JackAlsaSecondaryCard&);
+    AlsaSecondaryCard(const AlsaSecondaryCard&);
+    AlsaSecondaryCard& operator=(const AlsaSecondaryCard&);
 
 public:
-    JackAlsaSecondaryCard(const JackAlsaSecondaryConfig& config, JackResamplerFactory* factory);
-    virtual ~JackAlsaSecondaryCard();
+    AlsaSecondaryCard(const AlsaSecondaryConfig& config, ResamplerFactory* factory);
+    virtual ~AlsaSecondaryCard();
 
-    std::int32_t Open(jack_nframes_t primary_buffer_size,
-        jack_nframes_t primary_rate,
-        jack_nframes_t primary_nperiods,
+    std::int32_t open(NframesC primaryBufferSize,
+        NframesC primaryRate,
+        NframesC primaryNperiods,
         bool realtime,
         std::int32_t priority);
-    std::int32_t Close();
+    std::int32_t close();
 
-    std::int32_t Start();
-    std::int32_t Stop();
+    std::int32_t start();
+    std::int32_t stop();
 
     // JackRunnableInterface
-    virtual bool Init();
-    virtual bool Execute();
+    virtual bool init();
+    virtual bool execute();
 
     // RT side, called from the primary driver thread.
-    void ReadToPorts(JackGraphManager* graph_manager, jack_nframes_t nframes);
-    void WriteFromPorts(JackGraphManager* graph_manager, jack_nframes_t nframes);
+    void readToPorts(GraphManager* graphManager, NframesC nframes);
+    void writeFromPorts(GraphManager* graphManager, NframesC nframes);
 
-    const std::string& Name() const { return fConfig.name; }
+    const std::string& name() const { return m_config.m_name; }
 
     // The device number of this card's PCM, or -1 when it is not known.
-    std::int32_t Device() const { return fDevice; }
+    std::int32_t device() const { return m_device; }
 
     // The name used in port names: the card name with its device, e.g. "nvidia_d3".
-    std::string PortBase() const;
+    std::string portBase() const;
 
     // Stable identifier chosen by the driver; used to route events to the card.
-    std::int32_t Id() const { return fId; }
-    void SetId(std::int32_t id) { fId = id; }
-    void SetFailureSink(JackAlsaCardFailureSink* sink) { fFailureSink = sink; }
-    const JackAlsaSecondaryConfig& Config() const { return fConfig; }
+    std::int32_t id() const { return m_id; }
+    void setId(std::int32_t id) { m_id = id; }
+    void setFailureSink(AlsaCardFailureSink* sink) { m_failureSink = sink; }
+    const AlsaSecondaryConfig& config() const { return m_config; }
 
-    bool CaptureEnabled() const { return fCaptureEnabled; }
-    bool PlaybackEnabled() const { return fPlaybackEnabled; }
-    std::int32_t CaptureChannels() const { return fCaptureChannels; }
-    std::int32_t PlaybackChannels() const { return fPlaybackChannels; }
-    jack_nframes_t Period() const { return fPeriod; }
-    jack_nframes_t Rate() const { return fRate; }
-    bool IsOpen() const { return fOpened; }
-    bool IsRunning() const { return fRunning.load(); }
+    bool captureEnabled() const { return m_captureEnabled; }
+    bool playbackEnabled() const { return m_playbackEnabled; }
+    std::int32_t captureChannels() const { return m_captureChannels; }
+    std::int32_t playbackChannels() const { return m_playbackChannels; }
+    NframesC period() const { return m_period; }
+    NframesC rate() const { return m_rate; }
+    bool isOpen() const { return m_opened; }
+    bool isRunning() const { return m_running.load(); }
     // Clears resampler history and drift state.  Called by the driver after a primary xrun.
-    void ResetResampling();
+    void resetResampling();
 
     // Gives the card the driver's RT cycle counter, used to know when the RT
     // thread has stopped touching the card during a reconfiguration.
     // The driver shares its RT cycle counter and running state.  While the RT
     // side runs, a reconfiguration waits for it to pass a safe point.
-    void SetRTState(const std::atomic<std::uint64_t>* epoch, const std::atomic<bool>* running)
+    void setRTState(const std::atomic<std::uint64_t>* epoch, const std::atomic<bool>* running)
     {
-        fRTEpoch = epoch;
-        fRTRunning = running;
+        m_rTEpoch = epoch;
+        m_rTRunning = running;
     }
 
     // Changes the stream rate: stops the card, reopens the ALSA stream and rebuilds
     // its buffers, converters and rings, then restarts it if it was running.  If the
     // new rate cannot be opened the previous rate is restored and -1 is returned.
-    std::int32_t Reconfigure(jack_nframes_t rate);
+    std::int32_t reconfigure(NframesC rate);
 
     // Latency of the card's ports, in primary frames.  Counts the cycle, the
     // card's ALSA buffer and the ring and converter buffering on this side.
-    jack_nframes_t CaptureLatency() const;
-    jack_nframes_t PlaybackLatency() const;
+    NframesC captureLatency() const;
+    NframesC playbackLatency() const;
 
     // Resolves or creates the rate elements for the enabled directions.
-    std::int32_t OpenControls();
+    std::int32_t openControls();
 
-    const std::string& ControlName() const { return fCtlName; }
-    bool RateElementValid(JackAlsaRateDirection dir) const { return fRateValid[dir]; }
-    const JackAlsaRateElement& RateElement(JackAlsaRateDirection dir) const { return fRateElem[dir]; }
-    std::int32_t ReadRate(JackAlsaRateDirection dir, std::int64_t* value);
-    std::int32_t WriteRate(JackAlsaRateDirection dir, std::int64_t value);
+    const std::string& controlName() const { return m_ctlName; }
+    bool rateElementValid(AlsaRateDirection dir) const { return m_rateValid[dir]; }
+    const AlsaRateElement& rateElement(AlsaRateDirection dir) const { return m_rateElem[dir]; }
+    std::int32_t readRate(AlsaRateDirection dir, std::int64_t* value);
+    std::int32_t writeRate(AlsaRateDirection dir, std::int64_t value);
 
-    bool IsConverting() const { return fCaptureConverter != nullptr || fPlaybackConverter != nullptr; }
+    bool isConverting() const { return m_captureConverter != nullptr || m_playbackConverter != nullptr; }
 
-    std::vector<jack_port_id_t>& CapturePorts() { return fCapturePorts; }
-    std::vector<jack_port_id_t>& PlaybackPorts() { return fPlaybackPorts; }
+    std::vector<PortIdC>& capturePorts() { return m_capturePorts; }
+    std::vector<PortIdC>& playbackPorts() { return m_playbackPorts; }
 };
 
 } // namespace jackmini

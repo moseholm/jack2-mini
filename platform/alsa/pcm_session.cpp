@@ -27,93 +27,93 @@ namespace jackmini::alsa {
 namespace {
 
 // The copy from a JACK float buffer to a device playback area.  Null when the format has no conversion.
-WriteCopyFunction select_write(const StreamInfo& info, DitherAlgorithm dither)
+WriteCopyFunction selectWrite(const StreamInfo& info, DitherAlgorithm dither)
 {
-    const bool swapped = info.byte_swapped;
+    const bool swapped = info.m_byteSwapped;
 
-    if (info.format == SND_PCM_FORMAT_FLOAT_LE) {
-        return sample_move_dS_floatLE;
+    if (info.m_format == SND_PCM_FORMAT_FLOAT_LE) {
+        return sampleMoveDSFloatLE;
     }
 
-    switch (info.sample_bytes) {
+    switch (info.m_sampleBytes) {
     case 2:
         switch (dither) {
-        case Rectangular:
+        case kRectangular:
             jack_info("Rectangular dithering at 16 bits");
-            return swapped ? sample_move_dither_rect_d16_sSs : sample_move_dither_rect_d16_sS;
-        case Triangular:
+            return swapped ? sampleMoveDitherRectD16SSs : sampleMoveDitherRectD16SS;
+        case kTriangular:
             jack_info("Triangular dithering at 16 bits");
-            return swapped ? sample_move_dither_tri_d16_sSs : sample_move_dither_tri_d16_sS;
-        case Shaped:
+            return swapped ? sampleMoveDitherTriD16SSs : sampleMoveDitherTriD16SS;
+        case kShaped:
             jack_info("Noise-shaped dithering at 16 bits");
-            return swapped ? sample_move_dither_shaped_d16_sSs : sample_move_dither_shaped_d16_sS;
+            return swapped ? sampleMoveDitherShapedD16SSs : sampleMoveDitherShapedD16SS;
         default:
-            return swapped ? sample_move_d16_sSs : sample_move_d16_sS;
+            return swapped ? sampleMoveD16SSs : sampleMoveD16SS;
         }
     case 3:
-        return swapped ? sample_move_d24_sSs : sample_move_d24_sS;
+        return swapped ? sampleMoveD24SSs : sampleMoveD24SS;
     case 4:
-        switch (info.format) {
+        switch (info.m_format) {
         case SND_PCM_FORMAT_S24_LE:
         case SND_PCM_FORMAT_S24_BE:
-            return swapped ? sample_move_d32l24_sSs : sample_move_d32l24_sS;
+            return swapped ? sampleMoveD32l24SSs : sampleMoveD32l24SS;
         case SND_PCM_FORMAT_S32_LE:
         case SND_PCM_FORMAT_S32_BE:
-            if (info.sbits == 32) {
-                return swapped ? sample_move_d32_sSs : sample_move_d32_sS;
+            if (info.m_sbits == 32) {
+                return swapped ? sampleMoveD32SSs : sampleMoveD32SS;
             }
-            if (info.sbits == 24) {
+            if (info.m_sbits == 24) {
                 jack_log("sample format is SND_PCM_FORMAT_S32 but only 24 bits available");
-                return swapped ? sample_move_d32u24_sSs : sample_move_d32u24_sS;
+                return swapped ? sampleMoveD32u24SSs : sampleMoveD32u24SS;
             }
-            jack_error("unsupported sample format for playback: SND_PCM_FORMAT_S32 with %u bits", info.sbits);
+            jack_error("unsupported sample format for playback: SND_PCM_FORMAT_S32 with %u bits", info.m_sbits);
             return nullptr;
         default:
             jack_error("unsupported 4 byte sample_format");
             return nullptr;
         }
     default:
-        jack_error("impossible sample width (%u) discovered!", info.sample_bytes);
+        jack_error("impossible sample width (%u) discovered!", info.m_sampleBytes);
         return nullptr;
     }
 }
 
 // The copy from a device capture area to a JACK float buffer.  Null when the format has no conversion.
-ReadCopyFunction select_read(const StreamInfo& info)
+ReadCopyFunction selectRead(const StreamInfo& info)
 {
-    const bool swapped = info.byte_swapped;
+    const bool swapped = info.m_byteSwapped;
 
-    if (info.format == SND_PCM_FORMAT_FLOAT_LE) {
-        return sample_move_floatLE_sSs;
+    if (info.m_format == SND_PCM_FORMAT_FLOAT_LE) {
+        return sampleMoveFloatLESSs;
     }
 
-    switch (info.sample_bytes) {
+    switch (info.m_sampleBytes) {
     case 2:
-        return swapped ? sample_move_dS_s16s : sample_move_dS_s16;
+        return swapped ? sampleMoveDSS16s : sampleMoveDSS16;
     case 3:
-        return swapped ? sample_move_dS_s24s : sample_move_dS_s24;
+        return swapped ? sampleMoveDSS24s : sampleMoveDSS24;
     case 4:
-        switch (info.format) {
+        switch (info.m_format) {
         case SND_PCM_FORMAT_S24_LE:
         case SND_PCM_FORMAT_S24_BE:
-            return swapped ? sample_move_dS_s32l24s : sample_move_dS_s32l24;
+            return swapped ? sampleMoveDSS32l24s : sampleMoveDSS32l24;
         case SND_PCM_FORMAT_S32_LE:
         case SND_PCM_FORMAT_S32_BE:
-            if (info.sbits == 32) {
-                return swapped ? sample_move_dS_s32s : sample_move_dS_s32;
+            if (info.m_sbits == 32) {
+                return swapped ? sampleMoveDSS32s : sampleMoveDSS32;
             }
-            if (info.sbits == 24) {
+            if (info.m_sbits == 24) {
                 jack_log("sample format is SND_PCM_FORMAT_S32 but only 24 bits available");
-                return swapped ? sample_move_dS_s32u24s : sample_move_dS_s32u24;
+                return swapped ? sampleMoveDSS32u24s : sampleMoveDSS32u24;
             }
-            jack_error("unsupported sample format for capture: SND_PCM_FORMAT_S32 with %u bits", info.sbits);
+            jack_error("unsupported sample format for capture: SND_PCM_FORMAT_S32 with %u bits", info.m_sbits);
             return nullptr;
         default:
             jack_error("unsupported 4 byte sample_format");
             return nullptr;
         }
     default:
-        jack_error("impossible sample width (%u) discovered!", info.sample_bytes);
+        jack_error("impossible sample width (%u) discovered!", info.m_sampleBytes);
         return nullptr;
     }
 }
@@ -125,75 +125,75 @@ Session::~Session()
     close();
 }
 
-std::int32_t Session::open(const char* capture_name, const char* playback_name, Request& request, DitherAlgorithm dither)
+std::int32_t Session::open(const char* captureName, const char* playbackName, Request& request, DitherAlgorithm dither)
 {
     close();
-    if (device_.open(capture_name, playback_name, request) < 0) {
+    if (m_device.open(captureName, playbackName, request) < 0) {
         return -1;
     }
 
-    if (device_.has_playback()) {
-        write_copy_ = select_write(device_.info(Stream::Playback), dither);
-        if (write_copy_ == nullptr) {
+    if (m_device.hasPlayback()) {
+        m_writeCopy = selectWrite(m_device.info(Stream::kPlayback), dither);
+        if (m_writeCopy == nullptr) {
             close();
             return -1;
         }
     }
-    if (device_.has_capture()) {
-        read_copy_ = select_read(device_.info(Stream::Capture));
-        if (read_copy_ == nullptr) {
+    if (m_device.hasCapture()) {
+        m_readCopy = selectRead(m_device.info(Stream::kCapture));
+        if (m_readCopy == nullptr) {
             close();
             return -1;
         }
     }
 
-    const StreamInfo& timing = device_.has_playback() ? device_.info(Stream::Playback) : device_.info(Stream::Capture);
-    frames_per_cycle_ = request.frames_per_cycle;
-    periods_ = timing.periods;
-    rate_ = request.rate;
-    dither_.assign(device_.playback_channels(), dither_state_t { });
+    const StreamInfo& timing = m_device.hasPlayback() ? m_device.info(Stream::kPlayback) : m_device.info(Stream::kCapture);
+    m_framesPerCycle = request.m_framesPerCycle;
+    m_periods = timing.m_periods;
+    m_rate = request.m_rate;
+    m_dither.assign(m_device.playbackChannels(), DitherState { });
 
     Config config;
-    config.frames_per_cycle = frames_per_cycle_;
-    config.buffer_frames = frames_per_cycle_ * periods_;
-    config.period_usecs = static_cast<std::uint64_t>(frames_per_cycle_) * 1000000ull / rate_;
-    config.capture_and_playback_not_synced = device_.capture_and_playback_not_synced();
+    config.m_framesPerCycle = m_framesPerCycle;
+    config.m_bufferFrames = m_framesPerCycle * m_periods;
+    config.m_periodUsecs = static_cast<std::uint64_t>(m_framesPerCycle) * 1000000ull / m_rate;
+    config.m_captureAndPlaybackNotSynced = m_device.captureAndPlaybackNotSynced();
 
-    cycle_ = std::make_unique<PcmCycle>(device_, config);
-    cycle_->set_callbacks(callbacks_);
+    m_cycle = std::make_unique<PcmCycle>(m_device, config);
+    m_cycle->setCallbacks(m_callbacks);
     return 0;
 }
 
 void Session::close()
 {
-    cycle_.reset();
-    device_.close();
-    dither_.clear();
-    read_copy_ = nullptr;
-    write_copy_ = nullptr;
-    frames_per_cycle_ = 0;
-    periods_ = 0;
-    rate_ = 0;
+    m_cycle.reset();
+    m_device.close();
+    m_dither.clear();
+    m_readCopy = nullptr;
+    m_writeCopy = nullptr;
+    m_framesPerCycle = 0;
+    m_periods = 0;
+    m_rate = 0;
 }
 
-void Session::set_callbacks(const PcmCycle::Callbacks& callbacks)
+void Session::setCallbacks(const PcmCycle::Callbacks& callbacks)
 {
-    callbacks_ = callbacks;
-    if (cycle_) {
-        cycle_->set_callbacks(callbacks_);
+    m_callbacks = callbacks;
+    if (m_cycle) {
+        m_cycle->setCallbacks(m_callbacks);
     }
 }
 
-void Session::read_channel(const ChannelArea& area, jack_default_audio_sample_t* buf, std::size_t frames)
+void Session::readChannel(const ChannelArea& area, DefaultAudioSampleC* buf, std::size_t frames)
 {
-    read_copy_(buf, reinterpret_cast<std::byte*>(area.data), frames, area.stride);
+    m_readCopy(buf, reinterpret_cast<std::byte*>(area.m_data), frames, area.m_stride);
 }
 
-void Session::write_channel(std::size_t channel, const ChannelArea& area, jack_default_audio_sample_t* buf,
+void Session::writeChannel(std::size_t channel, const ChannelArea& area, DefaultAudioSampleC* buf,
     std::size_t frames)
 {
-    write_copy_(reinterpret_cast<std::byte*>(area.data), buf, frames, area.stride, &dither_[channel]);
-    cycle_->mark_channel_done(channel);
+    m_writeCopy(reinterpret_cast<std::byte*>(area.m_data), buf, frames, area.m_stride, &m_dither[channel]);
+    m_cycle->markChannelDone(channel);
 }
 
 } // namespace jackmini::alsa

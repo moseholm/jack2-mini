@@ -22,14 +22,14 @@
 
 namespace jackmini {
 
-bool JackActivationCount::Signal(std::atomic<SInt32>& live, JackSynchro* synchro, JackClientControl* control)
+bool ActivationCount::signal(std::atomic<SInt32>& live, Synchro* synchro, ClientControl* control)
 {
     if (live.load() == 0) {
         // Transfer activation to next clients
-        jack_log("JackActivationCount::Signal value = 0 ref = %ld", control->fRefNum);
-        return synchro->Signal();
+        jack_log("JackActivationCount::Signal value = 0 ref = %ld", control->m_refNum);
+        return synchro->signal();
     } else if (live.fetch_sub(1) == 1) {
-        return synchro->Signal();
+        return synchro->signal();
     } else {
         return true;
     }

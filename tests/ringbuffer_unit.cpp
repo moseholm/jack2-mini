@@ -28,27 +28,27 @@
 
 namespace {
 
-std::int32_t failures = 0;
+std::int32_t gFailures = 0;
 
 #define CHECK(cond)                                              \
     do {                                                         \
         if (!(cond)) {                                           \
             std::fprintf(stderr, "FAILED %s:%d: %s\n", __FILE__, \
                 __LINE__, #cond);                                \
-            ++failures;                                          \
+            ++gFailures;                                          \
         }                                                        \
     } while (0)
 
-void check_sizes()
+void checkSizes()
 {
     for (size_t requested : { size_t(0), size_t(1), size_t(2) }) {
-        jack_ringbuffer_t* rb = jack_ringbuffer_create(requested);
+        RingbufferC* rb = jack_ringbuffer_create(requested);
         CHECK(rb != nullptr);
         CHECK(jack_ringbuffer_write_space(rb) == 1);
         jack_ringbuffer_free(rb);
     }
 
-    jack_ringbuffer_t* rb = jack_ringbuffer_create(5);
+    RingbufferC* rb = jack_ringbuffer_create(5);
     CHECK(rb != nullptr);
     CHECK(jack_ringbuffer_write_space(rb) == 7);
     jack_ringbuffer_free(rb);
@@ -60,9 +60,9 @@ void check_sizes()
     jack_ringbuffer_free(rb);
 }
 
-void check_round_trip_and_wrap()
+void checkRoundTripAndWrap()
 {
-    jack_ringbuffer_t* rb = jack_ringbuffer_create(8);
+    RingbufferC* rb = jack_ringbuffer_create(8);
     CHECK(rb != nullptr);
 
     // Fill 5 of the 7 usable bytes, read 3, then write 6: the write wraps past the end.
@@ -87,9 +87,9 @@ void check_round_trip_and_wrap()
     jack_ringbuffer_free(rb);
 }
 
-void check_peek_and_advance()
+void checkPeekAndAdvance()
 {
-    jack_ringbuffer_t* rb = jack_ringbuffer_create(16);
+    RingbufferC* rb = jack_ringbuffer_create(16);
     CHECK(jack_ringbuffer_write(rb, "0123456789", 10) == 10);
 
     std::array<char, 16> out = { };
@@ -109,27 +109,27 @@ void check_peek_and_advance()
     jack_ringbuffer_free(rb);
 }
 
-void check_vectors()
+void checkVectors()
 {
-    jack_ringbuffer_t* rb = jack_ringbuffer_create(8);
-    std::array<jack_ringbuffer_data_t, 2> vec;
+    RingbufferC* rb = jack_ringbuffer_create(8);
+    std::array<RingbufferDataC, 2> vec;
 
     // Write 6 bytes and read 5. The free space now starts at index 6, so the writer's vector wraps: 2 bytes at the
     // end of the buffer and 4 at the start.
     jack_ringbuffer_get_write_vector(rb, vec.data());
-    CHECK(vec[0].len == 7);
+    CHECK(vec[0].m_len == 7);
     CHECK(jack_ringbuffer_write(rb, "uvwxyz", 6) == 6);
     std::array<char, 8> out = { };
     CHECK(jack_ringbuffer_read(rb, out.data(), 5) == 5);
 
     jack_ringbuffer_get_write_vector(rb, vec.data());
-    CHECK(vec[0].len == 2);
-    CHECK(vec[1].len == 4);
+    CHECK(vec[0].m_len == 2);
+    CHECK(vec[1].m_len == 4);
 
     jack_ringbuffer_get_read_vector(rb, vec.data());
-    CHECK(vec[0].len == 1);
-    CHECK(vec[0].buf[0] == 'z');
-    CHECK(vec[1].len == 0);
+    CHECK(vec[0].m_len == 1);
+    CHECK(vec[0].m_buf[0] == 'z');
+    CHECK(vec[1].m_len == 0);
 
     // The reader's view wraps too: "78" at the end of the buffer, then "9" at the start.
     jack_ringbuffer_reset(rb);
@@ -137,17 +137,17 @@ void check_vectors()
     jack_ringbuffer_read_advance(rb, 6);
     CHECK(jack_ringbuffer_write(rb, "89", 2) == 2);
     jack_ringbuffer_get_read_vector(rb, vec.data());
-    CHECK(vec[0].len == 2);
-    CHECK(std::memcmp(vec[0].buf, "78", 2) == 0);
-    CHECK(vec[1].len == 1);
-    CHECK(vec[1].buf[0] == '9');
+    CHECK(vec[0].m_len == 2);
+    CHECK(std::memcmp(vec[0].m_buf, "78", 2) == 0);
+    CHECK(vec[1].m_len == 1);
+    CHECK(vec[1].m_buf[0] == '9');
 
     jack_ringbuffer_free(rb);
 }
 
-void check_reset_size()
+void checkResetSize()
 {
-    jack_ringbuffer_t* rb = jack_ringbuffer_create(16);
+    RingbufferC* rb = jack_ringbuffer_create(16);
     CHECK(jack_ringbuffer_write(rb, "abcdef", 6) == 6);
     jack_ringbuffer_reset_size(rb, 4);
     CHECK(jack_ringbuffer_read_space(rb) == 0);
@@ -157,10 +157,10 @@ void check_reset_size()
 
 // One thread writes a known sequence and the other reads it back. The bytes must come out in the same order, with
 // nothing lost or repeated.
-void check_two_threads()
+void checkTwoThreads()
 {
     constexpr size_t kTotal = 1 << 22;
-    jack_ringbuffer_t* rb = jack_ringbuffer_create(4096);
+    RingbufferC* rb = jack_ringbuffer_create(4096);
     bool ordered = true;
 
     std::thread writer([rb] {
@@ -204,15 +204,15 @@ void check_two_threads()
 
 int main()
 {
-    check_sizes();
-    check_round_trip_and_wrap();
-    check_peek_and_advance();
-    check_vectors();
-    check_reset_size();
-    check_two_threads();
+    checkSizes();
+    checkRoundTripAndWrap();
+    checkPeekAndAdvance();
+    checkVectors();
+    checkResetSize();
+    checkTwoThreads();
 
-    if (failures) {
-        std::fprintf(stderr, "ringbuffer_unit: %d failure(s)\n", failures);
+    if (gFailures) {
+        std::fprintf(stderr, "ringbuffer_unit: %d failure(s)\n", gFailures);
         return 1;
     }
     std::printf("ringbuffer_unit: all checks passed\n");

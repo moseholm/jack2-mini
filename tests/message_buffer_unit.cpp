@@ -32,54 +32,54 @@
 
 namespace {
 
-std::int32_t g_failures = 0;
-std::int32_t g_checks = 0;
+std::int32_t gFailures = 0;
+std::int32_t gChecks = 0;
 
 #define CHECK(cond)                                                                       \
     do {                                                                                  \
-        g_checks++;                                                                       \
+        gChecks++;                                                                       \
         if (!(cond)) {                                                                    \
             std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
-            g_failures++;                                                                 \
+            gFailures++;                                                                 \
         }                                                                                 \
     } while (0)
 
-std::mutex g_lock;
-std::vector<std::string> g_received;
+std::mutex gLock;
+std::vector<std::string> gReceived;
 
-void CaptureError(const char* desc)
+void captureError(const char* desc)
 {
-    std::lock_guard<std::mutex> guard(g_lock);
-    g_received.emplace_back(desc);
+    std::lock_guard<std::mutex> guard(gLock);
+    gReceived.emplace_back(desc);
 }
 
-std::vector<std::string> Snapshot()
+std::vector<std::string> snapshot()
 {
-    std::lock_guard<std::mutex> guard(g_lock);
-    return g_received;
+    std::lock_guard<std::mutex> guard(gLock);
+    return gReceived;
 }
 
 // Producer messages look like "t<producer>:<sequence>".  Anything else is
 // the buffer's own report and is not counted.
-bool IsProducerMessage(const std::string& text)
+bool isProducerMessage(const std::string& text)
 {
     return text.size() > 1 && text[0] == 't' && std::isdigit(static_cast<unsigned char>(text[1]));
 }
 
-void TestConcurrentProducers()
+void testConcurrentProducers()
 {
-    constexpr std::int32_t producers = 4;
-    constexpr std::int64_t per_producer = 20000;
+    constexpr std::int32_t kProducers = 4;
+    constexpr std::int64_t kPerProducer = 20000;
 
-    CHECK(jackmini::JackMessageBuffer::Create());
-    g_received.clear();
+    CHECK(jackmini::MessageBuffer::create());
+    gReceived.clear();
 
     std::vector<std::thread> threads;
-    for (std::int32_t id = 0; id < producers; id++) {
+    for (std::int32_t id = 0; id < kProducers; id++) {
         threads.emplace_back([id] {
-            for (std::int64_t i = 0; i < per_producer; i++) {
+            for (std::int64_t i = 0; i < kPerProducer; i++) {
                 const std::string text = "t" + std::to_string(id) + ":" + std::to_string(i);
-                jackmini::JackMessageBufferAdd(kLogLevelError, text.c_str());
+                jackmini::messageBufferAdd(kLogLevelError, text.c_str());
             }
         });
     }
@@ -88,20 +88,20 @@ void TestConcurrentProducers()
     }
 
     // Read the overrun count before Destroy() drains the ring and logs it.
-    const std::uint64_t dropped = jackmini::JackMessageBuffer::fInstance->Overruns();
-    CHECK(jackmini::JackMessageBuffer::Destroy());
+    const std::uint64_t dropped = jackmini::MessageBuffer::s_instance->overruns();
+    CHECK(jackmini::MessageBuffer::destroy());
 
-    std::vector<std::int64_t> last(producers, -1);
+    std::vector<std::int64_t> last(kProducers, -1);
     std::uint64_t delivered = 0;
     bool ordered = true;
-    for (const auto& text : Snapshot()) {
-        if (!IsProducerMessage(text)) {
+    for (const auto& text : snapshot()) {
+        if (!isProducerMessage(text)) {
             continue;
         }
         const auto colon = text.find(':');
         const std::int32_t id = std::atoi(text.c_str() + 1);
         const std::int64_t seq = std::strtol(text.c_str() + colon + 1, nullptr, 10);
-        if (id < 0 || id >= producers || seq <= last[id] || text != "t" + std::to_string(id) + ":" + std::to_string(seq)) {
+        if (id < 0 || id >= kProducers || seq <= last[id] || text != "t" + std::to_string(id) + ":" + std::to_string(seq)) {
             ordered = false;
             break;
         }
@@ -111,20 +111,20 @@ void TestConcurrentProducers()
 
     CHECK(ordered);
     // Every message was either delivered or counted, and nothing else was.
-    CHECK(delivered + dropped == static_cast<std::uint64_t>(producers) * per_producer);
+    CHECK(delivered + dropped == static_cast<std::uint64_t>(kProducers) * kPerProducer);
     CHECK(delivered > 0);
 }
 
-void TestTruncation()
+void testTruncation()
 {
-    CHECK(jackmini::JackMessageBuffer::Create());
-    g_received.clear();
+    CHECK(jackmini::MessageBuffer::create());
+    gReceived.clear();
 
-    const std::string long_message = "L:" + std::string(400, 'x');
-    jackmini::JackMessageBufferAdd(kLogLevelError, long_message.c_str());
-    CHECK(jackmini::JackMessageBuffer::Destroy());
+    const std::string longMessage = "L:" + std::string(400, 'x');
+    jackmini::messageBufferAdd(kLogLevelError, longMessage.c_str());
+    CHECK(jackmini::MessageBuffer::destroy());
 
-    const auto received = Snapshot();
+    const auto received = snapshot();
     CHECK(received.size() == 1);
     if (received.size() == 1) {
         // 256 bytes including the terminator, so 255 characters are kept.
@@ -137,11 +137,11 @@ void TestTruncation()
 
 int main()
 {
-    jack_error_callback = CaptureError;
+    gJackErrorCallback = captureError;
 
-    TestConcurrentProducers();
-    TestTruncation();
+    testConcurrentProducers();
+    testTruncation();
 
-    std::printf("%d checks, %d failed\n", g_checks, g_failures);
-    return g_failures == 0 ? 0 : 1;
+    std::printf("%d checks, %d failed\n", gChecks, gFailures);
+    return gFailures == 0 ? 0 : 1;
 }

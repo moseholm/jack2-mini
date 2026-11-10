@@ -38,70 +38,70 @@ using namespace std;
 namespace jackmini {
 
 static constexpr const char* kDefaultTmpDir = "/tmp";
-std::string jack_tmpdir = kDefaultTmpDir;
+std::string gJackTmpdir = kDefaultTmpDir;
 
-void JackTools::KillServer()
+void Tools::killServer()
 {
-    kill(GetPID(), SIGINT);
+    kill(getPID(), SIGINT);
 }
 
-std::int32_t JackTools::MkDir(const char* path)
+std::int32_t Tools::mkDir(const char* path)
 {
     std::error_code ec;
     // create_directory() reports an existing directory as "not created", which is an error here.
     return !std::filesystem::create_directory(path, ec);
 }
 
-std::int32_t JackTools::GetPID()
+std::int32_t Tools::getPID()
 {
     return getpid();
 }
 
-std::int32_t JackTools::GetUID()
+std::int32_t Tools::getUID()
 {
     return geteuid();
 }
 
-const char* JackTools::DefaultServerName()
+const char* Tools::defaultServerName()
 {
-    const char* server_name;
-    if ((server_name = getenv("JACK_DEFAULT_SERVER")) == nullptr) {
-        server_name = kDefaultServerName;
+    const char* serverName;
+    if ((serverName = getenv("JACK_DEFAULT_SERVER")) == nullptr) {
+        serverName = kDefaultServerName;
     }
-    return server_name;
+    return serverName;
 }
 
 // returns the name of the per-user subdirectory of jack_tmpdir
-const char* JackTools::UserDir()
+const char* Tools::userDir()
 {
-    static char user_dir[kPathMax + 1] = "";
+    static char userDir[kPathMax + 1] = "";
 
     // format the path name on the first call
-    if (user_dir[0] == '\0') {
+    if (userDir[0] == '\0') {
         if (getenv("JACK_PROMISCUOUS_SERVER")) {
-            jackmini::FormatCString(user_dir, "{}/jack", jack_tmpdir);
+            jackmini::formatCString(userDir, "{}/jack", gJackTmpdir);
         } else {
-            jackmini::FormatCString(user_dir, "{}/jack-{}", jack_tmpdir, GetUID());
+            jackmini::formatCString(userDir, "{}/jack-{}", gJackTmpdir, getUID());
         }
     }
 
-    return user_dir;
+    return userDir;
 }
 
 // returns the name of the per-server subdirectory of jack_user_dir()
-const char* JackTools::ServerDir(const char* server_name, char* server_dir)
+const char* Tools::serverDir(const char* serverName, char* serverDir)
 {
     // format the path name into the suppled server_dir char array,
     // assuming that server_dir is at least as large as JACK_PATH_MAX + 1
 
-    jackmini::FormatCString(std::span<char>(server_dir, kPathMax + 1), "{}/{}", UserDir(), server_name);
-    return server_dir;
+    jackmini::formatCString(std::span<char>(serverDir, kPathMax + 1), "{}/{}", userDir(), serverName);
+    return serverDir;
 }
 
-void JackTools::CleanupFiles(const char* server_name)
+void Tools::cleanupFiles(const char* serverName)
 {
-    std::array<char, kPathMax + 1> dir_name { };
-    ServerDir(server_name, dir_name.data());
+    std::array<char, kPathMax + 1> dirName { };
+    serverDir(serverName, dirName.data());
 
     // On termination, we remove all files that jackd creates so
     // subsequent attempts to start jackd will not believe that an
@@ -119,38 +119,38 @@ void JackTools::CleanupFiles(const char* server_name)
     // we know there is no other server actively using that name.
 
     std::error_code ec;
-    const std::filesystem::path server_dir(dir_name.data());
+    const std::filesystem::path serverDir(dirName.data());
 
     // nothing to do if the server directory does not exist
-    if (!std::filesystem::is_directory(server_dir, ec)) {
+    if (!std::filesystem::is_directory(serverDir, ec)) {
         return;
     }
 
     // remove all the files in this directory, they are mine
-    for (std::filesystem::directory_iterator it(server_dir, ec), end; !ec && it != end; it.increment(ec)) {
-        std::error_code remove_ec;
-        std::filesystem::remove(it->path(), remove_ec);
-        if (remove_ec) {
-            jack_error("cannot unlink `%s' (%s)", it->path().c_str(), remove_ec.message().c_str());
+    for (std::filesystem::directory_iterator it(serverDir, ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code removeEc;
+        std::filesystem::remove(it->path(), removeEc);
+        if (removeEc) {
+            jack_error("cannot unlink `%s' (%s)", it->path().c_str(), removeEc.message().c_str());
         }
     }
 
     // now, delete the per-server subdirectory, itself
-    std::error_code rmdir_ec;
-    std::filesystem::remove(server_dir, rmdir_ec);
-    if (rmdir_ec) {
-        jack_error("cannot remove `%s' (%s)", dir_name.data(), rmdir_ec.message().c_str());
+    std::error_code rmdirEc;
+    std::filesystem::remove(serverDir, rmdirEc);
+    if (rmdirEc) {
+        jack_error("cannot remove `%s' (%s)", dirName.data(), rmdirEc.message().c_str());
     }
 
     // finally, delete the per-user subdirectory, if empty
-    std::error_code user_ec;
-    std::filesystem::remove(UserDir(), user_ec);
-    if (user_ec && user_ec != std::make_error_code(std::errc::directory_not_empty)) {
-        jack_error("cannot remove `%s' (%s)", UserDir(), user_ec.message().c_str());
+    std::error_code userEc;
+    std::filesystem::remove(userDir(), userEc);
+    if (userEc && userEc != std::make_error_code(std::errc::directory_not_empty)) {
+        jack_error("cannot remove `%s' (%s)", userDir(), userEc.message().c_str());
     }
 }
 
-std::int32_t JackTools::GetTmpdir()
+std::int32_t Tools::getTmpdir()
 {
     FILE* in;
     size_t len;
@@ -173,40 +173,40 @@ std::int32_t JackTools::GetTmpdir()
         return -1;
     }
 
-    jack_tmpdir.assign(buf.data(), len - 1);
+    gJackTmpdir.assign(buf.data(), len - 1);
 
     pclose(in);
     return 0;
 }
 
-void JackTools::RewriteName(const char* name, char* new_name)
+void Tools::rewriteName(const char* name, char* newName)
 {
     size_t i;
     for (i = 0; i < strlen(name); i++) {
         if ((name[i] == '/') || (name[i] == '\\')) {
-            new_name[i] = '_';
+            newName[i] = '_';
         } else {
-            new_name[i] = name[i];
+            newName[i] = name[i];
         }
     }
-    new_name[i] = '\0';
+    newName[i] = '\0';
 }
 
-void PrintLoadError(const char* so_name)
+void printLoadError(const char* soName)
 {
-    jack_log("error loading %s err = %s", so_name, dlerror());
+    jack_log("error loading %s err = %s", soName, dlerror());
 }
 
-void BuildClientPath(char* path_to_so, std::int32_t path_len, const char* so_name)
+void buildClientPath(char* pathToSo, std::int32_t pathLen, const char* soName)
 {
-    const char* internal_dir;
-    if ((internal_dir = getenv("JACK_INTERNAL_DIR")) == 0) {
-        if ((internal_dir = getenv("JACK_DRIVER_DIR")) == 0) {
-            internal_dir = ADDON_DIR;
+    const char* internalDir;
+    if ((internalDir = getenv("JACK_INTERNAL_DIR")) == 0) {
+        if ((internalDir = getenv("JACK_DRIVER_DIR")) == 0) {
+            internalDir = ADDON_DIR;
         }
     }
 
-    jackmini::FormatCString(std::span<char>(path_to_so, path_len), "{}/{}.so", internal_dir, so_name);
+    jackmini::formatCString(std::span<char>(pathToSo, pathLen), "{}/{}.so", internalDir, soName);
 }
 
 } // namespace jackmini

@@ -42,37 +42,37 @@ using namespace jackmini;
 // Each shared structure has natural alignment: its size is a multiple of its
 // alignment, so an array of them stays aligned.
 #define LAYOUT(T) static_assert(sizeof(T) % alignof(T) == 0, #T " is not a multiple of its alignment")
-LAYOUT(JackClientControl);
-LAYOUT(JackEngineControl);
-LAYOUT(JackGraphManager);
-LAYOUT(JackConnectionManager);
-LAYOUT(JackPort);
-LAYOUT(JackTransportEngine);
-LAYOUT(JackActivationCount);
-LAYOUT(JackFrameTimer);
+LAYOUT(ClientControl);
+LAYOUT(EngineControl);
+LAYOUT(GraphManager);
+LAYOUT(ConnectionManager);
+LAYOUT(ServerPort);
+LAYOUT(TransportEngine);
+LAYOUT(ActivationCount);
+LAYOUT(FrameTimer);
 #undef LAYOUT
 
 // The 64-bit counters and times must be 8-byte aligned in every class that holds
 // them.  JackClientTiming holds 64-bit times and a state; it is an array in the
 // graph segment, so its alignment is what matters.
-static_assert(alignof(JackClientTiming) >= alignof(jack_time_t));
+static_assert(alignof(ClientTiming) >= alignof(TimeC));
 
 // The UUIDs of the ports and of the clients are stored in the graph segment: 64 bits, and aligned as such.
-static_assert(sizeof(jack_uuid_t) == 8 && alignof(jack_uuid_t) == 8);
-static_assert(sizeof(JackClientTiming) % alignof(JackClientTiming) == 0);
+static_assert(sizeof(UuidC) == 8 && alignof(UuidC) == 8);
+static_assert(sizeof(ClientTiming) % alignof(ClientTiming) == 0);
 
 // The activation counter and the state counters are 32-bit, read and written
 // with std::atomic_ref.  They need 4-byte alignment.
-static_assert(alignof(JackActivationCount) >= alignof(SInt32));
+static_assert(alignof(ActivationCount) >= alignof(SInt32));
 
 // Each field of the per-client timing sits at an offset that is a multiple of its own alignment: the times are 64-bit.
-static_assert(offsetof(JackClientTiming, fSignaledAt) % alignof(jack_time_t) == 0);
-static_assert(offsetof(JackClientTiming, fAwakeAt) % alignof(jack_time_t) == 0);
-static_assert(offsetof(JackClientTiming, fFinishedAt) % alignof(jack_time_t) == 0);
+static_assert(offsetof(ClientTiming, m_signaledAt) % alignof(TimeC) == 0);
+static_assert(offsetof(ClientTiming, m_awakeAt) % alignof(TimeC) == 0);
+static_assert(offsetof(ClientTiming, m_finishedAt) % alignof(TimeC) == 0);
 
 // The activation count of a client is configuration only: one 32-bit field, at offset 0.  The live counter is outside
 // the copied state, as an atomic array of the graph manager (protocol.md section 4.5), so it must be lock-free there.
-static_assert(sizeof(JackActivationCount) == sizeof(SInt32));
+static_assert(sizeof(ActivationCount) == sizeof(SInt32));
 static_assert(std::atomic<SInt32>::is_always_lock_free);
 
 // The deactivation flag of the connection manager is 32-bit, and aligned in the state that is copied (protocol.md section 6).

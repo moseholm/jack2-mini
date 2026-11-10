@@ -34,55 +34,55 @@ namespace jackmini {
 // - concrete blocking based derived subclasses typically have to Open/Close the underlying audio API,
 // implement the Read/Write methods and "wraps" the driver with the JackThreadDriver class.
 
-class SERVER_EXPORT JackAudioDriver : public JackDriver {
+class SERVER_EXPORT AudioDriver : public Driver {
 
 protected:
-    jack_default_audio_sample_t* GetInputBuffer(std::int32_t port_index);
-    jack_default_audio_sample_t* GetOutputBuffer(std::int32_t port_index);
-    jack_default_audio_sample_t* GetMonitorBuffer(std::int32_t port_index);
+    DefaultAudioSampleC* getInputBuffer(std::int32_t portIndex);
+    DefaultAudioSampleC* getOutputBuffer(std::int32_t portIndex);
+    DefaultAudioSampleC* getMonitorBuffer(std::int32_t portIndex);
 
-    void HandleLatencyCallback(std::int32_t status);
-    virtual void UpdateLatencies();
+    void handleLatencyCallback(std::int32_t status);
+    virtual void updateLatencies();
 
-    std::int32_t ProcessAsync();
-    void ProcessGraphAsync();
-    void ProcessGraphAsyncMaster();
-    void ProcessGraphAsyncSlave();
+    std::int32_t processAsync();
+    void processGraphAsync();
+    void processGraphAsyncMaster();
+    void processGraphAsyncSlave();
 
-    std::int32_t ProcessSync();
-    void ProcessGraphSync();
-    void ProcessGraphSyncMaster();
-    void ProcessGraphSyncSlave();
+    std::int32_t processSync();
+    void processGraphSync();
+    void processGraphSyncMaster();
+    void processGraphSyncSlave();
 
 public:
-    JackAudioDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table);
-    virtual ~JackAudioDriver();
+    AudioDriver(const char* name, const char* alias, LockedEngine* engine, Synchro* table);
+    virtual ~AudioDriver();
 
-    virtual std::int32_t Open(jack_nframes_t buffer_size,
-        jack_nframes_t samplerate,
+    virtual std::int32_t open(NframesC bufferSize,
+        NframesC samplerate,
         bool capturing,
         bool playing,
         std::int32_t inchannels,
         std::int32_t outchannels,
         bool monitor,
-        const char* capture_driver_name,
-        const char* playback_driver_name,
-        jack_nframes_t capture_latency,
-        jack_nframes_t playback_latency);
+        const char* captureDriverName,
+        const char* playbackDriverName,
+        NframesC captureLatency,
+        NframesC playbackLatency);
 
     // To be called by the underlying driver audio callback, or possibly by a RT thread (using JackThreadedDriver decorator)
     // when a blocking read/write underlying API is used (like ALSA)
-    virtual std::int32_t Process();
+    virtual std::int32_t process();
 
-    virtual std::int32_t Attach();
-    virtual std::int32_t Detach();
+    virtual std::int32_t attach();
+    virtual std::int32_t detach();
 
-    virtual std::int32_t Write();
+    virtual std::int32_t write();
 
-    virtual std::int32_t SetBufferSize(jack_nframes_t buffer_size);
-    virtual std::int32_t SetSampleRate(jack_nframes_t sample_rate);
+    virtual std::int32_t setBufferSize(NframesC bufferSize);
+    virtual std::int32_t setSampleRate(NframesC sampleRate);
 
-    virtual std::int32_t ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
+    virtual std::int32_t clientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
 };
 
 } // namespace jackmini

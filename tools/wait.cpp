@@ -32,7 +32,7 @@ namespace {
 
 constexpr const char* kTool = "jackmini_wait";
 
-void show_usage(FILE* out)
+void showUsage(FILE* out)
 {
     std::fprintf(out, "\nUsage: %s [options]\n", kTool);
     std::fprintf(out, "Check for jack existence, or wait, until it either quits, or gets started\n");
@@ -53,8 +53,8 @@ int main(std::int32_t argc, char** argv)
 {
     std::string server;
     std::string name = kTool;
-    bool wait_for_start = false;
-    bool wait_for_quit = false;
+    bool waitForStart = false;
+    bool waitForQuit = false;
     std::int64_t timeout = 0;
 
     static constexpr std::string_view kShortOptions = "s:n:wqct:hv";
@@ -80,10 +80,10 @@ int main(std::int32_t argc, char** argv)
             name = optarg;
             break;
         case 'w':
-            wait_for_start = true;
+            waitForStart = true;
             break;
         case 'q':
-            wait_for_quit = true;
+            waitForQuit = true;
             break;
         case 'c':
             break;
@@ -94,15 +94,15 @@ int main(std::int32_t argc, char** argv)
             std::printf("%s " JACK_VERSION "\n", kTool);
             return 0;
         case 'h':
-            show_usage(stderr);
+            showUsage(stderr);
             return 1;
         default:
-            show_usage(stderr);
+            showUsage(stderr);
             return 1;
         }
     }
     if (optind < argc) {
-        show_usage(stderr);
+        showUsage(stderr);
         return 1;
     }
 
@@ -111,29 +111,29 @@ int main(std::int32_t argc, char** argv)
         bool running = false;
         {
             // The probe client is closed at the end of this block, before the answer is given.
-            auto opened = jackmini::tools::open_client(name, server);
+            auto opened = jackmini::tools::openClient(name, server);
             if (opened) {
                 running = true;
-            } else if (opened.error() != jackmini::Error::NoServer) {
+            } else if (opened.error() != jackmini::Error::kNoServer) {
                 return jackmini::tools::fail(kTool, opened.error());
             }
         }
 
         if (running) {
-            if (wait_for_start) {
+            if (waitForStart) {
                 std::printf("server is available\n");
                 return 0;
             }
-            if (!wait_for_quit) {
+            if (!waitForQuit) {
                 std::printf("running\n");
                 return 0;
             }
         } else {
-            if (wait_for_quit) {
+            if (waitForQuit) {
                 std::printf("server is gone\n");
                 return 0;
             }
-            if (!wait_for_start) {
+            if (!waitForStart) {
                 std::printf("not running\n");
                 return 0;
             }

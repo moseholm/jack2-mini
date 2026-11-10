@@ -25,31 +25,31 @@ namespace jackmini {
 
 // \brief The FreeWheel driver : run Jack engine at full speed.
 
-class JackFreewheelDriver : public JackDriver {
+class FreewheelDriver : public Driver {
 protected:
-    Result<void> SuspendRefNum();
+    Result<void> suspendRefNum();
 
 public:
-    JackFreewheelDriver(JackLockedEngine* engine, JackSynchro* table)
-        : JackDriver("freewheel", "", engine, table)
+    FreewheelDriver(LockedEngine* engine, Synchro* table)
+        : Driver("freewheel", "", engine, table)
     {
     }
-    virtual ~JackFreewheelDriver()
+    virtual ~FreewheelDriver()
     {
     }
 
-    bool IsRealTime() const
+    bool isRealTime() const
     {
         return false;
     }
 
-    std::int32_t Process();
+    std::int32_t process();
 
-    std::int32_t ProcessReadSync();
-    std::int32_t ProcessWriteSync();
+    std::int32_t processReadSync();
+    std::int32_t processWriteSync();
 
-    std::int32_t ProcessReadAsync();
-    std::int32_t ProcessWriteAsync();
+    std::int32_t processReadAsync();
+    std::int32_t processWriteAsync();
 };
 
 } // namespace jackmini

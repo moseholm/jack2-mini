@@ -30,24 +30,24 @@
 
 namespace jackmini {
 
-static void AudioBufferInit(void* buffer, size_t buffer_size, jack_nframes_t)
+static void audioBufferInit(void* buffer, size_t bufferSize, NframesC)
 {
-    memset(buffer, 0, buffer_size);
+    memset(buffer, 0, bufferSize);
 }
 
-static inline void MixAudioBuffer(jack_default_audio_sample_t* mixbuffer, jack_default_audio_sample_t* buffer, jack_nframes_t frames)
+static inline void mixAudioBuffer(DefaultAudioSampleC* mixbuffer, DefaultAudioSampleC* buffer, NframesC frames)
 {
-    jack_nframes_t frames_group = frames / 4;
+    NframesC framesGroup = frames / 4;
     frames = frames % 4;
 
-    while (frames_group > 0) {
+    while (framesGroup > 0) {
 #if defined(__SSE__)
         __m128 vec = _mm_add_ps(_mm_load_ps(mixbuffer), _mm_load_ps(buffer));
         _mm_store_ps(mixbuffer, vec);
 
         mixbuffer += 4;
         buffer += 4;
-        frames_group--;
+        framesGroup--;
 #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
         float32x4_t vec = vaddq_f32(vld1q_f32(mixbuffer), vld1q_f32(buffer));
         vst1q_f32(mixbuffer, vec);
@@ -83,8 +83,8 @@ static inline void MixAudioBuffer(jack_default_audio_sample_t* mixbuffer, jack_d
     }
 
     while (frames > 0) {
-        jack_default_audio_sample_t mixFloat1 = *mixbuffer;
-        jack_default_audio_sample_t sourceFloat1 = *buffer;
+        DefaultAudioSampleC mixFloat1 = *mixbuffer;
+        DefaultAudioSampleC sourceFloat1 = *buffer;
         buffer++;
         frames--;
         mixFloat1 += sourceFloat1;
@@ -93,27 +93,27 @@ static inline void MixAudioBuffer(jack_default_audio_sample_t* mixbuffer, jack_d
     }
 }
 
-static void AudioBufferMixdown(void* mixbuffer, void** src_buffers, std::int32_t src_count, jack_nframes_t nframes)
+static void audioBufferMixdown(void* mixbuffer, void** srcBuffers, std::int32_t srcCount, NframesC nframes)
 {
     void* buffer;
 
     // Copy first buffer
 #if defined(__SSE__)
-    jack_nframes_t frames_group = nframes / 4;
-    jack_nframes_t remaining_frames = nframes % 4;
+    NframesC framesGroup = nframes / 4;
+    NframesC remainingFrames = nframes % 4;
 
-    jack_default_audio_sample_t* source = static_cast<jack_default_audio_sample_t*>(src_buffers[0]);
-    jack_default_audio_sample_t* target = static_cast<jack_default_audio_sample_t*>(mixbuffer);
+    DefaultAudioSampleC* source = static_cast<DefaultAudioSampleC*>(srcBuffers[0]);
+    DefaultAudioSampleC* target = static_cast<DefaultAudioSampleC*>(mixbuffer);
 
-    while (frames_group > 0) {
+    while (framesGroup > 0) {
         __m128 vec = _mm_load_ps(source);
         _mm_store_ps(target, vec);
         source += 4;
         target += 4;
-        --frames_group;
+        --framesGroup;
     }
 
-    for (jack_nframes_t i = 0; i != remaining_frames; ++i) {
+    for (NframesC i = 0; i != remainingFrames; ++i) {
         target[i] = source[i];
     }
 #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
@@ -139,22 +139,22 @@ static void AudioBufferMixdown(void* mixbuffer, void** src_buffers, std::int32_t
 #endif
 
     // Mix remaining buffers
-    for (std::int32_t i = 1; i < src_count; ++i) {
-        buffer = src_buffers[i];
-        MixAudioBuffer(static_cast<jack_default_audio_sample_t*>(mixbuffer), static_cast<jack_default_audio_sample_t*>(buffer), nframes);
+    for (std::int32_t i = 1; i < srcCount; ++i) {
+        buffer = srcBuffers[i];
+        mixAudioBuffer(static_cast<DefaultAudioSampleC*>(mixbuffer), static_cast<DefaultAudioSampleC*>(buffer), nframes);
     }
 }
 
-static size_t AudioBufferSize()
+static size_t audioBufferSize()
 {
-    return GetEngineControl()->fBufferSize * sizeof(jack_default_audio_sample_t);
+    return getEngineControl()->m_bufferSize * sizeof(DefaultAudioSampleC);
 }
 
-const JackPortType gAudioPortType = {
+const PortType gAudioPortType = {
     kDefaultAudioType,
-    AudioBufferSize,
-    AudioBufferInit,
-    AudioBufferMixdown
+    audioBufferSize,
+    audioBufferInit,
+    audioBufferMixdown
 };
 
 } // namespace jackmini

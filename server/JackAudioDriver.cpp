@@ -33,229 +33,229 @@ using namespace std;
 
 namespace jackmini {
 
-JackAudioDriver::JackAudioDriver(const char* name, const char* alias, JackLockedEngine* engine, JackSynchro* table)
-    : JackDriver(name, alias, engine, table)
+AudioDriver::AudioDriver(const char* name, const char* alias, LockedEngine* engine, Synchro* table)
+    : Driver(name, alias, engine, table)
 {
 }
 
-JackAudioDriver::~JackAudioDriver()
+AudioDriver::~AudioDriver()
 {
 }
 
-std::int32_t JackAudioDriver::SetBufferSize(jack_nframes_t buffer_size)
+std::int32_t AudioDriver::setBufferSize(NframesC bufferSize)
 {
     // Update engine and graph manager state
-    fEngineControl->fBufferSize = buffer_size;
-    fGraphManager->SetBufferSize(buffer_size);
+    m_engineControl->m_bufferSize = bufferSize;
+    m_graphManager->setBufferSize(bufferSize);
 
-    fEngineControl->UpdateTimeOut();
-    UpdateLatencies();
+    m_engineControl->updateTimeOut();
+    updateLatencies();
 
     // Redirected on slaves drivers...
-    return JackDriver::SetBufferSize(buffer_size);
+    return Driver::setBufferSize(bufferSize);
 }
 
-std::int32_t JackAudioDriver::SetSampleRate(jack_nframes_t sample_rate)
+std::int32_t AudioDriver::setSampleRate(NframesC sampleRate)
 {
-    fEngineControl->fSampleRate = sample_rate;
-    fEngineControl->UpdateTimeOut();
+    m_engineControl->m_sampleRate = sampleRate;
+    m_engineControl->updateTimeOut();
 
     // Redirected on slaves drivers...
-    return JackDriver::SetSampleRate(sample_rate);
+    return Driver::setSampleRate(sampleRate);
 }
 
-std::int32_t JackAudioDriver::Open(jack_nframes_t buffer_size,
-    jack_nframes_t samplerate,
+std::int32_t AudioDriver::open(NframesC bufferSize,
+    NframesC samplerate,
     bool capturing,
     bool playing,
     std::int32_t inchannels,
     std::int32_t outchannels,
     bool monitor,
-    const char* capture_driver_name,
-    const char* playback_driver_name,
-    jack_nframes_t capture_latency,
-    jack_nframes_t playback_latency)
+    const char* captureDriverName,
+    const char* playbackDriverName,
+    NframesC captureLatency,
+    NframesC playbackLatency)
 {
-    fCaptureChannels = inchannels;
-    fPlaybackChannels = outchannels;
-    fWithMonitorPorts = monitor;
-    memset(fCapturePortList.data(), 0, sizeof(jack_port_id_t) * kDriverPortNum);
-    memset(fPlaybackPortList.data(), 0, sizeof(jack_port_id_t) * kDriverPortNum);
-    memset(fMonitorPortList.data(), 0, sizeof(jack_port_id_t) * kDriverPortNum);
-    return JackDriver::Open(buffer_size, samplerate, capturing, playing, inchannels, outchannels,
-        monitor, capture_driver_name, playback_driver_name, capture_latency, playback_latency);
+    m_captureChannels = inchannels;
+    m_playbackChannels = outchannels;
+    m_withMonitorPorts = monitor;
+    memset(m_capturePortList.data(), 0, sizeof(PortIdC) * kDriverPortNum);
+    memset(m_playbackPortList.data(), 0, sizeof(PortIdC) * kDriverPortNum);
+    memset(m_monitorPortList.data(), 0, sizeof(PortIdC) * kDriverPortNum);
+    return Driver::open(bufferSize, samplerate, capturing, playing, inchannels, outchannels,
+        monitor, captureDriverName, playbackDriverName, captureLatency, playbackLatency);
 }
 
-void JackAudioDriver::UpdateLatencies()
+void AudioDriver::updateLatencies()
 {
-    jack_latency_range_t input_range;
-    jack_latency_range_t output_range;
-    jack_latency_range_t monitor_range;
+    LatencyRangeC inputRange;
+    LatencyRangeC outputRange;
+    LatencyRangeC monitorRange;
 
-    for (std::int32_t i = 0; i < fCaptureChannels; i++) {
-        input_range.max = input_range.min = fEngineControl->fBufferSize + fCaptureLatency;
-        fGraphManager->GetPort(fCapturePortList[i])->SetLatencyRange(JackCaptureLatency, &input_range);
+    for (std::int32_t i = 0; i < m_captureChannels; i++) {
+        inputRange.m_max = inputRange.m_min = m_engineControl->m_bufferSize + m_captureLatency;
+        m_graphManager->getPort(m_capturePortList[i])->setLatencyRange(kCaptureLatency, &inputRange);
     }
 
-    for (std::int32_t i = 0; i < fPlaybackChannels; i++) {
-        output_range.max = output_range.min = fPlaybackLatency;
-        if (fEngineControl->fSyncMode) {
-            output_range.max = output_range.min += fEngineControl->fBufferSize;
+    for (std::int32_t i = 0; i < m_playbackChannels; i++) {
+        outputRange.m_max = outputRange.m_min = m_playbackLatency;
+        if (m_engineControl->m_syncMode) {
+            outputRange.m_max = outputRange.m_min += m_engineControl->m_bufferSize;
         } else {
-            output_range.max = output_range.min += fEngineControl->fBufferSize * 2;
+            outputRange.m_max = outputRange.m_min += m_engineControl->m_bufferSize * 2;
         }
-        fGraphManager->GetPort(fPlaybackPortList[i])->SetLatencyRange(JackPlaybackLatency, &output_range);
-        if (fWithMonitorPorts) {
-            monitor_range.min = monitor_range.max = fEngineControl->fBufferSize;
-            fGraphManager->GetPort(fMonitorPortList[i])->SetLatencyRange(JackCaptureLatency, &monitor_range);
+        m_graphManager->getPort(m_playbackPortList[i])->setLatencyRange(kPlaybackLatency, &outputRange);
+        if (m_withMonitorPorts) {
+            monitorRange.m_min = monitorRange.m_max = m_engineControl->m_bufferSize;
+            m_graphManager->getPort(m_monitorPortList[i])->setLatencyRange(kCaptureLatency, &monitorRange);
         }
     }
 }
 
-std::int32_t JackAudioDriver::Attach()
+std::int32_t AudioDriver::attach()
 {
-    JackPort* port;
-    jack_port_id_t port_index;
+    ServerPort* port;
+    PortIdC portIndex;
     std::array<char, kRealJackPortNameSize + 1> name { };
     std::array<char, kRealJackPortNameSize + 1> alias { };
     std::int32_t i;
 
-    jack_log("JackAudioDriver::Attach fBufferSize = %ld fSampleRate = %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
+    jack_log("JackAudioDriver::Attach fBufferSize = %ld fSampleRate = %ld", m_engineControl->m_bufferSize, m_engineControl->m_sampleRate);
 
-    for (i = 0; i < fCaptureChannels; i++) {
-        jackmini::FormatCString(alias, "{}:{}:out{}", fAliasName.data(), fCaptureDriverName.data(), i + 1);
-        jackmini::FormatCString(name, "{}:capture_{}", fClientControl.fName.data(), i + 1);
-        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), kDefaultAudioType, kCaptureDriverFlags, fEngineControl->fBufferSize, &port_index)) {
+    for (i = 0; i < m_captureChannels; i++) {
+        jackmini::formatCString(alias, "{}:{}:out{}", m_aliasName.data(), m_captureDriverName.data(), i + 1);
+        jackmini::formatCString(name, "{}:capture_{}", m_clientControl.m_name.data(), i + 1);
+        if (!m_engine->portRegister(m_clientControl.m_refNum, name.data(), kDefaultAudioType, kCaptureDriverFlags, m_engineControl->m_bufferSize, &portIndex)) {
             jack_error("driver: cannot register port for %s", name.data());
             return -1;
         }
-        port = fGraphManager->GetPort(port_index);
-        port->SetAlias(alias.data());
-        fCapturePortList[i] = port_index;
-        jack_log("JackAudioDriver::Attach fCapturePortList[i] port_index = %ld", port_index);
+        port = m_graphManager->getPort(portIndex);
+        port->setAlias(alias.data());
+        m_capturePortList[i] = portIndex;
+        jack_log("JackAudioDriver::Attach fCapturePortList[i] port_index = %ld", portIndex);
     }
 
-    for (i = 0; i < fPlaybackChannels; i++) {
-        jackmini::FormatCString(alias, "{}:{}:in{}", fAliasName.data(), fPlaybackDriverName.data(), i + 1);
-        jackmini::FormatCString(name, "{}:playback_{}", fClientControl.fName.data(), i + 1);
-        if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), kDefaultAudioType, kPlaybackDriverFlags, fEngineControl->fBufferSize, &port_index)) {
+    for (i = 0; i < m_playbackChannels; i++) {
+        jackmini::formatCString(alias, "{}:{}:in{}", m_aliasName.data(), m_playbackDriverName.data(), i + 1);
+        jackmini::formatCString(name, "{}:playback_{}", m_clientControl.m_name.data(), i + 1);
+        if (!m_engine->portRegister(m_clientControl.m_refNum, name.data(), kDefaultAudioType, kPlaybackDriverFlags, m_engineControl->m_bufferSize, &portIndex)) {
             jack_error("driver: cannot register port for %s", name.data());
             return -1;
         }
-        port = fGraphManager->GetPort(port_index);
-        port->SetAlias(alias.data());
-        fPlaybackPortList[i] = port_index;
-        jack_log("JackAudioDriver::Attach fPlaybackPortList[i] port_index = %ld", port_index);
+        port = m_graphManager->getPort(portIndex);
+        port->setAlias(alias.data());
+        m_playbackPortList[i] = portIndex;
+        jack_log("JackAudioDriver::Attach fPlaybackPortList[i] port_index = %ld", portIndex);
 
         // Monitor ports
-        if (fWithMonitorPorts) {
+        if (m_withMonitorPorts) {
             jack_log("Create monitor port");
-            jackmini::FormatCString(name, "{}:monitor_{}", fClientControl.fName.data(), i + 1);
-            if (!fEngine->PortRegister(fClientControl.fRefNum, name.data(), kDefaultAudioType, JackPortIsOutput, fEngineControl->fBufferSize, &port_index)) {
+            jackmini::formatCString(name, "{}:monitor_{}", m_clientControl.m_name.data(), i + 1);
+            if (!m_engine->portRegister(m_clientControl.m_refNum, name.data(), kDefaultAudioType, kPortIsOutput, m_engineControl->m_bufferSize, &portIndex)) {
                 jack_error("Cannot register monitor port for %s", name.data());
                 return -1;
             } else {
-                fMonitorPortList[i] = port_index;
+                m_monitorPortList[i] = portIndex;
             }
         }
     }
 
-    UpdateLatencies();
+    updateLatencies();
     return 0;
 }
 
-std::int32_t JackAudioDriver::Detach()
+std::int32_t AudioDriver::detach()
 {
     std::int32_t i;
     jack_log("JackAudioDriver::Detach");
 
-    for (i = 0; i < fCaptureChannels; i++) {
-        fEngine->PortUnRegister(fClientControl.fRefNum, fCapturePortList[i]);
+    for (i = 0; i < m_captureChannels; i++) {
+        m_engine->portUnRegister(m_clientControl.m_refNum, m_capturePortList[i]);
     }
 
-    for (i = 0; i < fPlaybackChannels; i++) {
-        fEngine->PortUnRegister(fClientControl.fRefNum, fPlaybackPortList[i]);
-        if (fWithMonitorPorts) {
-            fEngine->PortUnRegister(fClientControl.fRefNum, fMonitorPortList[i]);
+    for (i = 0; i < m_playbackChannels; i++) {
+        m_engine->portUnRegister(m_clientControl.m_refNum, m_playbackPortList[i]);
+        if (m_withMonitorPorts) {
+            m_engine->portUnRegister(m_clientControl.m_refNum, m_monitorPortList[i]);
         }
     }
 
     return 0;
 }
 
-std::int32_t JackAudioDriver::Write()
+std::int32_t AudioDriver::write()
 {
-    for (std::int32_t i = 0; i < fPlaybackChannels; i++) {
-        if (fGraphManager->GetConnectionsNum(fPlaybackPortList[i]) > 0) {
-            jack_default_audio_sample_t* buffer = GetOutputBuffer(i);
-            std::int32_t size = sizeof(jack_default_audio_sample_t) * fEngineControl->fBufferSize;
+    for (std::int32_t i = 0; i < m_playbackChannels; i++) {
+        if (m_graphManager->getConnectionsNum(m_playbackPortList[i]) > 0) {
+            DefaultAudioSampleC* buffer = getOutputBuffer(i);
+            std::int32_t size = sizeof(DefaultAudioSampleC) * m_engineControl->m_bufferSize;
             // Monitor ports
-            if (fWithMonitorPorts && fGraphManager->GetConnectionsNum(fMonitorPortList[i]) > 0) {
-                memcpy(GetMonitorBuffer(i), buffer, size);
+            if (m_withMonitorPorts && m_graphManager->getConnectionsNum(m_monitorPortList[i]) > 0) {
+                memcpy(getMonitorBuffer(i), buffer, size);
             }
         }
     }
     return 0;
 }
 
-std::int32_t JackAudioDriver::Process()
+std::int32_t AudioDriver::process()
 {
-    return (fEngineControl->fSyncMode) ? ProcessSync() : ProcessAsync();
+    return (m_engineControl->m_syncMode) ? processSync() : processAsync();
 }
 
 // The driver "asynchronous" mode: output buffers computed at the *previous cycle* are used, the server does not
 // synchronize to the end of client graph execution.
 
-std::int32_t JackAudioDriver::ProcessAsync()
+std::int32_t AudioDriver::processAsync()
 {
     // Read input buffers for the current cycle
-    if (Read() < 0) {
+    if (read() < 0) {
         jack_error("JackAudioDriver::ProcessAsync: read error, stopping...");
         return -1;
     }
 
     // Write output buffers from the previous cycle
-    if (Write() < 0) {
+    if (write() < 0) {
         jack_error("JackAudioDriver::ProcessAsync: write error, stopping...");
         return -1;
     }
 
     // Process graph
-    ProcessGraphAsync();
+    processGraphAsync();
 
     // Keep end cycle time
-    JackDriver::CycleTakeEndTime();
+    Driver::cycleTakeEndTime();
     return 0;
 }
 
-void JackAudioDriver::ProcessGraphAsync()
+void AudioDriver::processGraphAsync()
 {
     // Process graph
-    if (fIsMaster) {
-        ProcessGraphAsyncMaster();
+    if (m_isMaster) {
+        processGraphAsyncMaster();
     } else {
-        ProcessGraphAsyncSlave();
+        processGraphAsyncSlave();
     }
 }
 
 // Used when the driver works in master mode.
 
-void JackAudioDriver::ProcessGraphAsyncMaster()
+void AudioDriver::processGraphAsyncMaster()
 {
     // fBeginDateUst is set in the "low level" layer, fEndDateUst is from previous cycle
-    if (!fEngine->Process(fBeginDateUst, fEndDateUst)) {
+    if (!m_engine->process(m_beginDateUst, m_endDateUst)) {
         jack_error("JackAudioDriver::ProcessGraphAsyncMaster: Process error");
     }
 
-    if (!ResumeRefNum()) {
+    if (!resumeRefNum()) {
         jack_error("JackAudioDriver::ProcessGraphAsyncMaster: ResumeRefNum error");
     }
 
-    if (ProcessReadSlaves() < 0) {
+    if (processReadSlaves() < 0) {
         jack_error("JackAudioDriver::ProcessGraphAsyncMaster: ProcessReadSlaves error");
     }
 
-    if (ProcessWriteSlaves() < 0) {
+    if (processWriteSlaves() < 0) {
         jack_error("JackAudioDriver::ProcessGraphAsyncMaster: ProcessWriteSlaves error");
     }
 
@@ -264,9 +264,9 @@ void JackAudioDriver::ProcessGraphAsyncMaster()
 
 // Used when the driver works in slave mode.
 
-void JackAudioDriver::ProcessGraphAsyncSlave()
+void AudioDriver::processGraphAsyncSlave()
 {
-    if (!ResumeRefNum()) {
+    if (!resumeRefNum()) {
         jack_error("JackAudioDriver::ProcessGraphAsyncSlave: ResumeRefNum error");
     }
 }
@@ -274,59 +274,59 @@ void JackAudioDriver::ProcessGraphAsyncSlave()
 // The driver "synchronous" mode: the server does synchronize to the end of client graph execution,
 // if graph process succeed, output buffers computed at the *current cycle* are used.
 
-std::int32_t JackAudioDriver::ProcessSync()
+std::int32_t AudioDriver::processSync()
 {
     // Read input buffers for the current cycle
-    if (Read() < 0) {
+    if (read() < 0) {
         jack_error("JackAudioDriver::ProcessSync: read error, stopping...");
         return -1;
     }
 
     // Process graph
-    ProcessGraphSync();
+    processGraphSync();
 
     // Write output buffers from the current cycle
-    if (Write() < 0) {
+    if (write() < 0) {
         jack_error("JackAudioDriver::ProcessSync: write error, stopping...");
         return -1;
     }
 
     // Keep end cycle time
-    JackDriver::CycleTakeEndTime();
+    Driver::cycleTakeEndTime();
     return 0;
 }
 
-void JackAudioDriver::ProcessGraphSync()
+void AudioDriver::processGraphSync()
 {
     // Process graph
-    if (fIsMaster) {
-        ProcessGraphSyncMaster();
+    if (m_isMaster) {
+        processGraphSyncMaster();
     } else {
-        ProcessGraphSyncSlave();
+        processGraphSyncSlave();
     }
 }
 
 // Used when the driver works in master mode.
 
-void JackAudioDriver::ProcessGraphSyncMaster()
+void AudioDriver::processGraphSyncMaster()
 {
     // fBeginDateUst is set in the "low level" layer, fEndDateUst is from previous cycle
-    if (fEngine->Process(fBeginDateUst, fEndDateUst)) {
+    if (m_engine->process(m_beginDateUst, m_endDateUst)) {
 
-        if (!ResumeRefNum()) {
+        if (!resumeRefNum()) {
             jack_error("JackAudioDriver::ProcessGraphSyncMaster: ResumeRefNum error");
         }
 
-        if (ProcessReadSlaves() < 0) {
+        if (processReadSlaves() < 0) {
             jack_error("JackAudioDriver::ProcessGraphSync: ProcessReadSlaves error, engine may now behave abnormally!!");
         }
 
-        if (ProcessWriteSlaves() < 0) {
+        if (processWriteSlaves() < 0) {
             jack_error("JackAudioDriver::ProcessGraphSync: ProcessWriteSlaves error, engine may now behave abnormally!!");
         }
 
         // Waits for graph execution end
-        if (!SuspendRefNum()) {
+        if (!suspendRefNum()) {
             jack_error("JackAudioDriver::ProcessGraphSync: SuspendRefNum error, engine may now behave abnormally!!");
         }
 
@@ -337,63 +337,63 @@ void JackAudioDriver::ProcessGraphSyncMaster()
 
 // Used when the driver works in slave mode.
 
-void JackAudioDriver::ProcessGraphSyncSlave()
+void AudioDriver::processGraphSyncSlave()
 {
-    if (!ResumeRefNum()) {
+    if (!resumeRefNum()) {
         jack_error("JackAudioDriver::ProcessGraphSyncSlave: ResumeRefNum error");
     }
 }
 
-jack_default_audio_sample_t* JackAudioDriver::GetInputBuffer(std::int32_t port_index)
+DefaultAudioSampleC* AudioDriver::getInputBuffer(std::int32_t portIndex)
 {
-    return fCapturePortList[port_index]
-        ? (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fCapturePortList[port_index], fEngineControl->fBufferSize)
+    return m_capturePortList[portIndex]
+        ? (DefaultAudioSampleC*)m_graphManager->getBuffer(m_capturePortList[portIndex], m_engineControl->m_bufferSize)
         : nullptr;
 }
 
-jack_default_audio_sample_t* JackAudioDriver::GetOutputBuffer(std::int32_t port_index)
+DefaultAudioSampleC* AudioDriver::getOutputBuffer(std::int32_t portIndex)
 {
-    return fPlaybackPortList[port_index]
-        ? (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fPlaybackPortList[port_index], fEngineControl->fBufferSize)
+    return m_playbackPortList[portIndex]
+        ? (DefaultAudioSampleC*)m_graphManager->getBuffer(m_playbackPortList[portIndex], m_engineControl->m_bufferSize)
         : nullptr;
 }
 
-jack_default_audio_sample_t* JackAudioDriver::GetMonitorBuffer(std::int32_t port_index)
+DefaultAudioSampleC* AudioDriver::getMonitorBuffer(std::int32_t portIndex)
 {
-    return fMonitorPortList[port_index]
-        ? (jack_default_audio_sample_t*)fGraphManager->GetBuffer(fMonitorPortList[port_index], fEngineControl->fBufferSize)
+    return m_monitorPortList[portIndex]
+        ? (DefaultAudioSampleC*)m_graphManager->getBuffer(m_monitorPortList[portIndex], m_engineControl->m_bufferSize)
         : nullptr;
 }
 
-std::int32_t JackAudioDriver::ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2)
+std::int32_t AudioDriver::clientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2)
 {
     switch (notify) {
 
     case kLatencyCallback:
-        HandleLatencyCallback(value1);
+        handleLatencyCallback(value1);
         break;
 
     default:
-        JackDriver::ClientNotify(refnum, name, notify, sync, message, value1, value2);
+        Driver::clientNotify(refnum, name, notify, sync, message, value1, value2);
         break;
     }
 
     return 0;
 }
 
-void JackAudioDriver::HandleLatencyCallback(std::int32_t status)
+void AudioDriver::handleLatencyCallback(std::int32_t status)
 {
-    jack_latency_callback_mode_t mode = (status == 0) ? JackCaptureLatency : JackPlaybackLatency;
+    LatencyCallbackModeC mode = (status == 0) ? kCaptureLatency : kPlaybackLatency;
 
-    for (std::int32_t i = 0; i < fCaptureChannels; i++) {
-        if (mode == JackPlaybackLatency) {
-            fGraphManager->RecalculateLatency(fCapturePortList[i], mode);
+    for (std::int32_t i = 0; i < m_captureChannels; i++) {
+        if (mode == kPlaybackLatency) {
+            m_graphManager->recalculateLatency(m_capturePortList[i], mode);
         }
     }
 
-    for (std::int32_t i = 0; i < fPlaybackChannels; i++) {
-        if (mode == JackCaptureLatency) {
-            fGraphManager->RecalculateLatency(fPlaybackPortList[i], mode);
+    for (std::int32_t i = 0; i < m_playbackChannels; i++) {
+        if (mode == kCaptureLatency) {
+            m_graphManager->recalculateLatency(m_playbackPortList[i], mode);
         }
     }
 }

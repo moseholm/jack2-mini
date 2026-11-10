@@ -34,7 +34,7 @@ namespace jackmini {
 // of an integer division.  The two positions live on separate cache lines to
 // avoid false sharing between the card thread and the primary RT thread.
 
-class JackAlsaRingBuffer {
+class AlsaRingBuffer {
 
 private:
     // Fixed rather than std::hardware_destructive_interference_size: that
@@ -42,42 +42,42 @@ private:
     // builds), and every target we ship has 64-byte cache lines.
     static constexpr std::size_t kCacheLine = 64;
 
-    std::int32_t fChannels;
-    jack_nframes_t fCapacity;
-    std::uint64_t fMask;
-    float** fData;
+    std::int32_t m_channels;
+    NframesC m_capacity;
+    std::uint64_t m_mask;
+    float** m_data;
 
-    alignas(kCacheLine) std::atomic<std::uint64_t> fReadPos;
-    alignas(kCacheLine) std::atomic<std::uint64_t> fWritePos;
+    alignas(kCacheLine) std::atomic<std::uint64_t> m_readPos;
+    alignas(kCacheLine) std::atomic<std::uint64_t> m_writePos;
 
-    JackAlsaRingBuffer(const JackAlsaRingBuffer&);
-    JackAlsaRingBuffer& operator=(const JackAlsaRingBuffer&);
+    AlsaRingBuffer(const AlsaRingBuffer&);
+    AlsaRingBuffer& operator=(const AlsaRingBuffer&);
 
-    void Free();
+    void free();
 
 public:
-    JackAlsaRingBuffer(std::int32_t channels, jack_nframes_t capacity);
-    ~JackAlsaRingBuffer();
+    AlsaRingBuffer(std::int32_t channels, NframesC capacity);
+    ~AlsaRingBuffer();
 
-    bool Init(std::int32_t channels, jack_nframes_t capacity);
-    void Reset() noexcept;
+    bool init(std::int32_t channels, NframesC capacity);
+    void reset() noexcept;
 
     // Best-effort mlock() of the sample storage.  Returns false when any
     // page could not be locked; the ring remains usable either way.
-    bool LockMemory() const noexcept;
+    bool lockMemory() const noexcept;
 
-    std::int32_t Channels() const noexcept { return fChannels; }
-    jack_nframes_t Capacity() const noexcept { return fCapacity; }
-    jack_nframes_t AvailableRead() const noexcept;
-    jack_nframes_t AvailableWrite() const noexcept;
+    std::int32_t channels() const noexcept { return m_channels; }
+    NframesC capacity() const noexcept { return m_capacity; }
+    NframesC availableRead() const noexcept;
+    NframesC availableWrite() const noexcept;
 
     // Push nframes from planar source.  Returns the number of frames
     // actually stored; overflow is dropped.
-    jack_nframes_t Write(const float* const* src, jack_nframes_t nframes) noexcept;
+    NframesC write(const float* const* src, NframesC nframes) noexcept;
 
     // Pop up to nframes into planar destination.  Missing frames are
     // zero-filled.  Returns the number of frames actually available.
-    jack_nframes_t Read(float* const* dst, jack_nframes_t nframes) noexcept;
+    NframesC read(float* const* dst, NframesC nframes) noexcept;
 };
 
 } // namespace jackmini

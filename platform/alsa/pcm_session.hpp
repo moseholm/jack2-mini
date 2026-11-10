@@ -29,10 +29,10 @@ namespace jackmini::alsa {
 
 using PcmCycle = Cycle<Device>;
 
-using ReadCopyFunction = void (*)(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples,
-    std::uint64_t src_skip);
-using WriteCopyFunction = void (*)(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples,
-    std::uint64_t dst_skip, dither_state_t* state);
+using ReadCopyFunction = void (*)(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples,
+    std::uint64_t srcSkip);
+using WriteCopyFunction = void (*)(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples,
+    std::uint64_t dstSkip, DitherState* state);
 
 // One ALSA card as the JACK drivers use it: the device, the cycle core on the device, and the sample conversion
 // between the device buffers and JACK's float buffers.  The conversion functions are chosen once, in open().
@@ -45,44 +45,44 @@ public:
 
     // Opens and configures the streams, and builds the cycle.  Returns 0 on success, -1 on error.  The request is
     // updated with the rate and the period count that were set.
-    std::int32_t open(const char* capture_name, const char* playback_name, Request& request, DitherAlgorithm dither);
+    std::int32_t open(const char* captureName, const char* playbackName, Request& request, DitherAlgorithm dither);
     void close();
-    bool is_open() const { return cycle_ != nullptr; }
-    bool has_capture() const { return device_.has_capture(); }
-    bool has_playback() const { return device_.has_playback(); }
+    bool isOpen() const { return m_cycle != nullptr; }
+    bool hasCapture() const { return m_device.hasCapture(); }
+    bool hasPlayback() const { return m_device.hasPlayback(); }
 
-    void set_callbacks(const PcmCycle::Callbacks& callbacks);
+    void setCallbacks(const PcmCycle::Callbacks& callbacks);
 
-    const StreamInfo& info(Stream stream) const { return device_.info(stream); }
-    bool capture_and_playback_not_synced() const { return device_.capture_and_playback_not_synced(); }
-    std::uint32_t frames_per_cycle() const { return frames_per_cycle_; }
-    std::uint32_t periods() const { return periods_; }
-    std::uint32_t rate() const { return rate_; }
+    const StreamInfo& info(Stream stream) const { return m_device.info(stream); }
+    bool captureAndPlaybackNotSynced() const { return m_device.captureAndPlaybackNotSynced(); }
+    std::uint32_t framesPerCycle() const { return m_framesPerCycle; }
+    std::uint32_t periods() const { return m_periods; }
+    std::uint32_t rate() const { return m_rate; }
 
-    std::int32_t start() { return cycle_->start(); }
-    std::int32_t stop() { return cycle_->stop(); }
-    WaitResult wait() { return cycle_->wait(); }
-    std::int32_t read(std::uint32_t frames) { return cycle_->read(frames); }
-    std::int32_t write(std::uint32_t frames) { return cycle_->write(frames); }
-    PcmCycle& cycle() { return *cycle_; }
+    std::int32_t start() { return m_cycle->start(); }
+    std::int32_t stop() { return m_cycle->stop(); }
+    WaitResult wait() { return m_cycle->wait(); }
+    std::int32_t read(std::uint32_t frames) { return m_cycle->read(frames); }
+    std::int32_t write(std::uint32_t frames) { return m_cycle->write(frames); }
+    PcmCycle& cycle() { return *m_cycle; }
 
     // Converts one channel between a mapped device area and a JACK buffer.  The playback channel is marked done,
     // so the cycle does not silence it.
-    void read_channel(const ChannelArea& area, jack_default_audio_sample_t* buf, std::size_t frames);
-    void write_channel(std::size_t channel, const ChannelArea& area, jack_default_audio_sample_t* buf,
+    void readChannel(const ChannelArea& area, DefaultAudioSampleC* buf, std::size_t frames);
+    void writeChannel(std::size_t channel, const ChannelArea& area, DefaultAudioSampleC* buf,
         std::size_t frames);
 
 private:
-    Device device_;
-    std::unique_ptr<PcmCycle> cycle_;
-    PcmCycle::Callbacks callbacks_;
-    std::uint32_t frames_per_cycle_ = 0;
-    std::uint32_t periods_ = 0;
-    std::uint32_t rate_ = 0;
+    Device m_device;
+    std::unique_ptr<PcmCycle> m_cycle;
+    PcmCycle::Callbacks m_callbacks;
+    std::uint32_t m_framesPerCycle = 0;
+    std::uint32_t m_periods = 0;
+    std::uint32_t m_rate = 0;
 
-    ReadCopyFunction read_copy_ = nullptr;
-    WriteCopyFunction write_copy_ = nullptr;
-    std::vector<dither_state_t> dither_;
+    ReadCopyFunction m_readCopy = nullptr;
+    WriteCopyFunction m_writeCopy = nullptr;
+    std::vector<DitherState> m_dither;
 };
 
 } // namespace jackmini::alsa

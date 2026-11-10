@@ -31,87 +31,87 @@ inline constexpr std::int32_t kAllPorts = 0xFFFF;
 // \brief Base class for port.
 
 
-class SERVER_EXPORT JackPort {
+class SERVER_EXPORT ServerPort {
 
-    friend class JackGraphManager;
+    friend class GraphManager;
 
 private:
-    std::int32_t fTypeId;
-    enum JackPortFlags fFlags;
-    std::array<char, kRealJackPortNameSize + 1> fName;
-    std::array<char, kRealJackPortNameSize + 1> fAlias1;
-    std::array<char, kRealJackPortNameSize + 1> fAlias2;
-    std::int32_t fRefNum;
-    jack_uuid_t fUUID; // set when the port is allocated; the UUID is reported by the client tools
+    std::int32_t m_typeId;
+    enum PortFlagsC m_flags;
+    std::array<char, kRealJackPortNameSize + 1> m_name;
+    std::array<char, kRealJackPortNameSize + 1> m_alias1;
+    std::array<char, kRealJackPortNameSize + 1> m_alias2;
+    std::int32_t m_refNum;
+    UuidC m_uUID; // set when the port is allocated; the UUID is reported by the client tools
 
-    jack_nframes_t fLatency;
-    jack_nframes_t fTotalLatency;
-    jack_latency_range_t fPlaybackLatency;
-    jack_latency_range_t fCaptureLatency;
-    std::uint8_t fMonitorRequests;
+    NframesC m_latency;
+    NframesC m_totalLatency;
+    LatencyRangeC m_playbackLatency;
+    LatencyRangeC m_captureLatency;
+    std::uint8_t m_monitorRequests;
 
-    bool fInUse;
-    jack_port_id_t fTied; // Locally tied source port
-    std::array<jack_default_audio_sample_t, kBufferSizeMax + 8> fBuffer;
+    bool m_inUse;
+    PortIdC m_tied; // Locally tied source port
+    std::array<DefaultAudioSampleC, kBufferSizeMax + 8> m_buffer;
 
-    bool IsUsed() const
+    bool isUsed() const
     {
-        return fInUse;
+        return m_inUse;
     }
 
     // RT
-    void ClearBuffer(jack_nframes_t frames);
-    void MixBuffers(void** src_buffers, std::int32_t src_count, jack_nframes_t frames);
+    void clearBuffer(NframesC frames);
+    void mixBuffers(void** srcBuffers, std::int32_t srcCount, NframesC frames);
 
 public:
-    JackPort();
+    ServerPort();
 
-    bool Allocate(std::int32_t refnum, const char* port_name, const char* port_type, JackPortFlags flags);
-    void Release();
-    const char* GetName() const;
-    const char* GetShortName() const;
-    void SetName(const char* name);
+    bool allocate(std::int32_t refnum, const char* portName, const char* portType, PortFlagsC flags);
+    void release();
+    const char* getName() const;
+    const char* getShortName() const;
+    void setName(const char* name);
 
-    std::int32_t GetAliases(char* const aliases[2]);
-    std::int32_t SetAlias(const char* alias);
-    std::int32_t UnsetAlias(const char* alias);
-    bool NameEquals(std::string_view target);
+    std::int32_t getAliases(char* const aliases[2]);
+    std::int32_t setAlias(const char* alias);
+    std::int32_t unsetAlias(const char* alias);
+    bool nameEquals(std::string_view target);
 
-    std::int32_t GetFlags() const;
-    const char* GetType() const;
+    std::int32_t getFlags() const;
+    const char* getType() const;
 
-    std::int32_t Tie(jack_port_id_t port_index);
-    std::int32_t UnTie();
+    std::int32_t tie(PortIdC portIndex);
+    std::int32_t unTie();
 
-    jack_nframes_t GetLatency() const;
-    void SetLatency(jack_nframes_t latency);
+    NframesC getLatency() const;
+    void setLatency(NframesC latency);
 
-    void SetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_range_t* range);
-    void GetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_range_t* range) const;
+    void setLatencyRange(LatencyCallbackModeC mode, LatencyRangeC* range);
+    void getLatencyRange(LatencyCallbackModeC mode, LatencyRangeC* range) const;
 
-    jack_nframes_t GetTotalLatency() const;
+    NframesC getTotalLatency() const;
 
-    std::int32_t RequestMonitor(bool onoff);
-    std::int32_t EnsureMonitor(bool onoff);
-    bool MonitoringInput()
+    std::int32_t requestMonitor(bool onoff);
+    std::int32_t ensureMonitor(bool onoff);
+    bool monitoringInput()
     {
-        return (fMonitorRequests > 0);
+        return (m_monitorRequests > 0);
     }
 
     // Since we are in shared memory, the resulting pointer cannot be cached, so align it here...
-    jack_default_audio_sample_t* GetBuffer()
+    DefaultAudioSampleC* getBuffer()
     {
-        return (jack_default_audio_sample_t*)((std::uintptr_t)fBuffer.data() & ~31L) + 8;
+        return (DefaultAudioSampleC*)((std::uintptr_t)m_buffer.data() & ~31L) + 8;
     }
 
-    std::int32_t GetRefNum() const;
-    jack_uuid_t GetUUID() const
+    std::int32_t getRefNum() const;
+    UuidC getUUID() const
     {
-        return fUUID;
+        return m_uUID;
     }
-    bool InUse() const
+    bool inUse() const
     {
-        return fInUse;
+        return m_inUse;
     }
 };
 

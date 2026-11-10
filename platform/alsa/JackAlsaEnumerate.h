@@ -24,15 +24,15 @@ namespace jackmini {
 
 // \brief One PCM device (subdevice 0) of an ALSA card.
 
-struct JackAlsaPcmInfo {
-    std::string card_id; // ALSA card id, e.g. "NVidia"
-    std::int32_t card_num; // card index when enumerated
-    std::int32_t device; // PCM device number
-    std::string pcm; // stable name, "hw:CARD=<id>,DEV=<n>"
-    bool playback; // has a playback stream
-    bool capture; // has a capture stream
-    std::int32_t playback_channels; // maximum channels, 0 if no playback stream
-    std::int32_t capture_channels; // maximum channels, 0 if no capture stream
+struct AlsaPcmInfo {
+    std::string m_cardId; // ALSA card id, e.g. "NVidia"
+    std::int32_t m_cardNum; // card index when enumerated
+    std::int32_t m_device; // PCM device number
+    std::string m_pcm; // stable name, "hw:CARD=<id>,DEV=<n>"
+    bool m_playback; // has a playback stream
+    bool m_capture; // has a capture stream
+    std::int32_t m_playbackChannels; // maximum channels, 0 if no playback stream
+    std::int32_t m_captureChannels; // maximum channels, 0 if no capture stream
 };
 
 // Lists every PCM device that has a stream, on every card.
@@ -41,7 +41,7 @@ struct JackAlsaPcmInfo {
 // another application) keeps the channel counts it had in \a known, the previous
 // listing, so a device in use is not taken to be gone.  A device with no known
 // counts and no open is left out.  \a report turns the log lines on.
-std::vector<JackAlsaPcmInfo> JackAlsaEnumeratePcms(const std::vector<JackAlsaPcmInfo>& known,
+std::vector<AlsaPcmInfo> alsaEnumeratePcms(const std::vector<AlsaPcmInfo>& known,
     bool report);
 
 } // namespace jackmini

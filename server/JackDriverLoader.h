@@ -22,7 +22,7 @@
 #include "JackPlatformPlug.h"
 #include "driver_interface.h"
 
-jack_driver_desc_t* jack_find_driver_descriptor(JSList* drivers, const char* name);
-JSList* jack_drivers_load(JSList* drivers);
-void jack_print_driver_param_usage(jack_driver_desc_t* desc, std::uint64_t param, FILE* file);
-void jack_print_driver_options(jack_driver_desc_t* desc, FILE* file);
+DriverDesc* findDriverDescriptor(JSListC* drivers, const char* name);
+JSListC* driversLoad(JSListC* drivers);
+void printDriverParamUsage(DriverDesc* desc, std::uint64_t param, FILE* file);
+void printDriverOptions(DriverDesc* desc, FILE* file);

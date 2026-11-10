@@ -31,25 +31,25 @@ namespace jackmini {
 
 // \brief Utility functions.
 
-struct SERVER_EXPORT JackTools {
-    static std::int32_t GetPID();
-    static std::int32_t GetUID();
+struct SERVER_EXPORT Tools {
+    static std::int32_t getPID();
+    static std::int32_t getUID();
 
-    static void KillServer();
+    static void killServer();
 
-    static std::int32_t MkDir(const char* path);
-    static const char* UserDir();
-    static const char* ServerDir(const char* server_name, char* server_dir);
-    static const char* DefaultServerName();
-    static void CleanupFiles(const char* server_name);
-    static std::int32_t GetTmpdir();
-    static void RewriteName(const char* name, char* new_name);
+    static std::int32_t mkDir(const char* path);
+    static const char* userDir();
+    static const char* serverDir(const char* serverName, char* serverDir);
+    static const char* defaultServerName();
+    static void cleanupFiles(const char* serverName);
+    static std::int32_t getTmpdir();
+    static void rewriteName(const char* name, char* newName);
 
-    static std::int32_t ComputationMicroSec(std::int32_t buffer_size)
+    static std::int32_t computationMicroSec(std::int32_t bufferSize)
     {
-        if (buffer_size < 128) {
+        if (bufferSize < 128) {
             return 500;
-        } else if (buffer_size < 256) {
+        } else if (bufferSize < 256) {
             return 300;
         } else {
             return 100;
@@ -57,7 +57,7 @@ struct SERVER_EXPORT JackTools {
     }
 };
 
-void BuildClientPath(char* path_to_so, std::int32_t path_len, const char* so_name);
-void PrintLoadError(const char* so_name);
+void buildClientPath(char* pathToSo, std::int32_t pathLen, const char* soName);
+void printLoadError(const char* soName);
 
 } // namespace jackmini

@@ -23,11 +23,11 @@ namespace jackmini {
 
 // \brief Parameters used to create a resampler.
 
-struct JackResamplerParams {
-    std::uint32_t channels;
-    std::uint32_t in_rate;
-    std::uint32_t out_rate;
-    std::int32_t quality;
+struct ResamplerParams {
+    std::uint32_t m_channels;
+    std::uint32_t m_inRate;
+    std::uint32_t m_outRate;
+    std::int32_t m_quality;
 };
 
 // \brief Multi-channel planar float sample rate converter.
@@ -36,54 +36,54 @@ struct JackResamplerParams {
 // ALSA secondary card code.  The interface is deliberately small so that
 // tests can supply fakes.
 
-class JackResampler {
+class Resampler {
 
 public:
-    virtual ~JackResampler()
+    virtual ~Resampler()
     {
     }
 
     // Clear filter history and any pending state.
-    virtual void Reset() = 0;
+    virtual void reset() = 0;
 
     // Ratio correction around nominal, 1.0 is nominal.  Used by the
     // asynchronous drift controller.
-    virtual void SetRate(double rate) = 0;
+    virtual void setRate(double rate) = 0;
 
     // Number of input frames needed to produce out_len output frames.
-    virtual std::uint32_t InputLength(std::uint32_t out_len) = 0;
+    virtual std::uint32_t inputLength(std::uint32_t outLen) = 0;
 
     // Number of output frames produced from in_len input frames.
-    virtual std::uint32_t OutputLength(std::uint32_t in_len) = 0;
+    virtual std::uint32_t outputLength(std::uint32_t inLen) = 0;
 
     // Consume up to *in_len input frames and produce up to *out_len
     // output frames.  Both counts are updated to the frames actually used.
-    virtual void Process(const float* const* src, std::uint32_t* in_len,
-        float* const* dst, std::uint32_t* out_len) = 0;
+    virtual void process(const float* const* src, std::uint32_t* inLen,
+        float* const* dst, std::uint32_t* outLen) = 0;
 
     // Latency introduced by the filter, in output frames.
-    virtual std::uint32_t Delay() = 0;
+    virtual std::uint32_t delay() = 0;
 };
 
 // \brief Creates resamplers.  Factories are looked up by name.
 
-class JackResamplerFactory {
+class ResamplerFactory {
 
 public:
-    virtual ~JackResamplerFactory()
+    virtual ~ResamplerFactory()
     {
     }
 
-    virtual const char* Name() const = 0;
+    virtual const char* name() const = 0;
 
     // Returns nullptr when the parameters cannot be supported.
-    virtual JackResampler* Create(const JackResamplerParams& params) = 0;
+    virtual Resampler* create(const ResamplerParams& params) = 0;
 
     // The factory used when no other is requested.
-    static JackResamplerFactory* Default();
+    static ResamplerFactory* defaultFactory();
 
     // Returns nullptr for unknown names.  Only "pipewire" exists.
-    static JackResamplerFactory* Find(const char* name);
+    static ResamplerFactory* find(const char* name);
 };
 
 } // namespace jackmini

@@ -23,7 +23,7 @@
 
 namespace jackmini {
 
-static float** AllocChannels(std::int32_t channels, std::uint32_t frames)
+static float** allocChannels(std::int32_t channels, std::uint32_t frames)
 {
     float** buffers = new float*[channels];
     for (std::int32_t i = 0; i < channels; i++) {
@@ -33,7 +33,7 @@ static float** AllocChannels(std::int32_t channels, std::uint32_t frames)
     return buffers;
 }
 
-static void FreeChannels(float** buffers, std::int32_t channels)
+static void freeChannels(float** buffers, std::int32_t channels)
 {
     if (buffers == nullptr) {
         return;
@@ -44,119 +44,119 @@ static void FreeChannels(float** buffers, std::int32_t channels)
     delete[] buffers;
 }
 
-JackAlsaRateConverter::JackAlsaRateConverter(JackResampler* resampler, std::int32_t channels, std::uint32_t capacity)
-    : fResampler(resampler)
-    , fChannels(channels)
-    , fCapacity(capacity)
-    , fIn(nullptr)
-    , fOut(nullptr)
-    , fOutPtr(nullptr)
-    , fInCount(0)
-    , fOutCount(0)
+AlsaRateConverter::AlsaRateConverter(Resampler* resampler, std::int32_t channels, std::uint32_t capacity)
+    : m_resampler(resampler)
+    , m_channels(channels)
+    , m_capacity(capacity)
+    , m_in(nullptr)
+    , m_out(nullptr)
+    , m_outPtr(nullptr)
+    , m_inCount(0)
+    , m_outCount(0)
 {
-    if (fResampler == nullptr) {
+    if (m_resampler == nullptr) {
         return;
     }
-    fIn = AllocChannels(channels, capacity);
-    fOut = AllocChannels(channels, capacity);
-    fOutPtr = new float*[channels];
+    m_in = allocChannels(channels, capacity);
+    m_out = allocChannels(channels, capacity);
+    m_outPtr = new float*[channels];
 }
 
-JackAlsaRateConverter::~JackAlsaRateConverter()
+AlsaRateConverter::~AlsaRateConverter()
 {
-    delete fResampler;
-    FreeChannels(fIn, fChannels);
-    FreeChannels(fOut, fChannels);
-    delete[] fOutPtr;
+    delete m_resampler;
+    freeChannels(m_in, m_channels);
+    freeChannels(m_out, m_channels);
+    delete[] m_outPtr;
 }
 
-void JackAlsaRateConverter::Reset()
+void AlsaRateConverter::reset()
 {
-    fInCount = 0;
-    fOutCount = 0;
-    if (fResampler) {
-        fResampler->Reset();
+    m_inCount = 0;
+    m_outCount = 0;
+    if (m_resampler) {
+        m_resampler->reset();
     }
 }
 
-void JackAlsaRateConverter::SetRate(double rate)
+void AlsaRateConverter::setRate(double rate)
 {
-    if (fResampler) {
-        fResampler->SetRate(rate);
+    if (m_resampler) {
+        m_resampler->setRate(rate);
     }
 }
 
-std::uint32_t JackAlsaRateConverter::Delay()
+std::uint32_t AlsaRateConverter::delay()
 {
-    return fResampler ? fResampler->Delay() : 0;
+    return m_resampler ? m_resampler->delay() : 0;
 }
 
-std::uint32_t JackAlsaRateConverter::OutputBacklog()
+std::uint32_t AlsaRateConverter::outputBacklog()
 {
-    return fResampler ? fResampler->OutputLength(fInCount) : 0;
+    return m_resampler ? m_resampler->outputLength(m_inCount) : 0;
 }
 
-std::uint32_t JackAlsaRateConverter::NeedInput(std::uint32_t out_frames)
+std::uint32_t AlsaRateConverter::needInput(std::uint32_t outFrames)
 {
-    std::uint32_t pending = std::min(fOutCount, out_frames);
-    std::uint32_t want = fResampler->InputLength(out_frames - pending);
-    if (want <= fInCount) {
+    std::uint32_t pending = std::min(m_outCount, outFrames);
+    std::uint32_t want = m_resampler->inputLength(outFrames - pending);
+    if (want <= m_inCount) {
         return 0;
     }
-    want -= fInCount;
-    if (fInCount + want > fCapacity) {
-        want = fCapacity - fInCount;
+    want -= m_inCount;
+    if (m_inCount + want > m_capacity) {
+        want = m_capacity - m_inCount;
     }
     return want;
 }
 
-std::uint32_t JackAlsaRateConverter::Convert(const float* const* in, std::uint32_t in_frames,
-    float* const* out, std::uint32_t out_frames)
+std::uint32_t AlsaRateConverter::convert(const float* const* in, std::uint32_t inFrames,
+    float* const* out, std::uint32_t outFrames)
 {
-    if (out_frames > fCapacity) {
-        out_frames = fCapacity;
+    if (outFrames > m_capacity) {
+        outFrames = m_capacity;
     }
 
-    if (in_frames > fCapacity - fInCount) {
-        jack_log("JackAlsaRateConverter: input overflow, dropped %u frames", in_frames - (fCapacity - fInCount));
-        in_frames = fCapacity - fInCount;
+    if (inFrames > m_capacity - m_inCount) {
+        jack_log("JackAlsaRateConverter: input overflow, dropped %u frames", inFrames - (m_capacity - m_inCount));
+        inFrames = m_capacity - m_inCount;
     }
-    for (std::int32_t c = 0; c < fChannels; c++) {
-        memcpy(fIn[c] + fInCount, in[c], sizeof(float) * in_frames);
+    for (std::int32_t c = 0; c < m_channels; c++) {
+        memcpy(m_in[c] + m_inCount, in[c], sizeof(float) * inFrames);
     }
-    fInCount += in_frames;
+    m_inCount += inFrames;
 
-    while (fOutCount < out_frames && fInCount > 0) {
-        std::uint32_t in_len = fInCount;
-        std::uint32_t out_len = out_frames - fOutCount;
-        for (std::int32_t c = 0; c < fChannels; c++) {
-            fOutPtr[c] = fOut[c] + fOutCount;
+    while (m_outCount < outFrames && m_inCount > 0) {
+        std::uint32_t inLen = m_inCount;
+        std::uint32_t outLen = outFrames - m_outCount;
+        for (std::int32_t c = 0; c < m_channels; c++) {
+            m_outPtr[c] = m_out[c] + m_outCount;
         }
 
-        fResampler->Process(fIn, &in_len, fOutPtr, &out_len);
-        if (in_len == 0 && out_len == 0) {
+        m_resampler->process(m_in, &inLen, m_outPtr, &outLen);
+        if (inLen == 0 && outLen == 0) {
             break;
         }
 
-        if (in_len > 0 && in_len < fInCount) {
-            for (std::int32_t c = 0; c < fChannels; c++) {
-                memmove(fIn[c], fIn[c] + in_len, sizeof(float) * (fInCount - in_len));
+        if (inLen > 0 && inLen < m_inCount) {
+            for (std::int32_t c = 0; c < m_channels; c++) {
+                memmove(m_in[c], m_in[c] + inLen, sizeof(float) * (m_inCount - inLen));
             }
         }
-        fInCount -= in_len;
-        fOutCount += out_len;
+        m_inCount -= inLen;
+        m_outCount += outLen;
     }
 
-    std::uint32_t produced = std::min(fOutCount, out_frames);
-    for (std::int32_t c = 0; c < fChannels; c++) {
-        memcpy(out[c], fOut[c], sizeof(float) * produced);
+    std::uint32_t produced = std::min(m_outCount, outFrames);
+    for (std::int32_t c = 0; c < m_channels; c++) {
+        memcpy(out[c], m_out[c], sizeof(float) * produced);
     }
-    if (produced < fOutCount) {
-        for (std::int32_t c = 0; c < fChannels; c++) {
-            memmove(fOut[c], fOut[c] + produced, sizeof(float) * (fOutCount - produced));
+    if (produced < m_outCount) {
+        for (std::int32_t c = 0; c < m_channels; c++) {
+            memmove(m_out[c], m_out[c] + produced, sizeof(float) * (m_outCount - produced));
         }
     }
-    fOutCount -= produced;
+    m_outCount -= produced;
     return produced;
 }
 

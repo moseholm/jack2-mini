@@ -33,13 +33,13 @@ namespace jackmini {
 //
 // The methods return Result. The engine's int codes (0 on success) are converted here.
 
-class SERVER_EXPORT JackLockedEngine {
+class SERVER_EXPORT LockedEngine {
 private:
-    JackEngine fEngine;
+    Engine m_engine;
 
     // An allocation failure in the engine becomes ServerFailure. Other exceptions are not handled here.
     template <class F>
-    static auto Guard(F&& f) -> std::invoke_result_t<F>
+    static auto guard(F&& f) -> std::invoke_result_t<F>
     {
         using R = std::invoke_result_t<F>;
         try {
@@ -49,215 +49,215 @@ private:
             if constexpr (std::is_void_v<R>) {
                 return;
             } else {
-                return std::unexpected(Error::ServerFailure);
+                return std::unexpected(Error::kServerFailure);
             }
         }
     }
 
     // Runs f with the engine locked.
     template <class F>
-    auto Locked(F&& f) -> std::invoke_result_t<F>
+    auto locked(F&& f) -> std::invoke_result_t<F>
     {
-        JackLock lock(&fEngine);
-        return Guard(f);
+        Lock lock(&m_engine);
+        return guard(f);
     }
 
     // Runs f with the engine locked, if the client is registered.
     template <class F>
-    auto Client(std::int32_t refnum, F&& f) -> std::invoke_result_t<F>
+    auto client(std::int32_t refnum, F&& f) -> std::invoke_result_t<F>
     {
-        JackLock lock(&fEngine);
-        if (!fEngine.CheckClient(refnum)) {
-            return std::unexpected(Error::NotFound);
+        Lock lock(&m_engine);
+        if (!m_engine.checkClient(refnum)) {
+            return std::unexpected(Error::kNotFound);
         }
-        return Guard(f);
+        return guard(f);
     }
 
     // Closing the last client of a temporary server throws JackTemporaryException: the server quits.
     template <class F>
-    Result<void> Closing(std::int32_t refnum, F&& f)
+    Result<void> closing(std::int32_t refnum, F&& f)
     {
         try {
-            return Client(refnum, f);
-        } catch (const JackTemporaryException&) {
+            return client(refnum, f);
+        } catch (const TemporaryException&) {
             jack_error("JackTemporaryException : now quits...");
-            JackTools::KillServer();
+            Tools::killServer();
             return { };
         }
     }
 
 public:
-    JackLockedEngine(JackGraphManager* manager, JackSynchro* table, JackEngineControl* controler, char self_connect_mode)
-        : fEngine(manager, table, controler, self_connect_mode)
+    LockedEngine(GraphManager* manager, Synchro* table, EngineControl* controler, char selfConnectMode)
+        : m_engine(manager, table, controler, selfConnectMode)
     {
     }
-    ~JackLockedEngine()
+    ~LockedEngine()
     {
     }
 
-    bool Lock() { return fEngine.Lock(); }
-    bool Unlock() { return fEngine.Unlock(); }
-    bool Trylock() { return fEngine.Trylock(); }
+    bool lock() { return m_engine.lock(); }
+    bool unlock() { return m_engine.unlock(); }
+    bool trylock() { return m_engine.trylock(); }
 
-    Result<void> Open()
+    Result<void> open()
     {
         // No lock needed
-        return Guard([&] { return fEngine.Open(); });
+        return guard([&] { return m_engine.open(); });
     }
-    Result<void> Close()
+    Result<void> close()
     {
         // No lock needed
-        return Guard([&] { return fEngine.Close(); });
+        return guard([&] { return m_engine.close(); });
     }
 
     // Client management
-    Result<void> ClientCheck(const char* name, jack_uuid_t uuid, char* name_res, std::int32_t protocol, std::int32_t options, std::int32_t* status)
+    Result<void> clientCheck(const char* name, UuidC uuid, char* nameRes, std::int32_t protocol, std::int32_t options, std::int32_t* status)
     {
-        return Locked([&] { return fEngine.ClientCheck(name, uuid, name_res, protocol, options, status); });
+        return locked([&] { return m_engine.clientCheck(name, uuid, nameRes, protocol, options, status); });
     }
-    Result<void> ClientExternalOpen(const char* name, std::int32_t pid, jack_uuid_t uuid, std::int32_t* ref, JackShmSegment* shared_engine, JackShmSegment* shared_client, JackShmSegment* shared_graph_manager)
+    Result<void> clientExternalOpen(const char* name, std::int32_t pid, UuidC uuid, std::int32_t* ref, ShmSegment* sharedEngine, ShmSegment* sharedClient, ShmSegment* sharedGraphManager)
     {
-        return Locked([&] { return fEngine.ClientExternalOpen(name, pid, uuid, ref, shared_engine, shared_client, shared_graph_manager); });
+        return locked([&] { return m_engine.clientExternalOpen(name, pid, uuid, ref, sharedEngine, sharedClient, sharedGraphManager); });
     }
-    Result<void> RegisterDriver(const char* name, std::int32_t* ref, JackEngineControl** shared_engine, JackGraphManager** shared_manager, JackClientInterface* client, bool wait)
+    Result<void> registerDriver(const char* name, std::int32_t* ref, EngineControl** sharedEngine, GraphManager** sharedManager, ClientInterface* client, bool wait)
     {
-        return Locked([&] { return fEngine.RegisterDriver(name, ref, shared_engine, shared_manager, client, wait); });
-    }
-
-    Result<void> ClientExternalClose(std::int32_t refnum)
-    {
-        return Closing(refnum, [&] { return fEngine.ClientExternalClose(refnum); });
-    }
-    Result<void> UnregisterDriver(std::int32_t refnum, bool wait)
-    {
-        return Closing(refnum, [&] { return fEngine.UnregisterDriver(refnum, wait); });
+        return locked([&] { return m_engine.registerDriver(name, ref, sharedEngine, sharedManager, client, wait); });
     }
 
-    Result<void> ClientActivate(std::int32_t refnum, bool is_real_time, bool wait)
+    Result<void> clientExternalClose(std::int32_t refnum)
     {
-        return Client(refnum, [&] { return fEngine.ClientActivate(refnum, is_real_time, wait); });
+        return closing(refnum, [&] { return m_engine.clientExternalClose(refnum); });
     }
-    Result<void> ClientDeactivate(std::int32_t refnum, bool wait)
+    Result<void> unregisterDriver(std::int32_t refnum, bool wait)
     {
-        return Client(refnum, [&] { return fEngine.ClientDeactivate(refnum, wait); });
+        return closing(refnum, [&] { return m_engine.unregisterDriver(refnum, wait); });
     }
-    void ClientKill(std::int32_t refnum)
+
+    Result<void> clientActivate(std::int32_t refnum, bool isRealTime, bool wait)
     {
-        Locked([&] { fEngine.ClientKill(refnum); });
+        return client(refnum, [&] { return m_engine.clientActivate(refnum, isRealTime, wait); });
+    }
+    Result<void> clientDeactivate(std::int32_t refnum, bool wait)
+    {
+        return client(refnum, [&] { return m_engine.clientDeactivate(refnum, wait); });
+    }
+    void clientKill(std::int32_t refnum)
+    {
+        locked([&] { m_engine.clientKill(refnum); });
     }
 
     // Port management
-    Result<void> PortRegister(std::int32_t refnum, const char* name, const char* type, std::uint32_t flags, std::uint32_t buffer_size, jack_port_id_t* port)
+    Result<void> portRegister(std::int32_t refnum, const char* name, const char* type, std::uint32_t flags, std::uint32_t bufferSize, PortIdC* port)
     {
-        return Client(refnum, [&] { return fEngine.PortRegister(refnum, name, type, flags, buffer_size, port); });
+        return client(refnum, [&] { return m_engine.portRegister(refnum, name, type, flags, bufferSize, port); });
     }
-    Result<void> PortUnRegister(std::int32_t refnum, jack_port_id_t port)
+    Result<void> portUnRegister(std::int32_t refnum, PortIdC port)
     {
-        return Client(refnum, [&] { return fEngine.PortUnRegister(refnum, port); });
-    }
-
-    Result<void> PortConnect(std::int32_t refnum, const char* src, const char* dst)
-    {
-        return Client(refnum, [&] { return fEngine.PortConnect(refnum, src, dst); });
-    }
-    Result<void> PortDisconnect(std::int32_t refnum, const char* src, const char* dst)
-    {
-        return Client(refnum, [&] { return fEngine.PortDisconnect(refnum, src, dst); });
+        return client(refnum, [&] { return m_engine.portUnRegister(refnum, port); });
     }
 
-    Result<void> PortConnect(std::int32_t refnum, jack_port_id_t src, jack_port_id_t dst)
+    Result<void> portConnect(std::int32_t refnum, const char* src, const char* dst)
     {
-        return Client(refnum, [&] { return fEngine.PortConnect(refnum, src, dst); });
+        return client(refnum, [&] { return m_engine.portConnect(refnum, src, dst); });
     }
-    Result<void> PortDisconnect(std::int32_t refnum, jack_port_id_t src, jack_port_id_t dst)
+    Result<void> portDisconnect(std::int32_t refnum, const char* src, const char* dst)
     {
-        return Client(refnum, [&] { return fEngine.PortDisconnect(refnum, src, dst); });
-    }
-
-    Result<void> PortRename(std::int32_t refnum, jack_port_id_t port, const char* name)
-    {
-        return Client(refnum, [&] { return fEngine.PortRename(refnum, port, name); });
+        return client(refnum, [&] { return m_engine.portDisconnect(refnum, src, dst); });
     }
 
-    Result<void> ComputeTotalLatencies()
+    Result<void> portConnect(std::int32_t refnum, PortIdC src, PortIdC dst)
     {
-        return Locked([&] { return fEngine.ComputeTotalLatencies(); });
+        return client(refnum, [&] { return m_engine.portConnect(refnum, src, dst); });
+    }
+    Result<void> portDisconnect(std::int32_t refnum, PortIdC src, PortIdC dst)
+    {
+        return client(refnum, [&] { return m_engine.portDisconnect(refnum, src, dst); });
+    }
+
+    Result<void> portRename(std::int32_t refnum, PortIdC port, const char* name)
+    {
+        return client(refnum, [&] { return m_engine.portRename(refnum, port, name); });
+    }
+
+    Result<void> computeTotalLatencies()
+    {
+        return locked([&] { return m_engine.computeTotalLatencies(); });
     }
 
     // Graph
-    bool Process(jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end)
+    bool process(TimeC curCycleBegin, TimeC prevCycleEnd)
     {
         // RT : no lock
-        return fEngine.Process(cur_cycle_begin, prev_cycle_end);
+        return m_engine.process(curCycleBegin, prevCycleEnd);
     }
 
     // Notifications
-    void NotifyDriverXRun()
+    void notifyDriverXRun()
     {
         // Coming from the driver in RT : no lock
-        fEngine.NotifyDriverXRun();
+        m_engine.notifyDriverXRun();
     }
 
-    void NotifyClientXRun(std::int32_t refnum)
+    void notifyClientXRun(std::int32_t refnum)
     {
-        Locked([&] { fEngine.NotifyClientXRun(refnum); });
+        locked([&] { m_engine.notifyClientXRun(refnum); });
     }
 
-    void NotifyGraphReorder()
+    void notifyGraphReorder()
     {
-        Locked([&] { fEngine.NotifyGraphReorder(); });
+        locked([&] { m_engine.notifyGraphReorder(); });
     }
 
-    void NotifyBufferSize(jack_nframes_t buffer_size)
+    void notifyBufferSize(NframesC bufferSize)
     {
-        Locked([&] { fEngine.NotifyBufferSize(buffer_size); });
+        locked([&] { m_engine.notifyBufferSize(bufferSize); });
     }
-    void NotifySampleRate(jack_nframes_t sample_rate)
+    void notifySampleRate(NframesC sampleRate)
     {
-        Locked([&] { fEngine.NotifySampleRate(sample_rate); });
+        locked([&] { m_engine.notifySampleRate(sampleRate); });
     }
-    void NotifySecondarySampleRate(const char* card, jack_nframes_t sample_rate, std::int32_t direction)
+    void notifySecondarySampleRate(const char* card, NframesC sampleRate, std::int32_t direction)
     {
-        Locked([&] { fEngine.NotifySecondarySampleRate(card, sample_rate, direction); });
+        locked([&] { m_engine.notifySecondarySampleRate(card, sampleRate, direction); });
     }
-    void NotifyFreewheel(bool onoff)
+    void notifyFreewheel(bool onoff)
     {
-        Locked([&] { fEngine.NotifyFreewheel(onoff); });
-    }
-
-    void NotifyFailure(std::int32_t code, const char* reason)
-    {
-        Locked([&] { fEngine.NotifyFailure(code, reason); });
+        locked([&] { m_engine.notifyFreewheel(onoff); });
     }
 
-    Result<std::int32_t> GetClientPID(const char* name)
+    void notifyFailure(std::int32_t code, const char* reason)
     {
-        return Locked([&] { return fEngine.GetClientPID(name); });
+        locked([&] { m_engine.notifyFailure(code, reason); });
     }
 
-    Result<std::int32_t> GetClientRefNum(const char* name)
+    Result<std::int32_t> getClientPID(const char* name)
     {
-        return Locked([&] { return fEngine.GetClientRefNum(name); });
+        return locked([&] { return m_engine.getClientPID(name); });
     }
 
-    void NotifyQuit()
+    Result<std::int32_t> getClientRefNum(const char* name)
+    {
+        return locked([&] { return m_engine.getClientRefNum(name); });
+    }
+
+    void notifyQuit()
     {
         // No lock needed
-        Guard([&] { fEngine.NotifyQuit(); });
+        guard([&] { m_engine.notifyQuit(); });
     }
 
-    Result<void> GetUUIDForClientName(const char* client_name, char* uuid_res)
+    Result<void> getUUIDForClientName(const char* clientName, char* uuidRes)
     {
-        return Locked([&] { return fEngine.GetUUIDForClientName(client_name, uuid_res); });
+        return locked([&] { return m_engine.getUUIDForClientName(clientName, uuidRes); });
     }
 
-    Result<void> GetClientNameForUUID(const char* uuid, char* name_res)
+    Result<void> getClientNameForUUID(const char* uuid, char* nameRes)
     {
-        return Locked([&] { return fEngine.GetClientNameForUUID(uuid, name_res); });
+        return locked([&] { return m_engine.getClientNameForUUID(uuid, nameRes); });
     }
-    Result<void> ReserveClientName(const char* name, const char* uuid)
+    Result<void> reserveClientName(const char* name, const char* uuid)
     {
-        return Locked([&] { return fEngine.ReserveClientName(name, uuid); });
+        return locked([&] { return m_engine.reserveClientName(name, uuid); });
     }
 };
 

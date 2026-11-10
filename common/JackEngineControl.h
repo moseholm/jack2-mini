@@ -29,8 +29,8 @@
 
 namespace jackmini {
 
-class JackClientInterface;
-class JackGraphManager;
+class ClientInterface;
+class GraphManager;
 
 inline constexpr std::int32_t kEngineRollingCount = 32;
 inline constexpr std::int32_t kEngineRollingInterval = 1024;
@@ -38,144 +38,144 @@ inline constexpr std::int32_t kEngineRollingInterval = 1024;
 // \brief Engine control in shared memory.
 
 
-struct SERVER_EXPORT JackEngineControl : public JackShmMem {
+struct SERVER_EXPORT EngineControl : public ShmMem {
     // Shared state
-    jack_nframes_t fBufferSize;
-    jack_nframes_t fSampleRate;
-    bool fSyncMode;
-    bool fTemporary;
-    jack_time_t fPeriodUsecs;
-    jack_time_t fTimeOutUsecs;
-    float fMaxDelayedUsecs;
-    float fXrunDelayedUsecs;
-    bool fTimeOut;
-    bool fRealTime;
-    bool fSavedRealTime; // RT state saved and restored during Freewheel mode
-    std::atomic<bool> fFreewheel; // Freewheel mode is on: clients opened now must use the normal (not flushed) driver synchro
-    std::int32_t fServerPriority;
-    std::int32_t fClientPriority;
-    std::int32_t fMaxClientPriority;
-    std::array<char, kServerNameSize + 1> fServerName;
-    alignas(UInt32) alignas(JackTransportEngine) JackTransportEngine fTransport;
-    jack_timer_type_t fClockSource;
-    std::int32_t fDriverNum;
-    bool fVerbose;
+    NframesC m_bufferSize;
+    NframesC m_sampleRate;
+    bool m_syncMode;
+    bool m_temporary;
+    TimeC m_periodUsecs;
+    TimeC m_timeOutUsecs;
+    float m_maxDelayedUsecs;
+    float m_xrunDelayedUsecs;
+    bool m_timeOut;
+    bool m_realTime;
+    bool m_savedRealTime; // RT state saved and restored during Freewheel mode
+    std::atomic<bool> m_freewheel; // Freewheel mode is on: clients opened now must use the normal (not flushed) driver synchro
+    std::int32_t m_serverPriority;
+    std::int32_t m_clientPriority;
+    std::int32_t m_maxClientPriority;
+    std::array<char, kServerNameSize + 1> m_serverName;
+    alignas(UInt32) alignas(TransportEngine) TransportEngine m_transport;
+    TimerType m_clockSource;
+    std::int32_t m_driverNum;
+    bool m_verbose;
 
     // CPU Load
-    jack_time_t fPrevCycleTime;
-    jack_time_t fCurCycleTime;
-    jack_time_t fSpareUsecs;
-    jack_time_t fMaxUsecs;
-    std::array<jack_time_t, kEngineRollingCount> fRollingClientUsecs;
-    std::uint32_t fRollingClientUsecsCnt;
-    std::uint32_t fRollingClientUsecsIndex;
-    std::uint32_t fRollingInterval;
-    float fCPULoad;
-    float fMaxCPULoad;
+    TimeC m_prevCycleTime;
+    TimeC m_curCycleTime;
+    TimeC m_spareUsecs;
+    TimeC m_maxUsecs;
+    std::array<TimeC, kEngineRollingCount> m_rollingClientUsecs;
+    std::uint32_t m_rollingClientUsecsCnt;
+    std::uint32_t m_rollingClientUsecsIndex;
+    std::uint32_t m_rollingInterval;
+    float m_cPULoad;
+    float m_maxCPULoad;
 
     // Thread timing
-    UInt64 fPeriod;
-    UInt64 fComputation;
-    UInt64 fConstraint;
+    UInt64 m_period;
+    UInt64 m_computation;
+    UInt64 m_constraint;
 
     // Timer
-    alignas(UInt32) alignas(JackFrameTimer) JackFrameTimer fFrameTimer;
+    alignas(UInt32) alignas(FrameTimer) FrameTimer m_frameTimer;
 
-    JackEngineControl(bool sync, bool temporary, std::int64_t timeout, bool rt, std::int64_t priority, bool verbose, jack_timer_type_t clock, const char* server_name)
+    EngineControl(bool sync, bool temporary, std::int64_t timeout, bool rt, std::int64_t priority, bool verbose, TimerType clock, const char* serverName)
     {
-        static_assert(offsetof(JackEngineControl, fTransport) % sizeof(UInt32) == 0,
+        static_assert(offsetof(EngineControl, m_transport) % sizeof(UInt32) == 0,
             "fTransport must be aligned within JackEngineControl");
-        static_assert(offsetof(JackEngineControl, fFrameTimer) % sizeof(UInt32) == 0,
+        static_assert(offsetof(EngineControl, m_frameTimer) % sizeof(UInt32) == 0,
             "fFrameTimer must be aligned within JackEngineControl");
-        fBufferSize = 512;
-        fSampleRate = 48000;
-        fPeriodUsecs = jack_time_t(1000000.f / fSampleRate * fBufferSize);
-        fSyncMode = sync;
-        fTemporary = temporary;
-        fTimeOut = (timeout > 0);
-        fTimeOutUsecs = timeout * 1000;
-        fRealTime = rt;
-        fSavedRealTime = false;
-        fFreewheel = false;
-        fServerPriority = priority;
+        m_bufferSize = 512;
+        m_sampleRate = 48000;
+        m_periodUsecs = TimeC(1000000.f / m_sampleRate * m_bufferSize);
+        m_syncMode = sync;
+        m_temporary = temporary;
+        m_timeOut = (timeout > 0);
+        m_timeOutUsecs = timeout * 1000;
+        m_realTime = rt;
+        m_savedRealTime = false;
+        m_freewheel = false;
+        m_serverPriority = priority;
 
-        fClientPriority = (rt) ? priority - 5 : 0;
-        fMaxClientPriority = (rt) ? priority - 1 : 0;
-        fVerbose = verbose;
-        fPrevCycleTime = 0;
-        fCurCycleTime = 0;
-        fSpareUsecs = 0;
-        fMaxUsecs = 0;
-        ResetRollingUsecs();
-        strncpy(fServerName.data(), server_name, sizeof(fServerName));
-        fServerName[sizeof(fServerName) - 1] = 0;
-        fCPULoad = 0.f;
-        fMaxCPULoad = 0.f;
-        fPeriod = 0;
-        fComputation = 0;
-        fConstraint = 0;
-        fMaxDelayedUsecs = 0.f;
-        fXrunDelayedUsecs = 0.f;
-        fClockSource = clock;
-        fDriverNum = 0;
+        m_clientPriority = (rt) ? priority - 5 : 0;
+        m_maxClientPriority = (rt) ? priority - 1 : 0;
+        m_verbose = verbose;
+        m_prevCycleTime = 0;
+        m_curCycleTime = 0;
+        m_spareUsecs = 0;
+        m_maxUsecs = 0;
+        resetRollingUsecs();
+        strncpy(m_serverName.data(), serverName, sizeof(m_serverName));
+        m_serverName[sizeof(m_serverName) - 1] = 0;
+        m_cPULoad = 0.f;
+        m_maxCPULoad = 0.f;
+        m_period = 0;
+        m_computation = 0;
+        m_constraint = 0;
+        m_maxDelayedUsecs = 0.f;
+        m_xrunDelayedUsecs = 0.f;
+        m_clockSource = clock;
+        m_driverNum = 0;
     }
 
-    ~JackEngineControl()
+    ~EngineControl()
     {
     }
 
-    void UpdateTimeOut()
+    void updateTimeOut()
     {
-        fPeriodUsecs = jack_time_t(1000000.f / fSampleRate * fBufferSize); // In microsec
-        if (!(fTimeOut && fTimeOutUsecs > 2 * fPeriodUsecs)) {
-            fTimeOutUsecs = 2 * fPeriodUsecs;
+        m_periodUsecs = TimeC(1000000.f / m_sampleRate * m_bufferSize); // In microsec
+        if (!(m_timeOut && m_timeOutUsecs > 2 * m_periodUsecs)) {
+            m_timeOutUsecs = 2 * m_periodUsecs;
         }
     }
 
     // Cycle
-    void CycleIncTime(jack_time_t callback_usecs)
+    void cycleIncTime(TimeC callbackUsecs)
     {
         // Timer
-        fFrameTimer.IncFrameTime(fBufferSize, callback_usecs, fPeriodUsecs);
+        m_frameTimer.incFrameTime(m_bufferSize, callbackUsecs, m_periodUsecs);
     }
 
-    void CycleBegin(std::atomic<JackClientInterface*>* table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end)
+    void cycleBegin(std::atomic<ClientInterface*>* table, GraphManager* manager, TimeC curCycleBegin, TimeC prevCycleEnd)
     {
-        fTransport.CycleBegin(fSampleRate, cur_cycle_begin);
-        CalcCPULoad(table, manager, cur_cycle_begin, prev_cycle_end);
+        m_transport.cycleBegin(m_sampleRate, curCycleBegin);
+        calcCPULoad(table, manager, curCycleBegin, prevCycleEnd);
     }
 
-    void CycleEnd(std::atomic<JackClientInterface*>* table)
+    void cycleEnd(std::atomic<ClientInterface*>* table)
     {
-        fTransport.CycleEnd(table, fSampleRate, fBufferSize);
+        m_transport.cycleEnd(table, m_sampleRate, m_bufferSize);
     }
 
     // Timer
-    void InitFrameTime()
+    void initFrameTime()
     {
-        fFrameTimer.InitFrameTime();
+        m_frameTimer.initFrameTime();
     }
 
-    void ResetFrameTime(jack_time_t callback_usecs)
+    void resetFrameTime(TimeC callbackUsecs)
     {
-        fFrameTimer.ResetFrameTime(callback_usecs);
+        m_frameTimer.resetFrameTime(callbackUsecs);
     }
 
-    void ReadFrameTime(JackTimer* timer)
+    void readFrameTime(Timer* timer)
     {
-        fFrameTimer.ReadFrameTime(timer);
+        m_frameTimer.readFrameTime(timer);
     }
 
     // XRun
-    void NotifyXRun(jack_time_t callback_usecs, float delayed_usecs);
-    void ResetXRun()
+    void notifyXRun(TimeC callbackUsecs, float delayedUsecs);
+    void resetXRun()
     {
-        fMaxDelayedUsecs = 0.f;
+        m_maxDelayedUsecs = 0.f;
     }
 
     // Private
-    void CalcCPULoad(std::atomic<JackClientInterface*>* table, JackGraphManager* manager, jack_time_t cur_cycle_begin, jack_time_t prev_cycle_end);
-    void ResetRollingUsecs();
+    void calcCPULoad(std::atomic<ClientInterface*>* table, GraphManager* manager, TimeC curCycleBegin, TimeC prevCycleEnd);
+    void resetRollingUsecs();
 };
 
 } // namespace jackmini

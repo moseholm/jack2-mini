@@ -21,55 +21,55 @@ inline constexpr const char* kClientDir = "/dev/shm";
 inline constexpr const char* kDefaultDriver = "alsa";
 
 namespace jackmini {
-struct JackRequest;
-struct JackResult;
+struct Request;
+struct Reply;
 
-class JackPosixMutex;
-class JackPosixThread;
-class JackSocketServerChannel;
-class JackSocketServerNotifyChannel;
-class JackSocketNotifyChannel;
-class JackClientSocket;
+class PosixMutex;
+class PosixThread;
+class SocketServerChannel;
+class SocketServerNotifyChannel;
+class SocketNotifyChannel;
+class ClientSocket;
 } // namespace jackmini
 
 // __JackPlatformMutex__
 #include "JackPosixMutex.h"
 namespace jackmini {
-typedef JackPosixMutex JackMutex;
+typedef PosixMutex Mutex;
 }
 
 // __JackPlatformThread__
 #include "JackPosixThread.h"
 namespace jackmini {
-typedef JackPosixThread JackThread;
+typedef PosixThread Thread;
 }
 
 // __JackPlatformSynchro__  client activation
 #include "JackLinuxFutex.h"
 namespace jackmini {
-typedef JackLinuxFutex JackSynchro;
+typedef LinuxFutex Synchro;
 }
 
 // __JackPlatformProcessSync__
 #include "JackPosixProcessSync.h"
 namespace jackmini {
-typedef JackPosixProcessSync JackProcessSync;
+typedef PosixProcessSync ProcessSync;
 }
 
 // __JackPlatformServerChannel__
 #include "JackSocketServerChannel.h"
 namespace jackmini {
-typedef JackSocketServerChannel JackServerChannel;
+typedef SocketServerChannel ServerChannel;
 }
 
 // __JackPlatformServerNotifyChannel__
 #include "JackSocketServerNotifyChannel.h"
 namespace jackmini {
-typedef JackSocketServerNotifyChannel JackServerNotifyChannel;
+typedef SocketServerNotifyChannel ServerNotifyChannel;
 }
 
 // __JackPlatformNotifyChannel__
 #include "JackSocketNotifyChannel.h"
 namespace jackmini {
-typedef JackSocketNotifyChannel JackNotifyChannel;
+typedef SocketNotifyChannel NotifyChannel;
 }

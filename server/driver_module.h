@@ -25,8 +25,8 @@
 
 namespace jackmini {
 
-class JackDriverClientInterface;
-class JackLockedEngine;
+class DriverClientInterface;
+class LockedEngine;
 
 namespace driver {
 
@@ -37,16 +37,16 @@ inline constexpr std::uint32_t kModuleVersion = 1;
 inline constexpr const char* kModuleSymbol = "jackmini_driver_module";
 
 // Describes the driver: its name, its type, and its parameters. The descriptor is allocated by the module.
-using DescribeFunction = jack_driver_desc_t* (*)();
+using DescribeFunction = DriverDesc* (*)();
 
 // Creates the driver's backend on the engine, with the parameters given on the command line or by the control API.
 // Returns nullptr on failure.
-using InitializeFunction = JackDriverClientInterface* (*)(JackLockedEngine* engine, JackSynchro* table, const JSList* params);
+using InitializeFunction = DriverClientInterface* (*)(LockedEngine* engine, Synchro* table, const JSListC* params);
 
 struct Module {
-    std::uint32_t version;
-    DescribeFunction describe;
-    InitializeFunction initialize;
+    std::uint32_t m_version;
+    DescribeFunction m_describe;
+    InitializeFunction m_initialize;
 };
 
 // The type of the exported function that returns the Module.

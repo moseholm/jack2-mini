@@ -24,26 +24,26 @@
 
 namespace jackmini {
 
-JackBasePosixMutex::JackBasePosixMutex(const char* name)
-    : fOwner(0)
+BasePosixMutex::BasePosixMutex(const char* name)
+    : m_owner(0)
 {
-    std::int32_t res = pthread_mutex_init(&fMutex, nullptr);
-    ThrowIf(res != 0, JackException("JackBasePosixMutex: could not init the mutex"));
+    std::int32_t res = pthread_mutex_init(&m_mutex, nullptr);
+    ThrowIf(res != 0, Exception("JackBasePosixMutex: could not init the mutex"));
 }
 
-JackBasePosixMutex::~JackBasePosixMutex()
+BasePosixMutex::~BasePosixMutex()
 {
-    pthread_mutex_destroy(&fMutex);
+    pthread_mutex_destroy(&m_mutex);
 }
 
-bool JackBasePosixMutex::Lock()
+bool BasePosixMutex::lock()
 {
-    pthread_t current_thread = pthread_self();
+    pthread_t currentThread = pthread_self();
 
-    if (!pthread_equal(current_thread, fOwner)) {
-        std::int32_t res = pthread_mutex_lock(&fMutex);
+    if (!pthread_equal(currentThread, m_owner)) {
+        std::int32_t res = pthread_mutex_lock(&m_mutex);
         if (res == 0) {
-            fOwner = current_thread;
+            m_owner = currentThread;
             return true;
         } else {
             jack_error("JackBasePosixMutex::Lock res = %d", res);
@@ -54,14 +54,14 @@ bool JackBasePosixMutex::Lock()
     }
 }
 
-bool JackBasePosixMutex::Trylock()
+bool BasePosixMutex::trylock()
 {
-    pthread_t current_thread = pthread_self();
+    pthread_t currentThread = pthread_self();
 
-    if (!pthread_equal(current_thread, fOwner)) {
-        std::int32_t res = pthread_mutex_trylock(&fMutex);
+    if (!pthread_equal(currentThread, m_owner)) {
+        std::int32_t res = pthread_mutex_trylock(&m_mutex);
         if (res == 0) {
-            fOwner = current_thread;
+            m_owner = currentThread;
             return true;
         } else {
             return false;
@@ -71,11 +71,11 @@ bool JackBasePosixMutex::Trylock()
     }
 }
 
-bool JackBasePosixMutex::Unlock()
+bool BasePosixMutex::unlock()
 {
-    if (pthread_equal(pthread_self(), fOwner)) {
-        fOwner = 0;
-        std::int32_t res = pthread_mutex_unlock(&fMutex);
+    if (pthread_equal(pthread_self(), m_owner)) {
+        m_owner = 0;
+        std::int32_t res = pthread_mutex_unlock(&m_mutex);
         if (res == 0) {
             return true;
         } else {
@@ -87,42 +87,42 @@ bool JackBasePosixMutex::Unlock()
     }
 }
 
-JackPosixMutex::JackPosixMutex(const char* name)
+PosixMutex::PosixMutex(const char* name)
 {
     // Use recursive mutex
-    pthread_mutexattr_t mutex_attr;
+    pthread_mutexattr_t mutexAttr;
     std::int32_t res;
-    res = pthread_mutexattr_init(&mutex_attr);
-    ThrowIf(res != 0, JackException("JackBasePosixMutex: could not init the mutex attribute"));
-    res = pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_RECURSIVE);
-    ThrowIf(res != 0, JackException("JackBasePosixMutex: could not settype the mutex"));
-    res = pthread_mutex_init(&fMutex, &mutex_attr);
-    ThrowIf(res != 0, JackException("JackBasePosixMutex: could not init the mutex"));
-    pthread_mutexattr_destroy(&mutex_attr);
+    res = pthread_mutexattr_init(&mutexAttr);
+    ThrowIf(res != 0, Exception("JackBasePosixMutex: could not init the mutex attribute"));
+    res = pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
+    ThrowIf(res != 0, Exception("JackBasePosixMutex: could not settype the mutex"));
+    res = pthread_mutex_init(&m_mutex, &mutexAttr);
+    ThrowIf(res != 0, Exception("JackBasePosixMutex: could not init the mutex"));
+    pthread_mutexattr_destroy(&mutexAttr);
 }
 
-JackPosixMutex::~JackPosixMutex()
+PosixMutex::~PosixMutex()
 {
-    pthread_mutex_destroy(&fMutex);
+    pthread_mutex_destroy(&m_mutex);
 }
 
-bool JackPosixMutex::Lock()
+bool PosixMutex::lock()
 {
-    std::int32_t res = pthread_mutex_lock(&fMutex);
+    std::int32_t res = pthread_mutex_lock(&m_mutex);
     if (res != 0) {
         jack_log("JackPosixMutex::Lock res = %d", res);
     }
     return (res == 0);
 }
 
-bool JackPosixMutex::Trylock()
+bool PosixMutex::trylock()
 {
-    return (pthread_mutex_trylock(&fMutex) == 0);
+    return (pthread_mutex_trylock(&m_mutex) == 0);
 }
 
-bool JackPosixMutex::Unlock()
+bool PosixMutex::unlock()
 {
-    std::int32_t res = pthread_mutex_unlock(&fMutex);
+    std::int32_t res = pthread_mutex_unlock(&m_mutex);
     if (res != 0) {
         jack_log("JackPosixMutex::Unlock res = %d", res);
     }

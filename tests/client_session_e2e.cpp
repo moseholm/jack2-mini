@@ -31,14 +31,14 @@
 
 namespace {
 
-std::int32_t failures = 0;
+std::int32_t gFailures = 0;
 
 #define CHECK(cond)                                              \
     do {                                                         \
         if (!(cond)) {                                           \
             std::fprintf(stderr, "FAILED %s:%d: %s\n", __FILE__, \
                 __LINE__, #cond);                                \
-            ++failures;                                          \
+            ++gFailures;                                          \
         }                                                        \
     } while (0)
 
@@ -49,7 +49,7 @@ namespace {
 // Waits until the condition holds, or for about ten seconds. The cycles are counted by the realtime thread, so the
 // test polls the count; it does not depend on how long a cycle takes.
 template <class F>
-bool wait_for(F condition)
+bool waitFor(F condition)
 {
     for (std::int32_t i = 0; i < 10000; ++i) {
         if (condition()) {
@@ -61,7 +61,7 @@ bool wait_for(F condition)
 }
 
 // Activation, the cycles, deactivation, reactivation, and a process callback that fails.
-void check_activation(const jackmini::OpenOptions& exact)
+void checkActivation(const jackmini::OpenOptions& exact)
 {
     using jackmini::client::ClientSession;
 
@@ -72,34 +72,34 @@ void check_activation(const jackmini::OpenOptions& exact)
     }
 
     std::atomic<std::int32_t> cycles { 0 };
-    std::atomic<bool> bad_frames { false };
-    (*client)->set_process([&](const jackmini::Cycle& cycle) {
-        if (cycle.frames == 0) {
-            bad_frames = true;
+    std::atomic<bool> badFrames { false };
+    (*client)->setProcess([&](const jackmini::Cycle& cycle) {
+        if (cycle.m_frames == 0) {
+            badFrames = true;
         }
         cycles.fetch_add(1);
         return true;
     });
 
     CHECK((*client)->activate().has_value());
-    CHECK((*client)->is_active());
-    CHECK(wait_for([&] { return cycles.load() >= 20; }));
+    CHECK((*client)->isActive());
+    CHECK(waitFor([&] { return cycles.load() >= 20; }));
 
     CHECK((*client)->deactivate().has_value());
-    CHECK(!(*client)->is_active());
+    CHECK(!(*client)->isActive());
     // The thread is joined by deactivate, so the count does not change after it returns.
-    const std::int32_t after_deactivate = cycles.load();
+    const std::int32_t afterDeactivate = cycles.load();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    CHECK(cycles.load() == after_deactivate);
+    CHECK(cycles.load() == afterDeactivate);
 
     CHECK((*client)->activate().has_value());
-    CHECK(wait_for([&] { return cycles.load() >= after_deactivate + 5; }));
+    CHECK(waitFor([&] { return cycles.load() >= afterDeactivate + 5; }));
     CHECK((*client)->deactivate().has_value());
-    CHECK(!bad_frames.load());
+    CHECK(!badFrames.load());
 
     // Closing an active client deactivates it first.
     CHECK((*client)->activate().has_value());
-    CHECK(wait_for([&] { return cycles.load() > after_deactivate + 5; }));
+    CHECK(waitFor([&] { return cycles.load() > afterDeactivate + 5; }));
     CHECK((*client)->close().has_value());
 
     // A process callback that fails stops the client: the server takes it out of the graph.
@@ -107,11 +107,11 @@ void check_activation(const jackmini::OpenOptions& exact)
     CHECK(failing.has_value());
     if (failing) {
         std::atomic<std::int32_t> calls { 0 };
-        (*failing)->set_process([&](const jackmini::Cycle&) {
+        (*failing)->setProcess([&](const jackmini::Cycle&) {
             return calls.fetch_add(1) < 3;
         });
         CHECK((*failing)->activate().has_value());
-        CHECK(wait_for([&] { return !(*failing)->is_active(); }));
+        CHECK(waitFor([&] { return !(*failing)->isActive(); }));
         CHECK((*failing)->deactivate().has_value());
         CHECK(calls.load() == 4);
         CHECK((*failing)->close().has_value());
@@ -119,13 +119,13 @@ void check_activation(const jackmini::OpenOptions& exact)
 }
 
 // Ports and connections between two sessions, and the reasons they are refused.
-void check_ports(const jackmini::OpenOptions& exact)
+void checkPorts(const jackmini::OpenOptions& exact)
 {
     using jackmini::client::ClientSession;
     constexpr const char* kAudio = "32 bit float mono audio";
     constexpr std::uint64_t kOutput = 0x2; // JackPortIsOutput
     constexpr std::uint64_t kInput = 0x1; // JackPortIsInput
-    constexpr jack_port_id_t kNone = 0;
+    constexpr PortIdC kNone = 0;
 
     auto source = ClientSession::open("ports_src", exact);
     auto target = ClientSession::open("ports_dst", exact);
@@ -136,41 +136,41 @@ void check_ports(const jackmini::OpenOptions& exact)
     ClientSession& src = **source;
     ClientSession& dst = **target;
 
-    auto out = src.register_port("out", kAudio, kOutput, 0);
+    auto out = src.registerPort("out", kAudio, kOutput, 0);
     CHECK(out.has_value());
-    auto in = dst.register_port("in", kAudio, kInput, 0);
+    auto in = dst.registerPort("in", kAudio, kInput, 0);
     CHECK(in.has_value());
     if (!out || !in) {
         return;
     }
     CHECK(*out != kNone && *in != kNone);
-    CHECK(src.port_name(*out) == "ports_src:out");
-    CHECK(std::string(src.port_type(*out)) == kAudio);
-    CHECK(src.port_flags(*out) == kOutput);
-    CHECK(src.find_port("ports_src:out") == std::optional<jack_port_id_t>(*out));
+    CHECK(src.portName(*out) == "ports_src:out");
+    CHECK(std::string(src.portType(*out)) == kAudio);
+    CHECK(src.portFlags(*out) == kOutput);
+    CHECK(src.findPort("ports_src:out") == std::optional<PortIdC>(*out));
     CHECK(src.owns(*out));
     CHECK(!dst.owns(*out)); // another client's port is not ours
 
-    const auto outputs = src.port_names(kAudio, kOutput);
+    const auto outputs = src.portNames(kAudio, kOutput);
     CHECK(std::find(outputs.begin(), outputs.end(), "ports_src:out") != outputs.end());
 
     // A name with no client part and an empty name are refused; a port of another client cannot be unregistered.
-    CHECK(!src.register_port("", kAudio, kOutput, 0).has_value());
-    CHECK(!dst.unregister_port(*out).has_value());
-    CHECK(!src.register_port("out", kAudio, kOutput, 0).has_value()); // the name is taken
+    CHECK(!src.registerPort("", kAudio, kOutput, 0).has_value());
+    CHECK(!dst.unregisterPort(*out).has_value());
+    CHECK(!src.registerPort("out", kAudio, kOutput, 0).has_value()); // the name is taken
 
     // The server connects only the ports of active clients. Without a process callback no thread runs.
     CHECK(src.activate().has_value() && dst.activate().has_value());
-    CHECK(src.connect_ports("ports_src:out", "ports_dst:in").has_value());
-    CHECK(src.is_connected(*out, *in));
+    CHECK(src.connectPorts("ports_src:out", "ports_dst:in").has_value());
+    CHECK(src.isConnected(*out, *in));
     const auto links = src.connections(*out);
     CHECK(std::find(links.begin(), links.end(), "ports_dst:in") != links.end());
-    CHECK(src.disconnect_ports("ports_src:out", "ports_dst:in").has_value());
-    CHECK(!src.is_connected(*out, *in));
+    CHECK(src.disconnectPorts("ports_src:out", "ports_dst:in").has_value());
+    CHECK(!src.isConnected(*out, *in));
 
-    CHECK(src.unregister_port(*out).has_value());
-    CHECK(!src.find_port("ports_src:out").has_value());
-    CHECK(dst.unregister_port(*in).has_value());
+    CHECK(src.unregisterPort(*out).has_value());
+    CHECK(!src.findPort("ports_src:out").has_value());
+    CHECK(dst.unregisterPort(*in).has_value());
     CHECK(src.deactivate().has_value() && dst.deactivate().has_value());
 
     CHECK((*target)->close().has_value());
@@ -179,7 +179,7 @@ void check_ports(const jackmini::OpenOptions& exact)
 
 // The buffers: a value written by one client's process callback reaches the input buffer of a connected client in the
 // same graph, through the realtime threads.
-void check_buffers(const jackmini::OpenOptions& exact)
+void checkBuffers(const jackmini::OpenOptions& exact)
 {
     using jackmini::client::ClientSession;
     constexpr const char* kAudio = "32 bit float mono audio";
@@ -190,58 +190,58 @@ void check_buffers(const jackmini::OpenOptions& exact)
     if (!writer || !reader) {
         return;
     }
-    ClientSession& out_session = **writer;
-    ClientSession& in_session = **reader;
+    ClientSession& outSession = **writer;
+    ClientSession& inSession = **reader;
 
-    auto out = out_session.register_port("out", kAudio, 0x2, 0);
-    auto in = in_session.register_port("in", kAudio, 0x1, 0);
+    auto out = outSession.registerPort("out", kAudio, 0x2, 0);
+    auto in = inSession.registerPort("in", kAudio, 0x1, 0);
     CHECK(out.has_value() && in.has_value());
     if (!out || !in) {
         return;
     }
-    const jack_port_id_t out_port = *out;
-    const jack_port_id_t in_port = *in;
+    const PortIdC outPort = *out;
+    const PortIdC inPort = *in;
 
-    std::atomic<std::int32_t> sent_frames { 0 };
-    std::atomic<std::int32_t> received_frames { 0 };
+    std::atomic<std::int32_t> sentFrames { 0 };
+    std::atomic<std::int32_t> receivedFrames { 0 };
     std::atomic<float> received { 0.0f };
     std::atomic<std::int32_t> cycles { 0 };
-    out_session.set_process([&](const jackmini::Cycle& cycle) {
-        auto* buffer = static_cast<float*>(out_session.port_buffer(out_port, cycle.frames));
-        for (jackmini::FrameCount i = 0; buffer && i < cycle.frames; ++i) {
+    outSession.setProcess([&](const jackmini::Cycle& cycle) {
+        auto* buffer = static_cast<float*>(outSession.portBuffer(outPort, cycle.m_frames));
+        for (jackmini::FrameCount i = 0; buffer && i < cycle.m_frames; ++i) {
             buffer[i] = 0.5f;
         }
-        sent_frames = static_cast<std::int32_t>(cycle.frames);
+        sentFrames = static_cast<std::int32_t>(cycle.m_frames);
         return true;
     });
-    in_session.set_process([&](const jackmini::Cycle& cycle) {
-        auto* buffer = static_cast<float*>(in_session.port_buffer(in_port, cycle.frames));
+    inSession.setProcess([&](const jackmini::Cycle& cycle) {
+        auto* buffer = static_cast<float*>(inSession.portBuffer(inPort, cycle.m_frames));
         if (buffer) {
-            received = buffer[cycle.frames - 1];
-            received_frames = static_cast<std::int32_t>(cycle.frames);
+            received = buffer[cycle.m_frames - 1];
+            receivedFrames = static_cast<std::int32_t>(cycle.m_frames);
         }
         cycles.fetch_add(1);
         return true;
     });
 
-    CHECK(out_session.activate().has_value() && in_session.activate().has_value());
-    CHECK(out_session.connect_ports("buf_out:out", "buf_in:in").has_value());
+    CHECK(outSession.activate().has_value() && inSession.activate().has_value());
+    CHECK(outSession.connectPorts("buf_out:out", "buf_in:in").has_value());
     // In freewheel the cycles run faster than the connection takes effect, so the test waits for the value rather than
     // for a number of cycles.
-    CHECK(wait_for([&] { return received.load() == 0.5f; }));
+    CHECK(waitFor([&] { return received.load() == 0.5f; }));
     CHECK(cycles.load() > 0);
-    CHECK(sent_frames.load() > 0 && received_frames.load() == sent_frames.load());
+    CHECK(sentFrames.load() > 0 && receivedFrames.load() == sentFrames.load());
 
-    CHECK(out_session.deactivate().has_value() && in_session.deactivate().has_value());
-    CHECK(out_session.unregister_port(out_port).has_value());
-    CHECK(in_session.unregister_port(in_port).has_value());
+    CHECK(outSession.deactivate().has_value() && inSession.deactivate().has_value());
+    CHECK(outSession.unregisterPort(outPort).has_value());
+    CHECK(inSession.unregisterPort(inPort).has_value());
     CHECK((*writer)->close().has_value());
     CHECK((*reader)->close().has_value());
 }
 
 // Latency: a range set by hand, the default that the server's latency request applies, and the handler that replaces
 // the default.
-void check_latency(const jackmini::OpenOptions& exact)
+void checkLatency(const jackmini::OpenOptions& exact)
 {
     using jackmini::client::ClientSession;
     constexpr const char* kAudio = "32 bit float mono audio";
@@ -254,50 +254,50 @@ void check_latency(const jackmini::OpenOptions& exact)
         return;
     }
     ClientSession& session = **client;
-    auto out_a = session.register_port("out_a", kAudio, kOutput, 0);
-    auto out_b = session.register_port("out_b", kAudio, kOutput, 0);
-    auto in = session.register_port("in", kAudio, kInput, 0);
-    CHECK(out_a.has_value() && out_b.has_value() && in.has_value());
-    if (!out_a || !out_b || !in) {
+    auto outA = session.registerPort("out_a", kAudio, kOutput, 0);
+    auto outB = session.registerPort("out_b", kAudio, kOutput, 0);
+    auto in = session.registerPort("in", kAudio, kInput, 0);
+    CHECK(outA.has_value() && outB.has_value() && in.has_value());
+    if (!outA || !outB || !in) {
         return;
     }
     CHECK(session.activate().has_value());
 
     // The server asks only the clients that the driver reaches through the graph, so the input is connected to the
     // driver's capture port.
-    CHECK(session.connect_ports("system:capture_1", "lat_test:in").has_value());
+    CHECK(session.connectPorts("system:capture_1", "lat_test:in").has_value());
 
-    constexpr auto kPlayback = JackPlaybackLatency;
-    session.set_port_latency_range(*out_a, kPlayback, jack_latency_range_t { 5, 15 });
-    CHECK(session.port_latency_range(*out_a, kPlayback).min == 5);
-    CHECK(session.port_latency_range(*out_a, kPlayback).max == 15);
+    constexpr auto kPlayback = kPlaybackLatency;
+    session.setPortLatencyRange(*outA, kPlayback, LatencyRangeC { 5, 15 });
+    CHECK(session.portLatencyRange(*outA, kPlayback).m_min == 5);
+    CHECK(session.portLatencyRange(*outA, kPlayback).m_max == 15);
 
     // The default recalculates the output ports from their connections (none here, so {0, 0}), then sets the input
     // ports to the widest of the outputs. A value set by hand on the input is replaced.
-    session.set_port_latency_range(*in, kPlayback, jack_latency_range_t { 9, 9 });
-    CHECK(session.recompute_latencies().has_value());
-    CHECK(wait_for([&] {
-        const auto range = session.port_latency_range(*in, kPlayback);
-        return range.min == 0 && range.max == 0;
+    session.setPortLatencyRange(*in, kPlayback, LatencyRangeC { 9, 9 });
+    CHECK(session.recomputeLatencies().has_value());
+    CHECK(waitFor([&] {
+        const auto range = session.portLatencyRange(*in, kPlayback);
+        return range.m_min == 0 && range.m_max == 0;
     }));
-    CHECK(session.port_latency_range(*out_a, kPlayback).max == 0);
+    CHECK(session.portLatencyRange(*outA, kPlayback).m_max == 0);
 
     // A handler replaces the default: it is called for the mode the server asks about.
-    std::atomic<std::int32_t> handler_calls { 0 };
-    session.set_latency_handler([&](jackmini::LatencyMode) { handler_calls.fetch_add(1); });
-    CHECK(session.recompute_latencies().has_value());
-    CHECK(wait_for([&] { return handler_calls.load() >= 1; }));
+    std::atomic<std::int32_t> handlerCalls { 0 };
+    session.setLatencyHandler([&](jackmini::LatencyMode) { handlerCalls.fetch_add(1); });
+    CHECK(session.recomputeLatencies().has_value());
+    CHECK(waitFor([&] { return handlerCalls.load() >= 1; }));
 
-    CHECK(session.disconnect_ports("system:capture_1", "lat_test:in").has_value());
+    CHECK(session.disconnectPorts("system:capture_1", "lat_test:in").has_value());
     CHECK(session.deactivate().has_value());
-    CHECK(session.unregister_port(*out_a).has_value());
-    CHECK(session.unregister_port(*out_b).has_value());
-    CHECK(session.unregister_port(*in).has_value());
+    CHECK(session.unregisterPort(*outA).has_value());
+    CHECK(session.unregisterPort(*outB).has_value());
+    CHECK(session.unregisterPort(*in).has_value());
     CHECK((*client)->close().has_value());
 }
 
 // Transport: start and stop reach the server, which moves the state; a locate sets the position.
-void check_transport(const jackmini::OpenOptions& exact)
+void checkTransport(const jackmini::OpenOptions& exact)
 {
     using jackmini::client::ClientSession;
 
@@ -309,27 +309,27 @@ void check_transport(const jackmini::OpenOptions& exact)
     ClientSession& session = **client;
     CHECK(session.activate().has_value());
 
-    jack_position_t position { };
-    CHECK(session.transport_query(&position) == JackTransportStopped);
+    PositionC position { };
+    CHECK(session.transportQuery(&position) == kTransportStopped);
 
-    session.transport_locate(4800);
-    CHECK(wait_for([&] {
-        jack_position_t now { };
-        session.transport_query(&now);
-        return now.frame >= 4800;
+    session.transportLocate(4800);
+    CHECK(waitFor([&] {
+        PositionC now { };
+        session.transportQuery(&now);
+        return now.m_frame >= 4800;
     }));
 
-    session.transport_start();
-    CHECK(wait_for([&] { return session.transport_query(&position) != JackTransportStopped; }));
-    session.transport_stop();
-    CHECK(wait_for([&] { return session.transport_query(&position) == JackTransportStopped; }));
+    session.transportStart();
+    CHECK(waitFor([&] { return session.transportQuery(&position) != kTransportStopped; }));
+    session.transportStop();
+    CHECK(waitFor([&] { return session.transportQuery(&position) == kTransportStopped; }));
 
     CHECK(session.deactivate().has_value());
     CHECK((*client)->close().has_value());
 }
 
 // The callbacks of a running client: the buffer size is reported when the realtime thread starts.
-void check_callbacks(const jackmini::OpenOptions& exact)
+void checkCallbacks(const jackmini::OpenOptions& exact)
 {
     using jackmini::client::ClientSession;
 
@@ -339,17 +339,17 @@ void check_callbacks(const jackmini::OpenOptions& exact)
         return;
     }
     ClientSession& session = **client;
-    std::atomic<std::int32_t> size_calls { 0 };
-    std::atomic<std::int32_t> reported_size { 0 };
-    session.set_buffer_size_handler([&](jackmini::FrameCount frames) {
-        reported_size = static_cast<std::int32_t>(frames);
-        size_calls.fetch_add(1);
+    std::atomic<std::int32_t> sizeCalls { 0 };
+    std::atomic<std::int32_t> reportedSize { 0 };
+    session.setBufferSizeHandler([&](jackmini::FrameCount frames) {
+        reportedSize = static_cast<std::int32_t>(frames);
+        sizeCalls.fetch_add(1);
         return true;
     });
-    session.set_process([](const jackmini::Cycle&) { return true; });
+    session.setProcess([](const jackmini::Cycle&) { return true; });
     CHECK(session.activate().has_value());
-    CHECK(wait_for([&] { return size_calls.load() >= 1; }));
-    CHECK(reported_size.load() > 0);
+    CHECK(waitFor([&] { return sizeCalls.load() >= 1; }));
+    CHECK(reportedSize.load() > 0);
     CHECK(session.deactivate().has_value());
     CHECK((*client)->close().has_value());
 }
@@ -362,7 +362,7 @@ int main()
     using jackmini::client::ClientSession;
 
     OpenOptions exact;
-    exact.exact_name = true;
+    exact.m_exactName = true;
 
     auto first = ClientSession::open("session_e2e", exact);
     CHECK(first.has_value());
@@ -372,12 +372,12 @@ int main()
     }
     CHECK((*first)->ref() >= 0);
     CHECK((*first)->name() == "session_e2e");
-    CHECK((*first)->server_alive());
+    CHECK((*first)->serverAlive());
 
     // The exact name is taken: the open fails with NameTaken.
     auto taken = ClientSession::open("session_e2e", exact);
     CHECK(!taken.has_value());
-    CHECK(!taken.has_value() && taken.error() == jackmini::Error::NameTaken);
+    CHECK(!taken.has_value() && taken.error() == jackmini::Error::kNameTaken);
 
     // Without exact_name the server gives the client another name.
     auto renamed = ClientSession::open("session_e2e", OpenOptions { });
@@ -389,12 +389,12 @@ int main()
         CHECK((*renamed)->close().has_value()); // closing twice does nothing
     }
 
-    check_activation(exact);
-    check_ports(exact);
-    check_buffers(exact);
-    check_latency(exact);
-    check_transport(exact);
-    check_callbacks(exact);
+    checkActivation(exact);
+    checkPorts(exact);
+    checkBuffers(exact);
+    checkLatency(exact);
+    checkTransport(exact);
+    checkCallbacks(exact);
 
     CHECK((*first)->close().has_value());
     auto again = ClientSession::open("session_e2e", exact);
@@ -403,8 +403,8 @@ int main()
         CHECK((*again)->close().has_value());
     }
 
-    if (failures) {
-        std::fprintf(stderr, "client session e2e: %d failure(s)\n", failures);
+    if (gFailures) {
+        std::fprintf(stderr, "client session e2e: %d failure(s)\n", gFailures);
         return 1;
     }
     std::printf("client session e2e checks passed\n");

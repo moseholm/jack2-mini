@@ -27,11 +27,11 @@ namespace jackmini::tools {
 
 // Opens the client of a tool.  A tool never starts a server (as jack_lsp did): with no server running, it fails.
 // `server` is the name given with -s, or empty for the default server.
-inline Result<Client> open_client(std::string_view name, std::string_view server)
+inline Result<Client> openClient(std::string_view name, std::string_view server)
 {
     OpenOptions options;
-    options.start_server = false;
-    options.server_name = std::string(server);
+    options.m_startServer = false;
+    options.m_serverName = std::string(server);
     return Client::open(name, options);
 }
 
@@ -45,7 +45,7 @@ inline std::int32_t fail(const char* tool, std::string_view message)
 // The message for a failed call: the error's text, from the client library.
 inline std::int32_t fail(const char* tool, Error error)
 {
-    return fail(tool, to_string(error));
+    return fail(tool, toString(error));
 }
 
 } // namespace jackmini::tools

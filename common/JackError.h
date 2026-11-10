@@ -30,7 +30,7 @@
 
 SERVER_EXPORT void jack_log(const char* fmt, ...);
 
-SERVER_EXPORT std::int32_t set_threaded_log_function();
+SERVER_EXPORT std::int32_t setThreadedLogFunction();
 
 // The routing used by the host: the messages of a thread with its own log function go there.
-void jack_log_thread_route(std::int32_t level, const char* message);
+void logThreadRoute(std::int32_t level, const char* message);

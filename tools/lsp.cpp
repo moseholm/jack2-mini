@@ -31,18 +31,18 @@ namespace {
 constexpr const char* kTool = "jackmini_lsp";
 
 struct Options {
-    std::string server;
-    bool aliases = false;
-    bool connections = false;
-    bool port_latency = false;
-    bool total_latency = false;
-    bool properties = false;
-    bool type = false;
-    bool uuid = false;
-    bool port_uuid = false;
+    std::string m_server;
+    bool m_aliases = false;
+    bool m_connections = false;
+    bool m_portLatency = false;
+    bool m_totalLatency = false;
+    bool m_properties = false;
+    bool m_type = false;
+    bool m_uuid = false;
+    bool m_portUuid = false;
 };
 
-void show_usage(FILE* out)
+void showUsage(FILE* out)
 {
     std::fprintf(out, "\nUsage: %s [options] [filter string]\n", kTool);
     std::fprintf(out, "List active Jack ports, and optionally display extra information.\n");
@@ -63,13 +63,13 @@ void show_usage(FILE* out)
 }
 
 // The UUID as the server writes it: the decimal of the 64-bit value (jack_uuid_unparse).
-std::string uuid_text(jackmini::Uuid uuid)
+std::string uuidText(jackmini::Uuid uuid)
 {
     return std::to_string(uuid.value());
 }
 
 // The name with its client part replaced by the UUID of that client (-u), when the client is known.
-std::string with_owner_uuid(const std::string& name, const std::map<std::string, jackmini::Uuid>& owners)
+std::string withOwnerUuid(const std::string& name, const std::map<std::string, jackmini::Uuid>& owners)
 {
     const auto colon = name.find(':');
     if (colon == std::string::npos) {
@@ -79,11 +79,11 @@ std::string with_owner_uuid(const std::string& name, const std::map<std::string,
     if (owner == owners.end()) {
         return name;
     }
-    return uuid_text(owner->second) + name.substr(colon);
+    return uuidText(owner->second) + name.substr(colon);
 }
 
 // Every filter string must occur in the port name (a substring, as jack_lsp matched them).
-bool matches_all(const std::string& name, const std::vector<char*>& filters)
+bool matchesAll(const std::string& name, const std::vector<char*>& filters)
 {
     for (const char* filter : filters) {
         if (name.find(filter) == std::string::npos) {
@@ -93,22 +93,22 @@ bool matches_all(const std::string& name, const std::vector<char*>& filters)
     return true;
 }
 
-void print_properties(jackmini::PortFlags flags)
+void printProperties(jackmini::PortFlags flags)
 {
     std::fputs("\tproperties: ", stdout);
-    if (jackmini::has_flag(flags, jackmini::PortFlags::Input)) {
+    if (jackmini::hasFlag(flags, jackmini::PortFlags::kInput)) {
         std::fputs("input,", stdout);
     }
-    if (jackmini::has_flag(flags, jackmini::PortFlags::Output)) {
+    if (jackmini::hasFlag(flags, jackmini::PortFlags::kOutput)) {
         std::fputs("output,", stdout);
     }
-    if (jackmini::has_flag(flags, jackmini::PortFlags::CanMonitor)) {
+    if (jackmini::hasFlag(flags, jackmini::PortFlags::kCanMonitor)) {
         std::fputs("can-monitor,", stdout);
     }
-    if (jackmini::has_flag(flags, jackmini::PortFlags::Physical)) {
+    if (jackmini::hasFlag(flags, jackmini::PortFlags::kPhysical)) {
         std::fputs("physical,", stdout);
     }
-    if (jackmini::has_flag(flags, jackmini::PortFlags::Terminal)) {
+    if (jackmini::hasFlag(flags, jackmini::PortFlags::kTerminal)) {
         std::fputs("terminal,", stdout);
     }
     std::putc('\n', stdout);
@@ -139,49 +139,49 @@ int main(std::int32_t argc, char** argv)
     while ((c = getopt_long(argc, argv, kShortOptions.data(), kLongOptions.data(), nullptr)) != -1) {
         switch (c) {
         case 's':
-            options.server = optarg;
+            options.m_server = optarg;
             break;
         case 'A':
-            options.aliases = true;
+            options.m_aliases = true;
             break;
         case 'c':
-            options.connections = true;
+            options.m_connections = true;
             break;
         case 'l':
-            options.port_latency = true;
+            options.m_portLatency = true;
             break;
         case 'L':
-            options.total_latency = true;
+            options.m_totalLatency = true;
             break;
         case 'p':
-            options.properties = true;
+            options.m_properties = true;
             break;
         case 't':
-            options.type = true;
+            options.m_type = true;
             break;
         case 'u':
-            options.uuid = true;
+            options.m_uuid = true;
             break;
         case 'U':
-            options.port_uuid = true;
+            options.m_portUuid = true;
             break;
         case 'h':
-            show_usage(stderr);
+            showUsage(stderr);
             return 1;
         case 'v':
             std::printf("%s " JACK_VERSION "\n", kTool);
             return 0;
         default:
-            show_usage(stderr);
+            showUsage(stderr);
             return 1;
         }
     }
 
     std::vector<char*> filters(argv + optind, argv + argc);
 
-    auto opened = jackmini::tools::open_client("jackmini_lsp", options.server);
+    auto opened = jackmini::tools::openClient("jackmini_lsp", options.m_server);
     if (!opened) {
-        if (opened.error() == jackmini::Error::NoServer) {
+        if (opened.error() == jackmini::Error::kNoServer) {
             std::fprintf(stderr, "Error: cannot connect to JACK, server is not running.\n");
             return 1;
         }
@@ -194,49 +194,49 @@ int main(std::int32_t argc, char** argv)
     // The UUID of each client, from the ports it owns: -u prints them for the owners of the ports and of the connections.
     std::map<std::string, jackmini::Uuid> owners;
     for (const jackmini::PortInfo& port : ports) {
-        owners.emplace(port.owner, port.owner_uuid);
+        owners.emplace(port.m_owner, port.m_ownerUuid);
     }
 
     for (const jackmini::PortInfo& port : ports) {
-        if (!matches_all(port.name, filters)) {
+        if (!matchesAll(port.m_name, filters)) {
             continue;
         }
 
-        std::printf("%s\n", options.uuid ? with_owner_uuid(port.name, owners).c_str() : port.name.c_str());
+        std::printf("%s\n", options.m_uuid ? withOwnerUuid(port.m_name, owners).c_str() : port.m_name.c_str());
 
-        if (options.port_uuid) {
-            std::printf("\tuuid: %s\n", uuid_text(port.port_uuid).c_str());
+        if (options.m_portUuid) {
+            std::printf("\tuuid: %s\n", uuidText(port.m_portUuid).c_str());
         }
 
-        if (options.aliases) {
-            for (const std::string& alias : port.aliases) {
+        if (options.m_aliases) {
+            for (const std::string& alias : port.m_aliases) {
                 std::printf("   %s\n", alias.c_str());
             }
         }
 
-        if (options.connections) {
-            for (const std::string& connected : port.connections) {
-                std::printf("   %s\n", (options.uuid ? with_owner_uuid(connected, owners) : connected).c_str());
+        if (options.m_connections) {
+            for (const std::string& connected : port.m_connections) {
+                std::printf("   %s\n", (options.m_uuid ? withOwnerUuid(connected, owners) : connected).c_str());
             }
         }
 
-        if (options.port_latency) {
+        if (options.m_portLatency) {
             std::printf("\tport playback latency = [ %u %u ] frames\n",
-                        port.playback_latency.min, port.playback_latency.max);
+                        port.m_playbackLatency.m_min, port.m_playbackLatency.m_max);
             std::printf("\tport capture latency = [ %u %u ] frames\n",
-                        port.capture_latency.min, port.capture_latency.max);
+                        port.m_captureLatency.m_min, port.m_captureLatency.m_max);
         }
 
-        if (options.total_latency) {
-            std::printf("\ttotal latency = %u frames\n", port.total_latency);
+        if (options.m_totalLatency) {
+            std::printf("\ttotal latency = %u frames\n", port.m_totalLatency);
         }
 
-        if (options.properties) {
-            print_properties(port.flags);
+        if (options.m_properties) {
+            printProperties(port.m_flags);
         }
 
-        if (options.type) {
-            std::printf("\t%s\n", port.type.c_str());
+        if (options.m_type) {
+            std::printf("\t%s\n", port.m_type.c_str());
         }
     }
 

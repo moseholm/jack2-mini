@@ -25,29 +25,29 @@
 
 namespace jackmini {
 
-struct JackClientControl;
+struct ClientControl;
 
 // \brief Server side implementation of library clients.
 
-class JackExternalClient : public JackClientInterface {
+class ExternalClient : public ClientInterface {
 
 private:
-    JackNotifyChannel fChannel;  // Server/client communication channel
-    JackClientControl* fClientControl;  // Client control in shared memory
+    NotifyChannel m_channel;  // Server/client communication channel
+    ClientControl* m_clientControl;  // Client control in shared memory
 
 public:
-    JackExternalClient();
-    virtual ~JackExternalClient();
+    ExternalClient();
+    virtual ~ExternalClient();
 
     // The shared client control is allocated first; the notification channel is opened only once the driver is
     // known to be running, so a refused open does not create a writer thread.
-    Result<void> OpenClient(const char* name, std::int32_t pid, std::int32_t refnum, jack_uuid_t uuid, JackShmSegment* shared_client);
-    Result<void> OpenChannel(const char* name);
-    std::int32_t Close();
+    Result<void> openClient(const char* name, std::int32_t pid, std::int32_t refnum, UuidC uuid, ShmSegment* sharedClient);
+    Result<void> openChannel(const char* name);
+    std::int32_t close();
 
-    std::int32_t ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
+    std::int32_t clientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2);
 
-    JackClientControl* GetClientControl() const;
+    ClientControl* getClientControl() const;
 };
 
 

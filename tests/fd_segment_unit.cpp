@@ -29,21 +29,21 @@
 
 namespace {
 
-std::int32_t g_failures = 0;
-std::int32_t g_checks = 0;
+std::int32_t gFailures = 0;
+std::int32_t gChecks = 0;
 
 #define CHECK(cond)                                                                       \
     do {                                                                                  \
-        g_checks++;                                                                       \
+        gChecks++;                                                                       \
         if (!(cond)) {                                                                    \
             std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
-            g_failures++;                                                                 \
+            gFailures++;                                                                 \
         }                                                                                 \
     } while (0)
 
 using namespace jackmini;
 
-void SocketPair(std::array<std::int32_t, 2>& pair)
+void socketPair(std::array<std::int32_t, 2>& pair)
 {
     const std::int32_t rc = socketpair(AF_UNIX, SOCK_SEQPACKET, 0, pair.data());
     if (rc != 0) {
@@ -52,16 +52,16 @@ void SocketPair(std::array<std::int32_t, 2>& pair)
     }
 }
 
-void TestSegmentIsSharedAcrossMappings()
+void testSegmentIsSharedAcrossMappings()
 {
-    constexpr std::size_t size = 4096;
-    auto segment = CreateSegment(size, "jack-test");
+    constexpr std::size_t kSize = 4096;
+    auto segment = createSegment(kSize, "jack-test");
     CHECK(segment.has_value());
     if (!segment)
         return;
 
-    auto first = MapSegment(segment->get(), size);
-    auto second = MapSegment(segment->get(), size);
+    auto first = mapSegment(segment->get(), kSize);
+    auto second = mapSegment(segment->get(), kSize);
     CHECK(first.has_value() && second.has_value());
     if (!first || !second)
         return;
@@ -71,19 +71,19 @@ void TestSegmentIsSharedAcrossMappings()
     a[7] = 0xdeadbeef;
     CHECK(b[7] == 0xdeadbeef);
 
-    UnmapSegment(*first, size);
-    UnmapSegment(*second, size);
+    unmapSegment(*first, kSize);
+    unmapSegment(*second, kSize);
 }
 
-void TestDescriptorArrivesAndMapsToSameMemory()
+void testDescriptorArrivesAndMapsToSameMemory()
 {
-    constexpr std::size_t size = 8192;
-    auto segment = CreateSegment(size, "jack-test-pass");
+    constexpr std::size_t kSize = 8192;
+    auto segment = createSegment(kSize, "jack-test-pass");
     CHECK(segment.has_value());
     if (!segment)
         return;
 
-    auto mine = MapSegment(segment->get(), size);
+    auto mine = mapSegment(segment->get(), kSize);
     CHECK(mine.has_value());
     if (!mine)
         return;
@@ -93,15 +93,15 @@ void TestDescriptorArrivesAndMapsToSameMemory()
     }
 
     std::array<std::int32_t, 2> pair;
-    SocketPair(pair);
+    socketPair(pair);
 
     const std::array<std::byte, 5> message { std::byte { 'h' }, std::byte { 'e' }, std::byte { 'l' }, std::byte { 'l' }, std::byte { 'o' } };
     const std::array<std::int32_t, 1> fds { segment->get() };
-    CHECK(SendWithFds(pair[0], message, fds).has_value());
+    CHECK(sendWithFds(pair[0], message, fds).has_value());
 
     std::array<std::byte, 16> got { };
     std::vector<UniqueFd> received;
-    auto n = RecvWithFds(pair[1], got, received);
+    auto n = recvWithFds(pair[1], got, received);
     CHECK(n.has_value() && *n == message.size());
     CHECK(std::memcmp(got.data(), message.data(), message.size()) == 0);
     CHECK(received.size() == 1);
@@ -109,52 +109,52 @@ void TestDescriptorArrivesAndMapsToSameMemory()
         CHECK(received[0].valid());
         CHECK(fcntl(received[0].get(), F_GETFD) & FD_CLOEXEC);
 
-        auto theirs = MapSegment(received[0].get(), size);
+        auto theirs = mapSegment(received[0].get(), kSize);
         CHECK(theirs.has_value());
         if (theirs) {
             auto* view = static_cast<std::uint32_t*>(*theirs);
             CHECK(view[0] == 0x1000 && view[15] == 0x100f);
             view[3] = 42;
             CHECK(words[3] == 42);
-            UnmapSegment(*theirs, size);
+            unmapSegment(*theirs, kSize);
         }
     }
 
-    UnmapSegment(*mine, size);
+    unmapSegment(*mine, kSize);
     close(pair[0]);
     close(pair[1]);
 }
 
-void TestClosedPeerReadsZero()
+void testClosedPeerReadsZero()
 {
     std::array<std::int32_t, 2> pair;
-    SocketPair(pair);
+    socketPair(pair);
     close(pair[0]);
     std::array<std::byte, 8> buf { };
     std::vector<UniqueFd> none;
-    auto n = RecvWithFds(pair[1], buf, none);
+    auto n = recvWithFds(pair[1], buf, none);
     CHECK(n.has_value() && *n == 0);
     close(pair[1]);
 }
 
-void TestTooManyDescriptorsRejected()
+void testTooManyDescriptorsRejected()
 {
     std::array<std::int32_t, 2> pair;
-    SocketPair(pair);
+    socketPair(pair);
     std::array<std::int32_t, 9> fds { };
     for (auto& fd : fds)
         fd = pair[0];
     const std::array<std::byte, 1> one { std::byte { 1 } };
-    auto sent = SendWithFds(pair[0], one, fds);
+    auto sent = sendWithFds(pair[0], one, fds);
     CHECK(!sent.has_value());
     close(pair[0]);
     close(pair[1]);
 }
 
-void TestUniqueFdClosesOnDestruction()
+void testUniqueFdClosesOnDestruction()
 {
     std::array<std::int32_t, 2> pair;
-    SocketPair(pair);
+    socketPair(pair);
     std::int32_t raw = pair[0];
     {
         UniqueFd owned(raw);
@@ -168,12 +168,12 @@ void TestUniqueFdClosesOnDestruction()
 
 int main()
 {
-    TestSegmentIsSharedAcrossMappings();
-    TestDescriptorArrivesAndMapsToSameMemory();
-    TestClosedPeerReadsZero();
-    TestTooManyDescriptorsRejected();
-    TestUniqueFdClosesOnDestruction();
+    testSegmentIsSharedAcrossMappings();
+    testDescriptorArrivesAndMapsToSameMemory();
+    testClosedPeerReadsZero();
+    testTooManyDescriptorsRejected();
+    testUniqueFdClosesOnDestruction();
 
-    std::printf("%d checks, %d failed\n", g_checks, g_failures);
-    return g_failures == 0 ? 0 : 1;
+    std::printf("%d checks, %d failed\n", gChecks, gFailures);
+    return gFailures == 0 ? 0 : 1;
 }

@@ -28,49 +28,49 @@
 
 namespace jackmini {
 
-struct JackClientNotification;
+struct ClientNotification;
 
 // \brief JackNotifyChannel using sockets.
 
-class JackSocketNotifyChannel {
+class SocketNotifyChannel {
 
 private:
     // A notification waiting for the writer.  A synchronous one is also waited for by the caller of ClientNotify.
     struct Pending {
-        std::shared_ptr<JackClientNotification> event;
-        std::uint32_t request = 0;
-        bool done = false;
-        std::int32_t result = -1;
+        std::shared_ptr<ClientNotification> m_event;
+        std::uint32_t m_request = 0;
+        bool m_done = false;
+        std::int32_t m_result = -1;
     };
 
-    JackClientSocket fNotifySocket; // Socket to communicate with the server : from server to client
+    ClientSocket m_notifySocket; // Socket to communicate with the server : from server to client
 
-    std::mutex fMutex;
-    std::condition_variable fCondition;
-    std::deque<std::shared_ptr<Pending>> fQueue;
-    std::uint32_t fDropped = 0;
-    bool fClosing = false;
-    std::thread fWriter;
+    std::mutex m_mutex;
+    std::condition_variable m_condition;
+    std::deque<std::shared_ptr<Pending>> m_queue;
+    std::uint32_t m_dropped = 0;
+    bool m_closing = false;
+    std::thread m_writer;
 
-    void Writer();
-    std::int32_t Send(Pending& pending, std::uint32_t dropped);
-    std::int32_t Start();
+    void writer();
+    std::int32_t send(Pending& pending, std::uint32_t dropped);
+    std::int32_t start();
 
 public:
     // Notifications queued for one client.  When it is full, the oldest is dropped and counted; the client is told
     // with a kDropped notification (protocol.md section 3.2).  The size is a first guess, to be measured.
     static constexpr std::size_t kQueueSize = 256;
 
-    JackSocketNotifyChannel()
+    SocketNotifyChannel()
     {
     }
 
-    std::int32_t Open(const char* name); // Open the Server/Client connection
+    std::int32_t open(const char* name); // Open the Server/Client connection
     // Uses a connected socket instead of connecting one: the tests attach one end of a socket pair.
-    std::int32_t Attach(std::int32_t fd);
-    void Close(); // Close the Server/Client connection
+    std::int32_t attach(std::int32_t fd);
+    void close(); // Close the Server/Client connection
 
-    void ClientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2, std::int32_t* result);
+    void clientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2, std::int32_t* result);
 };
 
 } // namespace jackmini

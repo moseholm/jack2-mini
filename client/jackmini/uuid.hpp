@@ -29,20 +29,20 @@ class Uuid {
 public:
     constexpr Uuid() noexcept = default;
     constexpr explicit Uuid(std::uint64_t value) noexcept
-        : fValue(value)
+        : m_value(value)
     {
     }
 
-    constexpr std::uint64_t value() const noexcept { return fValue; }
-    constexpr bool empty() const noexcept { return fValue == 0; }
+    constexpr std::uint64_t value() const noexcept { return m_value; }
+    constexpr bool empty() const noexcept { return m_value == 0; }
 
-    std::string to_string() const;
+    std::string toString() const;
     static std::optional<Uuid> parse(std::string_view text);
 
     friend constexpr auto operator<=>(Uuid, Uuid) = default;
 
 private:
-    std::uint64_t fValue = 0;
+    std::uint64_t m_value = 0;
 };
 
 } // namespace jackmini

@@ -26,35 +26,35 @@ namespace jackmini {
 
 // \brief A synchronization primitive built using a condition variable.
 
-class JackPosixProcessSync : public JackBasePosixMutex {
+class PosixProcessSync : public BasePosixMutex {
 
 private:
-    pthread_cond_t fCond; // Condition variable
+    pthread_cond_t m_cond; // Condition variable
 
 public:
-    JackPosixProcessSync(const char* name = nullptr)
-        : JackBasePosixMutex()
+    PosixProcessSync(const char* name = nullptr)
+        : BasePosixMutex()
     {
-        std::int32_t res = pthread_cond_init(&fCond, nullptr);
-        ThrowIf(res != 0, JackException("JackBasePosixMutex: could not init the cond variable"));
+        std::int32_t res = pthread_cond_init(&m_cond, nullptr);
+        ThrowIf(res != 0, Exception("JackBasePosixMutex: could not init the cond variable"));
     }
 
-    virtual ~JackPosixProcessSync()
+    virtual ~PosixProcessSync()
     {
-        pthread_cond_destroy(&fCond);
+        pthread_cond_destroy(&m_cond);
     }
 
-    bool TimedWait(std::int64_t usec);
-    bool LockedTimedWait(std::int64_t usec);
+    bool timedWait(std::int64_t usec);
+    bool lockedTimedWait(std::int64_t usec);
 
-    void Wait();
-    void LockedWait();
+    void wait();
+    void lockedWait();
 
-    void Signal();
-    void LockedSignal();
+    void signal();
+    void lockedSignal();
 
-    void SignalAll();
-    void LockedSignalAll();
+    void signalAll();
+    void lockedSignalAll();
 };
 
 } // namespace jackmini

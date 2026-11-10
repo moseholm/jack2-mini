@@ -23,10 +23,10 @@
 namespace jackmini {
 
 enum class TransportState : std::uint8_t {
-    Stopped,
-    Rolling,
-    Starting,
-    Looping,
+    kStopped,
+    kRolling,
+    kStarting,
+    kLooping,
 };
 
 } // namespace jackmini

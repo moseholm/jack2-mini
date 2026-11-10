@@ -29,8 +29,8 @@ namespace jackmini::midi {
 
 // One MIDI event within a cycle.
 struct Event {
-    FrameCount time; // frame within the cycle
-    std::span<const std::byte> data; // the raw MIDI bytes
+    FrameCount m_time; // frame within the cycle
+    std::span<const std::byte> m_data; // the raw MIDI bytes
 };
 
 // The events of a MIDI port for one cycle.  Valid only inside the process
@@ -47,10 +47,10 @@ public:
 private:
     friend class jackmini::Client;
     explicit Buffer(void* handle) noexcept
-        : fHandle(handle)
+        : m_handle(handle)
     {
     }
-    void* fHandle = nullptr;
+    void* m_handle = nullptr;
 };
 
 } // namespace jackmini::midi

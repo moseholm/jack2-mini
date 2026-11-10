@@ -25,82 +25,82 @@
 
 namespace jackmini {
 
-void JackEngineControl::CalcCPULoad(std::atomic<JackClientInterface*>* table,
-    JackGraphManager* manager,
-    jack_time_t cur_cycle_begin,
-    jack_time_t prev_cycle_end)
+void EngineControl::calcCPULoad(std::atomic<ClientInterface*>* table,
+    GraphManager* manager,
+    TimeC curCycleBegin,
+    TimeC prevCycleEnd)
 {
-    fPrevCycleTime = fCurCycleTime;
-    fCurCycleTime = cur_cycle_begin;
-    jack_time_t last_cycle_end = prev_cycle_end;
+    m_prevCycleTime = m_curCycleTime;
+    m_curCycleTime = curCycleBegin;
+    TimeC lastCycleEnd = prevCycleEnd;
 
     // In Asynchronous mode, last cycle end is the max of client end dates
-    if (!fSyncMode) {
-        for (std::int32_t i = fDriverNum; i < kClientNum; i++) {
-            JackClientInterface* client = table[i];
-            JackClientTiming* timing = manager->GetClientTiming(i);
-            if (client && client->GetClientControl()->fActive && timing->fStatus == Finished) {
-                last_cycle_end = std::max(last_cycle_end, timing->fFinishedAt);
+    if (!m_syncMode) {
+        for (std::int32_t i = m_driverNum; i < kClientNum; i++) {
+            ClientInterface* client = table[i];
+            ClientTiming* timing = manager->getClientTiming(i);
+            if (client && client->getClientControl()->m_active && timing->m_status == kFinished) {
+                lastCycleEnd = std::max(lastCycleEnd, timing->m_finishedAt);
             }
         }
     }
 
     // Store the execution time for later averaging
-    if (last_cycle_end > 0) {
-        fRollingClientUsecs[fRollingClientUsecsIndex++] = last_cycle_end - fPrevCycleTime;
+    if (lastCycleEnd > 0) {
+        m_rollingClientUsecs[m_rollingClientUsecsIndex++] = lastCycleEnd - m_prevCycleTime;
     }
-    if (fRollingClientUsecsIndex >= kEngineRollingCount) {
-        fRollingClientUsecsIndex = 0;
+    if (m_rollingClientUsecsIndex >= kEngineRollingCount) {
+        m_rollingClientUsecsIndex = 0;
     }
 
     // Each time we have a full set of iterations, recompute the current
     // usage from the latest JACK_ENGINE_ROLLING_COUNT client entries.
-    if (fRollingClientUsecsCnt && (fRollingClientUsecsIndex == 0 || fRollingClientUsecsCnt == fRollingInterval)) {
-        jack_time_t avg_usecs = 0;
-        jack_time_t max_usecs = 0;
+    if (m_rollingClientUsecsCnt && (m_rollingClientUsecsIndex == 0 || m_rollingClientUsecsCnt == m_rollingInterval)) {
+        TimeC avgUsecs = 0;
+        TimeC maxUsecs = 0;
 
         for (std::int32_t i = 0; i < kEngineRollingCount; i++) {
-            avg_usecs += fRollingClientUsecs[i]; // This is really a running total to be averaged later
-            max_usecs = std::max(fRollingClientUsecs[i], max_usecs);
+            avgUsecs += m_rollingClientUsecs[i]; // This is really a running total to be averaged later
+            maxUsecs = std::max(m_rollingClientUsecs[i], maxUsecs);
         }
 
-        fMaxUsecs = std::max(fMaxUsecs, max_usecs);
+        m_maxUsecs = std::max(m_maxUsecs, maxUsecs);
 
-        if (fRollingClientUsecsCnt == fRollingInterval) {
-            fMaxUsecs = max_usecs;
-            fRollingClientUsecsCnt = 0;
+        if (m_rollingClientUsecsCnt == m_rollingInterval) {
+            m_maxUsecs = maxUsecs;
+            m_rollingClientUsecsCnt = 0;
         }
 
-        if (max_usecs < ((fPeriodUsecs * 95) / 100)) {
+        if (maxUsecs < ((m_periodUsecs * 95) / 100)) {
             // Average the values from our JACK_ENGINE_ROLLING_COUNT array
-            fSpareUsecs = (jack_time_t)(fPeriodUsecs - (avg_usecs / kEngineRollingCount));
+            m_spareUsecs = (TimeC)(m_periodUsecs - (avgUsecs / kEngineRollingCount));
         } else {
             // Use the 'worst case' value (or zero if we exceeded 'fPeriodUsecs')
-            fSpareUsecs = jack_time_t((max_usecs < fPeriodUsecs) ? fPeriodUsecs - max_usecs : 0);
+            m_spareUsecs = TimeC((maxUsecs < m_periodUsecs) ? m_periodUsecs - maxUsecs : 0);
         }
 
-        fCPULoad = ((1.f - (float(fSpareUsecs) / float(fPeriodUsecs))) * 50.f + (fCPULoad * 0.5f));
-        fMaxCPULoad = (1.f - float(fMaxUsecs < fPeriodUsecs ? fPeriodUsecs - fMaxUsecs : 0) / float(fPeriodUsecs)) * 100.f;
+        m_cPULoad = ((1.f - (float(m_spareUsecs) / float(m_periodUsecs))) * 50.f + (m_cPULoad * 0.5f));
+        m_maxCPULoad = (1.f - float(m_maxUsecs < m_periodUsecs ? m_periodUsecs - m_maxUsecs : 0) / float(m_periodUsecs)) * 100.f;
     }
 
-    fRollingClientUsecsCnt++;
+    m_rollingClientUsecsCnt++;
 }
 
-void JackEngineControl::ResetRollingUsecs()
+void EngineControl::resetRollingUsecs()
 {
-    memset(fRollingClientUsecs.data(), 0, sizeof(fRollingClientUsecs));
-    fRollingClientUsecsIndex = 0;
-    fRollingClientUsecsCnt = 0;
-    fSpareUsecs = 0;
-    fRollingInterval = std::int32_t(floor((kEngineRollingInterval * 1000.f) / fPeriodUsecs));
+    memset(m_rollingClientUsecs.data(), 0, sizeof(m_rollingClientUsecs));
+    m_rollingClientUsecsIndex = 0;
+    m_rollingClientUsecsCnt = 0;
+    m_spareUsecs = 0;
+    m_rollingInterval = std::int32_t(floor((kEngineRollingInterval * 1000.f) / m_periodUsecs));
 }
 
-void JackEngineControl::NotifyXRun(jack_time_t callback_usecs, float delayed_usecs)
+void EngineControl::notifyXRun(TimeC callbackUsecs, float delayedUsecs)
 {
-    ResetFrameTime(callback_usecs);
-    fXrunDelayedUsecs = delayed_usecs;
-    if (delayed_usecs > fMaxDelayedUsecs) {
-        fMaxDelayedUsecs = delayed_usecs;
+    resetFrameTime(callbackUsecs);
+    m_xrunDelayedUsecs = delayedUsecs;
+    if (delayedUsecs > m_maxDelayedUsecs) {
+        m_maxDelayedUsecs = delayedUsecs;
     }
 }
 

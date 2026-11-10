@@ -23,19 +23,19 @@
 
 namespace jackmini {
 
-extern const jack_port_type_id_t PORT_TYPES_MAX;
+extern const PortTypeIdC gPORTTYPESMAX;
 
-struct JackPortType {
-    const char* fName;
-    size_t (*size)();
-    void (*init)(void* buffer, size_t buffer_size, jack_nframes_t nframes);
-    void (*mixdown)(void* mixbuffer, void** src_buffers, std::int32_t src_count, jack_nframes_t nframes);
+struct PortType {
+    const char* m_name;
+    size_t (*m_size)();
+    void (*m_init)(void* buffer, size_t bufferSize, NframesC nframes);
+    void (*m_mixdown)(void* mixbuffer, void** srcBuffers, std::int32_t srcCount, NframesC nframes);
 };
 
-extern jack_port_type_id_t GetPortTypeId(const char* port_type);
-extern const struct JackPortType* GetPortType(jack_port_type_id_t port_type_id);
+extern PortTypeIdC getPortTypeId(const char* portType);
+extern const struct PortType* getPortType(PortTypeIdC portTypeId);
 
-extern const struct JackPortType gAudioPortType;
-extern const struct JackPortType gMidiPortType;
+extern const struct PortType gAudioPortType;
+extern const struct PortType gMidiPortType;
 
 } // namespace jackmini

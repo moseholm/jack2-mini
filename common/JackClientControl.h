@@ -30,55 +30,55 @@ namespace jackmini {
 // \brief Client control possibly in shared memory.
 
 
-struct JackClientControl : public JackShmMemAble {
-    std::array<char, kClientNameSize + 1> fName;
-    std::array<bool, kMaxNotification> fCallback;
-    volatile jack_transport_state_t fTransportState;
-    std::atomic<bool> fTransportSync;  // Will be true when slow-sync cb has to be called
-    std::atomic<bool> fTransportTimebase;  // Will be true when timebase cb is called with new_pos on
-    std::int32_t fRefNum;
-    std::int32_t fPID;
-    bool fActive;
+struct ClientControl : public ShmMemAble {
+    std::array<char, kClientNameSize + 1> m_name;
+    std::array<bool, kMaxNotification> m_callback;
+    volatile TransportStateC m_transportState;
+    std::atomic<bool> m_transportSync;  // Will be true when slow-sync cb has to be called
+    std::atomic<bool> m_transportTimebase;  // Will be true when timebase cb is called with new_pos on
+    std::int32_t m_refNum;
+    std::int32_t m_pID;
+    bool m_active;
 
-    jack_uuid_t fSessionID;
+    UuidC m_sessionID;
 
-    JackClientControl(const char* name, std::int32_t pid, std::int32_t refnum, jack_uuid_t uuid)
+    ClientControl(const char* name, std::int32_t pid, std::int32_t refnum, UuidC uuid)
     {
-        Init(name, pid, refnum, uuid);
+        init(name, pid, refnum, uuid);
     }
 
-    JackClientControl(const char* name, jack_uuid_t uuid)
+    ClientControl(const char* name, UuidC uuid)
     {
-        Init(name, 0, -1, uuid);
+        init(name, 0, -1, uuid);
     }
 
-    JackClientControl()
+    ClientControl()
     {
-        Init("", 0, -1, kUuidEmptyInitializer);
+        init("", 0, -1, kUuidEmptyInitializer);
     }
 
-    void Init(const char* name, std::int32_t pid, std::int32_t refnum, jack_uuid_t uuid)
+    void init(const char* name, std::int32_t pid, std::int32_t refnum, UuidC uuid)
     {
-        strcpy(fName.data(), name);
+        strcpy(m_name.data(), name);
         for (std::int32_t i = 0; i < kMaxNotification; i++) {
-            fCallback[i] = false;
+            m_callback[i] = false;
         }
         // Always activated
-        fCallback[kAddClient] = true;
-        fCallback[kRemoveClient] = true;
-        fCallback[kActivateClient] = true;
-        fCallback[kLatencyCallback] = true;
+        m_callback[kAddClient] = true;
+        m_callback[kRemoveClient] = true;
+        m_callback[kActivateClient] = true;
+        m_callback[kLatencyCallback] = true;
         // So that driver synchro are correctly setup in "flush" or "normal" mode
-        fCallback[kStartFreewheelCallback] = true;
-        fCallback[kStopFreewheelCallback] = true;
-        fRefNum = refnum;
-        fPID = pid;
-        fTransportState = JackTransportStopped;
-        fTransportSync = false;
-        fTransportTimebase = false;
-        fActive = false;
+        m_callback[kStartFreewheelCallback] = true;
+        m_callback[kStopFreewheelCallback] = true;
+        m_refNum = refnum;
+        m_pID = pid;
+        m_transportState = kTransportStopped;
+        m_transportSync = false;
+        m_transportTimebase = false;
+        m_active = false;
 
-        fSessionID = uuid;
+        m_sessionID = uuid;
     }
 };
 

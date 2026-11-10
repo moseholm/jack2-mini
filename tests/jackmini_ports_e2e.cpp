@@ -30,7 +30,7 @@ namespace {
 
 std::int32_t gFailures = 0;
 
-void Check(const char* what, bool ok)
+void check(const char* what, bool ok)
 {
     std::printf("%-72s %s\n", what, ok ? "ok" : "FAIL");
     if (!ok) {
@@ -38,22 +38,22 @@ void Check(const char* what, bool ok)
     }
 }
 
-Client OpenOrDie(const char* name)
+Client openOrDie(const char* name)
 {
     OpenOptions options;
-    options.start_server = false;
+    options.m_startServer = false;
     auto opened = Client::open(name, options);
     if (!opened) {
-        std::printf("cannot open %s: %s\n", name, std::string(to_string(opened.error())).c_str());
+        std::printf("cannot open %s: %s\n", name, std::string(toString(opened.error())).c_str());
         std::exit(1);
     }
     return std::move(*opened);
 }
 
-const PortInfo* Find(const std::vector<PortInfo>& ports, const std::string& name)
+const PortInfo* find(const std::vector<PortInfo>& ports, const std::string& name)
 {
     for (const PortInfo& port : ports) {
-        if (port.name == name) {
+        if (port.m_name == name) {
             return &port;
         }
     }
@@ -64,77 +64,77 @@ const PortInfo* Find(const std::vector<PortInfo>& ports, const std::string& name
 
 int main()
 {
-    Client a = OpenOrDie("ports_a");
-    Client b = OpenOrDie("ports_b");
+    Client a = openOrDie("ports_a");
+    Client b = openOrDie("ports_b");
 
-    auto a_out = a.register_port("out", PortType::Audio, PortFlags::Output);
-    auto a_mid = a.register_port("mid", PortType::Midi, PortFlags::Output);
-    auto b_in = b.register_port("in", PortType::Audio, PortFlags::Input);
-    Check("ports register", a_out && a_mid && b_in);
-    if (!a_out || !a_mid || !b_in) {
+    auto aOut = a.registerPort("out", PortType::kAudio, PortFlags::kOutput);
+    auto aMid = a.registerPort("mid", PortType::kMidi, PortFlags::kOutput);
+    auto bIn = b.registerPort("in", PortType::kAudio, PortFlags::kInput);
+    check("ports register", aOut && aMid && bIn);
+    if (!aOut || !aMid || !bIn) {
         std::printf("%d failure(s)\n", gFailures);
         return 1;
     }
 
     const std::vector<PortInfo> before = a.ports();
-    const PortInfo* out = Find(before, "ports_a:out");
-    const PortInfo* mid = Find(before, "ports_a:mid");
-    const PortInfo* in = Find(before, "ports_b:in");
-    Check("ports lists the registered ports", out && mid && in);
+    const PortInfo* out = find(before, "ports_a:out");
+    const PortInfo* mid = find(before, "ports_a:mid");
+    const PortInfo* in = find(before, "ports_b:in");
+    check("ports lists the registered ports", out && mid && in);
     if (out && mid && in) {
-        Check("audio type is the stored type string", out->type == "32 bit float mono audio");
-        Check("midi type is the stored type string", mid->type == "8 bit raw midi");
-        Check("output flags", has_flag(out->flags, PortFlags::Output) && !has_flag(out->flags, PortFlags::Input));
-        Check("input flags", has_flag(in->flags, PortFlags::Input) && !has_flag(in->flags, PortFlags::Output));
-        Check("owner is the client part of the name", out->owner == "ports_a" && in->owner == "ports_b");
-        Check("owner UUID is the client's UUID", out->owner_uuid == a.uuid() && in->owner_uuid == b.uuid());
-        Check("owner UUID is not empty", !out->owner_uuid.empty());
-        Check("port UUIDs are not empty", !out->port_uuid.empty() && !in->port_uuid.empty());
-        Check("port UUIDs differ", out->port_uuid != in->port_uuid && out->port_uuid != mid->port_uuid);
-        Check("no aliases are set", out->aliases.empty());
-        Check("nothing is connected yet", out->connections.empty() && in->connections.empty());
+        check("audio type is the stored type string", out->m_type == "32 bit float mono audio");
+        check("midi type is the stored type string", mid->m_type == "8 bit raw midi");
+        check("output flags", hasFlag(out->m_flags, PortFlags::kOutput) && !hasFlag(out->m_flags, PortFlags::kInput));
+        check("input flags", hasFlag(in->m_flags, PortFlags::kInput) && !hasFlag(in->m_flags, PortFlags::kOutput));
+        check("owner is the client part of the name", out->m_owner == "ports_a" && in->m_owner == "ports_b");
+        check("owner UUID is the client's UUID", out->m_ownerUuid == a.uuid() && in->m_ownerUuid == b.uuid());
+        check("owner UUID is not empty", !out->m_ownerUuid.empty());
+        check("port UUIDs are not empty", !out->m_portUuid.empty() && !in->m_portUuid.empty());
+        check("port UUIDs differ", out->m_portUuid != in->m_portUuid && out->m_portUuid != mid->m_portUuid);
+        check("no aliases are set", out->m_aliases.empty());
+        check("nothing is connected yet", out->m_connections.empty() && in->m_connections.empty());
     }
 
     // Latency: a range set on a port is listed, and the total latency is what the server last computed.
-    if (auto set = a.set_port_latency(*a_out, LatencyMode::Playback, LatencyRange { 3, 3 }); !set) {
-        Check("set the playback latency", false);
+    if (auto set = a.setPortLatency(*aOut, LatencyMode::kPlayback, LatencyRange { 3, 3 }); !set) {
+        check("set the playback latency", false);
     }
-    a.recompute_latencies();
+    a.recomputeLatencies();
     const std::vector<PortInfo> latency = a.ports();
-    const PortInfo* out_l = Find(latency, "ports_a:out");
-    Check("playback latency is listed", out_l && out_l->playback_latency == LatencyRange { 3, 3 });
-    Check("total latency of the port matches the listing",
-          out_l && a.total_latency(*a_out) == out_l->total_latency);
+    const PortInfo* outL = find(latency, "ports_a:out");
+    check("playback latency is listed", outL && outL->m_playbackLatency == LatencyRange { 3, 3 });
+    check("total latency of the port matches the listing",
+          outL && a.totalLatency(*aOut) == outL->m_totalLatency);
 
     // Connections: the audio ports are connected in both lists.
     // The engine connects only the ports of active clients.
-    Check("activate both clients", a.activate().has_value() && b.activate().has_value());
+    check("activate both clients", a.activate().has_value() && b.activate().has_value());
 
     // A handle belongs to the client that obtained it, so ports_a reaches ports_b:in through its own find_port.
-    auto b_in_for_a = a.find_port("ports_b:in");
-    auto connected = b_in_for_a ? a.connect(*a_out, *b_in_for_a) : std::unexpected(Error::NotFound);
-    Check("connect ports_a:out to ports_b:in", connected.has_value());
+    auto bInForA = a.findPort("ports_b:in");
+    auto connected = bInForA ? a.connect(*aOut, *bInForA) : std::unexpected(Error::kNotFound);
+    check("connect ports_a:out to ports_b:in", connected.has_value());
     const std::vector<PortInfo> linked = a.ports();
-    const PortInfo* out_c = Find(linked, "ports_a:out");
-    const PortInfo* in_c = Find(linked, "ports_b:in");
-    Check("the output lists the input as a connection",
-          out_c && out_c->connections.size() == 1 && out_c->connections[0] == "ports_b:in");
-    Check("the input lists the output as a connection",
-          in_c && in_c->connections.size() == 1 && in_c->connections[0] == "ports_a:out");
+    const PortInfo* outC = find(linked, "ports_a:out");
+    const PortInfo* inC = find(linked, "ports_b:in");
+    check("the output lists the input as a connection",
+          outC && outC->m_connections.size() == 1 && outC->m_connections[0] == "ports_b:in");
+    check("the input lists the output as a connection",
+          inC && inC->m_connections.size() == 1 && inC->m_connections[0] == "ports_a:out");
 
     // Unregistering removes the port from the listing.
-    auto gone = a.unregister_port(*a_mid);
-    Check("unregister the midi port", gone.has_value());
+    auto gone = a.unregisterPort(*aMid);
+    check("unregister the midi port", gone.has_value());
     const std::vector<PortInfo> after = a.ports();
-    Check("the unregistered port is no longer listed", Find(after, "ports_a:mid") == nullptr);
+    check("the unregistered port is no longer listed", find(after, "ports_a:mid") == nullptr);
 
     // Every listed port has a distinct port UUID, and the list is in port-number order without repeats.
     std::set<std::uint64_t> uuids;
     bool distinct = true;
     for (const PortInfo& port : after) {
-        distinct = distinct && uuids.insert(port.port_uuid.value()).second;
+        distinct = distinct && uuids.insert(port.m_portUuid.value()).second;
     }
-    Check("all listed port UUIDs are distinct", distinct);
+    check("all listed port UUIDs are distinct", distinct);
 
     std::printf("%d failure(s)\n", gFailures);
     return gFailures == 0 ? 0 : 1;

@@ -24,12 +24,12 @@
 
 using namespace jackmini;
 
-const double PI = 3.14;
+const double gPI = 3.14;
 
 namespace {
 
 // The keys are read as they are typed.  EOF ends the wait, so that a closed input does not spin.
-bool WaitForKey(std::int32_t key)
+bool waitForKey(std::int32_t key)
 {
     std::int32_t c;
     while ((c = getchar()) != key) {
@@ -40,10 +40,10 @@ bool WaitForKey(std::int32_t key)
     return true;
 }
 
-Client OpenClient(const char* client_name)
+Client openClient(const char* clientName)
 {
     OpenOptions options;
-    auto opened = Client::open(client_name, options);
+    auto opened = Client::open(clientName, options);
     if (!opened) {
         std::fprintf(stderr, "jack server not running?\n");
         throw -1;
@@ -53,85 +53,85 @@ Client OpenClient(const char* client_name)
 
 } // namespace
 
-bool ExternalMetro::process_audio(FrameCount nframes)
+bool ExternalMetro::processAudio(FrameCount nframes)
 {
-    float* buffer = client.audio_buffer(output_port).data();
-    FrameCount frames_left = nframes;
+    float* buffer = m_client.audioBuffer(m_outputPort).data();
+    FrameCount framesLeft = nframes;
 
-    while (wave_length - offset < frames_left) {
-        std::memcpy(buffer + (nframes - frames_left), wave + offset, sizeof(float) * (wave_length - offset));
-        frames_left -= wave_length - offset;
-        offset = 0;
+    while (m_waveLength - m_offset < framesLeft) {
+        std::memcpy(buffer + (nframes - framesLeft), m_wave + m_offset, sizeof(float) * (m_waveLength - m_offset));
+        framesLeft -= m_waveLength - m_offset;
+        m_offset = 0;
     }
-    if (frames_left > 0) {
-        std::memcpy(buffer + (nframes - frames_left), wave + offset, sizeof(float) * frames_left);
-        offset += frames_left;
+    if (framesLeft > 0) {
+        std::memcpy(buffer + (nframes - framesLeft), m_wave + m_offset, sizeof(float) * framesLeft);
+        m_offset += framesLeft;
     }
 
     return true;
 }
 
-ExternalMetro::ExternalMetro(std::int32_t freq_arg, double max_amp, std::int32_t dur_arg, std::int32_t bpm_arg, const char* client_name)
-    : client(OpenClient(client_name))
+ExternalMetro::ExternalMetro(std::int32_t freqArg, double maxAmp, std::int32_t durArg, std::int32_t bpmArg, const char* clientName)
+    : m_client(openClient(clientName))
 {
     float scale;
-    std::int32_t i, attack_length, decay_length;
-    std::int32_t attack_percent = 1, decay_percent = 10;
-    offset = 0;
-    wave = nullptr;
-    amp = nullptr;
-    freq = freq_arg;
-    bpm = bpm_arg;
+    std::int32_t i, attackLength, decayLength;
+    std::int32_t attackPercent = 1, decayPercent = 10;
+    m_offset = 0;
+    m_wave = nullptr;
+    m_amp = nullptr;
+    m_freq = freqArg;
+    m_bpm = bpmArg;
 
-    client.on_process([this](const Cycle& cycle) { return process_audio(cycle.frames); });
-    client.on_shutdown([] { std::printf("shutdown called..\n"); });
-    auto out = client.register_port("bpm", PortType::Audio, PortFlags::Output);
-    auto in = client.register_port("metro_in", PortType::Audio, PortFlags::Input);
+    m_client.onProcess([this](const Cycle& cycle) { return processAudio(cycle.m_frames); });
+    m_client.onShutdown([] { std::printf("shutdown called..\n"); });
+    auto out = m_client.registerPort("bpm", PortType::kAudio, PortFlags::kOutput);
+    auto in = m_client.registerPort("metro_in", PortType::kAudio, PortFlags::kInput);
     if (out) {
-        output_port = *out;
+        m_outputPort = *out;
     }
     if (in) {
-        input_port = *in;
+        m_inputPort = *in;
     }
 
-    sr = client.sample_rate();
+    m_sr = m_client.sampleRate();
 
     // setup wave table parameters
-    wave_length = 60 * sr / bpm;
-    tone_length = sr * dur_arg / 1000;
-    attack_length = tone_length * attack_percent / 100;
-    decay_length = tone_length * decay_percent / 100;
-    scale = 2 * PI * freq / sr;
+    m_waveLength = 60 * m_sr / m_bpm;
+    m_toneLength = m_sr * durArg / 1000;
+    attackLength = m_toneLength * attackPercent / 100;
+    decayLength = m_toneLength * decayPercent / 100;
+    scale = 2 * gPI * m_freq / m_sr;
 
-    if (tone_length >= wave_length) {
+    if (m_toneLength >= m_waveLength) {
         return;
     }
-    if (attack_length + decay_length > (std::int32_t)tone_length) {
+    if (attackLength + decayLength > (std::int32_t)m_toneLength) {
         std::fprintf(stderr, "invalid attack/decay\n");
         return;
     }
 
     // Build the wave table
-    wave = (float*)std::malloc(wave_length * sizeof(float));
-    amp = (double*)std::malloc(tone_length * sizeof(double));
+    m_wave = (float*)std::malloc(m_waveLength * sizeof(float));
+    m_amp = (double*)std::malloc(m_toneLength * sizeof(double));
 
-    for (i = 0; i < attack_length; i++) {
-        amp[i] = max_amp * i / ((double)attack_length);
+    for (i = 0; i < attackLength; i++) {
+        m_amp[i] = maxAmp * i / ((double)attackLength);
     }
-    for (i = attack_length; i < (std::int32_t)tone_length - decay_length; i++) {
-        amp[i] = max_amp;
+    for (i = attackLength; i < (std::int32_t)m_toneLength - decayLength; i++) {
+        m_amp[i] = maxAmp;
     }
-    for (i = (std::int32_t)tone_length - decay_length; i < (std::int32_t)tone_length; i++) {
-        amp[i] = -max_amp * (i - (double)tone_length) / ((double)decay_length);
+    for (i = (std::int32_t)m_toneLength - decayLength; i < (std::int32_t)m_toneLength; i++) {
+        m_amp[i] = -maxAmp * (i - (double)m_toneLength) / ((double)decayLength);
     }
-    for (i = 0; i < (std::int32_t)tone_length; i++) {
-        wave[i] = amp[i] * std::sin(scale * i);
+    for (i = 0; i < (std::int32_t)m_toneLength; i++) {
+        m_wave[i] = m_amp[i] * std::sin(scale * i);
     }
-    for (i = tone_length; i < (std::int32_t)wave_length; i++) {
-        wave[i] = 0;
+    for (i = m_toneLength; i < (std::int32_t)m_waveLength; i++) {
+        m_wave[i] = 0;
     }
 
-    if (!client.activate().has_value()) {
+    if (!m_client.activate().has_value()) {
         std::fprintf(stderr, "cannot activate client\n");
     }
 }
@@ -139,10 +139,10 @@ ExternalMetro::ExternalMetro(std::int32_t freq_arg, double max_amp, std::int32_t
 ExternalMetro::~ExternalMetro()
 {
     // The process callback reads the wave table: the client stops before the table is freed.
-    client.deactivate();
-    client.close();
-    std::free(amp);
-    std::free(wave);
+    m_client.deactivate();
+    m_client.close();
+    std::free(m_amp);
+    std::free(m_wave);
 }
 
 int main(std::int32_t argc, char* argv[])
@@ -161,7 +161,7 @@ int main(std::int32_t argc, char* argv[])
     client5 = new ExternalMetro(1500, 0.4, 20, 150, "t5");
 
     std::printf("Type 'c' to close all clients and go to next test...\n");
-    WaitForKey('c');
+    waitForKey('c');
 
     delete client1;
     delete client2;
@@ -174,21 +174,21 @@ int main(std::int32_t argc, char* argv[])
 
     std::printf("Now quit the server, shutdown callback should be called...\n");
     std::printf("Type 'c' to move on...\n");
-    WaitForKey('c');
+    waitForKey('c');
 
     std::printf("Closing client...\n");
     delete client1;
 
     std::printf("Now start the server again...\n");
     std::printf("Type 'c' to move on...\n");
-    WaitForKey('c');
+    waitForKey('c');
 
     std::printf("Opening a new client....\n");
     client1 = new ExternalMetro(1200, 0.4, 20, 80, "t1");
 
     std::printf("Now quit the server, shutdown callback should be called...\n");
     std::printf("Type 'c' to move on...\n");
-    WaitForKey('c');
+    waitForKey('c');
 
     std::printf("Simulating client not correctly closed...\n");
 
@@ -200,7 +200,7 @@ int main(std::int32_t argc, char* argv[])
     }
 
     std::printf("Type 'q' to quit...\n");
-    WaitForKey('q');
+    waitForKey('q');
     delete client1;
     return 0;
 }

@@ -20,13 +20,13 @@
 using namespace jackmini;
 
 static constexpr std::int32_t kMaxs = 400000;
-static std::array<std::int64_t, kMaxs> starts;
-static std::array<std::int64_t, kMaxs> ends;
-static std::atomic<std::uint64_t> nsamples { 0 }, nxruns { 0 };
-static Port in, out;
-static Client* jack_handle;
+static std::array<std::int64_t, kMaxs> gStarts;
+static std::array<std::int64_t, kMaxs> gEnds;
+static std::atomic<std::uint64_t> gNsamples { 0 }, gNxruns { 0 };
+static Port gIn, gOut;
+static Client* gJackHandle;
 
-static std::int64_t now_ns()
+static std::int64_t nowNs()
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -35,16 +35,16 @@ static std::int64_t now_ns()
 
 static bool process(const Cycle& cycle)
 {
-    const FrameCount nframes = cycle.frames;
-    std::uint64_t i = nsamples.fetch_add(1);
-    std::int64_t s = now_ns();
-    auto o = jack_handle->audio_buffer(out);
-    auto x = jack_handle->audio_buffer(in);
+    const FrameCount nframes = cycle.m_frames;
+    std::uint64_t i = gNsamples.fetch_add(1);
+    std::int64_t s = nowNs();
+    auto o = gJackHandle->audioBuffer(gOut);
+    auto x = gJackHandle->audioBuffer(gIn);
     std::memcpy(o.data(), x.data(), sizeof(float) * nframes);
-    std::int64_t e = now_ns();
+    std::int64_t e = nowNs();
     if (i < kMaxs) {
-        starts[i] = s;
-        ends[i] = e;
+        gStarts[i] = s;
+        gEnds[i] = e;
     }
     return true;
 }
@@ -67,11 +67,11 @@ int main(std::int32_t argc, char** argv)
     std::int32_t seconds = argc > 1 ? std::atoi(argv[1]) : 30;
 
     OpenOptions options;
-    options.start_server = false;
+    options.m_startServer = false;
 
     // The server may still be starting: retry the open for a while, instead of a fixed delay.
     std::optional<Client> client;
-    WaitUntil([&] {
+    waitUntil([&] {
         auto opened = Client::open("rtbench", options);
         if (opened) {
             client.emplace(std::move(*opened));
@@ -82,37 +82,37 @@ int main(std::int32_t argc, char** argv)
         std::fprintf(stderr, "open failed: no server\n");
         return 1;
     }
-    jack_handle = &*client;
+    gJackHandle = &*client;
 
-    client->on_process(process);
-    client->on_xrun([] { nxruns.fetch_add(1); });
-    auto pin = client->register_port("in", PortType::Audio, PortFlags::Input);
-    auto pout = client->register_port("out", PortType::Audio, PortFlags::Output);
+    client->onProcess(process);
+    client->onXrun([] { gNxruns.fetch_add(1); });
+    auto pin = client->registerPort("in", PortType::kAudio, PortFlags::kInput);
+    auto pout = client->registerPort("out", PortType::kAudio, PortFlags::kOutput);
     if (!pin || !pout) {
         std::fprintf(stderr, "cannot register the ports\n");
         return 1;
     }
-    in = *pin;
-    out = *pout;
+    gIn = *pin;
+    gOut = *pout;
     client->activate();
 
-    const std::uint64_t cycles = static_cast<std::uint64_t>(seconds) * client->sample_rate() / client->buffer_size();
-    WaitUntil([&] { return nsamples.load() >= cycles; });
+    const std::uint64_t cycles = static_cast<std::uint64_t>(seconds) * client->sampleRate() / client->bufferSize();
+    waitUntil([&] { return gNsamples.load() >= cycles; });
     client->deactivate();
 
-    std::uint64_t n = nsamples.load();
+    std::uint64_t n = gNsamples.load();
     if (n > kMaxs) {
         n = kMaxs;
     }
     std::vector<std::int64_t> iv(n > 0 ? n - 1 : 0), du(n);
     for (std::uint64_t i = 1; i < n; i++) {
-        iv[i - 1] = starts[i] - starts[i - 1];
+        iv[i - 1] = gStarts[i] - gStarts[i - 1];
     }
     for (std::uint64_t i = 0; i < n; i++) {
-        du[i] = ends[i] - starts[i];
+        du[i] = gEnds[i] - gStarts[i];
     }
-    std::printf("cycles %lu  xruns %lu  period %u  rate %u\n", nsamples.load(), nxruns.load(),
-        client->buffer_size(), client->sample_rate());
+    std::printf("cycles %lu  xruns %lu  period %u  rate %u\n", gNsamples.load(), gNxruns.load(),
+        client->bufferSize(), client->sampleRate());
     if (n > 1) {
         pct("interval (start-start)", iv.data(), (std::int64_t)iv.size());
     }

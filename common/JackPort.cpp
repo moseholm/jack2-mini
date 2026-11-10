@@ -28,131 +28,131 @@
 
 namespace jackmini {
 
-JackPort::JackPort()
+ServerPort::ServerPort()
 {
-    Release();
+    release();
 }
 
-bool JackPort::Allocate(std::int32_t refnum, const char* port_name, const char* port_type, JackPortFlags flags)
+bool ServerPort::allocate(std::int32_t refnum, const char* portName, const char* portType, PortFlagsC flags)
 {
-    jack_port_type_id_t id = GetPortTypeId(port_type);
+    PortTypeIdC id = getPortTypeId(portType);
     assert(id >= 0 && id <= PORT_TYPES_MAX);
-    if (id == PORT_TYPES_MAX) {
+    if (id == gPORTTYPESMAX) {
         return false;
     }
-    fTypeId = id;
-    fFlags = flags;
-    fRefNum = refnum;
-    CopyCString(fName, port_name);
-    fInUse = true;
-    fLatency = 0;
-    fTotalLatency = 0;
-    fMonitorRequests = 0;
-    fPlaybackLatency.min = fPlaybackLatency.max = 0;
-    fCaptureLatency.min = fCaptureLatency.max = 0;
-    fTied = kNoPort;
-    fAlias1[0] = '\0';
-    fAlias2[0] = '\0';
+    m_typeId = id;
+    m_flags = flags;
+    m_refNum = refnum;
+    copyCString(m_name, portName);
+    m_inUse = true;
+    m_latency = 0;
+    m_totalLatency = 0;
+    m_monitorRequests = 0;
+    m_playbackLatency.m_min = m_playbackLatency.m_max = 0;
+    m_captureLatency.m_min = m_captureLatency.m_max = 0;
+    m_tied = kNoPort;
+    m_alias1[0] = '\0';
+    m_alias2[0] = '\0';
     // DB: At this point we do not know current buffer size in frames,
     // but every time buffer will be returned to any user,
     // it will be called with either ClearBuffer or MixBuffers
     // with correct current buffer size.
     // So it is safe to init with 0 here.
-    ClearBuffer(0);
+    clearBuffer(0);
     return true;
 }
 
-void JackPort::Release()
+void ServerPort::release()
 {
-    fTypeId = 0;
-    fFlags = JackPortIsInput;
-    fRefNum = -1;
-    fUUID = 0;
-    fInUse = false;
-    fLatency = 0;
-    fTotalLatency = 0;
-    fMonitorRequests = 0;
-    fPlaybackLatency.min = fPlaybackLatency.max = 0;
-    fCaptureLatency.min = fCaptureLatency.max = 0;
-    fTied = kNoPort;
-    fAlias1[0] = '\0';
-    fAlias2[0] = '\0';
+    m_typeId = 0;
+    m_flags = kPortIsInput;
+    m_refNum = -1;
+    m_uUID = 0;
+    m_inUse = false;
+    m_latency = 0;
+    m_totalLatency = 0;
+    m_monitorRequests = 0;
+    m_playbackLatency.m_min = m_playbackLatency.m_max = 0;
+    m_captureLatency.m_min = m_captureLatency.m_max = 0;
+    m_tied = kNoPort;
+    m_alias1[0] = '\0';
+    m_alias2[0] = '\0';
 }
 
-std::int32_t JackPort::GetRefNum() const
+std::int32_t ServerPort::getRefNum() const
 {
-    return fRefNum;
+    return m_refNum;
 }
 
-jack_nframes_t JackPort::GetLatency() const
+NframesC ServerPort::getLatency() const
 {
-    return fLatency;
+    return m_latency;
 }
 
-jack_nframes_t JackPort::GetTotalLatency() const
+NframesC ServerPort::getTotalLatency() const
 {
-    return fTotalLatency;
+    return m_totalLatency;
 }
 
-void JackPort::SetLatency(jack_nframes_t nframes)
+void ServerPort::setLatency(NframesC nframes)
 {
-    fLatency = nframes;
+    m_latency = nframes;
 
     // setup the new latency values here,
     // so we don't need to change the backend codes.
-    if (fFlags & JackPortIsOutput) {
-        fCaptureLatency.min = nframes;
-        fCaptureLatency.max = nframes;
+    if (m_flags & kPortIsOutput) {
+        m_captureLatency.m_min = nframes;
+        m_captureLatency.m_max = nframes;
     }
-    if (fFlags & JackPortIsInput) {
-        fPlaybackLatency.min = nframes;
-        fPlaybackLatency.max = nframes;
+    if (m_flags & kPortIsInput) {
+        m_playbackLatency.m_min = nframes;
+        m_playbackLatency.m_max = nframes;
     }
 }
 
-void JackPort::SetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_range_t* range)
+void ServerPort::setLatencyRange(LatencyCallbackModeC mode, LatencyRangeC* range)
 {
-    if (mode == JackCaptureLatency) {
-        fCaptureLatency = *range;
+    if (mode == kCaptureLatency) {
+        m_captureLatency = *range;
 
         // hack to set latency up for
         // backend ports
-        if ((fFlags & JackPortIsOutput) && (fFlags & JackPortIsPhysical)) {
-            fLatency = (range->min + range->max) / 2;
+        if ((m_flags & kPortIsOutput) && (m_flags & kPortIsPhysical)) {
+            m_latency = (range->m_min + range->m_max) / 2;
         }
     } else {
-        fPlaybackLatency = *range;
+        m_playbackLatency = *range;
 
         // hack to set latency up for
         // backend ports
-        if ((fFlags & JackPortIsInput) && (fFlags & JackPortIsPhysical)) {
-            fLatency = (range->min + range->max) / 2;
+        if ((m_flags & kPortIsInput) && (m_flags & kPortIsPhysical)) {
+            m_latency = (range->m_min + range->m_max) / 2;
         }
     }
 }
 
-void JackPort::GetLatencyRange(jack_latency_callback_mode_t mode, jack_latency_range_t* range) const
+void ServerPort::getLatencyRange(LatencyCallbackModeC mode, LatencyRangeC* range) const
 {
-    if (mode == JackCaptureLatency) {
-        *range = fCaptureLatency;
+    if (mode == kCaptureLatency) {
+        *range = m_captureLatency;
     } else {
-        *range = fPlaybackLatency;
+        *range = m_playbackLatency;
     }
 }
 
-std::int32_t JackPort::Tie(jack_port_id_t port_index)
+std::int32_t ServerPort::tie(PortIdC portIndex)
 {
-    fTied = port_index;
+    m_tied = portIndex;
     return 0;
 }
 
-std::int32_t JackPort::UnTie()
+std::int32_t ServerPort::unTie()
 {
-    fTied = kNoPort;
+    m_tied = kNoPort;
     return 0;
 }
 
-std::int32_t JackPort::RequestMonitor(bool onoff)
+std::int32_t ServerPort::requestMonitor(bool onoff)
 {
     // jackd.h
     // * If @ref JackPortCanMonitor is set for this @a port, turn input
@@ -162,15 +162,15 @@ std::int32_t JackPort::RequestMonitor(bool onoff)
     // return -1;
 
     if (onoff) {
-        fMonitorRequests++;
-    } else if (fMonitorRequests) {
-        fMonitorRequests--;
+        m_monitorRequests++;
+    } else if (m_monitorRequests) {
+        m_monitorRequests--;
     }
 
     return 0;
 }
 
-std::int32_t JackPort::EnsureMonitor(bool onoff)
+std::int32_t ServerPort::ensureMonitor(bool onoff)
 {
     // jackd.h
     // * If @ref JackPortCanMonitor is set for this @a port, turn input
@@ -180,49 +180,49 @@ std::int32_t JackPort::EnsureMonitor(bool onoff)
     // return -1;
 
     if (onoff) {
-        if (fMonitorRequests == 0) {
-            fMonitorRequests++;
+        if (m_monitorRequests == 0) {
+            m_monitorRequests++;
         }
     } else {
-        if (fMonitorRequests > 0) {
-            fMonitorRequests = 0;
+        if (m_monitorRequests > 0) {
+            m_monitorRequests = 0;
         }
     }
 
     return 0;
 }
 
-const char* JackPort::GetName() const
+const char* ServerPort::getName() const
 {
-    return fName.data();
+    return m_name.data();
 }
 
-const char* JackPort::GetShortName() const
+const char* ServerPort::getShortName() const
 {
     // we know there is always a colon, because we put
     // it there ...
-    return strchr(fName.data(), ':') + 1;
+    return strchr(m_name.data(), ':') + 1;
 }
 
-std::int32_t JackPort::GetFlags() const
+std::int32_t ServerPort::getFlags() const
 {
-    return fFlags;
+    return m_flags;
 }
 
-const char* JackPort::GetType() const
+const char* ServerPort::getType() const
 {
-    const JackPortType* type = GetPortType(fTypeId);
-    return type->fName;
+    const PortType* type = getPortType(m_typeId);
+    return type->m_name;
 }
 
-void JackPort::SetName(const char* new_name)
+void ServerPort::setName(const char* newName)
 {
-    char* colon = strchr(fName.data(), ':');
-    std::int32_t len = sizeof(fName) - ((std::int32_t)(colon - fName.data())) - 2;
-    CopyCString(std::span<char>(colon + 1, len), new_name);
+    char* colon = strchr(m_name.data(), ':');
+    std::int32_t len = sizeof(m_name) - ((std::int32_t)(colon - m_name.data())) - 2;
+    copyCString(std::span<char>(colon + 1, len), newName);
 }
 
-bool JackPort::NameEquals(std::string_view target)
+bool ServerPort::nameEquals(std::string_view target)
 {
     std::array<char, kRealJackPortNameSize + 1> buf { };
 
@@ -233,38 +233,38 @@ bool JackPort::NameEquals(std::string_view target)
     // state.
 
     if (target.starts_with("ALSA:capture") || target.starts_with("ALSA:playback")) {
-        FormatCString(buf, "alsa_pcm{}", target.substr(4));
+        formatCString(buf, "alsa_pcm{}", target.substr(4));
         target = buf.data();
     }
 
-    return (std::string_view(fName) == target
-        || std::string_view(fAlias1) == target
-        || std::string_view(fAlias2) == target);
+    return (std::string_view(m_name) == target
+        || std::string_view(m_alias1) == target
+        || std::string_view(m_alias2) == target);
 }
 
-std::int32_t JackPort::GetAliases(char* const aliases[2])
+std::int32_t ServerPort::getAliases(char* const aliases[2])
 {
     std::int32_t cnt = 0;
 
-    if (fAlias1[0] != '\0') {
-        CopyCString(std::span<char>(aliases[0], kRealJackPortNameSize), fAlias1.data());
+    if (m_alias1[0] != '\0') {
+        copyCString(std::span<char>(aliases[0], kRealJackPortNameSize), m_alias1.data());
         cnt++;
     }
 
-    if (fAlias2[0] != '\0') {
-        CopyCString(std::span<char>(aliases[1], kRealJackPortNameSize), fAlias2.data());
+    if (m_alias2[0] != '\0') {
+        copyCString(std::span<char>(aliases[1], kRealJackPortNameSize), m_alias2.data());
         cnt++;
     }
 
     return cnt;
 }
 
-std::int32_t JackPort::SetAlias(const char* alias)
+std::int32_t ServerPort::setAlias(const char* alias)
 {
-    if (fAlias1[0] == '\0') {
-        CopyCString(fAlias1, alias);
-    } else if (fAlias2[0] == '\0') {
-        CopyCString(fAlias2, alias);
+    if (m_alias1[0] == '\0') {
+        copyCString(m_alias1, alias);
+    } else if (m_alias2[0] == '\0') {
+        copyCString(m_alias2, alias);
     } else {
         return -1;
     }
@@ -272,12 +272,12 @@ std::int32_t JackPort::SetAlias(const char* alias)
     return 0;
 }
 
-std::int32_t JackPort::UnsetAlias(const char* alias)
+std::int32_t ServerPort::unsetAlias(const char* alias)
 {
-    if (strcmp(fAlias1.data(), alias) == 0) {
-        fAlias1[0] = '\0';
-    } else if (strcmp(fAlias2.data(), alias) == 0) {
-        fAlias2[0] = '\0';
+    if (strcmp(m_alias1.data(), alias) == 0) {
+        m_alias1[0] = '\0';
+    } else if (strcmp(m_alias2.data(), alias) == 0) {
+        m_alias2[0] = '\0';
     } else {
         return -1;
     }
@@ -285,16 +285,16 @@ std::int32_t JackPort::UnsetAlias(const char* alias)
     return 0;
 }
 
-void JackPort::ClearBuffer(jack_nframes_t frames)
+void ServerPort::clearBuffer(NframesC frames)
 {
-    const JackPortType* type = GetPortType(fTypeId);
-    (type->init)(GetBuffer(), frames * sizeof(jack_default_audio_sample_t), frames);
+    const PortType* type = getPortType(m_typeId);
+    (type->m_init)(getBuffer(), frames * sizeof(DefaultAudioSampleC), frames);
 }
 
-void JackPort::MixBuffers(void** src_buffers, std::int32_t src_count, jack_nframes_t buffer_size)
+void ServerPort::mixBuffers(void** srcBuffers, std::int32_t srcCount, NframesC bufferSize)
 {
-    const JackPortType* type = GetPortType(fTypeId);
-    (type->mixdown)(GetBuffer(), src_buffers, src_count, buffer_size);
+    const PortType* type = getPortType(m_typeId);
+    (type->m_mixdown)(getBuffer(), srcBuffers, srcCount, bufferSize);
 }
 
 } // namespace jackmini

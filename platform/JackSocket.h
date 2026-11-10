@@ -35,33 +35,33 @@ namespace jackmini {
 
 // \brief Client socket.
 
-class JackClientSocket : public detail::JackClientRequestInterface {
+class ClientSocket : public detail::ClientRequestInterface {
 
 private:
-    std::int32_t fSocket = -1;
-    std::int32_t fTimeOut = 0;
-    bool fNonBlocking = false; // the socket(int) constructor does not set it
-    bool fPromiscuous = false;
-    std::int32_t fPromiscuousGid = -1;
+    std::int32_t m_socket = -1;
+    std::int32_t m_timeOut = 0;
+    bool m_nonBlocking = false; // the socket(int) constructor does not set it
+    bool m_promiscuous = false;
+    std::int32_t m_promiscuousGid = -1;
 
 public:
-    JackClientSocket();
-    JackClientSocket(std::int32_t socket);
+    ClientSocket();
+    ClientSocket(std::int32_t socket);
 
-    std::int32_t Connect(const char* dir, const char* name, std::int32_t which);
-    std::int32_t Close();
-    std::int32_t Read(void* data, std::int32_t len);
-    std::int32_t Write(void* data, std::int32_t len);
-    std::int32_t ReadWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) override;
-    std::int32_t WriteWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) override;
-    std::int32_t GetFd()
+    std::int32_t connect(const char* dir, const char* name, std::int32_t which);
+    std::int32_t close();
+    std::int32_t read(void* data, std::int32_t len);
+    std::int32_t write(void* data, std::int32_t len);
+    std::int32_t readWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) override;
+    std::int32_t writeWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) override;
+    std::int32_t getFd()
     {
-        return fSocket;
+        return m_socket;
     }
-    void SetReadTimeOut(std::int64_t sec);
-    void SetWriteTimeOut(std::int64_t sec);
+    void setReadTimeOut(std::int64_t sec);
+    void setWriteTimeOut(std::int64_t sec);
 
-    void SetNonBlocking(bool onoff);
+    void setNonBlocking(bool onoff);
 };
 
 // \brief Server socket.
@@ -69,26 +69,26 @@ public:
 inline constexpr std::int32_t kSocketMaxNameSize = 256;
 
 
-class JackServerSocket {
+class ServerSocket {
 
 private:
-    std::int32_t fSocket;
-    std::array<char, kSocketMaxNameSize> fName;
-    bool fPromiscuous;
-    std::int32_t fPromiscuousGid;
+    std::int32_t m_socket;
+    std::array<char, kSocketMaxNameSize> m_name;
+    bool m_promiscuous;
+    std::int32_t m_promiscuousGid;
 
 public:
-    JackServerSocket();
-    ~JackServerSocket()
+    ServerSocket();
+    ~ServerSocket()
     {
     }
 
-    std::int32_t Bind(const char* dir, const char* name, std::int32_t which);
-    JackClientSocket* Accept();
-    std::int32_t Close();
-    std::int32_t GetFd()
+    std::int32_t bind(const char* dir, const char* name, std::int32_t which);
+    ClientSocket* accept();
+    std::int32_t close();
+    std::int32_t getFd()
     {
-        return fSocket;
+        return m_socket;
     }
 };
 

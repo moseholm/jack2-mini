@@ -38,22 +38,22 @@ constexpr std::size_t kRingMessages = 100;
 
 // One event, as the realtime thread hands it to the printer.  Plain data: copying it does not allocate.
 struct Message {
-    std::uint32_t time = 0;                  // the frame within the cycle
-    std::uint32_t size = 0;
-    std::uint64_t frame = 0;                 // the frame since this program started (the cycle's start plus the time)
-    std::array<std::uint8_t, kMaxBytes> bytes { };
+    std::uint32_t m_time = 0;                  // the frame within the cycle
+    std::uint32_t m_size = 0;
+    std::uint64_t m_frame = 0;                 // the frame since this program started (the cycle's start plus the time)
+    std::array<std::uint8_t, kMaxBytes> m_bytes { };
 };
 
 std::atomic<bool> gStop { false };
 std::atomic<std::uint64_t> gTooLarge { 0 };
 std::atomic<std::uint64_t> gRingFull { 0 };
 
-void on_signal(std::int32_t)
+void onSignal(std::int32_t)
 {
     gStop.store(true);
 }
 
-void show_usage(FILE* out)
+void showUsage(FILE* out)
 {
     std::fprintf(out, "jack_midi_dump - JACK MIDI Monitor.\n\n");
     std::fprintf(out, "Usage: %s [ OPTIONS ] [CLIENT-NAME]\n\n", kTool);
@@ -71,23 +71,23 @@ void show_usage(FILE* out)
 // The message as the description the old tool printed: note on, note off and control change, with their channel.
 void describe(const Message& m)
 {
-    if (m.size == 0) {
+    if (m.m_size == 0) {
         return;
     }
-    const std::uint8_t type = m.bytes[0] & 0xf0;
-    const std::uint8_t channel = m.bytes[0] & 0xf;
-    if (m.size != 3) {
+    const std::uint8_t type = m.m_bytes[0] & 0xf0;
+    const std::uint8_t channel = m.m_bytes[0] & 0xf;
+    if (m.m_size != 3) {
         return;
     }
     switch (type) {
     case 0x90:
-        std::printf(" note on  (channel %2d): pitch %3d, velocity %3d", channel, m.bytes[1], m.bytes[2]);
+        std::printf(" note on  (channel %2d): pitch %3d, velocity %3d", channel, m.m_bytes[1], m.m_bytes[2]);
         break;
     case 0x80:
-        std::printf(" note off (channel %2d): pitch %3d, velocity %3d", channel, m.bytes[1], m.bytes[2]);
+        std::printf(" note off (channel %2d): pitch %3d, velocity %3d", channel, m.m_bytes[1], m.m_bytes[2]);
         break;
     case 0xb0:
-        std::printf(" control change (channel %2d): controller %3d, value %3d", channel, m.bytes[1], m.bytes[2]);
+        std::printf(" control change (channel %2d): controller %3d, value %3d", channel, m.m_bytes[1], m.m_bytes[2]);
         break;
     default:
         break;
@@ -99,7 +99,7 @@ void describe(const Message& m)
 int main(std::int32_t argc, char** argv)
 {
     std::string server;
-    std::int32_t time_format = 0; // 0: frame in the cycle, 1: absolute, 2: relative
+    std::int32_t timeFormat = 0; // 0: frame in the cycle, 1: absolute, 2: relative
     static constexpr std::string_view kShortOptions = "arhs:v";
     static std::array<const struct option, 4> kLongOptions = {{
         { "server", required_argument, nullptr, 's' },
@@ -112,10 +112,10 @@ int main(std::int32_t argc, char** argv)
     while ((c = getopt_long(argc, argv, kShortOptions.data(), kLongOptions.data(), nullptr)) != -1) {
         switch (c) {
         case 'a':
-            time_format = 1;
+            timeFormat = 1;
             break;
         case 'r':
-            time_format = 2;
+            timeFormat = 2;
             break;
         case 's':
             server = optarg;
@@ -124,22 +124,22 @@ int main(std::int32_t argc, char** argv)
             std::printf("%s " JACK_VERSION "\n", kTool);
             return 0;
         case 'h':
-            show_usage(stdout);
+            showUsage(stdout);
             return 0;
         default:
-            show_usage(stderr);
+            showUsage(stderr);
             return 1;
         }
     }
-    const std::string client_name = optind < argc ? argv[optind] : "midi-monitor";
+    const std::string clientName = optind < argc ? argv[optind] : "midi-monitor";
 
-    auto opened = jackmini::tools::open_client(client_name, server);
+    auto opened = jackmini::tools::openClient(clientName, server);
     if (!opened) {
         return jackmini::tools::fail(kTool, opened.error());
     }
     jackmini::Client& client = *opened;
 
-    auto port = client.register_port("input", jackmini::PortType::Midi, jackmini::PortFlags::Input);
+    auto port = client.registerPort("input", jackmini::PortType::kMidi, jackmini::PortFlags::kInput);
     if (!port) {
         return jackmini::tools::fail(kTool, port.error());
     }
@@ -147,72 +147,72 @@ int main(std::int32_t argc, char** argv)
 
     // The realtime thread's view: the frames since the start of the program, and the ring of events for the printer.
     jackmini::RingBuffer<Message> ring(kRingMessages);
-    std::uint64_t frames_before_cycle = 0;   // only the realtime thread writes it
-    if (auto set = client.on_process([&](const jackmini::Cycle& cycle) {
-            const jackmini::midi::Buffer events = client.midi_buffer(input);
+    std::uint64_t framesBeforeCycle = 0;   // only the realtime thread writes it
+    if (auto set = client.onProcess([&](const jackmini::Cycle& cycle) {
+            const jackmini::midi::Buffer events = client.midiBuffer(input);
             for (std::size_t i = 0; i < events.count(); i++) {
                 const jackmini::midi::Event event = events.event(i);
-                if (event.data.size() > kMaxBytes) {
+                if (event.m_data.size() > kMaxBytes) {
                     gTooLarge.fetch_add(1, std::memory_order_relaxed);
                     continue;
                 }
                 Message message;
-                message.time = event.time;
-                message.size = static_cast<std::uint32_t>(event.data.size());
-                message.frame = frames_before_cycle + event.time;
-                for (std::size_t j = 0; j < event.data.size(); j++) {
-                    message.bytes[j] = static_cast<std::uint8_t>(event.data[j]);
+                message.m_time = event.m_time;
+                message.m_size = static_cast<std::uint32_t>(event.m_data.size());
+                message.m_frame = framesBeforeCycle + event.m_time;
+                for (std::size_t j = 0; j < event.m_data.size(); j++) {
+                    message.m_bytes[j] = static_cast<std::uint8_t>(event.m_data[j]);
                 }
                 if (ring.write(std::span<const Message>(&message, 1)) == 0) {
                     gRingFull.fetch_add(1, std::memory_order_relaxed);
                 }
             }
-            frames_before_cycle += cycle.frames;
+            framesBeforeCycle += cycle.m_frames;
             return true;
         }); !set) {
         return jackmini::tools::fail(kTool, set.error());
     }
 
-    std::signal(SIGHUP, on_signal);
-    std::signal(SIGINT, on_signal);
+    std::signal(SIGHUP, onSignal);
+    std::signal(SIGINT, onSignal);
     if (auto activated = client.activate(); !activated) {
         return jackmini::tools::fail(kTool, activated.error());
     }
 
-    std::uint64_t prev_event = 0;
-    std::uint64_t reported_too_large = 0;
-    std::uint64_t reported_full = 0;
+    std::uint64_t prevEvent = 0;
+    std::uint64_t reportedTooLarge = 0;
+    std::uint64_t reportedFull = 0;
     Message message;
     while (!gStop.load()) {
         while (ring.read(std::span<Message>(&message, 1)) == 1) {
-            switch (time_format) {
+            switch (timeFormat) {
             case 1:
-                std::printf("%7" PRId64 ":", static_cast<std::int64_t>(message.frame));
+                std::printf("%7" PRId64 ":", static_cast<std::int64_t>(message.m_frame));
                 break;
             case 2:
-                std::printf("%+6" PRId64 ":", static_cast<std::int64_t>(message.frame - prev_event));
+                std::printf("%+6" PRId64 ":", static_cast<std::int64_t>(message.m_frame - prevEvent));
                 break;
             default:
-                std::printf("%4u:", message.time);
+                std::printf("%4u:", message.m_time);
                 break;
             }
-            for (std::uint32_t j = 0; j < message.size; j++) {
-                std::printf(" %02x", message.bytes[j]);
+            for (std::uint32_t j = 0; j < message.m_size; j++) {
+                std::printf(" %02x", message.m_bytes[j]);
             }
             describe(message);
             std::printf("\n");
-            prev_event = message.frame;
+            prevEvent = message.m_frame;
         }
         // The counters of the realtime thread are reported here, not printed there.
-        const std::uint64_t too_large = gTooLarge.load();
-        if (too_large != reported_too_large) {
+        const std::uint64_t tooLarge = gTooLarge.load();
+        if (tooLarge != reportedTooLarge) {
             std::fprintf(stderr, "Error: MIDI message was too large, skipping event. Max. allowed size: %zu bytes\n", kMaxBytes);
-            reported_too_large = too_large;
+            reportedTooLarge = tooLarge;
         }
         const std::uint64_t full = gRingFull.load();
-        if (full != reported_full) {
+        if (full != reportedFull) {
             std::fprintf(stderr, "Error: ringbuffer was full, skipping event.\n");
-            reported_full = full;
+            reportedFull = full;
         }
         std::fflush(stdout);
         std::this_thread::sleep_for(std::chrono::milliseconds(5));

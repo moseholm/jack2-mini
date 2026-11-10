@@ -58,7 +58,7 @@ public:
     ~ClientSession();
 
     // The process callback. It is set while the client is inactive, and used by the next activate().
-    void set_process(std::move_only_function<bool(const Cycle&)> fn) { process_ = std::move(fn); }
+    void setProcess(std::move_only_function<bool(const Cycle&)> fn) { m_process = std::move(fn); }
 
     // Activates the client: with a process callback, the realtime thread runs each cycle. A client without one
     // takes part in the graph only through its connections.
@@ -67,130 +67,130 @@ public:
     // Stops the realtime thread, after the server has taken the client out of the graph.
     Result<void> deactivate();
 
-    bool is_active() const noexcept;
+    bool isActive() const noexcept;
 
     // Ports, by the graph's port numbers. The public Client keeps the handles that it gives out.
-    Result<jack_port_id_t> register_port(std::string_view short_name, const char* type, std::uint64_t flags, std::uint64_t buffer_size);
-    Result<void> unregister_port(jack_port_id_t port);
-    Result<void> connect_ports(std::string_view source, std::string_view destination);
-    Result<void> disconnect_ports(std::string_view source, std::string_view destination);
-    bool owns(jack_port_id_t port) const;
-    std::string_view port_name(jack_port_id_t port) const;
-    const char* port_type(jack_port_id_t port) const;
-    std::uint64_t port_flags(jack_port_id_t port) const;
-    std::optional<jack_port_id_t> find_port(std::string_view full_name) const;
-    std::vector<std::string> port_names(const char* type, std::uint64_t flags) const;
-    std::vector<std::string> connections(jack_port_id_t port) const;
+    Result<PortIdC> registerPort(std::string_view shortName, const char* type, std::uint64_t flags, std::uint64_t bufferSize);
+    Result<void> unregisterPort(PortIdC port);
+    Result<void> connectPorts(std::string_view source, std::string_view destination);
+    Result<void> disconnectPorts(std::string_view source, std::string_view destination);
+    bool owns(PortIdC port) const;
+    std::string_view portName(PortIdC port) const;
+    const char* portType(PortIdC port) const;
+    std::uint64_t portFlags(PortIdC port) const;
+    std::optional<PortIdC> findPort(std::string_view fullName) const;
+    std::vector<std::string> portNames(const char* type, std::uint64_t flags) const;
+    std::vector<std::string> connections(PortIdC port) const;
 
     // Everything about each port in use, in port-number order.  The owner is the UUID of the client that registered
     // the port.  The read is not locked: a port registered or released while the list is built may be missing or
     // stale, as with the other reads of the graph.
     struct PortRecord {
-        std::string name;
-        std::string type;
-        std::uint64_t flags = 0;
-        jack_latency_range_t playback_latency { };
-        jack_latency_range_t capture_latency { };
-        jack_nframes_t total_latency = 0;
-        std::vector<std::string> aliases;
-        std::uint64_t port_uuid = 0;
-        std::uint64_t owner_uuid = 0;
-        std::vector<std::string> connections;
+        std::string m_name;
+        std::string m_type;
+        std::uint64_t m_flags = 0;
+        LatencyRangeC m_playbackLatency { };
+        LatencyRangeC m_captureLatency { };
+        NframesC m_totalLatency = 0;
+        std::vector<std::string> m_aliases;
+        std::uint64_t m_portUuid = 0;
+        std::uint64_t m_ownerUuid = 0;
+        std::vector<std::string> m_connections;
     };
-    std::vector<PortRecord> port_records() const;
-    jack_nframes_t port_total_latency(jack_port_id_t port) const;
-    bool is_connected(jack_port_id_t source, jack_port_id_t destination) const;
+    std::vector<PortRecord> portRecords() const;
+    NframesC portTotalLatency(PortIdC port) const;
+    bool isConnected(PortIdC source, PortIdC destination) const;
 
     // Callbacks. They are set while the client is inactive. The notification callbacks run on the notification
     // thread, the buffer size callback also at the start of the realtime thread; they are called only while the
     // client is active, as before. The shutdown callback runs once.
-    void set_xrun_handler(Client::XrunFn fn) { xrun_ = std::move(fn); }
-    void set_shutdown_handler(Client::ShutdownFn fn) { shutdown_ = std::move(fn); }
-    void set_buffer_size_handler(Client::BufferSizeFn fn) { buffer_size_ = std::move(fn); }
-    void set_sample_rate_handler(Client::SampleRateFn fn) { sample_rate_ = std::move(fn); }
+    void setXrunHandler(Client::XrunFn fn) { m_xrun = std::move(fn); }
+    void setShutdownHandler(Client::ShutdownFn fn) { m_shutdown = std::move(fn); }
+    void setBufferSizeHandler(Client::BufferSizeFn fn) { m_bufferSize = std::move(fn); }
+    void setSampleRateHandler(Client::SampleRateFn fn) { m_sampleRate = std::move(fn); }
 
     // Latency. The latency handler runs on the notification thread when the server asks for the latency of this
     // client's ports. Without a handler, the ports take the widest range of the ports that are measured.
-    void set_latency_handler(std::move_only_function<void(LatencyMode)> fn) { latency_ = std::move(fn); }
-    jack_latency_range_t port_latency_range(jack_port_id_t port, jack_latency_callback_mode_t mode) const;
-    void set_port_latency_range(jack_port_id_t port, jack_latency_callback_mode_t mode, jack_latency_range_t range);
-    Result<void> recompute_latencies();
+    void setLatencyHandler(std::move_only_function<void(LatencyMode)> fn) { m_latency = std::move(fn); }
+    LatencyRangeC portLatencyRange(PortIdC port, LatencyCallbackModeC mode) const;
+    void setPortLatencyRange(PortIdC port, LatencyCallbackModeC mode, LatencyRangeC range);
+    Result<void> recomputeLatencies();
 
     // The buffer of a port for the cycle being processed. It is valid inside the process callback. The realtime
     // path does not lock or allocate.
-    void* port_buffer(jack_port_id_t port, jack_nframes_t frames) noexcept;
+    void* portBuffer(PortIdC port, NframesC frames) noexcept;
 
     // Transport. These write the engine's transport state directly, so they are safe on the realtime path.
-    void transport_start() noexcept;
-    void transport_stop() noexcept;
-    void transport_locate(jack_nframes_t frame) noexcept;
-    jack_transport_state_t transport_query(jack_position_t* position) const noexcept;
+    void transportStart() noexcept;
+    void transportStop() noexcept;
+    void transportLocate(NframesC frame) noexcept;
+    TransportStateC transportQuery(PositionC* position) const noexcept;
 
     // Identity and timing.
-    Result<Uuid> lookup_uuid();
-    FrameCount sample_rate() const noexcept;
-    FrameCount buffer_size() const noexcept;
-    float cpu_load() const noexcept;
+    Result<Uuid> lookupUuid();
+    FrameCount sampleRate() const noexcept;
+    FrameCount bufferSize() const noexcept;
+    float cpuLoad() const noexcept;
 
     // Unregisters the client and stops the notifications. Calling it again does nothing. An active client is
     // deactivated first.
     Result<void> close();
 
-    std::int32_t ref() const noexcept { return ref_; }
-    std::string_view name() const noexcept { return name_; }
-    bool server_alive() const noexcept { return !server_down_.load(); }
+    std::int32_t ref() const noexcept { return m_ref; }
+    std::string_view name() const noexcept { return m_name; }
+    bool serverAlive() const noexcept { return !m_serverDown.load(); }
 
 private:
     ClientSession();
 
-    Result<void> connect_and_register(std::string_view name, const OpenOptions& options);
-    bool start_notifications();
-    void notification_loop();
-    std::int32_t handle_notification(const JackClientNotification& event);
-    std::int32_t handle_latency(std::int32_t status);
-    void deliver_shutdown();
-    std::int32_t transact(JackRequest& request, JackResult& reply);
-    void shut_down_sockets();
+    Result<void> connectAndRegister(std::string_view name, const OpenOptions& options);
+    bool startNotifications();
+    void notificationLoop();
+    std::int32_t handleNotification(const ClientNotification& event);
+    std::int32_t handleLatency(std::int32_t status);
+    void deliverShutdown();
+    std::int32_t transact(Request& request, Reply& reply);
+    void shutDownSockets();
 
-    static void* realtime_entry(void* arg);
-    void wait_graph_change() const;
-    bool start_realtime();
-    void stop_realtime();
-    void realtime_run();
-    bool wait_cycle();
-    void signal_cycle();
-    Cycle build_cycle() const;
-    void end_cycles_on_failure();
+    static void* realtimeEntry(void* arg);
+    void waitGraphChange() const;
+    bool startRealtime();
+    void stopRealtime();
+    void realtimeRun();
+    bool waitCycle();
+    void signalCycle();
+    Cycle buildCycle() const;
+    void endCyclesOnFailure();
 
-    ProcessContext* context_;
-    JackClientSocket request_;
-    std::mutex request_mutex_;
+    ProcessContext* m_context;
+    ClientSocket m_request;
+    std::mutex m_requestMutex;
 
-    JackServerSocket notify_listen_;
-    std::unique_ptr<JackClientSocket> notify_;
-    std::atomic<std::int32_t> notify_fd_ { -1 }; // a copy of notify_'s descriptor, so close can shut it down
-    std::jthread notifier_;
-    std::mutex ready_mutex_;
-    std::condition_variable ready_;
-    bool ready_flag_ = false;
+    ServerSocket m_notifyListen;
+    std::unique_ptr<ClientSocket> m_notify;
+    std::atomic<std::int32_t> m_notifyFd { -1 }; // a copy of notify_'s descriptor, so close can shut it down
+    std::jthread m_notifier;
+    std::mutex m_readyMutex;
+    std::condition_variable m_ready;
+    bool m_readyFlag = false;
 
-    JackShmReadWritePtr<JackClientControl> client_;
-    std::string server_name_;
-    std::string name_;
-    std::int32_t ref_ = -1;
-    std::atomic<bool> closing_ { false };
-    std::atomic<bool> server_down_ { false };
+    ShmReadWritePtr<ClientControl> m_client;
+    std::string m_serverName;
+    std::string m_name;
+    std::int32_t m_ref = -1;
+    std::atomic<bool> m_closing { false };
+    std::atomic<bool> m_serverDown { false };
 
-    std::move_only_function<bool(const Cycle&)> process_;
-    std::move_only_function<void(LatencyMode)> latency_;
-    Client::XrunFn xrun_;
-    Client::ShutdownFn shutdown_;
-    Client::BufferSizeFn buffer_size_;
-    Client::SampleRateFn sample_rate_;
-    pthread_t realtime_thread_ { };
-    std::mutex realtime_mutex_; // guards the thread: start, stop, and the freewheel scheduling changes
-    std::atomic<bool> realtime_running_ { false };
-    std::atomic<bool> realtime_stop_ { false };
+    std::move_only_function<bool(const Cycle&)> m_process;
+    std::move_only_function<void(LatencyMode)> m_latency;
+    Client::XrunFn m_xrun;
+    Client::ShutdownFn m_shutdown;
+    Client::BufferSizeFn m_bufferSize;
+    Client::SampleRateFn m_sampleRate;
+    pthread_t m_realtimeThread { };
+    std::mutex m_realtimeMutex; // guards the thread: start, stop, and the freewheel scheduling changes
+    std::atomic<bool> m_realtimeRunning { false };
+    std::atomic<bool> m_realtimeStop { false };
 };
 
 } // namespace jackmini::client

@@ -28,64 +28,64 @@ namespace jackmini {
 // \brief A structure used for time management.
 
 
-class SERVER_EXPORT JackTimer {
+class SERVER_EXPORT Timer {
 
-    friend class JackFrameTimer;
+    friend class FrameTimer;
 
 private:
-    jack_nframes_t fFrames;
-    jack_time_t fCurrentWakeup;
-    jack_time_t fCurrentCallback;
-    jack_time_t fNextWakeUp;
-    float fPeriodUsecs;
-    float fFilterOmega;  // set once, never altered
-    bool fInitialized;
+    NframesC m_frames;
+    TimeC m_currentWakeup;
+    TimeC m_currentCallback;
+    TimeC m_nextWakeUp;
+    float m_periodUsecs;
+    float m_filterOmega;  // set once, never altered
+    bool m_initialized;
 
 public:
-    JackTimer();
-    ~JackTimer()
+    Timer();
+    ~Timer()
     {
     }
 
-    jack_nframes_t Time2Frames(jack_time_t time, jack_nframes_t buffer_size);
-    jack_time_t Frames2Time(jack_nframes_t frames, jack_nframes_t buffer_size);
-    jack_nframes_t FramesSinceCycleStart(jack_time_t cur_time, jack_nframes_t frames_rate);
-    std::int32_t GetCycleTimes(jack_nframes_t* current_frames, jack_time_t* current_usecs, jack_time_t* next_usecs, float* period_usecs);
+    NframesC time2Frames(TimeC time, NframesC bufferSize);
+    TimeC frames2Time(NframesC frames, NframesC bufferSize);
+    NframesC framesSinceCycleStart(TimeC curTime, NframesC framesRate);
+    std::int32_t getCycleTimes(NframesC* currentFrames, TimeC* currentUsecs, TimeC* nextUsecs, float* periodUsecs);
 
-    jack_nframes_t CurFrame()
+    NframesC curFrame()
     {
-        return fFrames;
+        return m_frames;
     }
 
-    jack_time_t CurTime()
+    TimeC curTime()
     {
-        return fCurrentWakeup;
+        return m_currentWakeup;
     }
 };
 
 // \brief A class using the JackAtomicState to manage jack time.
 
 
-class SERVER_EXPORT JackFrameTimer : public JackAtomicState<JackTimer> {
+class SERVER_EXPORT FrameTimer : public AtomicState<Timer> {
 
 private:
-    bool fFirstWakeUp;
-    void IncFrameTimeAux(jack_nframes_t buffer_size, jack_time_t callback_usecs, jack_time_t period_usecs);
-    void InitFrameTimeAux(jack_time_t callback_usecs, jack_time_t period_usecs);
+    bool m_firstWakeUp;
+    void incFrameTimeAux(NframesC bufferSize, TimeC callbackUsecs, TimeC periodUsecs);
+    void initFrameTimeAux(TimeC callbackUsecs, TimeC periodUsecs);
 
 public:
-    JackFrameTimer()
-        : fFirstWakeUp(true)
+    FrameTimer()
+        : m_firstWakeUp(true)
     {
     }
-    ~JackFrameTimer()
+    ~FrameTimer()
     {
     }
 
-    void InitFrameTime();
-    void ResetFrameTime(jack_time_t callback_usecs);
-    void IncFrameTime(jack_nframes_t buffer_size, jack_time_t callback_usecs, jack_time_t period_usecs);
-    void ReadFrameTime(JackTimer* timer);
+    void initFrameTime();
+    void resetFrameTime(TimeC callbackUsecs);
+    void incFrameTime(NframesC bufferSize, TimeC callbackUsecs, TimeC periodUsecs);
+    void readFrameTime(Timer* timer);
 };
 
 

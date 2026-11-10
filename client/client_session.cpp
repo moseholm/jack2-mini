@@ -47,10 +47,10 @@ namespace jackmini::client {
 namespace {
 
 // Set on the notification thread, so a call to the server from there is refused instead of deadlocking.
-thread_local bool on_notification_thread = false;
+thread_local bool gOnNotificationThread = false;
 
 // Set on the realtime thread of a client.
-thread_local bool on_realtime_thread = false;
+thread_local bool gOnRealtimeThread = false;
 
 #ifndef SCHED_RESET_ON_FORK
 #define SCHED_RESET_ON_FORK 0x40000000
@@ -58,7 +58,7 @@ thread_local bool on_realtime_thread = false;
 
 // The realtime class (SCHED_FIFO) for a thread: the same request as the thread of the server, with the reset on fork
 // when the system knows it.
-std::int32_t acquire_realtime(pthread_t thread, std::int32_t priority)
+std::int32_t acquireRealtime(pthread_t thread, std::int32_t priority)
 {
     sched_param param { };
     param.sched_priority = priority;
@@ -73,7 +73,7 @@ std::int32_t acquire_realtime(pthread_t thread, std::int32_t priority)
     return -1;
 }
 
-void drop_realtime(pthread_t thread)
+void dropRealtime(pthread_t thread)
 {
     sched_param param { };
     if (pthread_setschedparam(thread, SCHED_OTHER, &param) != 0) {
@@ -81,29 +81,29 @@ void drop_realtime(pthread_t thread)
     }
 }
 
-std::string default_server_name()
+std::string defaultServerName()
 {
     const char* name = getenv("JACK_DEFAULT_SERVER");
     return name ? name : kDefaultServerName;
 }
 
 // The bits of the options that the server reads when it checks a new client.
-std::int32_t option_bits(const OpenOptions& options)
+std::int32_t optionBits(const OpenOptions& options)
 {
     std::int32_t bits = 0;
-    if (!options.start_server) {
-        bits |= JackNoStartServer;
+    if (!options.m_startServer) {
+        bits |= kNoStartServer;
     }
-    if (options.exact_name) {
-        bits |= JackUseExactName;
+    if (options.m_exactName) {
+        bits |= kUseExactName;
     }
-    if (!options.server_name.empty()) {
-        bits |= JackServerName;
+    if (!options.m_serverName.empty()) {
+        bits |= kServerName;
     }
     return bits;
 }
 
-void shut_down_fd(std::int32_t fd)
+void shutDownFd(std::int32_t fd)
 {
     if (fd >= 0) {
         ::shutdown(fd, SHUT_RDWR);
@@ -111,9 +111,9 @@ void shut_down_fd(std::int32_t fd)
 }
 
 // The server writes a uuid as a decimal number. A uuid has the type bits set, so a smaller number is not one.
-std::optional<std::uint64_t> parse_server_uuid(std::string_view text)
+std::optional<std::uint64_t> parseServerUuid(std::string_view text)
 {
-    text = SkipNumericPrefix(text);
+    text = skipNumericPrefix(text);
     std::uint64_t value = 0;
     const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
     if (ec != std::errc() || value < (std::uint64_t(1) << 32)) {
@@ -122,20 +122,20 @@ std::optional<std::uint64_t> parse_server_uuid(std::string_view text)
     return value;
 }
 
-void setup_driver_sync(ProcessContext& context, bool freewheel)
+void setupDriverSync(ProcessContext& context, bool freewheel)
 {
     // In "async" mode the server does not wait for the drivers, so their synchro is set to flush: it keeps no
     // activations that nobody consumes. See JackClient::SetupDriverSync.
-    const bool flush = !freewheel && !context.engine->fSyncMode;
-    for (std::int32_t i = 0; i < context.engine->fDriverNum; i++) {
-        context.synchro[i].SetFlush(flush);
+    const bool flush = !freewheel && !context.m_engine->m_syncMode;
+    for (std::int32_t i = 0; i < context.m_engine->m_driverNum; i++) {
+        context.m_synchro[i].setFlush(flush);
     }
 }
 
 } // end of anonymous namespace
 
 ClientSession::ClientSession()
-    : context_(&ProcessContext::acquire())
+    : m_context(&ProcessContext::acquire())
 {
 }
 
@@ -148,226 +148,226 @@ ClientSession::~ClientSession()
 Result<std::unique_ptr<ClientSession>> ClientSession::open(std::string_view name, const OpenOptions& options)
 {
     if (name.empty() || name.size() >= kClientNameSize) {
-        return std::unexpected(Error::InvalidArgument);
+        return std::unexpected(Error::kInvalidArgument);
     }
 
     std::unique_ptr<ClientSession> session(new ClientSession());
-    if (auto opened = session->connect_and_register(name, options); !opened) {
+    if (auto opened = session->connectAndRegister(name, options); !opened) {
         return std::unexpected(opened.error());
     }
     return session;
 }
 
-Result<void> ClientSession::connect_and_register(std::string_view name_view, const OpenOptions& options)
+Result<void> ClientSession::connectAndRegister(std::string_view nameView, const OpenOptions& options)
 {
-    const std::string name(name_view);
-    server_name_ = options.server_name.empty() ? default_server_name() : options.server_name;
-    const std::int32_t bits = option_bits(options);
+    const std::string name(nameView);
+    m_serverName = options.m_serverName.empty() ? defaultServerName() : options.m_serverName;
+    const std::int32_t bits = optionBits(options);
 
-    jack_status_t status = static_cast<jack_status_t>(0);
-    if (try_start_server(server_name_.c_str(), static_cast<jack_options_t>(bits), &status) < 0) {
-        return std::unexpected(Error::NoServer);
+    StatusC status = static_cast<StatusC>(0);
+    if (tryStartServer(m_serverName.c_str(), static_cast<OptionsC>(bits), &status) < 0) {
+        return std::unexpected(Error::kNoServer);
     }
 
-    if (request_.Connect(kServerDir, server_name_.c_str(), 0) < 0) {
-        return std::unexpected(Error::Io);
+    if (m_request.connect(kServerDir, m_serverName.c_str(), 0) < 0) {
+        return std::unexpected(Error::kIo);
     }
 
-    JackClientCheckRequest check(name.c_str(), kProtocolVersion, bits, kUuidEmptyInitializer, true);
-    JackClientCheckResult check_reply;
-    if (transact(check, check_reply) < 0) {
-        return std::unexpected(Error::Io);
+    ClientCheckRequest check(name.c_str(), kProtocolVersion, bits, kUuidEmptyInitializer, true);
+    ClientCheckResult checkReply;
+    if (transact(check, checkReply) < 0) {
+        return std::unexpected(Error::kIo);
     }
-    if (check_reply.fResult < 0) {
-        if (check_reply.fStatus & JackVersionError) {
+    if (checkReply.m_result < 0) {
+        if (checkReply.m_status & kVersionError) {
             jack_error("JACK protocol mismatch %d", kProtocolVersion);
-            return std::unexpected(Error::Protocol);
+            return std::unexpected(Error::kProtocol);
         }
         jack_error("Client name = %s conflits with another running client", name.c_str());
-        return std::unexpected(Error::NameTaken);
+        return std::unexpected(Error::kNameTaken);
     }
-    const std::string name_res(check_reply.fName.data());
+    const std::string nameRes(checkReply.m_name.data());
 
-    if (notify_listen_.Bind(kClientDir, name_res.c_str(), 0) < 0) {
+    if (m_notifyListen.bind(kClientDir, nameRes.c_str(), 0) < 0) {
         jack_error("Cannot bind socket");
-        return std::unexpected(Error::Io);
+        return std::unexpected(Error::kIo);
     }
-    if (!start_notifications()) {
+    if (!startNotifications()) {
         jack_error("Cannot start channel");
-        return std::unexpected(Error::Io);
+        return std::unexpected(Error::kIo);
     }
 
-    JackClientOpenRequest open_request(name_res.c_str(), JackTools::GetPID(), kUuidEmptyInitializer);
-    JackClientOpenResult open_reply;
-    if (transact(open_request, open_reply) < 0) {
-        return std::unexpected(Error::Io);
+    ClientOpenRequest openRequest(nameRes.c_str(), Tools::getPID(), kUuidEmptyInitializer);
+    ClientOpenResult openReply;
+    if (transact(openRequest, openReply) < 0) {
+        return std::unexpected(Error::kIo);
     }
     // The descriptors belong to this function: the mappings keep the segments alive after they are closed.
     std::array<UniqueFd, 3> descriptors;
-    descriptors[0].reset(open_reply.fSharedEngine.fFd);
-    descriptors[1].reset(open_reply.fSharedGraph.fFd);
-    descriptors[2].reset(open_reply.fSharedClient.fFd);
-    if (open_reply.fResult < 0) {
-        jack_error("Cannot open %s client", name_res.c_str());
-        return std::unexpected(Error::ServerFailure);
+    descriptors[0].reset(openReply.m_sharedEngine.m_fd);
+    descriptors[1].reset(openReply.m_sharedGraph.m_fd);
+    descriptors[2].reset(openReply.m_sharedClient.m_fd);
+    if (openReply.m_result < 0) {
+        jack_error("Cannot open %s client", nameRes.c_str());
+        return std::unexpected(Error::kServerFailure);
     }
 
-    ProcessContext& context = *context_;
+    ProcessContext& context = *m_context;
     try {
-        context.engine.Map(open_reply.fSharedEngine);
-        context.graph.Map(open_reply.fSharedGraph);
-        client_.Map(open_reply.fSharedClient);
+        context.m_engine.map(openReply.m_sharedEngine);
+        context.m_graph.map(openReply.m_sharedGraph);
+        m_client.map(openReply.m_sharedClient);
     } catch (...) {
         jack_error("Map shared memory segments exception");
-        return std::unexpected(Error::Io);
+        return std::unexpected(Error::kIo);
     }
-    JackGlobals::fVerbose = context.engine->fVerbose;
+    Globals::s_verbose = context.m_engine->m_verbose;
 
-    ref_ = client_->fRefNum;
-    name_ = name_res;
-    setup_driver_sync(context, context.engine->fFreewheel);
+    m_ref = m_client->m_refNum;
+    m_name = nameRes;
+    setupDriverSync(context, context.m_engine->m_freewheel);
 
     {
-        std::lock_guard lock(context.synchro_mutex);
-        if (!context.synchro[ref_].Connect(name_.c_str(), server_name_.c_str())) {
-            jack_error("Cannot ConnectSemaphore %s client", name_.c_str());
-            return std::unexpected(Error::Io);
+        std::lock_guard lock(context.m_synchroMutex);
+        if (!context.m_synchro[m_ref].connect(m_name.c_str(), m_serverName.c_str())) {
+            jack_error("Cannot ConnectSemaphore %s client", m_name.c_str());
+            return std::unexpected(Error::kIo);
         }
     }
-    set_clock_source(context.engine->fClockSource);
+    setClockSource(context.m_engine->m_clockSource);
     return { };
 }
 
-bool ClientSession::start_notifications()
+bool ClientSession::startNotifications()
 {
-    notifier_ = std::jthread([this](std::stop_token) { notification_loop(); });
-    std::unique_lock lock(ready_mutex_);
-    ready_.wait(lock, [this] { return ready_flag_; });
+    m_notifier = std::jthread([this](std::stop_token) { notificationLoop(); });
+    std::unique_lock lock(m_readyMutex);
+    m_ready.wait(lock, [this] { return m_readyFlag; });
     return true;
 }
 
-void ClientSession::notification_loop()
+void ClientSession::notificationLoop()
 {
-    on_notification_thread = true;
+    gOnNotificationThread = true;
     {
-        std::lock_guard lock(ready_mutex_);
-        ready_flag_ = true;
+        std::lock_guard lock(m_readyMutex);
+        m_readyFlag = true;
     }
-    ready_.notify_all();
+    m_ready.notify_all();
 
     // The listening socket is closed by close(), after this thread has been joined.
-    notify_.reset(notify_listen_.Accept());
-    if (!notify_) {
+    m_notify.reset(m_notifyListen.accept());
+    if (!m_notify) {
         jack_error("JackSocketClientChannel: cannot establish notification socket");
-        server_down_ = true;
+        m_serverDown = true;
         return;
     }
-    notify_fd_ = notify_->GetFd();
+    m_notifyFd = m_notify->getFd();
 
     while (true) {
-        JackMsgHeader header { };
-        if (std::int32_t err = ReadJackMsgHeader(notify_.get(), header); err < 0) {
-            if (err != kRequestErrAborted && !closing_) {
+        MsgHeader header { };
+        if (std::int32_t err = readJackMsgHeader(m_notify.get(), header); err < 0) {
+            if (err != kRequestErrAborted && !m_closing) {
                 jack_error("JackSocketClientChannel read fail");
             }
             break;
         }
-        if (header.version != kJackMsgVersion || header.length != JackClientNotification::PayloadSize) {
-            jack_error("JackSocketClientChannel: notification of protocol version %d, length %d", header.version, header.length);
+        if (header.m_version != kJackMsgVersion || header.m_length != ClientNotification::kPayloadSize) {
+            jack_error("JackSocketClientChannel: notification of protocol version %d, length %d", header.m_version, header.m_length);
             break;
         }
 
-        JackClientNotification event;
+        ClientNotification event;
         {
-            JackPayloadReader payload(notify_.get(), header.length, { });
-            if (event.Read(&payload) < 0 || !payload.Done()) {
+            PayloadReader payload(m_notify.get(), header.m_length, { });
+            if (event.read(&payload) < 0 || !payload.done()) {
                 jack_error("JackSocketClientChannel: notification does not match its length");
                 break;
             }
         }
-        if (event.fNotify == kDropped) {
-            jack_error("JACK server dropped %d notifications for this client (it did not read them in time)", event.fValue1);
+        if (event.m_notify == kDropped) {
+            jack_error("JACK server dropped %d notifications for this client (it did not read them in time)", event.m_value1);
         }
 
-        JackResult reply;
-        reply.fResult = handle_notification(event);
-        if (event.fSync && SendJackReply(notify_.get(), reply, header) < 0) {
+        Reply reply;
+        reply.m_result = handleNotification(event);
+        if (event.m_sync && sendJackReply(m_notify.get(), reply, header) < 0) {
             jack_error("JackSocketClientChannel write fail");
             break;
         }
     }
     // Ending the loop by close() is not a server failure. A lost connection is reported to the client once.
-    if (!closing_) {
-        server_down_ = true;
-        deliver_shutdown();
+    if (!m_closing) {
+        m_serverDown = true;
+        deliverShutdown();
     }
 }
 
-void ClientSession::deliver_shutdown()
+void ClientSession::deliverShutdown()
 {
-    if (shutdown_) {
-        auto fn = std::move(shutdown_);
-        shutdown_ = nullptr;
+    if (m_shutdown) {
+        auto fn = std::move(m_shutdown);
+        m_shutdown = nullptr;
         fn();
     }
 }
 
-std::int32_t ClientSession::handle_notification(const JackClientNotification& event)
+std::int32_t ClientSession::handleNotification(const ClientNotification& event)
 {
-    ProcessContext& context = *context_;
+    ProcessContext& context = *m_context;
     std::int32_t res = 0;
-    switch (event.fNotify) {
+    switch (event.m_notify) {
     case kAddClient: {
-        std::lock_guard lock(context.synchro_mutex);
-        res = context.synchro[event.fRefNum].Connect(event.fName.data(), server_name_.c_str()) ? 0 : -1;
+        std::lock_guard lock(context.m_synchroMutex);
+        res = context.m_synchro[event.m_refNum].connect(event.m_name.data(), m_serverName.c_str()) ? 0 : -1;
         break;
     }
     case kRemoveClient:
-        if (name_ != event.fName.data()) {
-            std::lock_guard lock(context.synchro_mutex);
-            res = context.synchro[event.fRefNum].Disconnect() ? 0 : -1;
+        if (m_name != event.m_name.data()) {
+            std::lock_guard lock(context.m_synchroMutex);
+            res = context.m_synchro[event.m_refNum].disconnect() ? 0 : -1;
         }
         break;
     case kShutDownCallback:
-        server_down_ = true;
-        if (is_active()) {
-            deliver_shutdown();
+        m_serverDown = true;
+        if (isActive()) {
+            deliverShutdown();
         }
         break;
     case kLatencyCallback:
-        if (is_active()) {
-            res = handle_latency(event.fValue1);
+        if (isActive()) {
+            res = handleLatency(event.m_value1);
         }
         break;
     case kXRunCallback:
-        if (is_active() && xrun_) {
-            xrun_();
+        if (isActive() && m_xrun) {
+            m_xrun();
         }
         break;
     case kBufferSizeCallback:
-        if (is_active() && buffer_size_) {
-            res = buffer_size_(event.fValue1) ? 0 : -1;
+        if (isActive() && m_bufferSize) {
+            res = m_bufferSize(event.m_value1) ? 0 : -1;
         }
         break;
     case kSampleRateCallback:
-        if (is_active() && sample_rate_) {
-            res = sample_rate_(event.fValue1) ? 0 : -1;
+        if (isActive() && m_sampleRate) {
+            res = m_sampleRate(event.m_value1) ? 0 : -1;
         }
         break;
     case kStartFreewheelCallback: {
-        setup_driver_sync(context, true);
+        setupDriverSync(context, true);
         // Freewheel runs the cycles without the sound card, so the realtime class is given up while it lasts.
-        std::lock_guard lock(realtime_mutex_);
-        if (realtime_running_ && is_active()) {
-            drop_realtime(realtime_thread_);
+        std::lock_guard lock(m_realtimeMutex);
+        if (m_realtimeRunning && isActive()) {
+            dropRealtime(m_realtimeThread);
         }
         break;
     }
     case kStopFreewheelCallback: {
-        setup_driver_sync(context, false);
-        std::lock_guard lock(realtime_mutex_);
-        if (context.engine->fRealTime && realtime_running_ && is_active()) {
-            if (acquire_realtime(realtime_thread_, context.engine->fClientPriority) < 0) {
+        setupDriverSync(context, false);
+        std::lock_guard lock(m_realtimeMutex);
+        if (context.m_engine->m_realTime && m_realtimeRunning && isActive()) {
+            if (acquireRealtime(m_realtimeThread, context.m_engine->m_clientPriority) < 0) {
                 jack_error("JackClient::AcquireRealTime error");
             }
         }
@@ -377,120 +377,120 @@ std::int32_t ClientSession::handle_notification(const JackClientNotification& ev
     return res;
 }
 
-std::int32_t ClientSession::transact(JackRequest& request, JackResult& reply)
+std::int32_t ClientSession::transact(Request& request, Reply& reply)
 {
-    if (on_notification_thread) {
+    if (gOnNotificationThread) {
         jack_error("Cannot callback the server in notification thread!");
         return -1;
     }
-    if (server_down_) {
+    if (m_serverDown) {
         jack_error("Server is not running");
         return -1;
     }
 
-    std::lock_guard lock(request_mutex_);
-    if (request.Write(&request_) < 0) {
-        jack_error("Could not write request type = %ld", request.fType);
+    std::lock_guard lock(m_requestMutex);
+    if (request.write(&m_request) < 0) {
+        jack_error("Could not write request type = %ld", request.m_type);
         return -1;
     }
-    if (ReadJackReply(&request_, request.fType, request.fRequestId, reply) < 0) {
-        jack_error("Could not read result type = %ld", request.fType);
+    if (readJackReply(&m_request, request.m_type, request.m_requestId, reply) < 0) {
+        jack_error("Could not read result type = %ld", request.m_type);
         return -1;
     }
     return 0;
 }
 
-Result<jack_port_id_t> ClientSession::register_port(std::string_view short_name, const char* type, std::uint64_t flags, std::uint64_t buffer_size)
+Result<PortIdC> ClientSession::registerPort(std::string_view shortName, const char* type, std::uint64_t flags, std::uint64_t bufferSize)
 {
-    if (short_name.empty()) {
+    if (shortName.empty()) {
         jack_error("port_name is empty");
-        return std::unexpected(Error::InvalidArgument);
+        return std::unexpected(Error::kInvalidArgument);
     }
-    const std::string full_name = name_ + ":" + std::string(short_name);
-    if (full_name.size() >= kRealJackPortNameSize) {
-        jack_error("\"%s\" is too long to be used as a JACK port name.", full_name.c_str());
-        return std::unexpected(Error::InvalidArgument);
+    const std::string fullName = m_name + ":" + std::string(shortName);
+    if (fullName.size() >= kRealJackPortNameSize) {
+        jack_error("\"%s\" is too long to be used as a JACK port name.", fullName.c_str());
+        return std::unexpected(Error::kInvalidArgument);
     }
 
-    JackPortRegisterRequest request(ref_, full_name.c_str(), type, static_cast<std::uint32_t>(flags), static_cast<std::uint32_t>(buffer_size));
-    JackPortRegisterResult reply;
-    if (transact(request, reply) < 0 || reply.fResult < 0) {
-        return std::unexpected(Error::ServerFailure);
+    PortRegisterRequest request(m_ref, fullName.c_str(), type, static_cast<std::uint32_t>(flags), static_cast<std::uint32_t>(bufferSize));
+    PortRegisterResult reply;
+    if (transact(request, reply) < 0 || reply.m_result < 0) {
+        return std::unexpected(Error::kServerFailure);
     }
-    return reply.fPortIndex;
+    return reply.m_portIndex;
 }
 
-Result<void> ClientSession::unregister_port(jack_port_id_t port)
+Result<void> ClientSession::unregisterPort(PortIdC port)
 {
     if (!owns(port)) {
         jack_error("unregistering a port %ld that is not own by the client", port);
-        return std::unexpected(Error::NotFound);
+        return std::unexpected(Error::kNotFound);
     }
-    JackPortUnRegisterRequest request(ref_, port);
-    JackResult reply;
-    if (transact(request, reply) < 0 || reply.fResult < 0) {
-        return std::unexpected(Error::ServerFailure);
+    PortUnRegisterRequest request(m_ref, port);
+    Reply reply;
+    if (transact(request, reply) < 0 || reply.m_result < 0) {
+        return std::unexpected(Error::kServerFailure);
     }
     return { };
 }
 
-Result<void> ClientSession::connect_ports(std::string_view source, std::string_view destination)
+Result<void> ClientSession::connectPorts(std::string_view source, std::string_view destination)
 {
     if (source.size() >= kRealJackPortNameSize || destination.size() >= kRealJackPortNameSize) {
-        return std::unexpected(Error::InvalidArgument);
+        return std::unexpected(Error::kInvalidArgument);
     }
     const std::string src(source);
     const std::string dst(destination);
-    JackPortConnectNameRequest request(ref_, src.c_str(), dst.c_str());
-    JackResult reply;
-    if (transact(request, reply) < 0 || reply.fResult < 0) {
-        return std::unexpected(Error::ServerFailure);
+    PortConnectNameRequest request(m_ref, src.c_str(), dst.c_str());
+    Reply reply;
+    if (transact(request, reply) < 0 || reply.m_result < 0) {
+        return std::unexpected(Error::kServerFailure);
     }
     return { };
 }
 
-Result<void> ClientSession::disconnect_ports(std::string_view source, std::string_view destination)
+Result<void> ClientSession::disconnectPorts(std::string_view source, std::string_view destination)
 {
     if (source.size() >= kRealJackPortNameSize || destination.size() >= kRealJackPortNameSize) {
-        return std::unexpected(Error::InvalidArgument);
+        return std::unexpected(Error::kInvalidArgument);
     }
     const std::string src(source);
     const std::string dst(destination);
-    JackPortDisconnectNameRequest request(ref_, src.c_str(), dst.c_str());
-    JackResult reply;
-    if (transact(request, reply) < 0 || reply.fResult < 0) {
-        return std::unexpected(Error::ServerFailure);
+    PortDisconnectNameRequest request(m_ref, src.c_str(), dst.c_str());
+    Reply reply;
+    if (transact(request, reply) < 0 || reply.m_result < 0) {
+        return std::unexpected(Error::kServerFailure);
     }
     return { };
 }
 
-bool ClientSession::owns(jack_port_id_t port) const
+bool ClientSession::owns(PortIdC port) const
 {
-    return port > 0 && port < kPortNumMax && context_->graph->GetPort(port)->GetRefNum() == ref_;
+    return port > 0 && port < kPortNumMax && m_context->m_graph->getPort(port)->getRefNum() == m_ref;
 }
 
-std::string_view ClientSession::port_name(jack_port_id_t port) const
+std::string_view ClientSession::portName(PortIdC port) const
 {
     if (port == 0 || port >= kPortNumMax) {
         return { };
     }
-    return context_->graph->GetPort(port)->GetName();
+    return m_context->m_graph->getPort(port)->getName();
 }
 
-const char* ClientSession::port_type(jack_port_id_t port) const
+const char* ClientSession::portType(PortIdC port) const
 {
-    return context_->graph->GetPort(port)->GetType();
+    return m_context->m_graph->getPort(port)->getType();
 }
 
-std::uint64_t ClientSession::port_flags(jack_port_id_t port) const
+std::uint64_t ClientSession::portFlags(PortIdC port) const
 {
-    return context_->graph->GetPort(port)->GetFlags();
+    return m_context->m_graph->getPort(port)->getFlags();
 }
 
-std::optional<jack_port_id_t> ClientSession::find_port(std::string_view full_name) const
+std::optional<PortIdC> ClientSession::findPort(std::string_view fullName) const
 {
-    const std::string text(full_name);
-    const jack_port_id_t port = context_->graph->GetPort(text.c_str());
+    const std::string text(fullName);
+    const PortIdC port = m_context->m_graph->getPort(text.c_str());
     if (port == kNoPort) {
         return std::nullopt;
     }
@@ -501,7 +501,7 @@ namespace {
 
 // The graph gives a list of names that point into its own table, and a list that it allocated. The names are copied
 // and the list is freed.
-std::vector<std::string> take_names(const char** list)
+std::vector<std::string> takeNames(const char** list)
 {
     std::vector<std::string> names;
     if (list == nullptr) {
@@ -516,402 +516,402 @@ std::vector<std::string> take_names(const char** list)
 
 } // end of anonymous namespace
 
-std::vector<std::string> ClientSession::port_names(const char* type, std::uint64_t flags) const
+std::vector<std::string> ClientSession::portNames(const char* type, std::uint64_t flags) const
 {
-    return take_names(context_->graph->GetPorts(nullptr, type, flags));
+    return takeNames(m_context->m_graph->getPorts(nullptr, type, flags));
 }
 
-std::vector<std::string> ClientSession::connections(jack_port_id_t port) const
+std::vector<std::string> ClientSession::connections(PortIdC port) const
 {
-    wait_graph_change();
-    return take_names(context_->graph->GetConnections(port));
+    waitGraphChange();
+    return takeNames(m_context->m_graph->getConnections(port));
 }
 
-std::vector<ClientSession::PortRecord> ClientSession::port_records() const
+std::vector<ClientSession::PortRecord> ClientSession::portRecords() const
 {
-    wait_graph_change();
+    waitGraphChange();
     std::vector<PortRecord> records;
-    const jack_port_id_t max = context_->graph->PortMax();
-    for (jack_port_id_t index = kFirstAvailablePort; index < max; index++) {
-        JackPort* port = context_->graph->GetPort(index);
-        if (!port->InUse()) {
+    const PortIdC max = m_context->m_graph->portMax();
+    for (PortIdC index = kFirstAvailablePort; index < max; index++) {
+        ServerPort* port = m_context->m_graph->getPort(index);
+        if (!port->inUse()) {
             continue;
         }
         PortRecord record;
-        record.name = port->GetName();
-        record.type = port->GetType();
-        record.flags = port->GetFlags();
-        port->GetLatencyRange(JackPlaybackLatency, &record.playback_latency);
-        port->GetLatencyRange(JackCaptureLatency, &record.capture_latency);
-        record.total_latency = port->GetTotalLatency();
+        record.m_name = port->getName();
+        record.m_type = port->getType();
+        record.m_flags = port->getFlags();
+        port->getLatencyRange(kPlaybackLatency, &record.m_playbackLatency);
+        port->getLatencyRange(kCaptureLatency, &record.m_captureLatency);
+        record.m_totalLatency = port->getTotalLatency();
 
         std::array<char, kRealJackPortNameSize + 1> alias1 { }, alias2 { };
         std::array<char* const, 2> aliases = { alias1.data(), alias2.data() };
-        const std::int32_t count = port->GetAliases(aliases.data());
+        const std::int32_t count = port->getAliases(aliases.data());
         for (std::int32_t i = 0; i < count; i++) {
-            record.aliases.emplace_back(aliases[i]);
+            record.m_aliases.emplace_back(aliases[i]);
         }
 
-        record.port_uuid = port->GetUUID();
-        record.owner_uuid = context_->graph->GetClientUUID(port->GetRefNum());
-        record.connections = take_names(context_->graph->GetConnections(index));
+        record.m_portUuid = port->getUUID();
+        record.m_ownerUuid = m_context->m_graph->getClientUUID(port->getRefNum());
+        record.m_connections = takeNames(m_context->m_graph->getConnections(index));
         records.push_back(std::move(record));
     }
     return records;
 }
 
-jack_nframes_t ClientSession::port_total_latency(jack_port_id_t port) const
+NframesC ClientSession::portTotalLatency(PortIdC port) const
 {
-    wait_graph_change();
-    return context_->graph->GetPort(port)->GetTotalLatency();
+    waitGraphChange();
+    return m_context->m_graph->getPort(port)->getTotalLatency();
 }
 
-bool ClientSession::is_connected(jack_port_id_t source, jack_port_id_t destination) const
+bool ClientSession::isConnected(PortIdC source, PortIdC destination) const
 {
-    wait_graph_change();
-    return context_->graph->IsConnected(source, destination);
+    waitGraphChange();
+    return m_context->m_graph->isConnected(source, destination);
 }
 
-void ClientSession::wait_graph_change() const
+void ClientSession::waitGraphChange() const
 {
     // A pending graph change is waited for on a client's own thread only. The realtime thread reads the current state.
-    if (on_realtime_thread) {
+    if (gOnRealtimeThread) {
         return;
     }
-    if (context_->graph->IsPendingChange()) {
-        sleep_microseconds(std::int32_t(context_->engine->fPeriodUsecs * 1.1f));
+    if (m_context->m_graph->isPendingChange()) {
+        sleepMicroseconds(std::int32_t(m_context->m_engine->m_periodUsecs * 1.1f));
     }
 }
 
 // The server asks for the latency of the ports, in one direction (status 0 is capture, the others playback). The ports
 // measured in that direction get their range from their connections first; then the handler decides, or the default does.
-std::int32_t ClientSession::handle_latency(std::int32_t status)
+std::int32_t ClientSession::handleLatency(std::int32_t status)
 {
-    const jack_latency_callback_mode_t mode = (status == 0) ? JackCaptureLatency : JackPlaybackLatency;
-    ProcessContext& context = *context_;
-    std::vector<jack_port_id_t> ports;
-    context.graph->GetOwnedPorts(ref_, ports);
+    const LatencyCallbackModeC mode = (status == 0) ? kCaptureLatency : kPlaybackLatency;
+    ProcessContext& context = *m_context;
+    std::vector<PortIdC> ports;
+    context.m_graph->getOwnedPorts(m_ref, ports);
 
-    for (jack_port_id_t port : ports) {
-        const std::uint64_t flags = context.graph->GetPort(port)->GetFlags();
-        if ((flags & JackPortIsOutput) && mode == JackPlaybackLatency) {
-            context.graph->RecalculateLatency(port, mode);
+    for (PortIdC port : ports) {
+        const std::uint64_t flags = context.m_graph->getPort(port)->getFlags();
+        if ((flags & kPortIsOutput) && mode == kPlaybackLatency) {
+            context.m_graph->recalculateLatency(port, mode);
         }
-        if ((flags & JackPortIsInput) && mode == JackCaptureLatency) {
-            context.graph->RecalculateLatency(port, mode);
+        if ((flags & kPortIsInput) && mode == kCaptureLatency) {
+            context.m_graph->recalculateLatency(port, mode);
         }
     }
 
-    if (latency_) {
-        latency_(mode == JackCaptureLatency ? LatencyMode::Capture : LatencyMode::Playback);
+    if (m_latency) {
+        m_latency(mode == kCaptureLatency ? LatencyMode::kCapture : LatencyMode::kPlayback);
         return 0;
     }
 
     // Playback: the input ports take the widest range of the output ports. Capture: the output ports take the widest
     // range of the input ports. This is the default that every port without a handler gets.
-    const bool playback = mode == JackPlaybackLatency;
-    const std::uint64_t measured = playback ? JackPortIsOutput : JackPortIsInput;
-    const std::uint64_t set_on = playback ? JackPortIsInput : JackPortIsOutput;
-    jack_latency_range_t latency = { UINT32_MAX, 0 };
-    for (jack_port_id_t port : ports) {
-        JackPort* p = context.graph->GetPort(port);
-        if (p->GetFlags() & measured) {
-            jack_latency_range_t other { };
-            p->GetLatencyRange(mode, &other);
-            latency.max = std::max(latency.max, other.max);
-            latency.min = std::min(latency.min, other.min);
+    const bool playback = mode == kPlaybackLatency;
+    const std::uint64_t measured = playback ? kPortIsOutput : kPortIsInput;
+    const std::uint64_t setOn = playback ? kPortIsInput : kPortIsOutput;
+    LatencyRangeC latency = { UINT32_MAX, 0 };
+    for (PortIdC port : ports) {
+        ServerPort* p = context.m_graph->getPort(port);
+        if (p->getFlags() & measured) {
+            LatencyRangeC other { };
+            p->getLatencyRange(mode, &other);
+            latency.m_max = std::max(latency.m_max, other.m_max);
+            latency.m_min = std::min(latency.m_min, other.m_min);
         }
     }
-    if (latency.min == UINT32_MAX) {
-        latency.min = 0;
+    if (latency.m_min == UINT32_MAX) {
+        latency.m_min = 0;
     }
-    for (jack_port_id_t port : ports) {
-        JackPort* p = context.graph->GetPort(port);
-        if (p->GetFlags() & set_on) {
-            p->SetLatencyRange(mode, &latency);
+    for (PortIdC port : ports) {
+        ServerPort* p = context.m_graph->getPort(port);
+        if (p->getFlags() & setOn) {
+            p->setLatencyRange(mode, &latency);
         }
     }
     return 0;
 }
 
-jack_latency_range_t ClientSession::port_latency_range(jack_port_id_t port, jack_latency_callback_mode_t mode) const
+LatencyRangeC ClientSession::portLatencyRange(PortIdC port, LatencyCallbackModeC mode) const
 {
-    wait_graph_change();
-    jack_latency_range_t range { };
-    context_->graph->GetPort(port)->GetLatencyRange(mode, &range);
+    waitGraphChange();
+    LatencyRangeC range { };
+    m_context->m_graph->getPort(port)->getLatencyRange(mode, &range);
     return range;
 }
 
-void ClientSession::set_port_latency_range(jack_port_id_t port, jack_latency_callback_mode_t mode, jack_latency_range_t range)
+void ClientSession::setPortLatencyRange(PortIdC port, LatencyCallbackModeC mode, LatencyRangeC range)
 {
-    wait_graph_change();
-    context_->graph->GetPort(port)->SetLatencyRange(mode, &range);
+    waitGraphChange();
+    m_context->m_graph->getPort(port)->setLatencyRange(mode, &range);
 }
 
-Result<void> ClientSession::recompute_latencies()
+Result<void> ClientSession::recomputeLatencies()
 {
-    JackComputeTotalLatenciesRequest request;
-    JackResult reply;
-    if (transact(request, reply) < 0 || reply.fResult < 0) {
-        return std::unexpected(Error::ServerFailure);
+    ComputeTotalLatenciesRequest request;
+    Reply reply;
+    if (transact(request, reply) < 0 || reply.m_result < 0) {
+        return std::unexpected(Error::kServerFailure);
     }
     return { };
 }
 
-void ClientSession::transport_start() noexcept
+void ClientSession::transportStart() noexcept
 {
-    context_->engine->fTransport.SetCommand(TransportCommandStart);
+    m_context->m_engine->m_transport.setCommand(kTransportCommandStart);
 }
 
-void ClientSession::transport_stop() noexcept
+void ClientSession::transportStop() noexcept
 {
-    context_->engine->fTransport.SetCommand(TransportCommandStop);
+    m_context->m_engine->m_transport.setCommand(kTransportCommandStop);
 }
 
-void ClientSession::transport_locate(jack_nframes_t frame) noexcept
+void ClientSession::transportLocate(NframesC frame) noexcept
 {
-    jack_position_t position { };
-    position.frame = frame;
-    position.valid = static_cast<jack_position_bits_t>(0);
-    context_->engine->fTransport.RequestNewPos(&position);
+    PositionC position { };
+    position.m_frame = frame;
+    position.m_valid = static_cast<PositionBitsC>(0);
+    m_context->m_engine->m_transport.requestNewPos(&position);
 }
 
-jack_transport_state_t ClientSession::transport_query(jack_position_t* position) const noexcept
+TransportStateC ClientSession::transportQuery(PositionC* position) const noexcept
 {
-    return context_->engine->fTransport.Query(position);
+    return m_context->m_engine->m_transport.query(position);
 }
 
-void* ClientSession::port_buffer(jack_port_id_t port, jack_nframes_t frames) noexcept
+void* ClientSession::portBuffer(PortIdC port, NframesC frames) noexcept
 {
-    return context_->graph->GetBuffer(port, frames);
+    return m_context->m_graph->getBuffer(port, frames);
 }
 
-Result<Uuid> ClientSession::lookup_uuid()
+Result<Uuid> ClientSession::lookupUuid()
 {
-    JackGetUUIDRequest request(name_.c_str());
-    JackUUIDResult reply;
-    if (transact(request, reply) < 0 || reply.fResult < 0) {
-        return std::unexpected(Error::ServerFailure);
+    GetUUIDRequest request(m_name.c_str());
+    UUIDResult reply;
+    if (transact(request, reply) < 0 || reply.m_result < 0) {
+        return std::unexpected(Error::kServerFailure);
     }
-    const auto parsed = parse_server_uuid(reply.fUUID.data());
+    const auto parsed = parseServerUuid(reply.m_uUID.data());
     if (!parsed) {
-        return std::unexpected(Error::Protocol);
+        return std::unexpected(Error::kProtocol);
     }
     return Uuid(*parsed);
 }
 
-FrameCount ClientSession::sample_rate() const noexcept
+FrameCount ClientSession::sampleRate() const noexcept
 {
-    return context_->engine->fSampleRate;
+    return m_context->m_engine->m_sampleRate;
 }
 
-FrameCount ClientSession::buffer_size() const noexcept
+FrameCount ClientSession::bufferSize() const noexcept
 {
-    return context_->engine->fBufferSize;
+    return m_context->m_engine->m_bufferSize;
 }
 
-float ClientSession::cpu_load() const noexcept
+float ClientSession::cpuLoad() const noexcept
 {
-    return context_->engine->fCPULoad;
+    return m_context->m_engine->m_cPULoad;
 }
 
-bool ClientSession::is_active() const noexcept
+bool ClientSession::isActive() const noexcept
 {
-    return ref_ >= 0 && std::atomic_ref<bool>(client_->fActive).load();
+    return m_ref >= 0 && std::atomic_ref<bool>(m_client->m_active).load();
 }
 
 Result<void> ClientSession::activate()
 {
-    if (ref_ < 0) {
-        return std::unexpected(Error::InvalidState);
+    if (m_ref < 0) {
+        return std::unexpected(Error::kInvalidState);
     }
-    if (is_active()) {
+    if (isActive()) {
         return { };
     }
 
-    const bool real_time = static_cast<bool>(process_);
-    if (real_time && !start_realtime()) {
-        return std::unexpected(Error::ServerFailure);
+    const bool realTime = static_cast<bool>(m_process);
+    if (realTime && !startRealtime()) {
+        return std::unexpected(Error::kServerFailure);
     }
 
     // Insertion of the client in the graph causes a graph order notification, which the client wants. The transport
     // flags are set as they were before: the server asks the client about transport through them.
-    std::atomic_ref<bool>(client_->fActive).store(true);
-    client_->fTransportSync = true;
-    client_->fTransportTimebase = true;
-    client_->fCallback[kRealTimeCallback] = real_time;
+    std::atomic_ref<bool>(m_client->m_active).store(true);
+    m_client->m_transportSync = true;
+    m_client->m_transportTimebase = true;
+    m_client->m_callback[kRealTimeCallback] = realTime;
 
-    JackActivateRequest request(ref_, real_time);
-    JackResult reply;
-    if (transact(request, reply) < 0 || reply.fResult < 0) {
-        std::atomic_ref<bool>(client_->fActive).store(false);
-        client_->fTransportSync = false;
-        client_->fTransportTimebase = false;
-        stop_realtime();
-        return std::unexpected(Error::ServerFailure);
+    ActivateRequest request(m_ref, realTime);
+    Reply reply;
+    if (transact(request, reply) < 0 || reply.m_result < 0) {
+        std::atomic_ref<bool>(m_client->m_active).store(false);
+        m_client->m_transportSync = false;
+        m_client->m_transportTimebase = false;
+        stopRealtime();
+        return std::unexpected(Error::kServerFailure);
     }
     return { };
 }
 
 Result<void> ClientSession::deactivate()
 {
-    if (!is_active()) {
+    if (!isActive()) {
         // A thread that ended by itself after a failed cycle still has to be joined.
-        stop_realtime();
+        stopRealtime();
         return { };
     }
 
-    std::atomic_ref<bool>(client_->fActive).store(false);
-    client_->fTransportSync = false;
-    client_->fTransportTimebase = false;
+    std::atomic_ref<bool>(m_client->m_active).store(false);
+    m_client->m_transportSync = false;
+    m_client->m_transportTimebase = false;
 
     // The server takes the client out of the graph and waits for the cycle to finish before it answers. Only then is the
     // realtime thread stopped.
-    JackDeactivateRequest request(ref_);
-    JackResult reply;
-    const bool ok = transact(request, reply) == 0 && reply.fResult == 0;
-    stop_realtime();
-    return ok ? Result<void> { } : std::unexpected(Error::ServerFailure);
+    DeactivateRequest request(m_ref);
+    Reply reply;
+    const bool ok = transact(request, reply) == 0 && reply.m_result == 0;
+    stopRealtime();
+    return ok ? Result<void> { } : std::unexpected(Error::kServerFailure);
 }
 
-bool ClientSession::start_realtime()
+bool ClientSession::startRealtime()
 {
-    std::lock_guard lock(realtime_mutex_);
-    realtime_stop_ = false;
-    if (pthread_create(&realtime_thread_, nullptr, &ClientSession::realtime_entry, this) != 0) {
+    std::lock_guard lock(m_realtimeMutex);
+    m_realtimeStop = false;
+    if (pthread_create(&m_realtimeThread, nullptr, &ClientSession::realtimeEntry, this) != 0) {
         jack_error("Start thread error");
         return false;
     }
-    realtime_running_ = true;
+    m_realtimeRunning = true;
     return true;
 }
 
-void ClientSession::stop_realtime()
+void ClientSession::stopRealtime()
 {
-    std::lock_guard lock(realtime_mutex_);
-    if (!realtime_running_) {
+    std::lock_guard lock(m_realtimeMutex);
+    if (!m_realtimeRunning) {
         return;
     }
     // A running thread belongs to an open client, so ref_ is valid here.
-    realtime_stop_ = true;
+    m_realtimeStop = true;
     // The thread may be waiting for a cycle. The signal wakes it, and it checks the stop flag before it runs a cycle.
-    context_->synchro[ref_].Signal();
-    pthread_join(realtime_thread_, nullptr);
-    realtime_running_ = false;
+    m_context->m_synchro[m_ref].signal();
+    pthread_join(m_realtimeThread, nullptr);
+    m_realtimeRunning = false;
     // A wake-up that the thread did not take must not reach the next activation.
-    context_->synchro[ref_].TimedWait(0);
+    m_context->m_synchro[m_ref].timedWait(0);
 }
 
-void* ClientSession::realtime_entry(void* arg)
+void* ClientSession::realtimeEntry(void* arg)
 {
-    static_cast<ClientSession*>(arg)->realtime_run();
+    static_cast<ClientSession*>(arg)->realtimeRun();
     return nullptr;
 }
 
-void ClientSession::realtime_run()
+void ClientSession::realtimeRun()
 {
-    on_realtime_thread = true;
-    if (context_->engine->fRealTime) {
-        set_threaded_log_function();
-        if (acquire_realtime(pthread_self(), context_->engine->fClientPriority) < 0) {
+    gOnRealtimeThread = true;
+    if (m_context->m_engine->m_realTime) {
+        setThreadedLogFunction();
+        if (acquireRealtime(pthread_self(), m_context->m_engine->m_clientPriority) < 0) {
             jack_error("JackClient::AcquireSelfRealTime error");
         }
     }
     // The buffer size is reported before the first cycle, so no buffer size callback runs during a cycle.
-    if (buffer_size_) {
-        (void)buffer_size_(context_->engine->fBufferSize);
+    if (m_bufferSize) {
+        (void)m_bufferSize(m_context->m_engine->m_bufferSize);
     }
 
     // The first wait is the dummy cycle that the old client ran too: the thread is in step with the graph before the
     // first process call. It signals its outputs without calling the process callback.
-    if (!wait_cycle()) {
-        if (!realtime_stop_) {
+    if (!waitCycle()) {
+        if (!m_realtimeStop) {
             // The graph wait failed: the server is gone. The client is deactivated and told so.
-            end_cycles_on_failure();
-            deliver_shutdown();
+            endCyclesOnFailure();
+            deliverShutdown();
         }
         return;
     }
-    signal_cycle();
+    signalCycle();
 
     while (true) {
-        if (!wait_cycle()) {
-            if (!realtime_stop_) {
-                end_cycles_on_failure();
-                deliver_shutdown();
+        if (!waitCycle()) {
+            if (!m_realtimeStop) {
+                endCyclesOnFailure();
+                deliverShutdown();
             }
             return;
         }
-        const Cycle cycle = build_cycle();
-        if (!process_(cycle)) {
-            signal_cycle();
-            end_cycles_on_failure();
+        const Cycle cycle = buildCycle();
+        if (!m_process(cycle)) {
+            signalCycle();
+            endCyclesOnFailure();
             return;
         }
-        signal_cycle();
+        signalCycle();
     }
 }
 
-bool ClientSession::wait_cycle()
+bool ClientSession::waitCycle()
 {
-    if (!context_->graph->SuspendRefNum(client_.GetShmAddress(), context_->synchro.data(), LONG_MAX)) {
+    if (!m_context->m_graph->suspendRefNum(m_client.getShmAddress(), m_context->m_synchro.data(), LONG_MAX)) {
         jack_error("SuspendRefNum error");
         return false;
     }
-    return !realtime_stop_;
+    return !m_realtimeStop;
 }
 
-void ClientSession::signal_cycle()
+void ClientSession::signalCycle()
 {
-    if (!context_->graph->ResumeRefNum(client_.GetShmAddress(), context_->synchro.data())) {
+    if (!m_context->m_graph->resumeRefNum(m_client.getShmAddress(), m_context->m_synchro.data())) {
         jack_error("ResumeRefNum error");
     }
 }
 
-Cycle ClientSession::build_cycle() const
+Cycle ClientSession::buildCycle() const
 {
     Cycle cycle;
-    cycle.frames = context_->engine->fBufferSize;
-    JackTimer timer;
-    context_->engine->ReadFrameTime(&timer);
-    jack_nframes_t current_frames = 0;
-    jack_time_t current_usecs = 0;
-    jack_time_t next_usecs = 0;
-    float period_usecs = 0.0f;
-    if (timer.GetCycleTimes(&current_frames, &current_usecs, &next_usecs, &period_usecs) == 0) {
-        cycle.current_frames = current_frames;
-        cycle.current_usecs = current_usecs;
-        cycle.next_usecs = next_usecs;
-        cycle.period_usecs = period_usecs;
+    cycle.m_frames = m_context->m_engine->m_bufferSize;
+    Timer timer;
+    m_context->m_engine->readFrameTime(&timer);
+    NframesC currentFrames = 0;
+    TimeC currentUsecs = 0;
+    TimeC nextUsecs = 0;
+    float periodUsecs = 0.0f;
+    if (timer.getCycleTimes(&currentFrames, &currentUsecs, &nextUsecs, &periodUsecs) == 0) {
+        cycle.m_currentFrames = currentFrames;
+        cycle.m_currentUsecs = currentUsecs;
+        cycle.m_nextUsecs = nextUsecs;
+        cycle.m_periodUsecs = periodUsecs;
     }
-    cycle.freewheel = context_->engine->fFreewheel.load();
+    cycle.m_freewheel = m_context->m_engine->m_freewheel.load();
     return cycle;
 }
 
-void ClientSession::end_cycles_on_failure()
+void ClientSession::endCyclesOnFailure()
 {
     // The process callback failed: the client leaves the graph, as the old client did. The realtime class is given up
     // first, so that the server's answer does not wait for this thread.
-    drop_realtime(pthread_self());
-    std::atomic_ref<bool>(client_->fActive).store(false);
-    client_->fTransportSync = false;
-    client_->fTransportTimebase = false;
-    JackDeactivateRequest request(ref_);
-    JackResult reply;
-    if (transact(request, reply) < 0 || reply.fResult < 0) {
+    dropRealtime(pthread_self());
+    std::atomic_ref<bool>(m_client->m_active).store(false);
+    m_client->m_transportSync = false;
+    m_client->m_transportTimebase = false;
+    DeactivateRequest request(m_ref);
+    Reply reply;
+    if (transact(request, reply) < 0 || reply.m_result < 0) {
         jack_error("Deactivation after a failed cycle did not complete");
     }
 }
 
-void ClientSession::shut_down_sockets()
+void ClientSession::shutDownSockets()
 {
-    shut_down_fd(notify_listen_.GetFd());
-    shut_down_fd(notify_fd_.load());
+    shutDownFd(m_notifyListen.getFd());
+    shutDownFd(m_notifyFd.load());
 }
 
 Result<void> ClientSession::close()
 {
-    if (closing_.exchange(true)) {
+    if (m_closing.exchange(true)) {
         return { };
     }
 
@@ -919,34 +919,34 @@ Result<void> ClientSession::close()
     (void)deactivate();
 
     // The notifications stop, so no notification arrives while the client is closed.
-    shut_down_sockets();
-    if (notifier_.joinable()) {
-        notifier_.join();
+    shutDownSockets();
+    if (m_notifier.joinable()) {
+        m_notifier.join();
     }
-    notify_.reset();
-    notify_listen_.Close();
-    notify_fd_ = -1;
+    m_notify.reset();
+    m_notifyListen.close();
+    m_notifyFd = -1;
 
     std::int32_t result = 0;
-    if (ref_ >= 0) {
-        if (server_alive()) {
-            JackClientCloseRequest close_request(ref_);
-            JackResult reply;
-            if (transact(close_request, reply) < 0 || reply.fResult < 0) {
+    if (m_ref >= 0) {
+        if (serverAlive()) {
+            ClientCloseRequest closeRequest(m_ref);
+            Reply reply;
+            if (transact(closeRequest, reply) < 0 || reply.m_result < 0) {
                 result = -1;
             }
         } else {
             result = -1;
         }
         {
-            std::lock_guard lock(context_->synchro_mutex);
-            context_->synchro[ref_].Disconnect();
+            std::lock_guard lock(m_context->m_synchroMutex);
+            m_context->m_synchro[m_ref].disconnect();
         }
-        ref_ = -1;
+        m_ref = -1;
     }
-    request_.Close();
+    m_request.close();
 
-    return (result == 0) ? Result<void> { } : std::unexpected(Error::ServerFailure);
+    return (result == 0) ? Result<void> { } : std::unexpected(Error::kServerFailure);
 }
 
 } // namespace jackmini::client

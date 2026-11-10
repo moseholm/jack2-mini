@@ -26,29 +26,29 @@ namespace jackmini {
 
 // \brief The base class for runnable objects, that have an <B> Init </B> and <B> Execute </B> method to be called in a thread.
 
-class JackRunnableInterface {
+class RunnableInterface {
 
 protected:
-    JackRunnableInterface()
+    RunnableInterface()
     {
     }
-    virtual ~JackRunnableInterface()
+    virtual ~RunnableInterface()
     {
     }
 
 public:
-    virtual bool Init()  // Called once when the thread is started
+    virtual bool init()  // Called once when the thread is started
     {
         return true;
     }
-    virtual bool Execute() = 0;  // Must be implemented by subclasses
+    virtual bool execute() = 0;  // Must be implemented by subclasses
 };
 
 namespace detail {
 
 // \brief The thread base class.
 
-class SERVER_EXPORT JackThreadInterface {
+class SERVER_EXPORT ThreadInterface {
 
 public:
     enum kThreadState { kIdle,
@@ -57,65 +57,65 @@ public:
         kRunning };
 
 protected:
-    JackRunnableInterface* fRunnable;
-    std::int32_t fPriority;
-    bool fRealTime;
-    std::atomic<kThreadState> fStatus;
-    std::int32_t fCancellation;
+    RunnableInterface* m_runnable;
+    std::int32_t m_priority;
+    bool m_realTime;
+    std::atomic<kThreadState> m_status;
+    std::int32_t m_cancellation;
 
 public:
-    JackThreadInterface(JackRunnableInterface* runnable, std::int32_t priority, bool real_time, std::int32_t cancellation)
-        : fRunnable(runnable)
-        , fPriority(priority)
-        , fRealTime(real_time)
-        , fStatus(kIdle)
-        , fCancellation(cancellation)
+    ThreadInterface(RunnableInterface* runnable, std::int32_t priority, bool realTime, std::int32_t cancellation)
+        : m_runnable(runnable)
+        , m_priority(priority)
+        , m_realTime(realTime)
+        , m_status(kIdle)
+        , m_cancellation(cancellation)
     {
     }
 
-    kThreadState GetStatus()
+    kThreadState getStatus()
     {
-        return fStatus;
+        return m_status;
     }
 
-    void SetParams(UInt64 period, UInt64 computation, UInt64 constraint) // Empty implementation, will only make sense on OSX...
+    void setParams(UInt64 period, UInt64 computation, UInt64 constraint) // Empty implementation, will only make sense on OSX...
     {
     }
 
-    std::int32_t Start();
-    std::int32_t StartSync();
-    std::int32_t Kill();
-    std::int32_t Stop();
-    void Terminate();
+    std::int32_t start();
+    std::int32_t startSync();
+    std::int32_t kill();
+    std::int32_t stop();
+    void terminate();
 
-    std::int32_t AcquireRealTime(); // Used when called from another thread
-    std::int32_t AcquireSelfRealTime(); // Used when called from thread itself
+    std::int32_t acquireRealTime(); // Used when called from another thread
+    std::int32_t acquireSelfRealTime(); // Used when called from thread itself
 
-    std::int32_t AcquireRealTime(std::int32_t priority); // Used when called from another thread
-    std::int32_t AcquireSelfRealTime(std::int32_t priority); // Used when called from thread itself
+    std::int32_t acquireRealTime(std::int32_t priority); // Used when called from another thread
+    std::int32_t acquireSelfRealTime(std::int32_t priority); // Used when called from thread itself
 
-    std::int32_t DropRealTime(); // Used when called from another thread
-    std::int32_t DropSelfRealTime(); // Used when called from thread itself
+    std::int32_t dropRealTime(); // Used when called from another thread
+    std::int32_t dropSelfRealTime(); // Used when called from thread itself
 
-    jack_native_thread_t GetThreadID();
-    bool IsThread();
+    NativeThreadC getThreadID();
+    bool isThread();
 
-    static std::int32_t AcquireRealTimeImp(jack_native_thread_t thread, std::int32_t priority);
-    static std::int32_t AcquireRealTimeImp(jack_native_thread_t thread, std::int32_t priority, UInt64 period, UInt64 computation, UInt64 constraint);
-    static std::int32_t DropRealTimeImp(jack_native_thread_t thread);
-    static std::int32_t StartImp(jack_native_thread_t* thread, std::int32_t priority, std::int32_t realtime, void* (*start_routine)(void*), void* arg);
-    static std::int32_t StopImp(jack_native_thread_t thread);
-    static std::int32_t KillImp(jack_native_thread_t thread);
+    static std::int32_t acquireRealTimeImp(NativeThreadC thread, std::int32_t priority);
+    static std::int32_t acquireRealTimeImp(NativeThreadC thread, std::int32_t priority, UInt64 period, UInt64 computation, UInt64 constraint);
+    static std::int32_t dropRealTimeImp(NativeThreadC thread);
+    static std::int32_t startImp(NativeThreadC* thread, std::int32_t priority, std::int32_t realtime, void* (*startRoutine)(void*), void* arg);
+    static std::int32_t stopImp(NativeThreadC thread);
+    static std::int32_t killImp(NativeThreadC thread);
 };
 
 } // namespace detail
 
 } // namespace jackmini
 
-bool jack_get_thread_realtime_priority_range(std::int32_t* min_ptr, std::int32_t* max_ptr);
+bool getThreadRealtimePriorityRange(std::int32_t* minPtr, std::int32_t* maxPtr);
 
-bool jack_tls_allocate_key(jack_tls_key* key_ptr);
-bool jack_tls_free_key(jack_tls_key key);
+bool tlsAllocateKey(TlsKey* keyPtr);
+bool tlsFreeKey(TlsKey key);
 
-bool jack_tls_set(jack_tls_key key, void* data_ptr);
-void* jack_tls_get(jack_tls_key key);
+bool tlsSet(TlsKey key, void* dataPtr);
+void* tlsGet(TlsKey key);

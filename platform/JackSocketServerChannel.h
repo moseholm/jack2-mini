@@ -28,45 +28,45 @@
 
 namespace jackmini {
 
-class JackServer;
+class ServerCore;
 
 // \brief JackServerChannel using sockets.
 
-class JackSocketServerChannel : public JackRunnableInterface, public JackClientHandlerInterface {
+class SocketServerChannel : public RunnableInterface, public ClientHandlerInterface {
 
 private:
-    JackServerSocket fRequestListenSocket; // Socket to create request socket for the client
-    JackThread fThread; // Thread to execute the event loop
-    std::unique_ptr<JackRequestDecoder> fDecoder;
-    JackServer* fServer;
+    ServerSocket m_requestListenSocket; // Socket to create request socket for the client
+    Thread m_thread; // Thread to execute the event loop
+    std::unique_ptr<RequestDecoder> m_decoder;
+    ServerCore* m_server;
 
-    std::vector<pollfd> fPollTable;
-    bool fRebuild;
-    std::map<std::int32_t, std::pair<std::int32_t, JackClientSocket*>> fSocketTable;
+    std::vector<pollfd> m_pollTable;
+    bool m_rebuild;
+    std::map<std::int32_t, std::pair<std::int32_t, ClientSocket*>> m_socketTable;
 
-    void BuildPoolTable();
+    void buildPoolTable();
 
-    void ClientCreate();
-    void ClientKill(std::int32_t fd);
+    void clientCreate();
+    void clientKill(std::int32_t fd);
 
-    void ClientAdd(detail::JackChannelTransactionInterface* socket, JackClientOpenRequest* req, JackClientOpenResult* res);
-    void ClientRemove(detail::JackChannelTransactionInterface* socket, std::int32_t refnum);
+    void clientAdd(detail::ChannelTransactionInterface* socket, ClientOpenRequest* req, ClientOpenResult* res);
+    void clientRemove(detail::ChannelTransactionInterface* socket, std::int32_t refnum);
 
-    std::int32_t GetFd(JackClientSocket* socket);
+    std::int32_t getFd(ClientSocket* socket);
 
 public:
-    JackSocketServerChannel();
-    ~JackSocketServerChannel();
+    SocketServerChannel();
+    ~SocketServerChannel();
 
-    Result<void> Open(const char* server_name, JackServer* server); // Open the Server/Client connection
-    void Close(); // Close the Server/Client connection
+    Result<void> open(const char* serverName, ServerCore* server); // Open the Server/Client connection
+    void close(); // Close the Server/Client connection
 
-    Result<void> Start();
-    void Stop();
+    Result<void> start();
+    void stop();
 
     // JackRunnableInterface interface
-    bool Init();
-    bool Execute();
+    bool init();
+    bool execute();
 };
 
 } // namespace jackmini

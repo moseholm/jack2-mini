@@ -32,35 +32,35 @@ namespace {
 // The descriptor that holds the lock.  Closing it releases the lock.
 UniqueFd gLockFd;
 
-std::error_code LastError()
+std::error_code lastError()
 {
     return std::error_code(errno, std::system_category());
 }
 
 } // namespace
 
-std::expected<void, std::error_code> AcquireServerLock(const char* dir)
+std::expected<void, std::error_code> acquireServerLock(const char* dir)
 {
-    const std::string lock_path = std::format("{}/jack_{}_server.lock", dir, JackTools::GetUID());
+    const std::string lockPath = std::format("{}/jack_{}_server.lock", dir, Tools::getUID());
 
     // O_CLOEXEC keeps the descriptor out of any program the server starts, so the lock ends with the server.
-    UniqueFd fd(open(lock_path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0666));
+    UniqueFd fd(open(lockPath.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0666));
     if (!fd.valid()) {
-        return std::unexpected(LastError());
+        return std::unexpected(lastError());
     }
 
     if (flock(fd.get(), LOCK_EX | LOCK_NB) != 0) {
         if (errno == EWOULDBLOCK) {
             return std::unexpected(std::make_error_code(std::errc::file_exists));
         }
-        return std::unexpected(LastError());
+        return std::unexpected(lastError());
     }
 
     gLockFd = std::move(fd);
     return { };
 }
 
-void ReleaseServerLock() noexcept
+void releaseServerLock() noexcept
 {
     gLockFd.reset();
 }

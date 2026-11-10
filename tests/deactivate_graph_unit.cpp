@@ -34,29 +34,29 @@ namespace {
 
 constexpr std::int32_t kSourceRef = 2;
 constexpr std::int32_t kSinkRef = 3;
-constexpr jack_nframes_t kFrames = 64;
+constexpr NframesC kFrames = 64;
 
 std::int32_t gFailures = 0;
 
 // The same object as a JackGraphManager, with the connection steps of JackGraphManager::Connect for a loop-free
 // connection.  It adds no members, so the layout is the same.
-struct GraphTestAccess : public JackGraphManager {
-    void ConnectDirect(jack_port_id_t src, jack_port_id_t dst)
+struct GraphTestAccess : public GraphManager {
+    void connectDirect(PortIdC src, PortIdC dst)
     {
-        JackConnectionManager* manager = WriteNextStateStart();
-        manager->Connect(src, dst);
-        manager->Connect(dst, src);
-        manager->IncDirectConnection(src, dst);
-        WriteNextStateStop();
+        ConnectionManager* manager = writeNextStateStart();
+        manager->connect(src, dst);
+        manager->connect(dst, src);
+        manager->incDirectConnection(src, dst);
+        writeNextStateStop();
     }
     // Readers see the changes once the graph has switched to the next state, as in the cycle.
-    void Switch()
+    void switchGraph()
     {
-        RunNextGraph();
+        runNextGraph();
     }
 };
 
-void Check(const char* what, bool ok)
+void check(const char* what, bool ok)
 {
     std::printf("%-56s %s\n", what, ok ? "ok" : "FAIL");
     if (!ok) {
@@ -64,9 +64,9 @@ void Check(const char* what, bool ok)
     }
 }
 
-bool AllEqual(const float* buffer, float value)
+bool allEqual(const float* buffer, float value)
 {
-    for (jack_nframes_t i = 0; i < kFrames; i++) {
+    for (NframesC i = 0; i < kFrames; i++) {
         if (buffer[i] != value) {
             return false;
         }
@@ -78,37 +78,37 @@ bool AllEqual(const float* buffer, float value)
 
 int main()
 {
-    set_clock_source(JACK_TIMER_SYSTEM_CLOCK);
+    setClockSource(kTimerSystemClock);
 
-    JackGraphManager* graph = JackGraphManager::Allocate(16);
-    graph->InitRefNum(kSourceRef);
-    graph->InitRefNum(kSinkRef);
-    graph->Activate(kSourceRef);
-    graph->Activate(kSinkRef);
-    static_cast<GraphTestAccess*>(graph)->Switch();
+    GraphManager* graph = GraphManager::allocate(16);
+    graph->initRefNum(kSourceRef);
+    graph->initRefNum(kSinkRef);
+    graph->activate(kSourceRef);
+    graph->activate(kSinkRef);
+    static_cast<GraphTestAccess*>(graph)->switchGraph();
 
-    const jack_port_id_t out = graph->AllocatePort(kSourceRef, "src:out", kDefaultAudioType, JackPortIsOutput, kFrames);
-    const jack_port_id_t in = graph->AllocatePort(kSinkRef, "sink:in", kDefaultAudioType, JackPortIsInput, kFrames);
-    Check("ports allocated", out != kNoPort && in != kNoPort);
-    static_cast<GraphTestAccess*>(graph)->ConnectDirect(out, in);
-    static_cast<GraphTestAccess*>(graph)->Switch();
-    Check("connected", graph->IsConnected(out, in));
+    const PortIdC out = graph->allocatePort(kSourceRef, "src:out", kDefaultAudioType, kPortIsOutput, kFrames);
+    const PortIdC in = graph->allocatePort(kSinkRef, "sink:in", kDefaultAudioType, kPortIsInput, kFrames);
+    check("ports allocated", out != kNoPort && in != kNoPort);
+    static_cast<GraphTestAccess*>(graph)->connectDirect(out, in);
+    static_cast<GraphTestAccess*>(graph)->switchGraph();
+    check("connected", graph->isConnected(out, in));
 
-    float* source = static_cast<float*>(graph->GetBuffer(out, kFrames));
-    for (jack_nframes_t i = 0; i < kFrames; i++) {
+    float* source = static_cast<float*>(graph->getBuffer(out, kFrames));
+    for (NframesC i = 0; i < kFrames; i++) {
         source[i] = 0.5f;
     }
-    Check("active: the input receives the output", AllEqual(static_cast<float*>(graph->GetBuffer(in, kFrames)), 0.5f));
+    check("active: the input receives the output", allEqual(static_cast<float*>(graph->getBuffer(in, kFrames)), 0.5f));
 
-    graph->Deactivate(kSourceRef);
-    static_cast<GraphTestAccess*>(graph)->Switch();
-    Check("deactivated: the connection is kept", graph->IsConnected(out, in));
-    Check("deactivated: the input is silent", AllEqual(static_cast<float*>(graph->GetBuffer(in, kFrames)), 0.0f));
+    graph->deactivate(kSourceRef);
+    static_cast<GraphTestAccess*>(graph)->switchGraph();
+    check("deactivated: the connection is kept", graph->isConnected(out, in));
+    check("deactivated: the input is silent", allEqual(static_cast<float*>(graph->getBuffer(in, kFrames)), 0.0f));
 
-    graph->Activate(kSourceRef);
-    static_cast<GraphTestAccess*>(graph)->Switch();
-    Check("reactivated: the connection is still there", graph->IsConnected(out, in));
-    Check("reactivated: the input receives the output again", AllEqual(static_cast<float*>(graph->GetBuffer(in, kFrames)), 0.5f));
+    graph->activate(kSourceRef);
+    static_cast<GraphTestAccess*>(graph)->switchGraph();
+    check("reactivated: the connection is still there", graph->isConnected(out, in));
+    check("reactivated: the input receives the output again", allEqual(static_cast<float*>(graph->getBuffer(in, kFrames)), 0.5f));
 
     std::printf("%s\n", gFailures == 0 ? "deactivate graph checks passed" : "deactivate graph checks FAILED");
     return gFailures == 0 ? 0 : 1;

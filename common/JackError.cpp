@@ -25,34 +25,34 @@
 
 using namespace jackmini;
 
-static bool change_thread_log_function(jack_log_function_t log_function)
+static bool changeThreadLogFunction(LogFunction logFunction)
 {
-    return (jack_tls_get(JackGlobals::fKeyLogFunction) == nullptr
-        && jack_tls_set(JackGlobals::fKeyLogFunction, (void*)log_function));
+    return (tlsGet(Globals::s_keyLogFunction) == nullptr
+        && tlsSet(Globals::s_keyLogFunction, (void*)logFunction));
 }
 
-SERVER_EXPORT std::int32_t set_threaded_log_function()
+SERVER_EXPORT std::int32_t setThreadedLogFunction()
 {
-    return change_thread_log_function(JackMessageBufferAdd);
+    return changeThreadLogFunction(messageBufferAdd);
 }
 
-void jack_log_thread_route(std::int32_t level, const char* message)
+void logThreadRoute(std::int32_t level, const char* message)
 {
-    jack_log_function_t log_function = (jack_log_function_t)jack_tls_get(JackGlobals::fKeyLogFunction);
+    LogFunction logFunction = (LogFunction)tlsGet(Globals::s_keyLogFunction);
 
     // if log function is not overridden for thread, use the default one
-    (log_function != nullptr ? log_function : jack_log_direct)(level, message);
+    (logFunction != nullptr ? logFunction : logDirect)(level, message);
 }
 
 // The messages of this library go through the thread routing.
-static const bool log_router_installed = (jack_log_router = jack_log_thread_route, true);
+static const bool gLogRouterInstalled = (gJackLogRouter = logThreadRoute, true);
 
 SERVER_EXPORT void jack_log(const char* fmt, ...)
 {
-    if (JackGlobals::fVerbose) {
+    if (Globals::s_verbose) {
         va_list ap;
         va_start(ap, fmt);
-        jack_log_message(kLogLevelInfo, "Jack: ", fmt, ap);
+        logMessage(kLogLevelInfo, "Jack: ", fmt, ap);
         va_end(ap);
     }
 }

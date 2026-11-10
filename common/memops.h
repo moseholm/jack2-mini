@@ -25,59 +25,59 @@
 
 
 typedef enum {
-    None,
-    Rectangular,
-    Triangular,
-    Shaped
+    kNone,
+    kRectangular,
+    kTriangular,
+    kShaped
 } DitherAlgorithm;
 
 inline constexpr std::int32_t kDitherBufSize = 8;
 inline constexpr std::int32_t kDitherBufMask = 7;
 
 typedef struct {
-    std::uint32_t depth;
-    float rm1;
-    std::uint32_t idx;
-    std::array<float, kDitherBufSize> e;
-} dither_state_t;
+    std::uint32_t m_depth;
+    float m_rm1;
+    std::uint32_t m_idx;
+    std::array<float, kDitherBufSize> m_e;
+} DitherState;
 
 // float functions
-void sample_move_floatLE_sSs(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t dst_skip);
-void sample_move_dS_floatLE(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
+void sampleMoveFloatLESSs(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t dstSkip);
+void sampleMoveDSFloatLE(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
 
 // integer functions
-void sample_move_d32_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_d32_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_d32u24_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_d32u24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_d32l24_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_d32l24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_d24_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_d24_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_d16_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_d16_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
+void sampleMoveD32SSs(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveD32SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveD32u24SSs(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveD32u24SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveD32l24SSs(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveD32l24SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveD24SSs(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveD24SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveD16SSs(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveD16SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
 
-void sample_move_dither_rect_d16_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_dither_rect_d16_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_dither_tri_d16_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_dither_tri_d16_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_dither_shaped_d16_sSs(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
-void sample_move_dither_shaped_d16_sS(std::byte* dst, jack_default_audio_sample_t* src, std::uint64_t nsamples, std::uint64_t dst_skip, dither_state_t* state);
+void sampleMoveDitherRectD16SSs(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveDitherRectD16SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveDitherTriD16SSs(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveDitherTriD16SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveDitherShapedD16SSs(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
+void sampleMoveDitherShapedD16SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsamples, std::uint64_t dstSkip, DitherState* state);
 
-void sample_move_dS_s32s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip);
-void sample_move_dS_s32(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip);
-void sample_move_dS_s32u24s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip);
-void sample_move_dS_s32u24(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip);
-void sample_move_dS_s32l24s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip);
-void sample_move_dS_s32l24(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip);
-void sample_move_dS_s24s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip);
-void sample_move_dS_s24(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip);
-void sample_move_dS_s16s(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip);
-void sample_move_dS_s16(jack_default_audio_sample_t* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t src_skip);
+void sampleMoveDSS32s(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t srcSkip);
+void sampleMoveDSS32(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t srcSkip);
+void sampleMoveDSS32u24s(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t srcSkip);
+void sampleMoveDSS32u24(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t srcSkip);
+void sampleMoveDSS32l24s(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t srcSkip);
+void sampleMoveDSS32l24(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t srcSkip);
+void sampleMoveDSS24s(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t srcSkip);
+void sampleMoveDSS24(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t srcSkip);
+void sampleMoveDSS16s(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t srcSkip);
+void sampleMoveDSS16(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsamples, std::uint64_t srcSkip);
 
 
 static __inline__ void
-sample_merge(jack_default_audio_sample_t* dst, jack_default_audio_sample_t* src, std::uint64_t cnt)
+sampleMerge(DefaultAudioSampleC* dst, DefaultAudioSampleC* src, std::uint64_t cnt)
 {
     while (cnt--) {
         *dst += *src;
@@ -87,14 +87,14 @@ sample_merge(jack_default_audio_sample_t* dst, jack_default_audio_sample_t* src,
 }
 
 static __inline__ void
-sample_memcpy(jack_default_audio_sample_t* dst, jack_default_audio_sample_t* src, std::uint64_t cnt)
+sampleMemcpy(DefaultAudioSampleC* dst, DefaultAudioSampleC* src, std::uint64_t cnt)
 {
-    memcpy(dst, src, cnt * sizeof(jack_default_audio_sample_t));
+    memcpy(dst, src, cnt * sizeof(DefaultAudioSampleC));
 }
 
-void memset_interleave(std::byte* dst, std::byte val, std::uint64_t bytes, std::uint64_t unit_bytes, std::uint64_t skip_bytes);
-void memcpy_fake(std::byte* dst, std::byte* src, std::uint64_t src_bytes, std::uint64_t foo, std::uint64_t bar);
+void memsetInterleave(std::byte* dst, std::byte val, std::uint64_t bytes, std::uint64_t unitBytes, std::uint64_t skipBytes);
+void memcpyFake(std::byte* dst, std::byte* src, std::uint64_t srcBytes, std::uint64_t foo, std::uint64_t bar);
 
-void memcpy_interleave_d16_s16(std::byte* dst, std::byte* src, std::uint64_t src_bytes, std::uint64_t dst_skip_bytes, std::uint64_t src_skip_bytes);
-void memcpy_interleave_d24_s24(std::byte* dst, std::byte* src, std::uint64_t src_bytes, std::uint64_t dst_skip_bytes, std::uint64_t src_skip_bytes);
-void memcpy_interleave_d32_s32(std::byte* dst, std::byte* src, std::uint64_t src_bytes, std::uint64_t dst_skip_bytes, std::uint64_t src_skip_bytes);
+void memcpyInterleaveD16S16(std::byte* dst, std::byte* src, std::uint64_t srcBytes, std::uint64_t dstSkipBytes, std::uint64_t srcSkipBytes);
+void memcpyInterleaveD24S24(std::byte* dst, std::byte* src, std::uint64_t srcBytes, std::uint64_t dstSkipBytes, std::uint64_t srcSkipBytes);
+void memcpyInterleaveD32S32(std::byte* dst, std::byte* src, std::uint64_t srcBytes, std::uint64_t dstSkipBytes, std::uint64_t srcSkipBytes);

@@ -37,25 +37,25 @@ static_assert(std::equality_comparable<Port>);
 static_assert(!Port { }.valid());
 
 // The process callback must return bool.  A void callable is rejected.
-using ProcessOk = decltype(std::declval<Client&>().on_process(std::declval<bool (*)(const Cycle&)>()));
+using ProcessOk = decltype(std::declval<Client&>().onProcess(std::declval<bool (*)(const Cycle&)>()));
 static_assert(std::same_as<ProcessOk, Result<void>>);
 template <class F>
-concept AcceptsProcess = requires(Client& c, F f) { c.on_process(f); };
+concept AcceptsProcess = requires(Client& c, F f) { c.onProcess(f); };
 static_assert(!AcceptsProcess<void (*)(FrameCount)>);
 static_assert(AcceptsProcess<bool (*)(const Cycle&)>);
 
 // Setup calls return a result, and open() returns a Result<Client>.
 static_assert(std::same_as<decltype(Client::open("x")), Result<Client>>);
-static_assert(std::same_as<decltype(std::declval<Client&>().register_port("p", PortType::Audio, PortFlags::Input)),
+static_assert(std::same_as<decltype(std::declval<Client&>().registerPort("p", PortType::kAudio, PortFlags::kInput)),
     Result<Port>>);
 
 // Realtime accessors do not return errors.
-static_assert(std::same_as<decltype(std::declval<Client&>().audio_buffer(Port { })), std::span<float>>);
-static_assert(std::same_as<decltype(std::declval<Client&>().midi_buffer(Port { })), midi::Buffer>);
+static_assert(std::same_as<decltype(std::declval<Client&>().audioBuffer(Port { })), std::span<float>>);
+static_assert(std::same_as<decltype(std::declval<Client&>().midiBuffer(Port { })), midi::Buffer>);
 
 // Flags combine.
-static_assert(has_flag(PortFlags::Input | PortFlags::Physical, PortFlags::Physical));
-static_assert(!has_flag(PortFlags::Input, PortFlags::Output));
+static_assert(hasFlag(PortFlags::kInput | PortFlags::kPhysical, PortFlags::kPhysical));
+static_assert(!hasFlag(PortFlags::kInput, PortFlags::kOutput));
 
 // Uuid is a value type with ordering.
 static_assert(Uuid { 1 } < Uuid { 2 });

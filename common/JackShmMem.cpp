@@ -23,48 +23,48 @@
 
 namespace jackmini {
 
-static std::uint32_t fSegmentNum = 0;
+static std::uint32_t gFSegmentNum = 0;
 static std::uint32_t gSize = 0;
 static void* gAddress = nullptr;
 static std::int32_t gFd = -1;
 
-JackShmMem::JackShmMem()
+ShmMem::ShmMem()
 {
-    JackShmMemAble::Init();
-    LockMemory();
+    ShmMemAble::init();
+    lockMemory();
 }
 
-JackShmMem::~JackShmMem()
+ShmMem::~ShmMem()
 {
-    UnlockMemory();
+    unlockMemory();
 }
 
-void JackShmMemAble::Init()
+void ShmMemAble::init()
 {
-    fSize = gSize;
-    fAddress = gAddress;
-    fFd = gFd;
+    m_size = gSize;
+    m_address = gAddress;
+    m_fd = gFd;
 }
 
-void* JackShmMem::operator new(size_t size, void* memory)
+void* ShmMem::operator new(size_t size, void* memory)
 {
     jack_log("JackShmMem::new placement size = %ld", size);
     return memory;
 }
 
-void* JackShmMem::operator new(size_t size)
+void* ShmMem::operator new(size_t size)
 {
     std::array<char, 64> name { };
 
-    jackmini::FormatCString(name, "jack-shared{}", fSegmentNum++);
+    jackmini::formatCString(name, "jack-shared{}", gFSegmentNum++);
 
-    auto segment = CreateSegment(size, name.data());
+    auto segment = createSegment(size, name.data());
     if (!segment) {
         jack_error("Cannot create shared memory segment name = %s size = %zu err = %s", name.data(), size, segment.error().message().c_str());
         throw std::bad_alloc();
     }
 
-    auto address = MapSegment(segment->get(), size);
+    auto address = mapSegment(segment->get(), size);
     if (!address) {
         jack_error("Cannot map shared memory segment name = %s err = %s", name.data(), address.error().message().c_str());
         throw std::bad_alloc();
@@ -80,25 +80,25 @@ void* JackShmMem::operator new(size_t size)
     return *address;
 }
 
-void JackShmMem::operator delete(void* p, size_t size)
+void ShmMem::operator delete(void* p, size_t size)
 {
-    JackShmMem* obj = (JackShmMem*)p;
+    ShmMem* obj = (ShmMem*)p;
     // The descriptor is closed and the mapping removed; the segment goes when the last one is gone.
-    UniqueFd fd(obj->fFd);
+    UniqueFd fd(obj->m_fd);
 
     jack_log("JackShmMem::delete size = %ld fd = %d", size, fd.get());
 
-    UnmapSegment(p, obj->fSize);
+    unmapSegment(p, obj->m_size);
 }
 
-void JackShmMem::operator delete(void* obj)
+void ShmMem::operator delete(void* obj)
 {
     if (obj) {
-        JackShmMem::operator delete(obj, 0);
+        ShmMem::operator delete(obj, 0);
     }
 }
 
-void LockMemoryImp(void* ptr, size_t size)
+void lockMemoryImp(void* ptr, size_t size)
 {
     if (checkMlock(ptr, size)) {
         jack_log("Succeeded in locking %u byte memory area", size);
@@ -107,7 +107,7 @@ void LockMemoryImp(void* ptr, size_t size)
     }
 }
 
-void InitLockMemoryImp(void* ptr, size_t size)
+void initLockMemoryImp(void* ptr, size_t size)
 {
     if (checkMlock(ptr, size)) {
         memset(ptr, 0, size);
@@ -117,7 +117,7 @@ void InitLockMemoryImp(void* ptr, size_t size)
     }
 }
 
-void UnlockMemoryImp(void* ptr, size_t size)
+void unlockMemoryImp(void* ptr, size_t size)
 {
     if (checkMunlock(ptr, size)) {
         jack_log("Succeeded in unlocking %u byte memory area", size);
@@ -126,7 +126,7 @@ void UnlockMemoryImp(void* ptr, size_t size)
     }
 }
 
-void LockAllMemory()
+void lockAllMemory()
 {
     if (checkMlockall()) {
         jack_log("Succeeded in locking all memory");
@@ -135,7 +135,7 @@ void LockAllMemory()
     }
 }
 
-void UnlockAllMemory()
+void unlockAllMemory()
 {
     if (checkMunlockall()) {
         jack_log("Succeeded in unlocking all memory");

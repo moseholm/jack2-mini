@@ -24,16 +24,16 @@
 namespace jackmini {
 
 // Globals used by the server and the client library.
-struct JackGlobals {
+struct Globals {
 
-    static jack_tls_key fKeyLogFunction;
-    static std::atomic<bool> fVerbose;
-    static jack_thread_creator_t fJackThreadCreator;
+    static TlsKey s_keyLogFunction;
+    static std::atomic<bool> s_verbose;
+    static ThreadCreator s_jackThreadCreator;
 };
 
 // Each "side" server and client will implement this to get the shared graph manager, engine control and inter-process synchro table.
-extern SERVER_EXPORT JackGraphManager* GetGraphManager();
-extern SERVER_EXPORT JackEngineControl* GetEngineControl();
-extern SERVER_EXPORT JackSynchro* GetSynchroTable();
+extern SERVER_EXPORT GraphManager* getGraphManager();
+extern SERVER_EXPORT EngineControl* getEngineControl();
+extern SERVER_EXPORT Synchro* getSynchroTable();
 
 } // namespace jackmini

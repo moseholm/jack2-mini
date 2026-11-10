@@ -25,21 +25,21 @@
 class ExternalMetro {
 
 public:
-    jackmini::Client client;
-    jackmini::Port input_port;
-    jackmini::Port output_port;
+    jackmini::Client m_client;
+    jackmini::Port m_inputPort;
+    jackmini::Port m_outputPort;
 
-    std::uint64_t sr;
-    std::int32_t freq;
-    std::int32_t bpm;
-    jackmini::FrameCount tone_length, wave_length;
-    float* wave;
-    double* amp;
-    std::int64_t offset;
+    std::uint64_t m_sr;
+    std::int32_t m_freq;
+    std::int32_t m_bpm;
+    jackmini::FrameCount m_toneLength, m_waveLength;
+    float* m_wave;
+    double* m_amp;
+    std::int64_t m_offset;
 
-    ExternalMetro(std::int32_t freq, double max_amp, std::int32_t dur_arg, std::int32_t bpm, const char* client_name = "metro");
+    ExternalMetro(std::int32_t freq, double maxAmp, std::int32_t durArg, std::int32_t bpm, const char* clientName = "metro");
     virtual ~ExternalMetro();
 
 private:
-    bool process_audio(jackmini::FrameCount nframes);
+    bool processAudio(jackmini::FrameCount nframes);
 };

@@ -25,14 +25,14 @@
 
 namespace jackmini::client {
 
-std::mutex ProcessContext::registry_mutex_;
-std::unique_ptr<ProcessContext> ProcessContext::instance_;
-std::atomic<ProcessContext*> ProcessContext::current_ { nullptr };
-std::int32_t ProcessContext::count_ = 0;
+std::mutex ProcessContext::s_registryMutex;
+std::unique_ptr<ProcessContext> ProcessContext::s_instance;
+std::atomic<ProcessContext*> ProcessContext::s_current { nullptr };
+std::int32_t ProcessContext::s_count = 0;
 
 ProcessContext::ProcessContext()
 {
-    if (!JackMessageBuffer::Create()) {
+    if (!MessageBuffer::create()) {
         jack_error("Cannot create message buffer");
     }
 
@@ -40,41 +40,41 @@ ProcessContext::ProcessContext()
     sigset_t signals;
     sigemptyset(&signals);
     sigaddset(&signals, SIGPIPE);
-    sigprocmask(SIG_BLOCK, &signals, &saved_signals_);
+    sigprocmask(SIG_BLOCK, &signals, &m_savedSignals);
 }
 
 ProcessContext::~ProcessContext()
 {
-    for (auto& entry : synchro) {
-        entry.Disconnect();
+    for (auto& entry : m_synchro) {
+        entry.disconnect();
     }
-    JackMessageBuffer::Destroy();
-    sigprocmask(SIG_SETMASK, &saved_signals_, nullptr);
+    MessageBuffer::destroy();
+    sigprocmask(SIG_SETMASK, &m_savedSignals, nullptr);
 }
 
 ProcessContext& ProcessContext::acquire()
 {
-    std::lock_guard lock(registry_mutex_);
-    if (count_++ == 0) {
-        init_time();
-        instance_.reset(new ProcessContext());
-        current_ = instance_.get();
+    std::lock_guard lock(s_registryMutex);
+    if (s_count++ == 0) {
+        initTime();
+        s_instance.reset(new ProcessContext());
+        s_current = s_instance.get();
     }
-    return *instance_;
+    return *s_instance;
 }
 
 ProcessContext* ProcessContext::current() noexcept
 {
-    return current_.load();
+    return s_current.load();
 }
 
 void ProcessContext::release() noexcept
 {
-    std::lock_guard lock(registry_mutex_);
-    if (count_ > 0 && --count_ == 0) {
-        current_ = nullptr;
-        instance_.reset();
-        end_time();
+    std::lock_guard lock(s_registryMutex);
+    if (s_count > 0 && --s_count == 0) {
+        s_current = nullptr;
+        s_instance.reset();
+        endTime();
     }
 }
 
@@ -84,22 +84,22 @@ namespace jackmini {
 
 // The accessors of the shared state for the code that is common to the server and the client library. The server
 // defines them over its own state; here they are the state of the process's clients, and nullptr when there is none.
-SERVER_EXPORT JackGraphManager* GetGraphManager()
+SERVER_EXPORT GraphManager* getGraphManager()
 {
     auto* context = jackmini::client::ProcessContext::current();
-    return context ? context->graph.GetShmAddress() : nullptr;
+    return context ? context->m_graph.getShmAddress() : nullptr;
 }
 
-SERVER_EXPORT JackEngineControl* GetEngineControl()
+SERVER_EXPORT EngineControl* getEngineControl()
 {
     auto* context = jackmini::client::ProcessContext::current();
-    return context ? context->engine.GetShmAddress() : nullptr;
+    return context ? context->m_engine.getShmAddress() : nullptr;
 }
 
-SERVER_EXPORT JackSynchro* GetSynchroTable()
+SERVER_EXPORT Synchro* getSynchroTable()
 {
     auto* context = jackmini::client::ProcessContext::current();
-    return context ? context->synchro.data() : nullptr;
+    return context ? context->m_synchro.data() : nullptr;
 }
 
 } // end of namespace jackmini

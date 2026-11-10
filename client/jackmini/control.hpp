@@ -40,33 +40,33 @@ using Value = std::variant<std::int64_t, std::uint64_t, bool, char, std::string>
 
 // One value that a parameter may take, with what it means.
 struct Choice {
-    Value value;
-    std::string description;
+    Value m_value;
+    std::string m_description;
 };
 
 struct Parameter {
-    std::string name;
-    char short_name = 0; // the driver option letter; 0 for server parameters
-    std::string description;
-    Value value;
-    Value default_value;
-    bool is_set = false; // whether the value was given, rather than left at the default
-    std::vector<Choice> choices; // empty unless the parameter takes one of a set of values
+    std::string m_name;
+    char m_shortName = 0; // the driver option letter; 0 for server parameters
+    std::string m_description;
+    Value m_value;
+    Value m_defaultValue;
+    bool m_isSet = false; // whether the value was given, rather than left at the default
+    std::vector<Choice> m_choices; // empty unless the parameter takes one of a set of values
 };
 
 struct Driver {
-    std::string name;
-    std::string description;
-    bool master = false;
-    std::vector<Parameter> parameters;
+    std::string m_name;
+    std::string m_description;
+    bool m_master = false;
+    std::vector<Parameter> m_parameters;
 };
 
 // Callbacks for the audio devices that the server acquires and releases, for
 // a desktop session that shares them.  All may be null.
 struct DeviceHooks {
-    bool (*on_acquire)(const char* device_name) = nullptr;
-    void (*on_release)(const char* device_name) = nullptr;
-    void (*on_reservation_loop)() = nullptr;
+    bool (*m_onAcquire)(const char* deviceName) = nullptr;
+    void (*m_onRelease)(const char* deviceName) = nullptr;
+    void (*m_onReservationLoop)() = nullptr;
 };
 
 class JACKMINI_CONTROL_API Server {
@@ -86,33 +86,33 @@ public:
     Result<void> start();
     // Stops the engine and releases the server name.
     Result<void> stop();
-    bool is_running() const noexcept;
+    bool isRunning() const noexcept;
 
     std::vector<Driver> drivers() const;
-    Result<void> select_driver(std::string_view driver_name);
+    Result<void> selectDriver(std::string_view driverName);
 
     // Parses the selected driver's options: argv[0] is the driver name, the
     // rest are its options, as on the jackd command line.  Prints the help and
     // fails for "-h" or an unknown option.
-    Result<void> parse_driver_arguments(std::int32_t argc, char* argv[]);
-    Result<void> set_driver_parameter(std::string_view name, Value value);
+    Result<void> parseDriverArguments(std::int32_t argc, char* argv[]);
+    Result<void> setDriverParameter(std::string_view name, Value value);
 
     std::vector<Parameter> parameters() const;
-    Result<void> set_parameter(std::string_view name, Value value);
+    Result<void> setParameter(std::string_view name, Value value);
 
 private:
     Server() = default;
     struct Impl;
-    std::unique_ptr<Impl> fImpl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 // The signals that stop the server are blocked in the calling thread and
 // received in wait_for_signal(), which returns when the server should stop.
 struct SignalSet {
-    sigset_t signals;
+    sigset_t m_signals;
 };
 
-JACKMINI_CONTROL_API SignalSet setup_signals();
-JACKMINI_CONTROL_API void wait_for_signal(const SignalSet& signals);
+JACKMINI_CONTROL_API SignalSet setupSignals();
+JACKMINI_CONTROL_API void waitForSignal(const SignalSet& signals);
 
 } // namespace jackmini::control
