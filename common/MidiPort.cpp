@@ -37,7 +37,7 @@ LIB_EXPORT void MidiBuffer::reset(NframesC nframes)
 
 LIB_EXPORT ShmsizeC MidiBuffer::maxEventSize() const
 {
-    assert(((jack_shmsize_t)-1) < 0); // jack_shmsize_t should be signed
+    assert(((ShmsizeC)-1) < 0); // ShmsizeC should be signed
     ShmsizeC left = m_bufferSize - (sizeof(MidiBuffer) + sizeof(MidiEvent) * (m_eventCount + 1) + m_writePos);
     if (left < 0) {
         return 0;

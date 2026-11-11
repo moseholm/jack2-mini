@@ -43,7 +43,7 @@ public:
     {
         static_assert(offsetof(ActivationCount, m_count) % sizeof(m_count) == 0,
             "fCount must be aligned within JackActivationCount");
-        assert(reinterpret_cast<std::uintptr_t>(CountPtr()) % alignof(SInt32) == 0);
+        assert(reinterpret_cast<std::uintptr_t>(countPtr()) % alignof(SInt32) == 0);
     }
 
     // The counter is reached through its offset: the class is packed, and a reference to a packed member is not

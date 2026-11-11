@@ -199,7 +199,7 @@ Result<void> ServerCore::stop()
 bool ServerCore::isRunning()
 {
     jack_log("JackServer::IsRunning");
-    assert(fAudioDriver);
+    assert(m_audioDriver);
     return m_audioDriver->isRunning();
 }
 
