@@ -1,6 +1,28 @@
 # Licence audit
 
-Classification of every file in the tree (`origin/develop`, `1c9a725a`) against the original JACK2 tree (`e102e682`). Input for `LICENSING.md`.
+Classification of every file in the tree (`origin/develop`, `1c9a725a`). Input for `LICENSING.md`.
+
+## Baseline (corrected)
+
+The history has three stages that matter here:
+
+1. **`17959465`**, 2026-01-07, upstream JACK2 (falkTX). This is the original JACK2 tree.
+2. **`65c9d792`**, 2026-11-04, "Linux/ALSA-only refactor" (Henrik Sølvkjær Jespersen, the same person as the repository owner under another GitHub account). It deletes most of upstream (Windows, macOS, waf) and keeps the rest.
+3. **`e102e682`**, the merge of PR #3 (`hjj/cxx23`). Everything after it is this project's work.
+
+The earlier version of this audit used `e102e682` as the original tree. That is wrong: it skips stages 1 and 2. The table below still classifies each file by its path and renames from `e102e682`, which is the state this project started from. The check against upstream is in "Upstream check".
+
+Limits of the method:
+- `git log --follow` links files through copies as well as renames, so a path-based origin can be wrong. Two such links were found and discarded (`platform/Promiscuous.hpp`, `server/DriverInfo.h`).
+- Content matching finds little verbatim text shared with upstream: 7 current files are 30 % or more identical in lines to an upstream file. Most of the code was rewritten, so a file's licence follows its header and its lineage, not its text.
+
+## Upstream check
+
+For each current file with an upstream file of the same name (ignoring the `Jack` prefix, case and underscores), the licence was compared with the upstream one. 129 files have such a match. The matches that differ are false (the name points to another file), except one, which is explained:
+
+- `client/jackmini/Control.hpp` and `server/Control.cpp` replace the C control API. Upstream's control API is in `common/jack/control.h` and `common/JackControlAPI.h`. Both carry `SPDX-License-Identifier: ( GPL-2.0-or-later OR LGPL-2.1-or-later OR MIT OR AFL-2.1 )`: the work may be used under any one of those four licences. LGPL-2.1-or-later is one of them, so the LGPL licence of the replacement is allowed. The header of `Control.hpp` names only the LGPL. Keep this note with the licence.
+
+These two are the only upstream files with an SPDX header. All other upstream files state their licence in the text, which the classifier reads.
 
 ## Method
 
@@ -11,7 +33,7 @@ Classification of every file in the tree (`origin/develop`, `1c9a725a`) against 
 
 ## Summary
 
-Files in the tree: 302. Derived from JACK2 (renamed, kept, or rewritten): 301. New: 1.
+Files in the tree: 302. Relative to `e102e682` (not upstream, see "Baseline"): derived (renamed, kept, or rewritten) 301, new 1.
 
 | Original licence | Files | Licence now |
 |---|---|---|
@@ -24,7 +46,8 @@ Every derived file keeps the licence it had in the original tree. No licence cha
 
 ## Findings to settle before the layout
 
-0. **The client library contains GPL code.** `platform/FdSegment.cpp` is GPL-2.0 (in `e102e682` too, and in `origin/develop`). It is in `JACK_COMMON_SOURCES` in `CMakeLists.txt`, and `JACK_COMMON_SOURCES` is part of `JACK_CLIENT_SOURCES`, so the `jack` library (`libjack`) that clients link against is built with it. `client/ClientSession.cpp` and `common/ShmMem.h` use `FdSegment`. The client is therefore not LGPL as built, whatever its headers say. Choices: relicense `FdSegment` (the copyright holder decides, and it is derived from a GPL file), move the client's use of it out of the library, or make the client library GPL.
+0. **The client library contains GPL code.** `platform/FdSegment.cpp` is GPL-2.0 (in `e102e682` too, and in `origin/develop`). It is in `JACK_COMMON_SOURCES` in `CMakeLists.txt`, and `JACK_COMMON_SOURCES` is part of `JACK_CLIENT_SOURCES`, so the `jack` library (`libjack`) that clients link against is built with it. `client/ClientSession.cpp` and `common/ShmMem.h` use `FdSegment`. The client is therefore not LGPL as built, whatever its headers say. Choices: relicense `FdSegment` (the owner's decision), move the client's use of it out of the library, or make the client library GPL. Neither file has an upstream origin: `FdSegment` was added in `6bf4566b` (2026-11-08) and `Message.h` in `575b58e9` (2026-11-08), both by this project. So no third-party copyright is involved in relicensing them.
+   **Resolved:** `FdSegment.{h,cpp}` and `common/Message.h` (which `ClientSession.cpp` includes) are relicensed to LGPL-2.1-or-later, by the owner's decision. The include closure of `libjack` now has no GPL file (checked by following `#include "..."` from its sources). The "Licence now" column above is the state before that change; `LICENSING.md` has the current lists.
 1. **Resampler kernels are MIT.** `platform/alsa/resample/` (`resample.h`, `resample-native*.c`, `resample-native-impl.h`) is copied from PipeWire under MIT (SPDX headers). `dbesi0.c` is Takuya Ooura's Bessel function under its own permissive notice. The plan in the handoff does not mention MIT; `LICENSING.md` must name it.
 2. **`platform/alsa/resample/spa-shim/` has no licence notice.** The five headers are written as minimal subsets of PipeWire's SPA headers (MIT, per `resample/README.md`). They need an MIT notice, or a statement that they are MIT by provenance.
 3. **`tests/perf/alloccount.cpp`, `tests/perf/rtbench.cpp`, `tests/perf/run-baseline.sh`, `tests/tools_e2e.sh`, `scripts/ci.sh`, `configure.sh`, and the build files have no licence notice.** Under the plan, the server code is GPL-2.0 (`COPYING`), so these fall under `COPYING` by default. `LICENSING.md` should say so, or each file should get a notice.
