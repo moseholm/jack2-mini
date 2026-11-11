@@ -68,6 +68,7 @@ Maxim Grishin
 Melanie Thielker
 Michael Voigt
 Michał Szymański
+Mose Holm
 Nedko Arnaudov
 Olaf Hering
 Olivier Humbert
