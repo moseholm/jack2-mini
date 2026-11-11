@@ -22,6 +22,10 @@ jobs:
           - cc: gcc
             cxx: g++
             extra_flags: "-msse4.1 -mavx2"
+          # Debug keeps the asserts enabled. The Release builds compile them out, which hid stale names in asserts.
+          - cc: gcc
+            cxx: g++
+            build_type: Debug
     steps:
     - uses: actions/checkout@v4
     - name: Install dependencies
@@ -33,6 +37,7 @@ jobs:
         CC: ${{ matrix.cc }}
         CXX: ${{ matrix.cxx }}
         EXTRA_FLAGS: ${{ matrix.extra_flags }}
+        BUILD_TYPE: ${{ matrix.build_type }}
       run: scripts/ci.sh configure
     - name: Build
       run: scripts/ci.sh build

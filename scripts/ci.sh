@@ -7,6 +7,7 @@
 # Environment:
 #   CC, CXX         the compilers (default: the system ones)
 #   GENERATOR       the CMake generator (default: the CMake default, Make)
+#   BUILD_TYPE      the CMake build type (default: Release). Debug keeps the asserts enabled.
 #   EXTRA_FLAGS     extra C and C++ flags, e.g. "-msse4.1 -mavx2" for the SIMD kernels
 #   BUILD_DIR       the build directory (default: build-ci)
 #   DESTDIR         the install root (default: build-ci/destdir)
@@ -21,7 +22,7 @@ case $step in
 configure)
     # shellcheck disable=SC2086
     cmake -S . -B "$build_dir" ${GENERATOR:+-G "$GENERATOR"} \
-        -DCMAKE_BUILD_TYPE=Release -DJACK_BUILD_TESTS=ON \
+        -DCMAKE_BUILD_TYPE="${BUILD_TYPE:-Release}" -DJACK_BUILD_TESTS=ON \
         ${EXTRA_FLAGS:+-DCMAKE_C_FLAGS="$EXTRA_FLAGS" -DCMAKE_CXX_FLAGS="$EXTRA_FLAGS"}
     ;;
 build)
