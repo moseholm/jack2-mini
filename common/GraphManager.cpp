@@ -32,7 +32,7 @@ static void assertBufferSize(NframesC bufferSize)
 {
     if (bufferSize > kBufferSizeMax) {
         jack_log("JackGraphManager::AssertBufferSize frames = %ld", bufferSize);
-        assert(buffer_size <= kBufferSizeMax);
+        assert(bufferSize <= kBufferSizeMax);
     }
 }
 
@@ -40,7 +40,7 @@ void GraphManager::assertPort(PortIdC portIndex)
 {
     if (portIndex >= m_portMax) {
         jack_log("JackGraphManager::AssertPort port_index = %ld", portIndex);
-        assert(port_index < fPortMax);
+        assert(portIndex < m_portMax);
     }
 }
 
@@ -60,7 +60,7 @@ void GraphManager::destroy(GraphManager* manager)
 
 GraphManager::GraphManager(std::int32_t portMax)
 {
-    assert(port_max <= kPortNumMax);
+    assert(portMax <= kPortNumMax);
 
     for (std::int32_t i = 0; i < portMax; i++) {
         m_portArray[i].release();

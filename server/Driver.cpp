@@ -117,8 +117,8 @@ std::int32_t Driver::open(NframesC bufferSize,
     m_captureLatency = captureLatency;
     m_playbackLatency = playbackLatency;
 
-    assert(strlen(capture_driver_name) < kClientNameSize);
-    assert(strlen(playback_driver_name) < kClientNameSize);
+    assert(strlen(captureDriverName) < kClientNameSize);
+    assert(strlen(playbackDriverName) < kClientNameSize);
 
     strcpy(m_captureDriverName.data(), captureDriverName);
     strcpy(m_playbackDriverName.data(), playbackDriverName);

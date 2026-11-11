@@ -36,7 +36,7 @@ ServerPort::ServerPort()
 bool ServerPort::allocate(std::int32_t refnum, const char* portName, const char* portType, PortFlagsC flags)
 {
     PortTypeIdC id = getPortTypeId(portType);
-    assert(id >= 0 && id <= PORT_TYPES_MAX);
+    assert(id >= 0 && id <= gPORTTYPESMAX);
     if (id == gPORTTYPESMAX) {
         return false;
     }

@@ -358,8 +358,8 @@ std::int32_t AlsaDriver::attach()
     std::array<char, kRealJackPortNameSize + 1> name { };
     std::array<char, kRealJackPortNameSize + 1> alias { };
 
-    assert(fCaptureChannels < kDriverPortNum);
-    assert(fPlaybackChannels < kDriverPortNum);
+    assert(m_captureChannels < kDriverPortNum);
+    assert(m_playbackChannels < kDriverPortNum);
 
     // ALSA driver may have changed the values
     AudioDriver::setBufferSize(m_session.framesPerCycle());

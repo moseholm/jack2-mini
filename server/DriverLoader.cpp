@@ -369,7 +369,7 @@ SERVER_EXPORT std::int32_t jack_driver_descriptor_add_parameter(
         descPtr->m_params = paramPtr;
     }
 
-    assert(desc_ptr->nparams < filler_ptr->size);
+    assert(descPtr->m_nparams < fillerPtr->m_size);
     paramPtr = descPtr->m_params + descPtr->m_nparams;
 
     memcpy(paramPtr->m_name.data(), name, nameLen + 1);
