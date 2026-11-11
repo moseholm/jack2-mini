@@ -11,7 +11,8 @@ card, resampled to the primary rate and added or removed while the server runs.
 
 It is meant for a machine where one JACK server should own all of the sound
 hardware: no PulseAudio, no second jackd, and no application taking a card
-behind the server's back. Existing JACK clients work unchanged.
+behind the server's back. It is not compatible with JACK2 servers or clients;
+see `Compatibility`_.
 
 .. code-block:: text
 
@@ -59,8 +60,6 @@ What it does
   can be used by the same server.
 - **Eight secondary slots.** Automatic and explicitly configured cards share
   the same eight slots.
-- **Resampler plugins.** Besides the built-in PipeWire resampler, a secondary
-  can load a versioned resampler plugin selected with ``resampler=``.
 
 Requirements and ownership
 ==========================
@@ -137,15 +136,24 @@ the secondary-card unit tests and the JACK test programs::
     cmake --build build --parallel
     ctest --test-dir build
 
+Compatibility
+=============
+
+jack2-mini does not speak the JACK2 wire protocol. A JACK2 client cannot connect
+to a jack2-mini server, and a jack2-mini client cannot connect to a JACK2
+server. Use the jack2-mini client library together with the jack2-mini server.
+
 Heritage
 ========
 
-jack2-mini is a focused fork of `JACK2 <https://github.com/jackaudio/jack2>`_.
-The JACK engine, graph and client API come from JACK2 and work as before; what
-this tree changes is how Linux hardware is discovered and owned. It builds the
-ALSA driver together with the ``dummy`` driver. MIDI is sent between clients
-only: the server does not read or write MIDI on hardware. See ``COPYING`` for
-the license.
+jack2-mini is a focused fork of `JACK2 <https://github.com/jackaudio/jack2>`_,
+which is the basis of the code. The JACK engine and graph come from JACK2; what
+this tree changes is the wire protocol, how Linux hardware is discovered and
+owned, and the client library. It builds the ALSA driver together with the
+``dummy`` driver. MIDI is sent between clients only: the server does not read
+or write MIDI on hardware. See ``LICENSING.md`` for which files fall under which
+license: ``COPYING`` (GPL-2.0) for the server, and ``COPYING.LGPL``
+(LGPL-2.1-or-later) for the client library.
 
 For general JACK information, see the `JACK homepage <https://jackaudio.org/>`_
 and `wiki <https://github.com/jackaudio/jackaudio.github.com/wiki>`_. There are
