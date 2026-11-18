@@ -23,7 +23,7 @@
 // freewheel mode (jackd -F) as in real time.
 
 #include "JackminiWait.hpp"
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
 
 #include <getopt.h>
 #include <algorithm>
@@ -126,7 +126,6 @@ int main(std::int32_t argc, char* argv[])
     }
 
     OpenOptions openOptions;
-    openOptions.m_startServer = false;
     auto opened = Client::open(clientName, openOptions);
     if (!opened) {
         std::fprintf(stderr, "jack_client_open() failed : is jack server running ?\n");

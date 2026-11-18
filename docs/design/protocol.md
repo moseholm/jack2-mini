@@ -8,8 +8,8 @@ replacement is named against the current code.
 
 This specifies the messages between a `jackmini` client and the server, and
 the shared-memory structures they use. It replaces the wire format in
-`common/Request.h`, `common/Notification.h`, and the channels in
-`common/Channel.h`, and the shared structures listed in section 4. The
+`ipc/protocol/Request.h`, `ipc/protocol/Notification.h`, and the channels in
+`ipc/protocol/Channel.h`, and the shared structures listed in section 4. The
 architecture does not change: a server process, clients on a Unix socket,
 a shared-memory graph, and futex synchronization.
 
@@ -305,12 +305,12 @@ the `jackmini::Error` codes, so the enum values are fixed in this spec:
    8-byte fields. The probe shows every field and the per-client timing array
    at natural offsets. ALSA startup is still intermittent (see the baseline
    notes); it is not caused by this change.
-2. Segment handoff with `SCM_RIGHTS` and no registry. Done: `platform/JackFdSegment`
+2. Segment handoff with `SCM_RIGHTS` and no registry. Done: `ipc/memory/FdSegment`
    (2a), the descriptors in the `ClientOpen` reply (2b), the single-instance lock on
    the per-user lock (step 3), and the registry removed (step 4).
 3. Message framing and the handshake. Done on the control socket: the 16-byte
    header on every request and reply, the request id echoed, the exact payload length,
-   and the version check (`common/Message.h`, `tests/MessageFrameUnit.cpp`).
+   and the version check (`ipc/protocol/Message.h`, `tests/MessageFrameUnit.cpp`).
    Notifications keep their own format until item 4.
 4. Requests, then notifications.
 5. Counter redesign (section 4.5), with its TSAN test.

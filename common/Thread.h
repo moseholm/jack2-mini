@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include "CompilerDeps.h"
-#include "Types.h"
+#include "common/CompilerDeps.h"
+#include "common/Types.h"
 #include <atomic>
 #include <cstdint>
 

@@ -19,19 +19,19 @@
 // and its fields must sit at natural offsets.  The checks are static, so this
 // program only needs to compile.
 
-#include "ActivationCount.h"
-#include "AtomicArrayState.h"
-#include "AtomicState.h"
-#include "ClientControl.h"
-#include "ConnectionManager.h"
-#include "Constants.h"
-#include "EngineControl.h"
-#include "FrameTimer.h"
-#include "GraphManager.h"
-#include "ServerPort.h"
-#include "Time.h"
-#include "TransportEngine.h"
-#include "Types.h"
+#include "ipc/memory/ActivationCount.h"
+#include "ipc/memory/AtomicArrayState.h"
+#include "ipc/memory/AtomicState.h"
+#include "ipc/memory/ClientControl.h"
+#include "ipc/memory/ConnectionManager.h"
+#include "ipc/protocol/Constants.h"
+#include "ipc/memory/EngineControl.h"
+#include "ipc/memory/FrameTimer.h"
+#include "ipc/memory/GraphManager.h"
+#include "ipc/memory/ServerPort.h"
+#include "common/Time.h"
+#include "ipc/memory/TransportEngine.h"
+#include "common/Types.h"
 
 #include <atomic>
 #include <cstddef>

@@ -13,14 +13,14 @@ The history has three stages that matter here:
 The earlier version of this audit used `e102e682` as the original tree. That is wrong: it skips stages 1 and 2. The table below still classifies each file by its path and renames from `e102e682`, which is the state this project started from. The check against upstream is in "Upstream check".
 
 Limits of the method:
-- `git log --follow` links files through copies as well as renames, so a path-based origin can be wrong. Two such links were found and discarded (`platform/Promiscuous.hpp`, `server/DriverInfo.h`).
+- `git log --follow` links files through copies as well as renames, so a path-based origin can be wrong. Two such links were found and discarded (`ipc/socket/Promiscuous.hpp`, `server/drivers/DriverInfo.h`).
 - Content matching finds little verbatim text shared with upstream: 7 current files are 30 % or more identical in lines to an upstream file. Most of the code was rewritten, so a file's licence follows its header and its lineage, not its text.
 
 ## Upstream check
 
 For each current file with an upstream file of the same name (ignoring the `Jack` prefix, case and underscores), the licence was compared with the upstream one. 129 files have such a match. The matches that differ are false (the name points to another file), except one, which is explained:
 
-- `client/jackmini/Control.hpp` and `server/Control.cpp` replace the C control API. Upstream's control API is in `common/jack/control.h` and `common/JackControlAPI.h`. Both carry `SPDX-License-Identifier: ( GPL-2.0-or-later OR LGPL-2.1-or-later OR MIT OR AFL-2.1 )`: the work may be used under any one of those four licences. LGPL-2.1-or-later is one of them, so the LGPL licence of the replacement is allowed. The header of `Control.hpp` names only the LGPL. Keep this note with the licence.
+- `server/control/Control.hpp` and `server/control/Control.cpp` replace the C control API. Upstream's control API is in `common/jack/control.h` and `common/JackControlAPI.h`. Both carry `SPDX-License-Identifier: ( GPL-2.0-or-later OR LGPL-2.1-or-later OR MIT OR AFL-2.1 )`: the work may be used under any one of those four licences. LGPL-2.1-or-later is one of them, so the LGPL licence of the replacement is allowed. The header of `Control.hpp` names only the LGPL. Keep this note with the licence.
 
 These two are the only upstream files with an SPDX header. All other upstream files state their licence in the text, which the classifier reads.
 
@@ -46,16 +46,16 @@ Every derived file keeps the licence it had in the original tree. No licence cha
 
 ## Findings to settle before the layout
 
-0. **The client library contains GPL code.** `platform/FdSegment.cpp` is GPL-2.0 (in `e102e682` too, and in `origin/develop`). It is in `JACK_COMMON_SOURCES` in `CMakeLists.txt`, and `JACK_COMMON_SOURCES` is part of `JACK_CLIENT_SOURCES`, so the `jack` library (`libjack`) that clients link against is built with it. `client/ClientSession.cpp` and `common/ShmMem.h` use `FdSegment`. The client is therefore not LGPL as built, whatever its headers say. Choices: relicense `FdSegment` (the owner's decision), move the client's use of it out of the library, or make the client library GPL. Neither file has an upstream origin: `FdSegment` was added in `6bf4566b` (2026-11-08) and `Message.h` in `575b58e9` (2026-11-08), both by this project. So no third-party copyright is involved in relicensing them.
-   **Resolved:** `FdSegment.{h,cpp}` and `common/Message.h` (which `ClientSession.cpp` includes) are relicensed to LGPL-2.1-or-later, by the owner's decision. The include closure of `libjack` now has no GPL file (checked by following `#include "..."` from its sources). The "Licence now" column above is the state before that change; `LICENSING.md` has the current lists.
-1. **Resampler kernels are MIT.** `platform/alsa/resample/` (`resample.h`, `resample-native*.c`, `resample-native-impl.h`) is copied from PipeWire under MIT (SPDX headers). `dbesi0.c` is Takuya Ooura's Bessel function under its own permissive notice. The plan in the handoff does not mention MIT; `LICENSING.md` must name it.
-2. **`platform/alsa/resample/spa-shim/` has no licence notice.** The five headers are written as minimal subsets of PipeWire's SPA headers (MIT, per `resample/README.md`). They need an MIT notice, or a statement that they are MIT by provenance.
+0. **The client library contains GPL code.** `ipc/memory/FdSegment.cpp` is GPL-2.0 (in `e102e682` too, and in `origin/develop`). It is in `JACK_COMMON_SOURCES` in `CMakeLists.txt`, and `JACK_COMMON_SOURCES` is part of `JACK_CLIENT_SOURCES`, so the `jack` library (`libjack`) that clients link against is built with it. `client/session/ClientSession.cpp` and `ipc/memory/ShmMem.h` use `FdSegment`. The client is therefore not LGPL as built, whatever its headers say. Choices: relicense `FdSegment` (the owner's decision), move the client's use of it out of the library, or make the client library GPL. Neither file has an upstream origin: `FdSegment` was added in `6bf4566b` (2026-11-08) and `Message.h` in `575b58e9` (2026-11-08), both by this project. So no third-party copyright is involved in relicensing them.
+   **Resolved:** `FdSegment.{h,cpp}` and `ipc/protocol/Message.h` (which `client/session/ClientSession.cpp` includes) are relicensed to LGPL-2.1-or-later, by the owner's decision. The include closure of `libjack` now has no GPL file (checked by following `#include "..."` from its sources). The "Licence now" column above is the state before that change; `LICENSING.md` has the current lists.
+1. **Resampler kernels are MIT.** `server/drivers/alsa/resample/` (`resample.h`, `resample-native*.c`, `resample-native-impl.h`) is copied from PipeWire under MIT (SPDX headers). `dbesi0.c` is Takuya Ooura's Bessel function under its own permissive notice. The plan in the handoff does not mention MIT; `LICENSING.md` must name it.
+2. **`server/drivers/alsa/resample/spa-shim/` has no licence notice.** The five headers are written as minimal subsets of PipeWire's SPA headers (MIT, per `resample/README.md`). They need an MIT notice, or a statement that they are MIT by provenance.
 3. **`tests/perf/alloccount.cpp`, `tests/perf/rtbench.cpp`, `tests/perf/run-baseline.sh`, `tests/tools_e2e.sh`, `scripts/ci.sh`, `configure.sh`, and the build files have no licence notice.** Under the plan, the server code is GPL-2.0 (`COPYING`), so these fall under `COPYING` by default. `LICENSING.md` should say so, or each file should get a notice.
 4. **Mixed licences in one directory.** The licence follows the file, not the directory. Exceptions to the directory's majority:
-   - `common/`: GPL-2.0 are `Memops.{h,cpp}` and `Message.h`; the rest is LGPL.
-   - `platform/`: GPL-2.0 are `FdSegment.{h,cpp}` and `ServerLock.{h,cpp}`; the rest is LGPL, including `Mutex.h` and `PosixMutex.{h,cpp}`.
-   - `platform/alsa/`: LGPL-2.1-or-later is `Jslist.h`; the rest is GPL.
-   - `server/`: LGPL-2.1-or-later are `Control.cpp`, `DriverInterface.h`, `DriverModule.h`, `DriverLoader.h`, `RequestDecoder.{h,cpp}`; the rest is GPL.
+   - `common/`: all LGPL-2.1-or-later. `Memops.{h,cpp}` (GPL-2.0) moved to `server/drivers/`.
+   - `common/os/`, `ipc/memory/`, `ipc/socket/`, `ipc/sync/` and `server/ipc/`: all LGPL-2.1-or-later.
+   - `server/drivers/alsa/`: all GPL-2.0 (`Jslist.h` was removed).
+   - `server/control/` and `server/ipc/` are LGPL-2.1-or-later, as are `DriverInterface.h`, `DriverLoader.h` and `DriverModule.h` in `server/drivers/`; `server/core/ServerLock.{h,cpp}` and the rest of `server/` are GPL-2.0.
    - `tests/`: split about evenly. `tools/` is all LGPL.
 
    `LICENSING.md` must list these per file, not per directory.
@@ -66,196 +66,197 @@ Every derived file keeps the licence it had in the original tree. No licence cha
 | File | Status | Origin | Original licence | Licence now |
 |---|---|---|---|---|
 | `CMakeLists.txt` | kept, edited | `CMakeLists.txt` | no notice | no notice |
-| `client/ClientSession.cpp` | renamed | `client/client_session.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/ClientSession.hpp` | renamed | `client/client_session.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/ProcessContext.cpp` | renamed | `client/process_context.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/ProcessContext.hpp` | renamed | `client/process_context.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/ServerLaunch.cpp` | renamed | `client/JackServerLaunch.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/ServerLaunch.h` | renamed | `client/JackServerLaunch.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Client.cpp` | renamed | `client/jackmini/client.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Client.hpp` | renamed | `client/jackmini/client.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Control.hpp` | renamed | `client/jackmini/control.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Error.cpp` | renamed | `client/jackmini/error.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Error.hpp` | renamed | `client/jackmini/error.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Jackmini.hpp` | rewritten (name match) | `client/jackmini/jackmini.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Midi.hpp` | renamed | `client/jackmini/midi.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Options.hpp` | renamed | `client/jackmini/options.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Port.hpp` | renamed | `client/jackmini/port.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Ringbuffer.hpp` | renamed | `client/jackmini/ringbuffer.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Transport.hpp` | renamed | `client/jackmini/transport.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Uuid.cpp` | renamed | `client/jackmini/uuid.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/jackmini/Uuid.hpp` | renamed | `client/jackmini/uuid.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/ActivationCount.cpp` | renamed | `common/JackActivationCount.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/ActivationCount.h` | renamed | `common/JackActivationCount.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/Atomic.h` | renamed | `common/JackAtomic.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/AtomicArrayState.h` | renamed | `common/JackAtomicArrayState.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/AtomicState.h` | renamed | `common/JackAtomicState.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/AudioPort.cpp` | renamed | `common/JackAudioPort.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/session/ClientSession.cpp` | renamed | `client/client_session.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/session/ClientSession.hpp` | renamed | `client/client_session.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/session/ProcessContext.cpp` | renamed | `client/process_context.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/session/ProcessContext.hpp` | renamed | `client/process_context.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/ServerLaunch.cpp` | removed | `client/JackServerLaunch.cpp` | LGPL-2.1-or-later | — |
+| `client/ServerLaunch.h` | removed | `client/JackServerLaunch.h` | LGPL-2.1-or-later | — |
+| `client/api/Client.cpp` | renamed | `client/api/client.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Client.hpp` | renamed | `client/api/client.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/control/Control.hpp` | renamed | `client/api/control.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Error.cpp` | renamed | `client/api/error.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Error.hpp` | renamed | `client/api/error.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Jackmini.hpp` | rewritten (name match) | `client/api/jackmini.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Midi.hpp` | renamed | `client/api/midi.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Options.hpp` | renamed | `client/api/options.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Port.hpp` | renamed | `client/api/port.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Ringbuffer.hpp` | renamed | `client/api/ringbuffer.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Transport.hpp` | renamed | `client/api/transport.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Uuid.cpp` | renamed | `client/api/uuid.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Uuid.hpp` | renamed | `client/api/uuid.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/ActivationCount.cpp` | renamed | `common/JackActivationCount.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/ActivationCount.h` | renamed | `common/JackActivationCount.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/Atomic.h` | renamed | `common/JackAtomic.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/AtomicArrayState.h` | renamed | `common/JackAtomicArrayState.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/AtomicState.h` | renamed | `common/JackAtomicState.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/AudioPort.cpp` | renamed | `common/JackAudioPort.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/CString.h` | renamed | `common/JackCString.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/Channel.h` | renamed | `common/JackChannel.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/ClientControl.h` | rewritten (name match) | `common/JackClientControl.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/ClientInterface.h` | rewritten (name match) | `common/JackClientInterface.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/protocol/Channel.h` | renamed | `common/JackChannel.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/ClientControl.h` | rewritten (name match) | `common/JackClientControl.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/ClientInterface.h` | rewritten (name match) | `common/JackClientInterface.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/CompilerDeps.h` | renamed | `common/JackCompilerDeps.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/ConnectionManager.cpp` | renamed | `common/JackConnectionManager.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/ConnectionManager.h` | renamed | `common/JackConnectionManager.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/Constants.h` | rewritten (name match) | `common/JackConstants.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/EngineControl.cpp` | renamed | `common/JackEngineControl.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/EngineControl.h` | rewritten (name match) | `common/JackEngineControl.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/ConnectionManager.cpp` | renamed | `common/JackConnectionManager.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/ConnectionManager.h` | renamed | `common/JackConnectionManager.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/protocol/Constants.h` | rewritten (name match) | `common/JackConstants.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/EngineControl.cpp` | renamed | `common/JackEngineControl.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/EngineControl.h` | rewritten (name match) | `common/JackEngineControl.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Error.cpp` | renamed | `common/JackError.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Error.h` | renamed | `common/JackError.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Exception.cpp` | renamed | `common/JackException.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Exception.h` | renamed | `common/JackException.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/FrameTimer.cpp` | rewritten (name match) | `common/JackFrameTimer.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/FrameTimer.h` | rewritten (name match) | `common/JackFrameTimer.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/FrameTimer.cpp` | rewritten (name match) | `common/JackFrameTimer.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/FrameTimer.h` | rewritten (name match) | `common/JackFrameTimer.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Globals.cpp` | rewritten (name match) | `common/JackGlobals.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Globals.h` | renamed | `common/JackGlobals.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/GraphManager.cpp` | renamed | `common/JackGraphManager.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/GraphManager.h` | rewritten (name match) | `common/JackGraphManager.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/GraphManager.cpp` | renamed | `common/JackGraphManager.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/GraphManager.h` | rewritten (name match) | `common/JackGraphManager.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Log.cpp` | renamed | `common/JackLog.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Log.h` | renamed | `common/JackLog.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/Memops.cpp` | renamed | `common/memops.cpp` | GPL-2.0 | GPL-2.0 |
-| `common/Memops.h` | rewritten (name match) | `common/memops.h` | GPL-2.0 | GPL-2.0 |
-| `common/Message.h` | renamed | `common/JackMessage.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/Memops.cpp` | renamed | `common/memops.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/Memops.h` | rewritten (name match) | `common/memops.h` | GPL-2.0 | GPL-2.0 |
+| `ipc/protocol/Message.h` | renamed | `common/JackMessage.h` | GPL-2.0 | GPL-2.0 |
 | `common/MessageBuffer.cpp` | renamed | `common/JackMessageBuffer.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/MessageBuffer.h` | renamed | `common/JackMessageBuffer.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/MidiAPI.cpp` | renamed | `common/JackMidiAPI.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/MidiPort.cpp` | renamed | `common/JackMidiPort.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/MidiPort.h` | renamed | `common/JackMidiPort.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Mutex.h` | renamed | `common/JackMutex.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/Notification.h` | renamed | `common/JackNotification.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/PlatformPlug.h` | renamed | `common/JackPlatformPlug.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/PortType.cpp` | renamed | `common/JackPortType.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/PortType.h` | rewritten (name match) | `common/JackPortType.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/Request.h` | renamed | `common/JackRequest.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/protocol/Notification.h` | renamed | `common/JackNotification.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/os/Platform.h` | renamed | `common/JackPlatformPlug.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/PortType.cpp` | renamed | `common/JackPortType.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/PortType.h` | rewritten (name match) | `common/JackPortType.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/protocol/Request.h` | renamed | `common/JackRequest.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Ringbuffer.cpp` | renamed | `common/ringbuffer.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/ServerPort.cpp` | renamed | `common/JackPort.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/ServerPort.h` | rewritten (name match) | `common/JackPort.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/ShmMem.cpp` | renamed | `common/JackShmMem.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/ShmMem.h` | renamed | `common/JackShmMem.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/Synchro.h` | renamed | `common/JackSynchro.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/ServerPort.cpp` | renamed | `common/JackPort.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/ServerPort.h` | rewritten (name match) | `common/JackPort.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/ShmMem.cpp` | renamed | `common/JackShmMem.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/ShmMem.h` | renamed | `common/JackShmMem.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/sync/Synchro.h` | renamed | `common/JackSynchro.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/SystemDeps.h` | renamed | `common/JackSystemDeps.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Thread.h` | renamed | `common/JackThread.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Time.h` | rewritten (name match) | `common/JackTime.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Tools.cpp` | renamed | `common/JackTools.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Tools.h` | renamed | `common/JackTools.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/TransportEngine.cpp` | renamed | `common/JackTransportEngine.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/TransportEngine.h` | rewritten (name match) | `common/JackTransportEngine.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/TransportEngine.cpp` | renamed | `common/JackTransportEngine.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/memory/TransportEngine.h` | rewritten (name match) | `common/JackTransportEngine.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Types.h` | rewritten (name match) | `common/JackTypes.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Uuid.cpp` | renamed | `common/JackUuid.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/jack/jslist.h` | kept, edited | `common/jack/jslist.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/jack/midiport.h` | kept, edited | `common/jack/midiport.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/jack/midiport.h` | removed | `common/jack/midiport.h` | LGPL-2.1-or-later | — |
 | `common/jack/ringbuffer.h` | kept, edited | `common/jack/ringbuffer.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/jack/systemdeps.h` | kept, edited | `common/jack/systemdeps.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/jack/transport.h` | kept, edited | `common/jack/transport.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/jack/transport.h` | removed | `common/jack/transport.h` | LGPL-2.1-or-later | — |
 | `common/jack/types.h` | kept, edited | `common/jack/types.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/jack/uuid.h` | kept, edited | `common/jack/uuid.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/jack/weakmacros.h` | kept, edited | `common/jack/weakmacros.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/jack/weakmacros.h` | removed | `common/jack/weakmacros.h` | LGPL-2.1-or-later | — |
 | `config.h.in` | kept, edited | `config.h.in` | no notice | no notice |
 | `configure.sh` | kept | `configure.sh` | no notice | no notice |
-| `platform/FdSegment.cpp` | renamed | `platform/JackFdSegment.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/FdSegment.h` | renamed | `platform/JackFdSegment.h` | GPL-2.0 | GPL-2.0 |
-| `platform/LinuxFutex.cpp` | renamed | `platform/JackLinuxFutex.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/LinuxFutex.h` | rewritten (name match) | `platform/JackLinuxFutex.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/LinuxTime.cpp` | renamed | `platform/JackLinuxTime.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/PosixMutex.cpp` | renamed | `platform/JackPosixMutex.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/PosixMutex.h` | renamed | `platform/JackPosixMutex.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/PosixProcessSync.cpp` | renamed | `platform/JackPosixProcessSync.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/PosixProcessSync.h` | rewritten (name match) | `platform/JackPosixProcessSync.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/PosixThread.cpp` | renamed | `platform/JackPosixThread.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/PosixThread.h` | rewritten (name match) | `platform/JackPosixThread.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/Promiscuous.cpp` | renamed | `platform/promiscuous.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/Promiscuous.hpp` | renamed | `platform/promiscuous.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/ServerLock.cpp` | renamed | `platform/JackServerLock.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/ServerLock.h` | renamed | `platform/JackServerLock.h` | GPL-2.0 | GPL-2.0 |
-| `platform/Socket.cpp` | renamed | `platform/JackSocket.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/Socket.h` | renamed | `platform/JackSocket.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/SocketNotifyChannel.cpp` | renamed | `platform/JackSocketNotifyChannel.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/SocketNotifyChannel.h` | renamed | `platform/JackSocketNotifyChannel.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/SocketServerChannel.cpp` | renamed | `platform/JackSocketServerChannel.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/SocketServerChannel.h` | rewritten (name match) | `platform/JackSocketServerChannel.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/SocketServerNotifyChannel.cpp` | renamed | `platform/JackSocketServerNotifyChannel.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/SocketServerNotifyChannel.h` | rewritten (name match) | `platform/JackSocketServerNotifyChannel.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/alsa/AlsaCardDiff.h` | renamed | `platform/alsa/JackAlsaCardDiff.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaCardFailureSink.h` | rewritten (name match) | `platform/alsa/JackAlsaCardFailureSink.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaControl.cpp` | renamed | `platform/alsa/JackAlsaControl.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaControl.h` | renamed | `platform/alsa/JackAlsaControl.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaControlMonitor.cpp` | renamed | `platform/alsa/JackAlsaControlMonitor.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaControlMonitor.h` | renamed | `platform/alsa/JackAlsaControlMonitor.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaDriftController.cpp` | renamed | `platform/alsa/JackAlsaDriftController.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaDriftController.h` | renamed | `platform/alsa/JackAlsaDriftController.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaDriver.cpp` | renamed | `platform/alsa/JackAlsaDriver.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaDriver.h` | renamed | `platform/alsa/JackAlsaDriver.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaEnumerate.cpp` | renamed | `platform/alsa/JackAlsaEnumerate.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaEnumerate.h` | rewritten (name match) | `platform/alsa/JackAlsaEnumerate.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaHotplug.cpp` | renamed | `platform/alsa/JackAlsaHotplug.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaHotplug.h` | rewritten (name match) | `platform/alsa/JackAlsaHotplug.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaRateConverter.cpp` | renamed | `platform/alsa/JackAlsaRateConverter.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaRateConverter.h` | renamed | `platform/alsa/JackAlsaRateConverter.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaReconfigWorker.cpp` | renamed | `platform/alsa/JackAlsaReconfigWorker.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaReconfigWorker.h` | renamed | `platform/alsa/JackAlsaReconfigWorker.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaRingBuffer.cpp` | renamed | `platform/alsa/JackAlsaRingBuffer.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaRingBuffer.h` | renamed | `platform/alsa/JackAlsaRingBuffer.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaSecondaryCard.cpp` | renamed | `platform/alsa/JackAlsaSecondaryCard.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaSecondaryCard.h` | renamed | `platform/alsa/JackAlsaSecondaryCard.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaSecondaryConfig.cpp` | renamed | `platform/alsa/JackAlsaSecondaryConfig.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaSecondaryConfig.h` | renamed | `platform/alsa/JackAlsaSecondaryConfig.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/AlsaSlotTable.h` | renamed | `platform/alsa/JackAlsaSlotTable.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/Bitset.h` | renamed | `platform/alsa/bitset.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/Hardware.h` | renamed | `platform/alsa/hardware.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/Jslist.h` | renamed | `platform/alsa/jslist.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `platform/alsa/PcmAlsa.cpp` | renamed | `platform/alsa/pcm_alsa.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/PcmAlsa.hpp` | renamed | `platform/alsa/pcm_alsa.hpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/PcmCycle.hpp` | renamed | `platform/alsa/pcm_cycle.hpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/PcmSession.cpp` | renamed | `platform/alsa/pcm_session.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/PcmSession.hpp` | renamed | `platform/alsa/pcm_session.hpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/resample/Resampler.cpp` | renamed | `platform/alsa/resample/JackResampler.cpp` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/resample/Resampler.h` | renamed | `platform/alsa/resample/JackResampler.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/resample/dbesi0.c` | kept | `platform/alsa/resample/dbesi0.c` | no notice | no notice |
-| `platform/alsa/resample/pipewire_resample_bridge.c` | kept | `platform/alsa/resample/pipewire_resample_bridge.c` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/resample/pipewire_resample_bridge.h` | kept | `platform/alsa/resample/pipewire_resample_bridge.h` | GPL-2.0 | GPL-2.0 |
-| `platform/alsa/resample/resample-native-avx2.c` | kept | `platform/alsa/resample/resample-native-avx2.c` | MIT | MIT |
-| `platform/alsa/resample/resample-native-c.c` | kept | `platform/alsa/resample/resample-native-c.c` | MIT | MIT |
-| `platform/alsa/resample/resample-native-impl.h` | kept | `platform/alsa/resample/resample-native-impl.h` | MIT | MIT |
-| `platform/alsa/resample/resample-native-neon.c` | kept | `platform/alsa/resample/resample-native-neon.c` | MIT | MIT |
-| `platform/alsa/resample/resample-native-sse.c` | kept | `platform/alsa/resample/resample-native-sse.c` | MIT | MIT |
-| `platform/alsa/resample/resample-native.c` | kept | `platform/alsa/resample/resample-native.c` | MIT | MIT |
-| `platform/alsa/resample/resample.h` | kept | `platform/alsa/resample/resample.h` | MIT | MIT |
-| `platform/alsa/resample/spa-shim/spa/param/audio/format.h` | kept | `platform/alsa/resample/spa-shim/spa/param/audio/format.h` | no notice | no notice |
-| `platform/alsa/resample/spa-shim/spa/support/cpu.h` | kept | `platform/alsa/resample/spa-shim/spa/support/cpu.h` | no notice | no notice |
-| `platform/alsa/resample/spa-shim/spa/support/log.h` | kept | `platform/alsa/resample/spa-shim/spa/support/log.h` | no notice | no notice |
-| `platform/alsa/resample/spa-shim/spa/utils/defs.h` | kept | `platform/alsa/resample/spa-shim/spa/utils/defs.h` | no notice | no notice |
-| `platform/alsa/resample/spa-shim/spa/utils/overflow.h` | kept | `platform/alsa/resample/spa-shim/spa/utils/overflow.h` | no notice | no notice |
+| `ipc/memory/FdSegment.cpp` | renamed | `platform/JackFdSegment.cpp` | GPL-2.0 | GPL-2.0 |
+| `ipc/memory/FdSegment.h` | renamed | `platform/JackFdSegment.h` | GPL-2.0 | GPL-2.0 |
+| `ipc/sync/LinuxFutex.cpp` | renamed | `platform/JackLinuxFutex.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/sync/LinuxFutex.h` | rewritten (name match) | `platform/JackLinuxFutex.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/os/LinuxTime.cpp` | renamed | `platform/JackLinuxTime.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/os/PosixMutex.cpp` | renamed | `platform/JackPosixMutex.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/os/PosixMutex.h` | renamed | `platform/JackPosixMutex.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/os/PosixProcessSync.cpp` | renamed | `platform/JackPosixProcessSync.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/os/PosixProcessSync.h` | rewritten (name match) | `platform/JackPosixProcessSync.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/os/PosixThread.cpp` | renamed | `platform/JackPosixThread.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/os/PosixThread.h` | rewritten (name match) | `platform/JackPosixThread.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/socket/Promiscuous.cpp` | renamed | `platform/promiscuous.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/socket/Promiscuous.hpp` | renamed | `platform/promiscuous.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/core/ServerLock.cpp` | renamed | `platform/JackServerLock.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/core/ServerLock.h` | renamed | `platform/JackServerLock.h` | GPL-2.0 | GPL-2.0 |
+| `ipc/socket/Socket.cpp` | renamed | `platform/JackSocket.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/socket/Socket.h` | renamed | `platform/JackSocket.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/ipc/ServerChannels.h` | split from `common/PlatformPlug.h` | — | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/ipc/SocketNotifyChannel.cpp` | renamed | `platform/JackSocketNotifyChannel.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/ipc/SocketNotifyChannel.h` | renamed | `platform/JackSocketNotifyChannel.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/ipc/SocketServerChannel.cpp` | renamed | `platform/JackSocketServerChannel.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/ipc/SocketServerChannel.h` | rewritten (name match) | `platform/JackSocketServerChannel.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/ipc/SocketServerNotifyChannel.cpp` | renamed | `platform/JackSocketServerNotifyChannel.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/ipc/SocketServerNotifyChannel.h` | rewritten (name match) | `platform/JackSocketServerNotifyChannel.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/drivers/alsa/AlsaCardDiff.h` | renamed | `platform/alsa/JackAlsaCardDiff.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaCardFailureSink.h` | rewritten (name match) | `platform/alsa/JackAlsaCardFailureSink.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaControl.cpp` | renamed | `platform/alsa/JackAlsaControl.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaControl.h` | renamed | `platform/alsa/JackAlsaControl.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaControlMonitor.cpp` | renamed | `platform/alsa/JackAlsaControlMonitor.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaControlMonitor.h` | renamed | `platform/alsa/JackAlsaControlMonitor.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaDriftController.cpp` | renamed | `platform/alsa/JackAlsaDriftController.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaDriftController.h` | renamed | `platform/alsa/JackAlsaDriftController.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaDriver.cpp` | renamed | `platform/alsa/JackAlsaDriver.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaDriver.h` | renamed | `platform/alsa/JackAlsaDriver.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaEnumerate.cpp` | renamed | `platform/alsa/JackAlsaEnumerate.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaEnumerate.h` | rewritten (name match) | `platform/alsa/JackAlsaEnumerate.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaHotplug.cpp` | renamed | `platform/alsa/JackAlsaHotplug.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaHotplug.h` | rewritten (name match) | `platform/alsa/JackAlsaHotplug.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaRateConverter.cpp` | renamed | `platform/alsa/JackAlsaRateConverter.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaRateConverter.h` | renamed | `platform/alsa/JackAlsaRateConverter.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaReconfigWorker.cpp` | renamed | `platform/alsa/JackAlsaReconfigWorker.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaReconfigWorker.h` | renamed | `platform/alsa/JackAlsaReconfigWorker.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaRingBuffer.cpp` | renamed | `platform/alsa/JackAlsaRingBuffer.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaRingBuffer.h` | renamed | `platform/alsa/JackAlsaRingBuffer.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaSecondaryCard.cpp` | renamed | `platform/alsa/JackAlsaSecondaryCard.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaSecondaryCard.h` | renamed | `platform/alsa/JackAlsaSecondaryCard.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaSecondaryConfig.cpp` | renamed | `platform/alsa/JackAlsaSecondaryConfig.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaSecondaryConfig.h` | renamed | `platform/alsa/JackAlsaSecondaryConfig.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/AlsaSlotTable.h` | renamed | `platform/alsa/JackAlsaSlotTable.h` | GPL-2.0 | GPL-2.0 |
+| `platform/alsa/Bitset.h` | removed | `platform/alsa/bitset.h` | GPL-2.0 | — |
+| `platform/alsa/Hardware.h` | removed | `platform/alsa/hardware.h` | GPL-2.0 | — |
+| `platform/alsa/Jslist.h` | removed | `platform/alsa/jslist.h` | LGPL-2.1-or-later | — |
+| `server/drivers/alsa/PcmAlsa.cpp` | renamed | `platform/alsa/pcm_alsa.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/PcmAlsa.hpp` | renamed | `platform/alsa/pcm_alsa.hpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/PcmCycle.hpp` | renamed | `platform/alsa/pcm_cycle.hpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/PcmSession.cpp` | renamed | `platform/alsa/pcm_session.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/PcmSession.hpp` | renamed | `platform/alsa/pcm_session.hpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/resample/Resampler.cpp` | renamed | `platform/alsa/resample/JackResampler.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/resample/Resampler.h` | renamed | `platform/alsa/resample/JackResampler.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/resample/dbesi0.c` | kept | `platform/alsa/resample/dbesi0.c` | no notice | no notice |
+| `server/drivers/alsa/resample/pipewire_resample_bridge.c` | kept | `platform/alsa/resample/pipewire_resample_bridge.c` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/resample/pipewire_resample_bridge.h` | kept | `platform/alsa/resample/pipewire_resample_bridge.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/alsa/resample/resample-native-avx2.c` | kept | `platform/alsa/resample/resample-native-avx2.c` | MIT | MIT |
+| `server/drivers/alsa/resample/resample-native-c.c` | kept | `platform/alsa/resample/resample-native-c.c` | MIT | MIT |
+| `server/drivers/alsa/resample/resample-native-impl.h` | kept | `platform/alsa/resample/resample-native-impl.h` | MIT | MIT |
+| `server/drivers/alsa/resample/resample-native-neon.c` | kept | `platform/alsa/resample/resample-native-neon.c` | MIT | MIT |
+| `server/drivers/alsa/resample/resample-native-sse.c` | kept | `platform/alsa/resample/resample-native-sse.c` | MIT | MIT |
+| `server/drivers/alsa/resample/resample-native.c` | kept | `platform/alsa/resample/resample-native.c` | MIT | MIT |
+| `server/drivers/alsa/resample/resample.h` | kept | `platform/alsa/resample/resample.h` | MIT | MIT |
+| `server/drivers/alsa/resample/spa-shim/spa/param/audio/format.h` | kept | `platform/alsa/resample/spa-shim/spa/param/audio/format.h` | no notice | no notice |
+| `server/drivers/alsa/resample/spa-shim/spa/support/cpu.h` | kept | `platform/alsa/resample/spa-shim/spa/support/cpu.h` | no notice | no notice |
+| `server/drivers/alsa/resample/spa-shim/spa/support/log.h` | kept | `platform/alsa/resample/spa-shim/spa/support/log.h` | no notice | no notice |
+| `server/drivers/alsa/resample/spa-shim/spa/utils/defs.h` | kept | `platform/alsa/resample/spa-shim/spa/utils/defs.h` | no notice | no notice |
+| `server/drivers/alsa/resample/spa-shim/spa/utils/overflow.h` | kept | `platform/alsa/resample/spa-shim/spa/utils/overflow.h` | no notice | no notice |
 | `scripts/ci.sh` | new | - | - | no notice |
-| `server/AudioDriver.cpp` | renamed | `server/JackAudioDriver.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/AudioDriver.h` | rewritten (name match) | `server/JackAudioDriver.h` | GPL-2.0 | GPL-2.0 |
-| `server/Control.cpp` | renamed | `server/control.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `server/Driver.cpp` | renamed | `server/JackDriver.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/Driver.h` | renamed | `server/JackDriver.h` | GPL-2.0 | GPL-2.0 |
-| `server/DriverInfo.h` | rewritten (name match) | `server/JackDriverInfo.h` | GPL-2.0 | GPL-2.0 |
-| `server/DriverInterface.h` | renamed | `server/driver_interface.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `server/DriverLoader.cpp` | renamed | `server/JackDriverLoader.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/DriverLoader.h` | rewritten (name match) | `server/JackDriverLoader.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `server/DriverModule.h` | renamed | `server/driver_module.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `server/DummyDriver.cpp` | renamed | `server/JackDummyDriver.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/DummyDriver.h` | renamed | `server/JackDummyDriver.h` | GPL-2.0 | GPL-2.0 |
-| `server/Engine.cpp` | renamed | `server/JackEngine.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/Engine.h` | renamed | `server/JackEngine.h` | GPL-2.0 | GPL-2.0 |
-| `server/ExternalClient.cpp` | renamed | `server/JackExternalClient.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/ExternalClient.h` | renamed | `server/JackExternalClient.h` | GPL-2.0 | GPL-2.0 |
-| `server/FreewheelDriver.cpp` | renamed | `server/JackFreewheelDriver.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/FreewheelDriver.h` | renamed | `server/JackFreewheelDriver.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/AudioDriver.cpp` | renamed | `server/JackAudioDriver.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/AudioDriver.h` | rewritten (name match) | `server/JackAudioDriver.h` | GPL-2.0 | GPL-2.0 |
+| `server/control/Control.cpp` | renamed | `server/control.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/drivers/Driver.cpp` | renamed | `server/JackDriver.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/Driver.h` | renamed | `server/JackDriver.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/DriverInfo.h` | rewritten (name match) | `server/JackDriverInfo.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/DriverInterface.h` | renamed | `server/driver_interface.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/drivers/DriverLoader.cpp` | renamed | `server/JackDriverLoader.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/DriverLoader.h` | rewritten (name match) | `server/JackDriverLoader.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/drivers/DriverModule.h` | renamed | `server/driver_module.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/drivers/DummyDriver.cpp` | renamed | `server/JackDummyDriver.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/DummyDriver.h` | renamed | `server/JackDummyDriver.h` | GPL-2.0 | GPL-2.0 |
+| `server/core/Engine.cpp` | renamed | `server/JackEngine.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/core/Engine.h` | renamed | `server/JackEngine.h` | GPL-2.0 | GPL-2.0 |
+| `server/core/ExternalClient.cpp` | renamed | `server/JackExternalClient.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/core/ExternalClient.h` | renamed | `server/JackExternalClient.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/FreewheelDriver.cpp` | renamed | `server/JackFreewheelDriver.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/FreewheelDriver.h` | renamed | `server/JackFreewheelDriver.h` | GPL-2.0 | GPL-2.0 |
 | `server/Jackdmp.cpp` | kept, edited | `server/Jackdmp.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/LockedEngine.h` | renamed | `server/JackLockedEngine.h` | GPL-2.0 | GPL-2.0 |
-| `server/RequestDecoder.cpp` | renamed | `server/JackRequestDecoder.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `server/RequestDecoder.h` | renamed | `server/JackRequestDecoder.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `server/ServerCore.cpp` | renamed | `server/JackServer.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/ServerCore.h` | rewritten (name match) | `server/JackServer.h` | GPL-2.0 | GPL-2.0 |
-| `server/ServerGlobals.cpp` | rewritten (name match) | `server/JackServerGlobals.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/ServerGlobals.h` | rewritten (name match) | `server/JackServerGlobals.h` | GPL-2.0 | GPL-2.0 |
-| `server/ThreadedDriver.cpp` | renamed | `server/JackThreadedDriver.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/ThreadedDriver.h` | rewritten (name match) | `server/JackThreadedDriver.h` | GPL-2.0 | GPL-2.0 |
-| `server/TimedDriver.cpp` | renamed | `server/JackTimedDriver.cpp` | GPL-2.0 | GPL-2.0 |
-| `server/TimedDriver.h` | renamed | `server/JackTimedDriver.h` | GPL-2.0 | GPL-2.0 |
+| `server/core/LockedEngine.h` | renamed | `server/JackLockedEngine.h` | GPL-2.0 | GPL-2.0 |
+| `server/ipc/RequestDecoder.cpp` | renamed | `server/JackRequestDecoder.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/ipc/RequestDecoder.h` | renamed | `server/JackRequestDecoder.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `server/core/ServerCore.cpp` | renamed | `server/JackServer.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/core/ServerCore.h` | rewritten (name match) | `server/JackServer.h` | GPL-2.0 | GPL-2.0 |
+| `server/core/ServerGlobals.cpp` | rewritten (name match) | `server/JackServerGlobals.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/core/ServerGlobals.h` | rewritten (name match) | `server/JackServerGlobals.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/ThreadedDriver.cpp` | renamed | `server/JackThreadedDriver.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/ThreadedDriver.h` | rewritten (name match) | `server/JackThreadedDriver.h` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/TimedDriver.cpp` | renamed | `server/JackTimedDriver.cpp` | GPL-2.0 | GPL-2.0 |
+| `server/drivers/TimedDriver.h` | renamed | `server/JackTimedDriver.h` | GPL-2.0 | GPL-2.0 |
 | `tests/AlsaFakeBackend.hpp` | renamed | `tests/alsa_fake_backend.hpp` | GPL-2.0 | GPL-2.0 |
 | `tests/AlsaSecondaryUnit.cpp` | renamed | `tests/alsa_secondary_unit.cpp` | GPL-2.0 | GPL-2.0 |
 | `tests/ClientSessionE2e.cpp` | renamed | `tests/client_session_e2e.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
@@ -297,4 +298,4 @@ Every derived file keeps the licence it had in the original tree. No licence cha
 
 ## Other files
 
-73 files that are not source or build files (documentation, data, workflow, and the `tools/README.md`). None of them has a licence header. `COPYING` holds the GPL-2.0 text, and `platform/alsa/resample/README.md` names the MIT licence of the vendored resampler. Derived ones: 73. New ones: 0.
+73 files that are not source or build files (documentation, data, workflow, and the `tools/README.md`). None of them has a licence header. `COPYING` holds the GPL-2.0 text, and `server/drivers/alsa/resample/README.md` names the MIT licence of the vendored resampler. Derived ones: 73. New ones: 0.

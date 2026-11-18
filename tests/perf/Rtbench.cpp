@@ -5,7 +5,7 @@
 // The run is seconds of audio: it counts cycles, so it holds in freewheel mode as well.  The client waits for the server
 // to come up.
 #include "../JackminiWait.hpp"
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
 
 #include <array>
 #include <atomic>
@@ -67,7 +67,6 @@ int main(std::int32_t argc, char** argv)
     std::int32_t seconds = argc > 1 ? std::atoi(argv[1]) : 30;
 
     OpenOptions options;
-    options.m_startServer = false;
 
     // The server may still be starting: retry the open for a while, instead of a fixed delay.
     std::optional<Client> client;

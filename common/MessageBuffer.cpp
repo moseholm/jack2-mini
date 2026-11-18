@@ -16,10 +16,10 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "MessageBuffer.h"
-#include "Error.h"
-#include "Globals.h"
-#include "Time.h"
+#include "common/MessageBuffer.h"
+#include "common/Error.h"
+#include "common/Globals.h"
+#include "common/Time.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdint>

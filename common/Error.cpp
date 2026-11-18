@@ -16,9 +16,9 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "Error.h"
-#include "Globals.h"
-#include "MessageBuffer.h"
+#include "common/Error.h"
+#include "common/Globals.h"
+#include "common/MessageBuffer.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <cstdint>

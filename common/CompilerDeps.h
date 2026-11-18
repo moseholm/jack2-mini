@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "Constants.h"
+#include "ipc/protocol/Constants.h"
 
 #if __GNUC__
 

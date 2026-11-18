@@ -1,6 +1,6 @@
 # C++ client API (P1 design)
 
-Status: decided. The headers are written in `client/jackmini/` and compile
+Status: decided. The headers are written in `client/api/` and compile
 standalone; the implementation is not started.
 
 ## Scope
@@ -117,13 +117,14 @@ The command-line tools are built on this (`tools/README.md`).
 
 ## Implementation
 
-The client is `client/ClientSession.*` (one connection to the server) and
+The client is `client/session/ClientSession.*` (one connection to the server) and
 `client/process_context.*` (the state that the clients of a process share), under the public
-headers in `client/jackmini/`. The C client library and its copied wrappers are gone (Plan A).
+headers in `client/api/`. The C client library and its copied wrappers are gone (Plan A).
 
-- **Lifecycle.** `ClientSession::open` checks the name, starts the server if the options allow
-  it, binds the notification socket, registers the client, maps the shared memory, and connects
-  the client's synchro. `close` stops the notifications first, then unregisters the client.
+- **Lifecycle.** `ClientSession::open` checks the name, connects to the already-running server,
+  binds the notification socket, registers the client, maps the shared memory, and connects the
+  client's synchro. A client never starts a server: with none running, `open` returns
+  `Error::kNoServer`. `close` stops the notifications first, then unregisters the client.
 - **Realtime thread.** A pthread that runs one dummy cycle, then one cycle per graph wake-up.
   Deactivate asks the server to take the client out of the graph and then stops the thread
   cooperatively (a stop flag, a wake-up of the client's own synchro, and a join). A process
@@ -146,7 +147,7 @@ graph order and the freewheel callbacks of the public C API, the total latency q
 
 ## Next steps
 
-1. Done: the headers are in `client/jackmini/`, and `tests/JackminiApiUnit.cpp`
+1. Done: the headers are in `client/api/`, and `tests/JackminiApiUnit.cpp`
    checks the types and overloads at compile time.
 2. Partly done: `RingBuffer`, `Uuid`, and the error text are implemented and
    tested without a server (`tests/JackminiUnit.cpp`, TSAN clean). The

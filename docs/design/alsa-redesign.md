@@ -19,7 +19,7 @@ Status: done. The cycle core, the libasound backend, the session and the adapter
 
 ## The target
 
-- `jackmini::alsa` in `platform/alsa/`: the RT core is a template over a backend, so the cycle has no
+- `jackmini::alsa` in `server/drivers/alsa/`: the RT core is a template over a backend, so the cycle has no
   virtual calls. The backend concept is the set of libasound calls the core needs (open, hw and sw
   params, start, the avail and the delay, read and write of the interleaved or the non-interleaved
   buffers, the xrun recovery, the close).
@@ -65,14 +65,14 @@ Status: done. The cycle core, the libasound backend, the session and the adapter
 
 1. ~~Find and fix the thread churn when the device cannot run.~~ Done: the control threads are not restarted by an
    xrun recovery, the recovery loop is bounded, and the notification channel opens after the driver runs.
-2. Done (`96fdde5e`). The backend concept, the fake backend, and the cycle core `platform/alsa/PcmCycle.hpp`, with
+2. Done (`96fdde5e`). The backend concept, the fake backend, and the cycle core `server/drivers/alsa/PcmCycle.hpp`, with
    `tests/PcmCycleUnit.cpp` (807 checks in ctest): the avail, the xrun recovery, the poll retries, the sync, the
    read and write through the mapped areas, and the silencing of untouched channels.
-3. Partly done. The libasound backend is `platform/alsa/pcm_alsa.{hpp,cpp}` (`jackmini::alsa::Device`, the
+3. Partly done. The libasound backend is `server/drivers/alsa/PcmAlsa.{hpp,cpp}` (`jackmini::alsa::Device`, the
    `PcmBackend` for the core, in `jack_alsa`). It configures the streams with the old negotiation, links them, and
    reports `capture_and_playback_not_synced()`. Checked on the UMC404HD (U192k) at 48 kHz: 64, 128 and 256 frames,
    0 xruns, cycle time equal to the period (`c03e30a2`).
-   The session is `platform/alsa/pcm_session.{hpp,cpp}` (`jackmini::alsa::Session`, `3cf04a5a`): the device, the cycle
+   The session is `server/drivers/alsa/PcmSession.{hpp,cpp}` (`jackmini::alsa::Session`, `3cf04a5a`): the device, the cycle
    on it, the copy functions chosen once at open (ported from `alsa_driver_setup_io_function_pointers`), and
    `read_channel`/`write_channel` for the callbacks. Checked on the card at 64, 128, 256 frames.
    The adapters now run on the session: `AlsaDriver` and `AlsaSecondaryCard` (this commit). `alsa_driver.c`

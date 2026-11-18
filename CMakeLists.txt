@@ -67,69 +67,77 @@ configure_file(
     @ONLY)
 
 set(JACK_INCLUDE_DIRS
+    "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/common"
-    "${CMAKE_CURRENT_SOURCE_DIR}/client"
-    "${CMAKE_CURRENT_SOURCE_DIR}/server"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/jack"
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/os"
+    "${CMAKE_CURRENT_SOURCE_DIR}/client"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ipc/memory"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ipc/protocol"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ipc/socket"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ipc/sync"
+    "${CMAKE_CURRENT_SOURCE_DIR}/server"
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/core"
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/drivers"
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/drivers/alsa"
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/ipc"
     "${CMAKE_CURRENT_BINARY_DIR}")
 
 set(JACK_COMMON_SOURCES
-    common/ActivationCount.cpp
-    common/ConnectionManager.cpp
+    ipc/memory/ActivationCount.cpp
+    ipc/memory/ConnectionManager.cpp
     common/Error.cpp
     common/Exception.cpp
-    common/FrameTimer.cpp
-    common/GraphManager.cpp
-    common/ServerPort.cpp
-    common/PortType.cpp
-    common/AudioPort.cpp
-    common/EngineControl.cpp
-    common/ShmMem.cpp
+    ipc/memory/FrameTimer.cpp
+    ipc/memory/GraphManager.cpp
+    ipc/memory/ServerPort.cpp
+    ipc/memory/PortType.cpp
+    ipc/memory/AudioPort.cpp
+    ipc/memory/EngineControl.cpp
+    ipc/memory/ShmMem.cpp
     common/Globals.cpp
-    common/TransportEngine.cpp
+    ipc/memory/TransportEngine.cpp
     common/Tools.cpp
     common/Uuid.cpp
     common/MessageBuffer.cpp
-    platform/Promiscuous.cpp
-    platform/PosixThread.cpp
-    platform/PosixProcessSync.cpp
-    platform/PosixMutex.cpp
-    platform/Socket.cpp
-    platform/FdSegment.cpp
-    platform/LinuxFutex.cpp
-    platform/LinuxTime.cpp)
+    common/os/PosixThread.cpp
+    common/os/PosixProcessSync.cpp
+    common/os/PosixMutex.cpp
+    common/os/LinuxTime.cpp
+    ipc/socket/Promiscuous.cpp
+    ipc/socket/Socket.cpp
+    ipc/memory/FdSegment.cpp
+    ipc/sync/LinuxFutex.cpp)
 
 set(JACK_CLIENT_SOURCES
     ${JACK_COMMON_SOURCES}
-    client/jackmini/Client.cpp
-    client/ProcessContext.cpp
-    client/jackmini/Uuid.cpp
-    client/ClientSession.cpp
-    client/ServerLaunch.cpp)
+    client/api/Client.cpp
+    client/session/ProcessContext.cpp
+    client/api/Uuid.cpp
+    client/session/ClientSession.cpp)
 
 set(JACK_SERVER_SOURCES
     ${JACK_COMMON_SOURCES}
-    server/AudioDriver.cpp
-    server/TimedDriver.cpp
-    server/Driver.cpp
-    server/Engine.cpp
-    server/ExternalClient.cpp
-    server/FreewheelDriver.cpp
-    server/ServerCore.cpp
-    server/ThreadedDriver.cpp
-    server/DriverLoader.cpp
-    server/ServerGlobals.cpp
-    server/Control.cpp
-    server/RequestDecoder.cpp
-    platform/SocketServerChannel.cpp
-    platform/SocketNotifyChannel.cpp
-    platform/SocketServerNotifyChannel.cpp
-    platform/ServerLock.cpp)
+    server/drivers/AudioDriver.cpp
+    server/drivers/TimedDriver.cpp
+    server/drivers/Driver.cpp
+    server/core/Engine.cpp
+    server/core/ExternalClient.cpp
+    server/drivers/FreewheelDriver.cpp
+    server/core/ServerCore.cpp
+    server/drivers/ThreadedDriver.cpp
+    server/drivers/DriverLoader.cpp
+    server/core/ServerGlobals.cpp
+    server/control/Control.cpp
+    server/ipc/RequestDecoder.cpp
+    server/ipc/SocketServerChannel.cpp
+    server/ipc/SocketNotifyChannel.cpp
+    server/ipc/SocketServerNotifyChannel.cpp
+    server/core/ServerLock.cpp)
 
 # The ring buffer is a library of its own: the client and server libraries and the ALSA drivers use it.
 add_library(jackring SHARED common/Ringbuffer.cpp)
-target_include_directories(jackring PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
+target_include_directories(jackring PRIVATE ${JACK_INCLUDE_DIRS})
 set_target_properties(jackring PROPERTIES VERSION "${JACK_API_VERSION}" SOVERSION 0)
 
 # The MIDI buffer (the format of the MIDI data in the port buffers, and the jack_midi_* functions that the drivers use).
@@ -142,7 +150,7 @@ set_target_properties(jackmidi PROPERTIES VERSION "${JACK_API_VERSION}" SOVERSIO
 
 # The basic logging (errors and messages, and where they go): a library of its own, with no dependencies.
 add_library(jacklog SHARED common/Log.cpp)
-target_include_directories(jacklog PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
+target_include_directories(jacklog PRIVATE ${JACK_INCLUDE_DIRS})
 set_target_properties(jacklog PROPERTIES VERSION "${JACK_API_VERSION}" SOVERSION 0)
 
 add_library(jack SHARED ${JACK_CLIENT_SOURCES})
@@ -192,7 +200,7 @@ function(jack_add_driver name)
     install(TARGETS jack_${name} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/jack)
 endfunction()
 
-jack_add_driver(dummy server/DummyDriver.cpp)
+jack_add_driver(dummy server/drivers/DummyDriver.cpp)
 
 # The vendored PipeWire resampler is portable C by default.  On x86 we also
 # build its SSE and AVX2 kernels, and on AArch64 its NEON kernel; the bridge
@@ -204,15 +212,15 @@ set(JACK_RESAMPLER_SIMD_SOURCES)
 set(JACK_RESAMPLER_SIMD_DEFINITIONS)
 set(JACK_RESAMPLER_SIMD_ENABLED OFF)
 if(JACK_RESAMPLER_SIMD AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
-    list(APPEND JACK_RESAMPLER_SIMD_SOURCES platform/alsa/resample/resample-native-neon.c)
+    list(APPEND JACK_RESAMPLER_SIMD_SOURCES server/drivers/alsa/resample/resample-native-neon.c)
     list(APPEND JACK_RESAMPLER_SIMD_DEFINITIONS HAVE_NEON)
     set(JACK_RESAMPLER_SIMD_ENABLED ON)
 elseif(JACK_RESAMPLER_SIMD AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64|i[3-6]86)$")
     check_c_compiler_flag("-msse" JACK_HAVE_MSSE)
     if(JACK_HAVE_MSSE)
-        list(APPEND JACK_RESAMPLER_SIMD_SOURCES platform/alsa/resample/resample-native-sse.c)
+        list(APPEND JACK_RESAMPLER_SIMD_SOURCES server/drivers/alsa/resample/resample-native-sse.c)
         list(APPEND JACK_RESAMPLER_SIMD_DEFINITIONS HAVE_SSE)
-        set_source_files_properties(platform/alsa/resample/resample-native-sse.c
+        set_source_files_properties(server/drivers/alsa/resample/resample-native-sse.c
             PROPERTIES COMPILE_OPTIONS "-msse")
         set(JACK_RESAMPLER_SIMD_ENABLED ON)
     endif()
@@ -220,9 +228,9 @@ elseif(JACK_RESAMPLER_SIMD AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AM
     check_c_compiler_flag("-mavx2" JACK_HAVE_MAVX2)
     check_c_compiler_flag("-mfma" JACK_HAVE_MFMA)
     if(JACK_HAVE_MAVX2 AND JACK_HAVE_MFMA)
-        list(APPEND JACK_RESAMPLER_SIMD_SOURCES platform/alsa/resample/resample-native-avx2.c)
+        list(APPEND JACK_RESAMPLER_SIMD_SOURCES server/drivers/alsa/resample/resample-native-avx2.c)
         list(APPEND JACK_RESAMPLER_SIMD_DEFINITIONS HAVE_AVX2 HAVE_FMA)
-        set_source_files_properties(platform/alsa/resample/resample-native-avx2.c
+        set_source_files_properties(server/drivers/alsa/resample/resample-native-avx2.c
             PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma")
         set(JACK_RESAMPLER_SIMD_ENABLED ON)
     endif()
@@ -230,24 +238,24 @@ endif()
 message(STATUS "Resampler SIMD kernels                    : ${JACK_RESAMPLER_SIMD_ENABLED}")
 
 set(JACK_ALSA_SOURCES
-    common/Memops.cpp
-    platform/alsa/AlsaDriver.cpp
-    platform/alsa/PcmAlsa.cpp
-    platform/alsa/PcmSession.cpp
-    platform/alsa/AlsaRingBuffer.cpp
-    platform/alsa/AlsaSecondaryConfig.cpp
-    platform/alsa/AlsaSecondaryCard.cpp
-    platform/alsa/AlsaRateConverter.cpp
-    platform/alsa/AlsaDriftController.cpp
-    platform/alsa/AlsaControl.cpp
-    platform/alsa/AlsaControlMonitor.cpp
-    platform/alsa/AlsaReconfigWorker.cpp
-    platform/alsa/AlsaEnumerate.cpp
-    platform/alsa/AlsaHotplug.cpp
-    platform/alsa/resample/Resampler.cpp
-    platform/alsa/resample/pipewire_resample_bridge.c
-    platform/alsa/resample/resample-native.c
-    platform/alsa/resample/resample-native-c.c
+    server/drivers/Memops.cpp
+    server/drivers/alsa/AlsaDriver.cpp
+    server/drivers/alsa/PcmAlsa.cpp
+    server/drivers/alsa/PcmSession.cpp
+    server/drivers/alsa/AlsaRingBuffer.cpp
+    server/drivers/alsa/AlsaSecondaryConfig.cpp
+    server/drivers/alsa/AlsaSecondaryCard.cpp
+    server/drivers/alsa/AlsaRateConverter.cpp
+    server/drivers/alsa/AlsaDriftController.cpp
+    server/drivers/alsa/AlsaControl.cpp
+    server/drivers/alsa/AlsaControlMonitor.cpp
+    server/drivers/alsa/AlsaReconfigWorker.cpp
+    server/drivers/alsa/AlsaEnumerate.cpp
+    server/drivers/alsa/AlsaHotplug.cpp
+    server/drivers/alsa/resample/Resampler.cpp
+    server/drivers/alsa/resample/pipewire_resample_bridge.c
+    server/drivers/alsa/resample/resample-native.c
+    server/drivers/alsa/resample/resample-native-c.c
     ${JACK_RESAMPLER_SIMD_SOURCES})
 
 jack_add_driver(alsa ${JACK_ALSA_SOURCES})
@@ -255,8 +263,8 @@ target_link_libraries(jack_alsa PRIVATE PkgConfig::ALSA PkgConfig::UDEV m ${CMAK
 # The vendored PipeWire resampler is built with its precomputed filter tables
 # disabled and a small SPA compatibility shim in place of the SPA headers.
 target_include_directories(jack_alsa PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/alsa/resample"
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/alsa/resample/spa-shim")
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/drivers/alsa/resample"
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/drivers/alsa/resample/spa-shim")
 target_compile_definitions(jack_alsa PRIVATE RESAMPLE_DISABLE_PRECOMP ${JACK_RESAMPLER_SIMD_DEFINITIONS})
 
 
@@ -266,34 +274,37 @@ install(TARGETS jack jackserver jackring jacklog jackmidi
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(TARGETS jackd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-# The client API: the jackmini headers (jackmini/...).
+# Public C++ headers.  The installed paths mirror the source tree, so an
+# integrator writes <client/api/Jackmini.hpp> or <server/control/Control.hpp>.
 install(FILES
-    client/jackmini/Client.hpp
-    client/jackmini/Control.hpp
-    client/jackmini/Error.hpp
-    client/jackmini/Jackmini.hpp
-    client/jackmini/Midi.hpp
-    client/jackmini/Options.hpp
-    client/jackmini/Port.hpp
-    client/jackmini/Ringbuffer.hpp
-    client/jackmini/Transport.hpp
-    client/jackmini/Uuid.hpp
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/jackmini)
+    client/api/Client.hpp
+    client/api/Error.hpp
+    client/api/Jackmini.hpp
+    client/api/Midi.hpp
+    client/api/Options.hpp
+    client/api/Port.hpp
+    client/api/Ringbuffer.hpp
+    client/api/Transport.hpp
+    client/api/Uuid.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/client/api)
 
-# The public headers of the libraries that have an interface of their own: the server control, the MIDI buffer and the
-# ring buffer.  The other headers of common/jack are internal.
+# Server management is not part of the client API; only embedders need it.
+install(FILES
+    server/control/Control.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/server/control)
+
+# The installed C ABI headers: the list helpers, the ring buffer, the system types and the shared typedefs.
+# The other headers of common/jack are internal.
 install(FILES
     common/jack/jslist.h
-    common/jack/midiport.h
     common/jack/ringbuffer.h
     common/jack/systemdeps.h
     common/jack/types.h
-    common/jack/weakmacros.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/jack)
 
-# The parts of jackmini that need no server: ring buffer, Uuid, error text.  The tools link it too.
-add_library(jackmini_base STATIC client/jackmini/Uuid.cpp client/jackmini/Error.cpp)
-target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/client)
+# The parts of the client API that need no server: Uuid and error text.  The tools link it too.
+add_library(jackmini_base STATIC client/api/Uuid.cpp client/api/Error.cpp)
+target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(jackmini_base PUBLIC cxx_std_23)
 
 if(JACK_TOOLS)
@@ -322,21 +333,20 @@ if(JACK_BUILD_TESTS)
     enable_testing()
     set(JACK_ALSA_UNIT_SOURCES
         tests/AlsaSecondaryUnit.cpp
-        platform/alsa/AlsaRingBuffer.cpp
-        platform/alsa/AlsaSecondaryConfig.cpp
-        platform/alsa/AlsaRateConverter.cpp
-        platform/alsa/AlsaDriftController.cpp
-        platform/alsa/resample/Resampler.cpp
-        platform/alsa/resample/pipewire_resample_bridge.c
-        platform/alsa/resample/resample-native.c
-        platform/alsa/resample/resample-native-c.c
+        server/drivers/alsa/AlsaRingBuffer.cpp
+        server/drivers/alsa/AlsaSecondaryConfig.cpp
+        server/drivers/alsa/AlsaRateConverter.cpp
+        server/drivers/alsa/AlsaDriftController.cpp
+        server/drivers/alsa/resample/Resampler.cpp
+        server/drivers/alsa/resample/pipewire_resample_bridge.c
+        server/drivers/alsa/resample/resample-native.c
+        server/drivers/alsa/resample/resample-native-c.c
         ${JACK_RESAMPLER_SIMD_SOURCES})
     add_executable(jack_alsa_unit ${JACK_ALSA_UNIT_SOURCES})
     target_include_directories(jack_alsa_unit PRIVATE
         ${JACK_INCLUDE_DIRS}
-        "${CMAKE_CURRENT_SOURCE_DIR}/platform/alsa"
-        "${CMAKE_CURRENT_SOURCE_DIR}/platform/alsa/resample"
-        "${CMAKE_CURRENT_SOURCE_DIR}/platform/alsa/resample/spa-shim")
+        "${CMAKE_CURRENT_SOURCE_DIR}/server/drivers/alsa/resample"
+        "${CMAKE_CURRENT_SOURCE_DIR}/server/drivers/alsa/resample/spa-shim")
     target_compile_definitions(jack_alsa_unit PRIVATE
         HAVE_CONFIG_H SERVER_SIDE RESAMPLE_DISABLE_PRECOMP
         ${JACK_RESAMPLER_SIMD_DEFINITIONS})
@@ -346,8 +356,7 @@ if(JACK_BUILD_TESTS)
     # The ALSA cycle core on a scripted fake backend: avail, xrun recovery,
     # poll timeout, start/stop sync, and the channel copies.  Header-only.
     add_executable(jack_pcm_cycle_unit tests/PcmCycleUnit.cpp)
-    target_include_directories(jack_pcm_cycle_unit PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/platform/alsa"
+    target_include_directories(jack_pcm_cycle_unit PRIVATE ${JACK_INCLUDE_DIRS}
         "${CMAKE_CURRENT_SOURCE_DIR}/tests")
     add_test(NAME pcm_cycle_unit COMMAND jack_pcm_cycle_unit)
 
@@ -367,13 +376,13 @@ if(JACK_BUILD_TESTS)
 
     # The byte ringbuffer behind jack_ringbuffer_*: sizes, wrap-around, vectors, and a transfer between two threads.
     add_executable(jack_ringbuffer_unit tests/RingbufferUnit.cpp)
-    target_include_directories(jack_ringbuffer_unit PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/common")
+    target_include_directories(jack_ringbuffer_unit PRIVATE ${JACK_INCLUDE_DIRS})
     target_link_libraries(jack_ringbuffer_unit PRIVATE jackring Threads::Threads)
     add_test(NAME ringbuffer_unit COMMAND jack_ringbuffer_unit)
 
     # The sample conversions and the interleaved copies, against the bytes of the C implementation they replaced.
-    add_executable(jack_memops_unit tests/MemopsUnit.cpp common/Memops.cpp)
-    target_include_directories(jack_memops_unit PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/common")
+    add_executable(jack_memops_unit tests/MemopsUnit.cpp server/drivers/Memops.cpp)
+    target_include_directories(jack_memops_unit PRIVATE ${JACK_INCLUDE_DIRS})
     target_link_libraries(jack_memops_unit PRIVATE m)
     add_test(NAME memops_unit COMMAND jack_memops_unit)
 
@@ -384,14 +393,13 @@ if(JACK_BUILD_TESTS)
 
     # Static layout checks of the shared-memory structures.  Compile-only checks; nothing is linked from the server.
     add_executable(jack_shm_layout_unit tests/ShmLayoutUnit.cpp)
-    target_include_directories(jack_shm_layout_unit PRIVATE ${JACK_INCLUDE_DIRS}
-        "${CMAKE_CURRENT_SOURCE_DIR}/platform")
+    target_include_directories(jack_shm_layout_unit PRIVATE ${JACK_INCLUDE_DIRS})
     target_compile_definitions(jack_shm_layout_unit PRIVATE HAVE_CONFIG_H SERVER_SIDE)
     add_test(NAME shm_layout_unit COMMAND jack_shm_layout_unit)
 
     # Descriptor passing over a Unix socket and anonymous shared-memory segments (P2 step 2).
-    add_executable(jack_fd_segment_unit tests/FdSegmentUnit.cpp platform/FdSegment.cpp)
-    target_include_directories(jack_fd_segment_unit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/platform")
+    add_executable(jack_fd_segment_unit tests/FdSegmentUnit.cpp ipc/memory/FdSegment.cpp)
+    target_include_directories(jack_fd_segment_unit PRIVATE ${JACK_INCLUDE_DIRS})
     add_test(NAME fd_segment_unit COMMAND jack_fd_segment_unit)
 
     # Message framing of the control socket: the header, the exact payload length, and the reply writer and reader.
@@ -450,7 +458,7 @@ if(JACK_BUILD_TESTS)
 
     # The client session of the new client code (open, names, close), with a server.
     add_executable(jack_client_session_e2e tests/ClientSessionE2e.cpp)
-    target_include_directories(jack_client_session_e2e PRIVATE ${JACK_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/client")
+    target_include_directories(jack_client_session_e2e PRIVATE ${JACK_INCLUDE_DIRS})
     target_link_libraries(jack_client_session_e2e PRIVATE jack jackmini_base Threads::Threads)
 
     # A MIDI source for the tests of jackmini_midi_dump: a note on in every cycle, until it is stopped.

@@ -17,7 +17,7 @@
 // --------------------------------------------------------------------------------
 
 #include "JackminiWait.hpp"
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
 
 #include <algorithm>
 #include <array>
@@ -211,7 +211,6 @@ int main(std::int32_t ac, char* av[])
 {
     float t;
     OpenOptions options;
-    options.m_startServer = false;
 
     auto opened = Client::open("jack_delay", options);
     if (!opened) {

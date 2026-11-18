@@ -16,12 +16,15 @@
 
 #pragma once
 
-#include "Constants.h"
-#include "PlatformPlug.h"
-#include "SystemDeps.h"
+#include "ipc/protocol/Constants.h"
+#include "common/os/Platform.h"
+#include "common/SystemDeps.h"
 #include <atomic>
 
 namespace jackmini {
+
+class GraphManager;
+struct EngineControl;
 
 // Globals used by the server and the client library.
 struct Globals {

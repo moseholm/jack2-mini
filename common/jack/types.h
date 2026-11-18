@@ -55,10 +55,7 @@ enum OptionsC {
     // Null value to use when no option bits are needed.
     kNullOption = 0x00,
 
-    // Do not automatically start the JACK server when it is not
-    // already running.  This option is always selected if
-    // \$JACK_NO_START_SERVER is defined in the calling process
-    // environment.
+    // Reserved: clients never start a server.
     kNoStartServer = 0x01,
 
     // Use the exact client name requested.  Otherwise, JACK
@@ -81,7 +78,7 @@ enum OptionsC {
 };
 
 // Valid options for opening an external client.
-inline constexpr std::int32_t kOpenOptions = (kSessionID | kServerName | kNoStartServer | kUseExactName);
+inline constexpr std::int32_t kOpenOptions = (kSessionID | kServerName | kUseExactName);
 
 // Valid options for loading an internal client.
 inline constexpr std::int32_t kLoadOptions = (kLoadInit | kLoadName | kUseExactName);
@@ -107,13 +104,8 @@ enum StatusC {
     // extra characters would be too long, the open fails instead.
     kNameNotUnique = 0x04,
 
-    // The JACK server was started as a result of this operation.
-    // Otherwise, it was running already.  In either case the caller
-    // is now connected to jackd, so there is no race condition.
-    // When the server shuts down, the client will find out.
+    // Reserved: a client never starts a server, so these are never reported.
     kServerStarted = 0x08,
-
-    // Unable to connect to the JACK server.
     kServerFailed = 0x10,
 
     // Communication error with the JACK server.

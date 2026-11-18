@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "PcmCycle.hpp"
+#include "server/drivers/alsa/PcmCycle.hpp"
 
 #include <poll.h>
 #include <algorithm>

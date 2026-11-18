@@ -16,9 +16,9 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "MidiPort.h"
-#include "Error.h"
-#include "PortType.h"
+#include "common/MidiPort.h"
+#include "common/Error.h"
+#include "ipc/memory/PortType.h"
 #include <assert.h>
 #include <string.h>
 #include <array>

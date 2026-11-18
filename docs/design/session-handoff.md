@@ -74,8 +74,8 @@ Architecture and scope:
 - Class-compliant ALSA PCM only. Hardware quirk drivers (hammerfall, hdsp, ice1712, usx2y, generic_hw) are removed.
 - MIDI is client-to-client only. The server never reads or writes MIDI on hardware. The ALSA RawMIDI and
   sequencer backends, the `platform/alsarawmidi` module, the server's MIDI driver and its queues, and the
-  `midi-driver` option are removed. The client MIDI transport (`libjackmidi`, `jack_midi_*`, `client/jackmini/Midi.hpp`) stays.
-- Resampler kernels stay in C (`platform/alsa/resample/*.c`, `dbesi0.c`, and the PipeWire bridge), behind a C++ wrapper.
+  `midi-driver` option are removed. The client MIDI transport (`libjackmidi`, `jack_midi_*`, `client/api/Midi.hpp`) stays.
+- Resampler kernels stay in C (`server/drivers/alsa/resample/*.c`, `dbesi0.c`, and the PipeWire bridge), behind a C++ wrapper.
   The resampler is PipeWire only: the plugin ABI is gone.
 - Driver modules stay loadable (`dlopen`), with one `extern "C"` entry point. The driver descriptor
   (`jack_driver_desc_t`) stays C: it is the module ABI.
@@ -83,9 +83,9 @@ Architecture and scope:
 
 Client API and control:
 
-- Namespace `jackmini`. Headers in `client/jackmini/`. Style per `docs/design/style.md`: CamelCase types,
+- Namespace `jackmini`. Headers in `client/api/`. Style per `docs/design/style.md`: CamelCase types,
   snake_case methods, `Result<T>` (std::expected with the client `Error` enum), RAII, typed callbacks.
-- Control API: `jackmini::control` (`client/jackmini/Control.hpp`), implemented in `server/Control.cpp`
+- Control API: `jackmini::control` (`server/control/Control.hpp`), implemented in `server/control/Control.cpp`
   in the server library. Signal handling is in the library (`setup_signals`, `wait_for_signal`).
   The symbols are exported with `JACKMINI_CONTROL_API` (default visibility).
 - Lifecycle: opened, active, inactive. Callbacks are set only while inactive (`Error::InvalidState` otherwise).
@@ -103,7 +103,7 @@ Engine and protocol:
 
 ALSA (S8):
 
-- The cycle core is `jackmini::alsa::Cycle<Backend>` (`platform/alsa/PcmCycle.hpp`), a template over the
+- The cycle core is `jackmini::alsa::Cycle<Backend>` (`server/drivers/alsa/PcmCycle.hpp`), a template over the
   `PcmBackend` concept, so the cycle has no virtual calls. The libasound backend is `Device` (`pcm_alsa.{hpp,cpp}`).
   `Session` (`pcm_session.{hpp,cpp}`) owns a device and the cycle and does the sample conversion.
 - Secondary cards and the primary card both run on `Session`. `alsa_driver.c` is gone.
@@ -123,7 +123,7 @@ Style and naming (PR #4, the WebKit style; `docs/design/style.md` is the referen
   `JackPort` is `ServerPort`, `JackServer` is `ServerCore`, `JackResult` is `Reply`.
 - Integers from `<cstdint>`; `char` for text only, `std::byte` for raw bytes; `std::array` for fixed arrays (the struct-hack
   trailing arrays stay); `nullptr`; `constexpr` constants; `//` comments only.
-- The C files under `platform/alsa/resample/` and their headers are untouched by the style work.
+- The C files under `server/drivers/alsa/resample/` and their headers are untouched by the style work.
 
 Licensing (agreed with the user; see "Current work"):
 
@@ -132,18 +132,21 @@ Licensing (agreed with the user; see "Current work"):
 
 ## Layout (current)
 
-- `common/`: shared by client and server: shared-memory structures, requests and notifications, graph, ports,
-  logging (`libjacklog`), the ring buffer (`libjackring`), the MIDI buffer (`libjackmidi`), `JackClient`.
-  `common/jack/`: the public C headers that stay (`jslist.h`, `midiport.h`, `ringbuffer.h`, `systemdeps.h`,
-  `types.h`, `weakmacros.h`, `transport.h`, `uuid.h`).
-- `client/`: the client library. `client/jackmini/` is the API (`client.hpp`, `port.hpp`, `midi.hpp`,
-  `ringbuffer.hpp`, `transport.hpp`, `options.hpp`, `error.hpp`, `control.hpp`, `jackmini.hpp`).
-- `server/`: the engine (`Engine`, `LockedEngine`), the server (`ServerCore`), the control API
-  (`control.cpp`), `jackd` (`Jackdmp.cpp`), the drivers (`DummyDriver`, `FreewheelDriver`,
-  `AudioDriver`, `Driver`, `JackDriverLoader`), the socket channels, the request decoder.
-- `platform/`: POSIX and Linux code (threads, mutexes, sockets, futex, clock, the server lock).
-  `platform/alsa/`: the ALSA driver (`AlsaDriver`, `AlsaSecondaryCard`, the cycle core and session,
-  the card control, hot-plug, the resampler and its bridge).
+- `common/`: genuinely shared code: logging (`libjacklog`), the ring buffer (`libjackring`), the MIDI buffer
+  (`libjackmidi`), error and time helpers. `common/os/` holds the POSIX/Linux primitives (threads, mutexes,
+  process sync, clock). `common/jack/` holds the installed C headers (`jslist.h`, `ringbuffer.h`,
+  `systemdeps.h`, `types.h`, `uuid.h`); `midiport.h`, `transport.h` and `weakmacros.h` are gone.
+- `ipc/`: the client/server contract. `ipc/protocol/` has the request, reply and notification messages and
+  their channel and constants; `ipc/socket/` the shared socket and its permission helper; `ipc/memory/` the
+  shared-memory graph, ports, engine control and descriptor-passed segments; `ipc/sync/` the futex-backed
+  synchro.
+- `client/`: the client library. `client/api/` is the public C++ API; `client/session/` is the connection and
+  process context. A client only connects to a running server; server autostart was removed.
+- `server/`: the server. `core/` has the engine (`Engine`, `LockedEngine`), `ServerCore`, `ExternalClient`,
+  globals and `ServerLock`; `control/` the server-management API; `ipc/` the request decoder and the
+  server-side socket channels (`ServerChannels.h`); `drivers/` the driver base classes and the loadable
+  drivers, including `alsa/` (the ALSA driver, secondary card, cycle core and session, card control,
+  hot-plug and resampler). `Jackdmp.cpp` is the `jackd` entry point.
 - `tests/`: unit and end-to-end tests (`jackmini_*`, `*_unit.cpp`), the benchmark tools (`cpu`, `iodelay`,
   `external_metro`), `tests/perf/` (`rtbench.cpp`, `alloccount.cpp`, `run-baseline.sh`).
 
@@ -228,7 +231,7 @@ S6 is done. Its stages (each: build, `check.sh`, commit, push) are listed for th
    report, checked against the tree before the change (procedure below). A duplicate connect is now an error
    (`InvalidState`); it was a silent success.
 
-S9 is done. The only C left is the resampler kernels and their bridge (`platform/alsa/resample/`). C linkage (`extern "C"`)
+S9 is done. The only C left is the resampler kernels and their bridge (`server/drivers/alsa/resample/`). C linkage (`extern "C"`)
 is kept for the driver module entry points and descriptor, the `jack_midi_*` and `jack_ringbuffer_*` names, the bridge, and the
 allocation interposer in `tests/perf/`.
 

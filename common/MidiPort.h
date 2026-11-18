@@ -17,10 +17,9 @@
 
 #pragma once
 
-#include "CompilerDeps.h"
-#include "Constants.h"
-#include "PlatformPlug.h"
-#include "types.h"
+#include "common/CompilerDeps.h"
+#include "ipc/protocol/Constants.h"
+#include "common/jack/types.h"
 #include <stddef.h>
 #include <array>
 #include <cstddef>

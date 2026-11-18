@@ -19,7 +19,7 @@
 // (for example `jackd -d dummy`); it is not part of ctest, which has no server.
 
 #include "JackminiWait.hpp"
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
 
 #include <array>
 #include <atomic>
@@ -50,14 +50,12 @@ void check(const char* what, bool ok)
 int main(std::int32_t argc, char** argv)
 {
     OpenOptions options;
-    options.m_startServer = false;
     if (argc > 1) {
         options.m_serverName = argv[1];
     }
 
-    // No server under this name: the error says so, when the server is not to be started.
+    // No server under this name: opening fails instead of launching one.
     OpenOptions missing;
-    missing.m_startServer = false;
     missing.m_serverName = "jackmini_no_such_server";
     auto none = Client::open("jackmini_missing", missing);
     check("open with no server: NoServer", !none && none.error() == Error::kNoServer);

@@ -17,7 +17,7 @@
 // `jackd -d dummy`, or `jackd -F -d dummy` for freewheel, where the checks count cycles).  It is not part of ctest.
 
 #include "JackminiWait.hpp"
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
 
 #include <atomic>
 #include <cmath>
@@ -51,7 +51,6 @@ bool startsWith(const std::string& s, const std::string& prefix)
 Client openOrDie(const char* name)
 {
     OpenOptions options;
-    options.m_startServer = false;
     auto opened = Client::open(name, options);
     if (!opened) {
         std::printf("cannot open %s: %s\n", name, std::string(toString(opened.error())).c_str());
@@ -199,7 +198,6 @@ int main(std::int32_t argc, char** argv)
     // Names and identities: a name taken is made unique by the server, and every client has its own UUID.
     {
         OpenOptions loose;
-        loose.m_startServer = false;
         auto first = Client::open("jackmini_dup", loose);
         auto second = Client::open("jackmini_dup", loose);
         check("naming: both clients open with the same name", first.has_value() && second.has_value());
@@ -218,8 +216,7 @@ int main(std::int32_t argc, char** argv)
         bool allOpen = true;
         for (std::int32_t i = 0; i < n; i++) {
             OpenOptions options;
-            options.m_startServer = false;
-            auto opened = Client::open("jackmini_group" + std::to_string(i), options);
+                    auto opened = Client::open("jackmini_group" + std::to_string(i), options);
             if (!opened) {
                 allOpen = false;
                 break;
@@ -271,8 +268,7 @@ int main(std::int32_t argc, char** argv)
     // the mode the server runs in, and in real time the next cycle is one period after the current one.
     {
         OpenOptions options;
-        options.m_startServer = false;
-        auto opened = Client::open("jackmini_cycle", options);
+            auto opened = Client::open("jackmini_cycle", options);
         check("cycle: a client opens", opened.has_value());
         if (opened) {
             Client cycleClient = std::move(*opened);

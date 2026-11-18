@@ -17,7 +17,7 @@
 // Unit tests for the parts of jackmini that do not need a server: the
 // ring buffer, Uuid, and the error text.
 
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
 
 #include <array>
 #include <cstdint>

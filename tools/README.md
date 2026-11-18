@@ -1,6 +1,6 @@
 # The command-line tools
 
-The tools are built on the jackmini client API (`client/jackmini/`) and are installed with the other binaries. They
+The tools are built on the jackmini client API (`client/api/`) and are installed with the other binaries. They
 never start a server: with no server running they print an error and exit with status 1. Each takes `-s <name>` to
 choose a server, `-v` for the version and `-h` for the usage. The build option is `JACK_TOOLS` (on by default).
 

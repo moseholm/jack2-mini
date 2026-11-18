@@ -14,12 +14,12 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-// The client session (client/ClientSession.hpp) against a running server: open, name handling, and close. Not a
+// The client session (client/session/ClientSession.hpp) against a running server: open, name handling, and close. Not a
 // ctest: it needs a server, for example `jackd -d dummy`.
 
-#include "ClientSession.hpp"
+#include "client/session/ClientSession.hpp"
 
-#include "jackmini/Client.hpp"
+#include "client/api/Client.hpp"
 
 #include <algorithm>
 #include <atomic>

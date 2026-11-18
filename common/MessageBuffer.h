@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "Atomic.h"
-#include "Mutex.h"
-#include "PlatformPlug.h"
+#include "ipc/memory/Atomic.h"
+#include "common/Mutex.h"
+#include "common/os/Platform.h"
 #include <array>
 #include <atomic>
 #include <cstddef>

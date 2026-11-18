@@ -14,11 +14,12 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-// Compile-time checks of the jackmini client API.  The declarations have no
-// definitions yet, so this program only checks types and overloads and is
-// linked without the implementation.
+// Compile-time checks of the client API and the server-control API.  The
+// declarations have no definitions yet, so this program only checks types and
+// overloads and is linked without the implementation.
 
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
+#include "server/control/Control.hpp"
 
 #include <concepts>
 #include <type_traits>

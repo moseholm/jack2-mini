@@ -23,9 +23,9 @@ inline constexpr char kDirSeparator = '/';
 #include <unistd.h>
 #include <cstdint>
 
-#include "CompilerDeps.h"
-#include "Error.h"
-#include "jslist.h"
+#include "common/CompilerDeps.h"
+#include "common/Error.h"
+#include "common/jack/jslist.h"
 
 namespace jackmini {
 
