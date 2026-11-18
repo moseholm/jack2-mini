@@ -18,9 +18,9 @@
 // graph, reset the counters, signal the connected clients) while another thread changes connections, which copies the
 // configuration to the next state.  Run under TSAN, the test fails on any race between the copy and the live counters.
 
-#include "ClientControl.h"
-#include "GraphManager.h"
-#include "Synchro.h"
+#include "ipc/memory/ClientControl.h"
+#include "ipc/memory/GraphManager.h"
+#include "ipc/sync/Synchro.h"
 
 #include <array>
 #include <atomic>

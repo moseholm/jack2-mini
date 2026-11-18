@@ -17,9 +17,9 @@
 // Message framing of the control socket (protocol.md section 2): the header, the exact payload length, and the reply
 // writer and reader.  The transport is a byte buffer, so the test needs no server.
 
-#include "Message.h"
-#include "Notification.h"
-#include "Request.h"
+#include "ipc/protocol/Message.h"
+#include "ipc/protocol/Notification.h"
+#include "ipc/protocol/Request.h"
 
 #include <array>
 #include <cstddef>

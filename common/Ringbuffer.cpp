@@ -21,7 +21,7 @@
 // Lock-free ringbuffer of bytes, for one reader thread and one writer thread. The C API (jack_ringbuffer_*) is the
 // one the MIDI code and the clients use; the logic lives in RingBuffer.
 
-#include "CompilerDeps.h"
+#include "common/CompilerDeps.h"
 #include <jack/ringbuffer.h>
 #include <cstddef>
 #include <cstdint>

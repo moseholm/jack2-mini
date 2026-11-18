@@ -16,7 +16,7 @@
 
 // Unit tests for CopyCString(): truncation, termination and zero fill.
 
-#include "CString.h"
+#include "common/CString.h"
 
 #include <array>
 #include <cstdint>

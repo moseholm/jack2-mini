@@ -16,7 +16,7 @@
 // What every tool needs: opening its client, and reporting an error with the exit status.  Kept small: a tool that
 // needs something only it uses keeps it in its own file.
 
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -30,7 +30,6 @@ namespace jackmini::tools {
 inline Result<Client> openClient(std::string_view name, std::string_view server)
 {
     OpenOptions options;
-    options.m_startServer = false;
     options.m_serverName = std::string(server);
     return Client::open(name, options);
 }

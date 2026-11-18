@@ -1,6 +1,6 @@
 # The command-line tools, on the jackmini client API.  One program per tool, named jackmini_<tool>, built from one source
 # file per tool (Lsp.cpp builds jackmini_lsp).  Each tool links the jack library and jackmini_base, and uses only the
-# headers in client/jackmini.  The tools are installed with the other binaries.
+# headers in client/api.  The tools are installed with the other binaries.
 #
 # A tool is added with add_jackmini_tool(<name> <source>...).  The name is the program name.
 function(add_jackmini_tool name)

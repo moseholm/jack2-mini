@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "CompilerDeps.h"
-#include "types.h"
+#include "common/CompilerDeps.h"
+#include "common/jack/types.h"
 
 #include <pthread.h>
 #include <cstdint>

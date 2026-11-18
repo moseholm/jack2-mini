@@ -15,7 +15,7 @@
 // latencies, the UUIDs of the ports and of their owners, and the connections.  Run it with a server started (for
 // example `jackd -d dummy`).  It is not part of ctest.
 #include "JackminiWait.hpp"
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -41,7 +41,6 @@ void check(const char* what, bool ok)
 Client openOrDie(const char* name)
 {
     OpenOptions options;
-    options.m_startServer = false;
     auto opened = Client::open(name, options);
     if (!opened) {
         std::printf("cannot open %s: %s\n", name, std::string(toString(opened.error())).c_str());

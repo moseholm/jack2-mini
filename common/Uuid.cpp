@@ -15,8 +15,8 @@
 // The UUIDs of clients and ports, used by the server and the clients (not exported).
 
 #include "jack/uuid.h"
-#include "CString.h"
-#include "Error.h"
+#include "common/CString.h"
+#include "common/Error.h"
 #include <stdio.h>
 #include <string.h>
 #include <cctype>

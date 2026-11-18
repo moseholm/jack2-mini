@@ -18,12 +18,12 @@
 // hardware: the card's control, stream and thread code is covered by the live
 // checks described in docs/secondary-alsa-cards.md.
 
-#include "AlsaCardDiff.h"
-#include "AlsaDriftController.h"
-#include "AlsaRateConverter.h"
-#include "AlsaRingBuffer.h"
-#include "AlsaSecondaryConfig.h"
-#include "AlsaSlotTable.h"
+#include "server/drivers/alsa/AlsaCardDiff.h"
+#include "server/drivers/alsa/AlsaDriftController.h"
+#include "server/drivers/alsa/AlsaRateConverter.h"
+#include "server/drivers/alsa/AlsaRingBuffer.h"
+#include "server/drivers/alsa/AlsaSecondaryConfig.h"
+#include "server/drivers/alsa/AlsaSlotTable.h"
 #include "resample/Resampler.h"
 #include "resample/pipewire_resample_bridge.h"
 

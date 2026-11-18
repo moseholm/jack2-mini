@@ -15,7 +15,7 @@
 // in every cycle until it is stopped with SIGINT or SIGTERM.  Connect the output to the dump's input to see the events.
 // It is not a tool.
 
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
 
 #include <array>
 #include <atomic>
@@ -46,7 +46,6 @@ int main(std::int32_t argc, char** argv)
     }
 
     jackmini::OpenOptions options;
-    options.m_startServer = false;
     options.m_serverName = server;
     auto opened = jackmini::Client::open("midi_writer", options);
     if (!opened) {

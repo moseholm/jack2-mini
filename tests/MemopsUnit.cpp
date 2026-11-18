@@ -14,7 +14,7 @@
 // The sample conversions and the interleave copies (memops.h). The expected bytes were produced by the C
 // implementation that memops.cpp replaced, on these same inputs; a change in the kernels shows here.
 
-#include "Memops.h"
+#include "server/drivers/Memops.h"
 
 #include <array>
 #include <cstddef>

@@ -17,10 +17,11 @@ the file is the reference for layout: run `clang-format -i` on the files you cha
 - Locals and parameters are camelCase.
 - Files are CamelCase and named after the main type they hold: `Client.hpp`, `ServerPort.h`, `PcmCycle.hpp`. Tests are
   named the same way: `MemopsUnit.cpp`.
-- The public C API headers in `common/jack/` keep their file names, and the functions declared there keep their names,
-  because plugins and programs look them up by name: `jack_ringbuffer_read`, `jack_midi_event_get`. The logging functions
-  `jack_error`, `jack_info` and `jack_log`, and the `jack_slist_*` list helpers, keep their names too. The public C names
-  that the library keeps for its users (`jack_ringbuffer_*`, `jack_midi_*`) are listed in `docs/design/client-api.md`.
+- The installed C API headers keep their file names, and the functions they declare keep their names, because plugins
+  and programs look them up by name: `jack_ringbuffer_read` in `common/jack/ringbuffer.h` and `jack_midi_event_get` in
+  `common/MidiPort.h`. The logging functions `jack_error`, `jack_info` and `jack_log`, and the `jack_slist_*` list helpers,
+  keep their names too. The public C names that the library keeps for its users (`jack_ringbuffer_*`, `jack_midi_*`) are
+  listed in `docs/design/client-api.md`.
 
 ## Types and syntax
 

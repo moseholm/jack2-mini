@@ -24,13 +24,12 @@
 #include <cstring>
 #include <vector>
 
-#include "CString.h"
-#include "Constants.h"
-#include "DriverInterface.h"
-#include "Log.h"
-#include "PlatformPlug.h"
-#include "Types.h"
-#include "jackmini/Control.hpp"
+#include "common/CString.h"
+#include "ipc/protocol/Constants.h"
+#include "server/drivers/DriverInterface.h"
+#include "common/Log.h"
+#include "common/Types.h"
+#include "server/control/Control.hpp"
 
 using jackmini::control::Choice;
 using jackmini::control::Driver;

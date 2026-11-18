@@ -17,11 +17,11 @@
 // must hold is that every notification is either delivered or counted as dropped, that the newest one is delivered,
 // and that the order is kept.
 
-#include "Message.h"
-#include "Notification.h"
-#include "Request.h"
-#include "Socket.h"
-#include "SocketNotifyChannel.h"
+#include "ipc/protocol/Message.h"
+#include "ipc/protocol/Notification.h"
+#include "ipc/protocol/Request.h"
+#include "ipc/socket/Socket.h"
+#include "server/ipc/SocketNotifyChannel.h"
 
 #include <sys/socket.h>
 #include <unistd.h>

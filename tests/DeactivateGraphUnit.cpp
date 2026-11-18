@@ -20,10 +20,10 @@
 // the test makes its (loop-free) connection with the same steps Connect takes after that check.  The client API test,
 // with a running server, is in the end-to-end checks.
 
-#include "ClientControl.h"
-#include "ConnectionManager.h"
-#include "GraphManager.h"
-#include "Synchro.h"
+#include "ipc/memory/ClientControl.h"
+#include "ipc/memory/ConnectionManager.h"
+#include "ipc/memory/GraphManager.h"
+#include "ipc/sync/Synchro.h"
 
 #include <cstdint>
 #include <cstdio>

@@ -19,11 +19,11 @@
 // through the real message code.  The malformed and version-mismatch cases go through the real request decoder, which
 // refuses them before it needs the engine, so the decoder runs without a server.
 
-#include "Message.h"
-#include "Notification.h"
-#include "Request.h"
-#include "RequestDecoder.h"
-#include "Socket.h"
+#include "ipc/protocol/Message.h"
+#include "ipc/protocol/Notification.h"
+#include "ipc/protocol/Request.h"
+#include "server/ipc/RequestDecoder.h"
+#include "ipc/socket/Socket.h"
 
 #include <sys/socket.h>
 #include <unistd.h>

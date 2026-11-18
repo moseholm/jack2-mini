@@ -18,8 +18,8 @@
 // and its flush thread, with several producers, and check that every message
 // is either delivered in per-producer order or counted as an overrun.
 
-#include "Error.h"
-#include "MessageBuffer.h"
+#include "common/Error.h"
+#include "common/MessageBuffer.h"
 
 #include <cctype>
 #include <cstdint>

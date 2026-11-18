@@ -14,11 +14,11 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "Tools.h"
-#include "CString.h"
-#include "Constants.h"
-#include "DriverInterface.h"
-#include "Error.h"
+#include "common/Tools.h"
+#include "common/CString.h"
+#include "ipc/protocol/Constants.h"
+#include "server/drivers/DriverInterface.h"
+#include "common/Error.h"
 #include <array>
 #include <cstdint>
 #include <filesystem>

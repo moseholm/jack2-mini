@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include "Error.h"
-#include "PlatformPlug.h"
+#include "common/Error.h"
+#include "common/os/Platform.h"
 #include <assert.h>
 
 

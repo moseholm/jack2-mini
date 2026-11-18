@@ -16,7 +16,7 @@
 
 // Tests for descriptor passing and anonymous segments (P2 step 2).
 
-#include "FdSegment.h"
+#include "ipc/memory/FdSegment.h"
 
 #include <fcntl.h>
 #include <sys/socket.h>

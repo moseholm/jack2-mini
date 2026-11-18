@@ -18,7 +18,7 @@
 
 #include <cstdint>
 
-#include "jackmini/Jackmini.hpp"
+#include "client/api/Jackmini.hpp"
 
 // \brief A class to test external clients
 
