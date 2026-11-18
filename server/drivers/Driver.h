@@ -22,7 +22,7 @@
 #include "ipc/protocol/Constants.h"
 #include "common/os/Platform.h"
 #include "client/api/Error.hpp"
-#include "common/jack/types.h"
+#include "common/Types.h"
 #include <array>
 #include <cstdint>
 #include <list>

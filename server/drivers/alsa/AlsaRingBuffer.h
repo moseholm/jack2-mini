@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "common/jack/types.h"
+#include "common/Types.h"
 #include <atomic>
 #include <cstddef>
 #include <cstdint>

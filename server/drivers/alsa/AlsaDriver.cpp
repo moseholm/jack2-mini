@@ -1449,7 +1449,7 @@ static DriverDesc* describeDriver()
     return desc;
 }
 
-static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine* engine, jackmini::Synchro* table, const JSListC* params)
+static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine* engine, jackmini::Synchro* table, DriverParamList params)
 {
     NframesC srate = 48000;
     NframesC framesPerInterrupt = 1024;
@@ -1468,28 +1468,24 @@ static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine*
     std::int32_t shortsFirst = false;
     NframesC systemicInputLatency = 0;
     NframesC systemicOutputLatency = 0;
-    const JSListC* node;
-    const DriverParam* param;
     std::vector<jackmini::AlsaSecondaryConfig> secondaries;
     std::vector<std::string> excludedCards;
 
-    for (node = params; node; node = jack_slist_next(node)) {
-        param = (const DriverParam*)node->m_data;
-
-        switch (param->m_character) {
+    for (const DriverParam& param : params) {
+        switch (param.m_character) {
 
         case 'C':
             capture = true;
-            if (strcmp(param->m_value.m_str.data(), "none") != 0) {
-                capturePcmName = strdup(param->m_value.m_str.data());
+            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
+                capturePcmName = strdup(param.m_value.m_str.data());
                 jack_log("capture device %s", capturePcmName);
             }
             break;
 
         case 'P':
             playback = true;
-            if (strcmp(param->m_value.m_str.data(), "none") != 0) {
-                playbackPcmName = strdup(param->m_value.m_str.data());
+            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
+                playbackPcmName = strdup(param.m_value.m_str.data());
                 jack_log("playback device %s", playbackPcmName);
             }
             break;
@@ -1500,79 +1496,79 @@ static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine*
             break;
 
         case 'd':
-            if (strcmp(param->m_value.m_str.data(), "none") != 0) {
-                playbackPcmName = strdup(param->m_value.m_str.data());
-                capturePcmName = strdup(param->m_value.m_str.data());
+            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
+                playbackPcmName = strdup(param.m_value.m_str.data());
+                capturePcmName = strdup(param.m_value.m_str.data());
                 jack_log("playback device %s", playbackPcmName);
                 jack_log("capture device %s", capturePcmName);
             }
             break;
 
         case 'H':
-            hwMonitoring = param->m_value.m_i;
+            hwMonitoring = param.m_value.m_i;
             break;
 
         case 'm':
-            monitor = param->m_value.m_i;
+            monitor = param.m_value.m_i;
             break;
 
         case 'M':
-            hwMetering = param->m_value.m_i;
+            hwMetering = param.m_value.m_i;
             break;
 
         case 'r':
-            srate = param->m_value.m_ui;
+            srate = param.m_value.m_ui;
             jack_log("apparent rate = %d", srate);
             break;
 
         case 'p':
-            framesPerInterrupt = param->m_value.m_ui;
+            framesPerInterrupt = param.m_value.m_ui;
             jack_log("frames per period = %d", framesPerInterrupt);
             break;
 
         case 'n':
-            userNperiods = param->m_value.m_ui;
+            userNperiods = param.m_value.m_ui;
             if (userNperiods < 2) { // enforce minimum value
                 userNperiods = 2;
             }
             break;
 
         case 's':
-            softMode = param->m_value.m_i;
+            softMode = param.m_value.m_i;
             break;
 
         case 'z':
-            if (ditherOpt(param->m_value.m_c, &dither)) {
+            if (ditherOpt(param.m_value.m_c, &dither)) {
                 return nullptr;
             }
             break;
 
         case 'i':
-            userCaptureNchnls = param->m_value.m_ui;
+            userCaptureNchnls = param.m_value.m_ui;
             break;
 
         case 'o':
-            userPlaybackNchnls = param->m_value.m_ui;
+            userPlaybackNchnls = param.m_value.m_ui;
             break;
 
         case 'S':
-            shortsFirst = param->m_value.m_i;
+            shortsFirst = param.m_value.m_i;
             break;
 
         case 'I':
-            systemicInputLatency = param->m_value.m_ui;
+            systemicInputLatency = param.m_value.m_ui;
             break;
 
         case 'O':
-            systemicOutputLatency = param->m_value.m_ui;
+            systemicOutputLatency = param.m_value.m_ui;
             break;
 
         case 'Y':
-            if (strcmp(param->m_value.m_str.data(), "none") != 0) {
+            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
                 jackmini::AlsaSecondaryConfig config;
                 std::string error;
-                if (!jackmini::alsaSecondaryConfigParse(param->m_value.m_str.data(), &config, &error)) {
-                    jack_error("invalid --secondary \"%s\": %s", param->m_value.m_str, error.c_str());
+                if (!jackmini::alsaSecondaryConfigParse(param.m_value.m_str.data(), &config, &error)) {
+                    jack_error("invalid --secondary \"%s\": %s", param.m_value.m_str, error.c_str());
                     return nullptr;
                 }
                 secondaries.push_back(config);
@@ -1581,8 +1577,8 @@ static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine*
 
         case 'Z':
             // The parameter holds one value, so a list is comma separated: "-Z PCH,NVidia".
-            if (strcmp(param->m_value.m_str.data(), "none") != 0) {
-                std::string_view list(param->m_value.m_str);
+            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
+                std::string_view list(param.m_value.m_str);
                 while (!list.empty()) {
                     const auto comma = list.find(',');
                     const std::string_view id = list.substr(0, comma);
@@ -1598,9 +1594,9 @@ static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine*
             break;
 
         case 'K':
-            if (strcmp(param->m_value.m_str.data(), "none") != 0) {
+            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
                 std::string error;
-                if (!jackmini::alsaSecondaryConfigLoadFile(param->m_value.m_str.data(), &secondaries, &error)) {
+                if (!jackmini::alsaSecondaryConfigLoadFile(param.m_value.m_str.data(), &secondaries, &error)) {
                     jack_error("%s", error.c_str());
                     return nullptr;
                 }

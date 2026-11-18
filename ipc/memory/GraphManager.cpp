@@ -18,7 +18,7 @@
 #include "ipc/memory/GraphManager.h"
 #include "ipc/protocol/Constants.h"
 #include "common/Error.h"
-#include "jack/uuid.h"
+#include "common/Uuid.h"
 #include <assert.h>
 #include <regex.h>
 #include <stdlib.h>
@@ -394,7 +394,7 @@ PortIdC GraphManager::allocatePortAux(std::int32_t refnum, const char* portName,
             if (!port->allocate(refnum, portName, portType, flags)) {
                 return kNoPort;
             }
-            port->m_uUID = jack_port_uuid_generate(portIndex);
+            port->m_uUID = jackmini::uuid::generatePort(portIndex);
             break;
         }
     }

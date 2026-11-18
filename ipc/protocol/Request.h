@@ -25,7 +25,8 @@
 #include "ipc/protocol/Message.h"
 #include "ipc/memory/ShmMem.h"
 #include "common/Time.h"
-#include "common/jack/types.h"
+#include "common/Types.h"
+#include "common/Uuid.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -261,7 +262,7 @@ struct ClientCheckRequest : public RequestImpl<kClientNameSize1 + 3 * sizeof(std
         , m_protocol(0)
         , m_options(0)
         , m_open(0)
-        , m_uUID(kUuidEmptyInitializer)
+        , m_uUID(jackmini::uuid::kEmpty)
     {
         memset(m_name.data(), 0, sizeof(m_name));
     }
@@ -349,7 +350,7 @@ struct ClientOpenRequest : public RequestImpl<sizeof(std::int32_t) + sizeof(Uuid
     ClientOpenRequest()
         : RequestImpl(kClientOpen)
         , m_pID(0)
-        , m_uUID(kUuidEmptyInitializer)
+        , m_uUID(jackmini::uuid::kEmpty)
     {
         memset(m_name.data(), 0, sizeof(m_name));
     }

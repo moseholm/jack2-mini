@@ -21,7 +21,7 @@
 
 #include "ipc/memory/AtomicState.h"
 #include "common/CompilerDeps.h"
-#include "common/jack/types.h"
+#include "common/Types.h"
 
 namespace jackmini {
 

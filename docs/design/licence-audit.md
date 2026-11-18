@@ -1,6 +1,7 @@
 # Licence audit
 
-Classification of every file in the tree (`origin/develop`, `1c9a725a`). Input for `LICENSING.md`.
+Classification of the tree at `origin/develop`, `1c9a725a`. Input for `LICENSING.md`. The tables record that
+baseline; the later legacy C API cleanup is noted below.
 
 ## Baseline (corrected)
 
@@ -15,6 +16,14 @@ The earlier version of this audit used `e102e682` as the original tree. That is 
 Limits of the method:
 - `git log --follow` links files through copies as well as renames, so a path-based origin can be wrong. Two such links were found and discarded (`ipc/socket/Promiscuous.hpp`, `server/drivers/DriverInfo.h`).
 - Content matching finds little verbatim text shared with upstream: 7 current files are 30 % or more identical in lines to an upstream file. Most of the code was rewritten, so a file's licence follows its header and its lineage, not its text.
+
+## Legacy C API cleanup (after the audit)
+
+The audit below was made before the old C API was removed. In the current tree, `common/jack/` is gone; its vocabulary
+types moved to `common/Types.h`, its UUID helpers to `common/Uuid.h`, and its byte ring buffer was deleted in favour of
+the C++ `RingBuffer<T>`. The `jackring` library and `tests/RingbufferUnit.cpp` were removed too. Rows in the table that
+say "removed in the C API cleanup" describe the current state; the licences in those rows are still their original
+licences, so the removals do not change the licensing conclusion.
 
 ## Upstream check
 
@@ -59,7 +68,8 @@ Every derived file keeps the licence it had in the original tree. No licence cha
    - `tests/`: split about evenly. `tools/` is all LGPL.
 
    `LICENSING.md` must list these per file, not per directory.
-6. **Public headers** `common/jack/*.h` are LGPL and are the ABI that integrators compile against. They stay LGPL.
+6. **Public headers** `common/jack/*.h` were LGPL and were the ABI that integrators compiled against. They were removed
+   in the later C API cleanup; `LICENSING.md` lists the C++ headers that replaced them.
 
 ## Per-file table (source and build files)
 
@@ -127,7 +137,7 @@ Every derived file keeps the licence it had in the original tree. No licence cha
 | `ipc/memory/PortType.cpp` | renamed | `common/JackPortType.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `ipc/memory/PortType.h` | rewritten (name match) | `common/JackPortType.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `ipc/protocol/Request.h` | renamed | `common/JackRequest.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/Ringbuffer.cpp` | renamed | `common/ringbuffer.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/Ringbuffer.cpp` | removed in the C API cleanup | `common/ringbuffer.cpp` | LGPL-2.1-or-later | — |
 | `ipc/memory/ServerPort.cpp` | renamed | `common/JackPort.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `ipc/memory/ServerPort.h` | rewritten (name match) | `common/JackPort.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `ipc/memory/ShmMem.cpp` | renamed | `common/JackShmMem.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
@@ -142,13 +152,13 @@ Every derived file keeps the licence it had in the original tree. No licence cha
 | `ipc/memory/TransportEngine.h` | rewritten (name match) | `common/JackTransportEngine.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Types.h` | rewritten (name match) | `common/JackTypes.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Uuid.cpp` | renamed | `common/JackUuid.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/jack/jslist.h` | kept, edited | `common/jack/jslist.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/jack/jslist.h` | removed in the C API cleanup | `common/jack/jslist.h` | LGPL-2.1-or-later | — |
 | `common/jack/midiport.h` | removed | `common/jack/midiport.h` | LGPL-2.1-or-later | — |
-| `common/jack/ringbuffer.h` | kept, edited | `common/jack/ringbuffer.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/jack/systemdeps.h` | kept, edited | `common/jack/systemdeps.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/jack/ringbuffer.h` | removed in the C API cleanup | `common/jack/ringbuffer.h` | LGPL-2.1-or-later | — |
+| `common/jack/systemdeps.h` | removed in the C API cleanup | `common/jack/systemdeps.h` | LGPL-2.1-or-later | — |
 | `common/jack/transport.h` | removed | `common/jack/transport.h` | LGPL-2.1-or-later | — |
-| `common/jack/types.h` | kept, edited | `common/jack/types.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/jack/uuid.h` | kept, edited | `common/jack/uuid.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/jack/types.h` | removed in the C API cleanup | `common/jack/types.h` | LGPL-2.1-or-later | — |
+| `common/jack/uuid.h` | removed in the C API cleanup | `common/jack/uuid.h` | LGPL-2.1-or-later | — |
 | `common/jack/weakmacros.h` | removed | `common/jack/weakmacros.h` | LGPL-2.1-or-later | — |
 | `config.h.in` | kept, edited | `config.h.in` | no notice | no notice |
 | `configure.sh` | kept | `configure.sh` | no notice | no notice |
@@ -281,7 +291,7 @@ Every derived file keeps the licence it had in the original tree. No licence cha
 | `tests/NotifyOverflowUnit.cpp` | renamed | `tests/notify_overflow_unit.cpp` | GPL-2.0 | GPL-2.0 |
 | `tests/PcmCycleUnit.cpp` | renamed | `tests/pcm_cycle_unit.cpp` | GPL-2.0 | GPL-2.0 |
 | `tests/ProtocolConformanceUnit.cpp` | renamed | `tests/protocol_conformance_unit.cpp` | GPL-2.0 | GPL-2.0 |
-| `tests/RingbufferUnit.cpp` | renamed | `tests/ringbuffer_unit.cpp` | GPL-2.0 | GPL-2.0 |
+| `tests/RingbufferUnit.cpp` | removed in the C API cleanup | `tests/ringbuffer_unit.cpp` | GPL-2.0 | — |
 | `tests/ShmLayoutUnit.cpp` | renamed | `tests/shm_layout_unit.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `tests/perf/Alloccount.cpp` | renamed | `tests/perf/alloccount.cpp` | no notice | no notice |
 | `tests/perf/Rtbench.cpp` | renamed | `tests/perf/rtbench.cpp` | no notice | no notice |

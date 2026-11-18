@@ -17,7 +17,7 @@
 #pragma once
 
 #include "ipc/memory/FdSegment.h"
-#include "common/jack/types.h"
+#include "common/Types.h"
 
 #include <cstdint>
 #include <span>

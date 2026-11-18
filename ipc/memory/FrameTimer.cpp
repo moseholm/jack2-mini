@@ -38,13 +38,13 @@ NframesC Timer::time2Frames(TimeC usecs, NframesC bufferSize)
 {
     if (m_initialized) {
         // Make sure we have signed differences. It would make a lot of sense
-        // to use the standard signed intNN_t types everywhere  instead of e.g.
-        // jack_nframes_t and jack_time_t. This would at least ensure that the
-        // types used below are the correct ones. There is no way to get a type
-        // that would be 'a signed version of jack_time_t' for example - the
-        // types below are inherently fragile and there is no automatic way to
-        // check they are the correct ones. The only way is to check manually
-        // against jack/types.h.  FA - 16/02/2012
+        // to use the standard signed intNN_t types everywhere instead of e.g.
+        // NframesC and TimeC. This would at least ensure that the types used
+        // below are the correct ones. There is no way to get a type that would
+        // be 'a signed version of TimeC', for example - the types below are
+        // inherently fragile and there is no automatic way to check they are
+        // the correct ones. The only way is to check manually against
+        // common/Types.h.  FA - 16/02/2012
         std::int64_t du = usecs - m_currentWakeup;
         std::int64_t dp = m_nextWakeUp - m_currentWakeup;
         return m_frames + (std::int32_t)rint((double)du / (double)dp * bufferSize);
@@ -57,13 +57,13 @@ TimeC Timer::frames2Time(NframesC frames, NframesC bufferSize)
 {
     if (m_initialized) {
         // Make sure we have signed differences. It would make a lot of sense
-        // to use the standard signed intNN_t types everywhere  instead of e.g.
-        // jack_nframes_t and jack_time_t. This would at least ensure that the
-        // types used below are the correct ones. There is no way to get a type
-        // that would be 'a signed version of jack_time_t' for example - the
-        // types below are inherently fragile and there is no automatic way to
-        // check they are the correct ones. The only way is to check manually
-        // against jack/types.h.  FA - 16/02/2012
+        // to use the standard signed intNN_t types everywhere instead of e.g.
+        // NframesC and TimeC. This would at least ensure that the types used
+        // below are the correct ones. There is no way to get a type that would
+        // be 'a signed version of TimeC', for example - the types below are
+        // inherently fragile and there is no automatic way to check they are
+        // the correct ones. The only way is to check manually against
+        // common/Types.h.  FA - 16/02/2012
         std::int32_t df = frames - m_frames;
         std::int64_t dp = m_nextWakeUp - m_currentWakeup;
         return m_currentWakeup + (std::int64_t)rint((double)df * (double)dp / bufferSize);

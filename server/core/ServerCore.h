@@ -26,7 +26,6 @@
 #include "common/os/Platform.h"
 #include "server/ipc/ServerChannels.h"
 #include "client/api/Error.hpp"
-#include "common/jack/jslist.h"
 
 #include <array>
 #include <cstdint>
@@ -62,7 +61,7 @@ public:
     ~ServerCore();
 
     // Server control
-    Result<void> open(DriverDesc* driverDesc, JSListC* driverParams);
+    Result<void> open(DriverDesc* driverDesc, DriverParamList driverParams);
     void close();
 
     Result<void> start(bool freewheel = false);

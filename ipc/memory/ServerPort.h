@@ -19,7 +19,7 @@
 
 #include "common/CompilerDeps.h"
 #include "ipc/protocol/Constants.h"
-#include "common/jack/types.h"
+#include "common/Types.h"
 #include <array>
 #include <cstdint>
 #include <string_view>

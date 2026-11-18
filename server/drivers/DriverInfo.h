@@ -38,5 +38,5 @@ public:
     }
     ~DriverInfo();
 
-    jackmini::DriverClientInterface* open(DriverDesc* driverDesc, jackmini::LockedEngine*, jackmini::Synchro*, const JSListC*);
+    jackmini::DriverClientInterface* open(DriverDesc* driverDesc, jackmini::LockedEngine*, jackmini::Synchro*, DriverParamList params);
 };

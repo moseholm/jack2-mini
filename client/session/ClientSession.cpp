@@ -25,6 +25,7 @@
 #include "ipc/protocol/Request.h"
 #include "common/Time.h"
 #include "common/Tools.h"
+#include "common/Uuid.h"
 
 #include "ipc/memory/FrameTimer.h"
 
@@ -164,7 +165,7 @@ Result<void> ClientSession::connectAndRegister(std::string_view nameView, const 
         return std::unexpected(Error::kNoServer);
     }
 
-    ClientCheckRequest check(name.c_str(), kProtocolVersion, bits, kUuidEmptyInitializer, true);
+    ClientCheckRequest check(name.c_str(), kProtocolVersion, bits, jackmini::uuid::kEmpty, true);
     ClientCheckResult checkReply;
     if (transact(check, checkReply) < 0) {
         return std::unexpected(Error::kIo);
@@ -188,7 +189,7 @@ Result<void> ClientSession::connectAndRegister(std::string_view nameView, const 
         return std::unexpected(Error::kIo);
     }
 
-    ClientOpenRequest openRequest(nameRes.c_str(), Tools::getPID(), kUuidEmptyInitializer);
+    ClientOpenRequest openRequest(nameRes.c_str(), Tools::getPID(), jackmini::uuid::kEmpty);
     ClientOpenResult openReply;
     if (transact(openRequest, openReply) < 0) {
         return std::unexpected(Error::kIo);

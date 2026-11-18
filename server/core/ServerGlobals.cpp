@@ -26,7 +26,7 @@ bool (*ServerGlobals::s_onDeviceAcquire)(const char* deviceName) = nullptr;
 void (*ServerGlobals::s_onDeviceRelease)(const char* deviceName) = nullptr;
 void (*ServerGlobals::s_onDeviceReservationLoop)(void) = nullptr;
 
-// Used for the external C API (JackAPI.cpp)
+// Server-side accessors for the graph and its synchronization state.
 SERVER_EXPORT GraphManager* getGraphManager()
 {
     return ServerGlobals::s_instance->getGraphManager();

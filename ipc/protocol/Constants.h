@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include <jack/uuid.h>
 #include <cstdint>
 
 #ifdef HAVE_CONFIG_H
@@ -34,6 +33,9 @@ inline constexpr std::int32_t kPortTypeSize = 32;
 inline constexpr std::int32_t kServerNameSize = 256;
 inline constexpr std::int32_t kClientNameSize = 64;
 inline constexpr std::int32_t kMessageSize = 256;
+
+// A UUID is written as a decimal 64-bit value with a trailing null.
+inline constexpr std::int32_t kUuidStringSize = 37;
 inline constexpr std::int32_t kSessionCommandSize = 256;
 
 inline constexpr std::int32_t kSyncMaxNameSize = 256;

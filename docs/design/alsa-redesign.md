@@ -29,7 +29,8 @@ Status: done. The cycle core, the libasound backend, the session and the adapter
 - `jack_alsa.so` (`AlsaDriver`): a thin adapter. It owns the JACK driver base and the threads, and it
   calls the core.
 - MIDI: none. The server has no hardware MIDI (see decision 2 of the master plan).
-- The public C names that stay: `jack_midi_*` and `jack_ringbuffer_*` (decision 4).
+- No installed C API. The internal MIDI buffer keeps its C helper names; the byte ring buffer was replaced by
+  `RingBuffer<T>` in the C++ client.
 
 ## Requirements
 

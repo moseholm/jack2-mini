@@ -62,7 +62,7 @@ void showUsage(FILE* out)
     std::fprintf(out, "        -v, --version         Output version information and exit\n\n");
 }
 
-// The UUID as the server writes it: the decimal of the 64-bit value (jack_uuid_unparse).
+// The UUID as the server writes it: the decimal form produced by jackmini::uuid::unparse.
 std::string uuidText(jackmini::Uuid uuid)
 {
     return std::to_string(uuid.value());

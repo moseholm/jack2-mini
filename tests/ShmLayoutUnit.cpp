@@ -61,6 +61,25 @@ static_assert(alignof(ClientTiming) >= alignof(TimeC));
 static_assert(sizeof(UuidC) == 8 && alignof(UuidC) == 8);
 static_assert(sizeof(ClientTiming) % alignof(ClientTiming) == 0);
 
+// Latency ranges are copied between processes and are written into the graph's port objects.
+static_assert(sizeof(LatencyRangeC) == 2 * sizeof(NframesC));
+static_assert(alignof(LatencyRangeC) == alignof(NframesC));
+static_assert(offsetof(LatencyRangeC, m_min) == 0);
+static_assert(offsetof(LatencyRangeC, m_max) == sizeof(NframesC));
+
+// Transport positions are copied through the graph's atomic state.  These checks fix the natural
+// layout that replaced the old packed struct: both sides of the IPC must agree on it.
+static_assert(sizeof(PositionC) == 144);
+static_assert(alignof(PositionC) == 8);
+static_assert(offsetof(PositionC, m_unique1) == 0);
+static_assert(offsetof(PositionC, m_usecs) == 8);
+static_assert(offsetof(PositionC, m_frameRate) == 16);
+static_assert(offsetof(PositionC, m_frame) == 20);
+static_assert(offsetof(PositionC, m_barStartTick) == 40);
+static_assert(offsetof(PositionC, m_tickDouble) == 104);
+static_assert(offsetof(PositionC, m_padding) == 112);
+static_assert(offsetof(PositionC, m_unique2) == 136);
+
 // The activation counter and the state counters are 32-bit, read and written
 // with std::atomic_ref.  They need 4-byte alignment.
 static_assert(alignof(ActivationCount) >= alignof(SInt32));

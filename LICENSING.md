@@ -6,7 +6,7 @@ the lists below say the same thing for every source file, because one directory 
 | Part | Licence | Text |
 |---|---|---|
 | Server: `jackd`, `server/`, the drivers, the ALSA driver, and the other GPL files (list below) | GPL-2.0 | `COPYING` |
-| Client library `libjack` and its public API: `client/`, `common/jack/`, the shared `common/os/` and `ipc/` code, and the other LGPL files (list below) | LGPL-2.1-or-later | `COPYING.LGPL` |
+| Client library `libjack` and its public C++ API: `client/`, the shared `common/`, `common/os/` and `ipc/` code, and the other LGPL files (list below) | LGPL-2.1-or-later | `COPYING.LGPL` |
 | Vendored PipeWire resampler (`server/drivers/alsa/resample/`) | MIT | `server/drivers/alsa/resample/README.md` |
 | Bessel function `server/drivers/alsa/resample/dbesi0.c` (Takuya Ooura) | Permissive notice in the file | `server/drivers/alsa/resample/dbesi0.c` |
 | Build files, scripts, and perf tools with no licence header | GPL-2.0 (by default) | `COPYING` |
@@ -29,12 +29,13 @@ The licence is therefore GPL-2.0 as stated in the headers.
 
 ## LGPL-2.1-or-later
 
-The client library, its public headers, and the shared code that it is built from.
+The client library, its public C++ headers, and the shared code that it is built from. The C ABI headers that
+were once installed from `common/jack/` are gone; the vocabulary types they held are now internal headers in
+`common/`.
 
 - `client/api/`: `Client.cpp`, `Client.hpp`, `Error.cpp`, `Error.hpp`, `Jackmini.hpp`, `Midi.hpp`, `Options.hpp`, `Port.hpp`, `Ringbuffer.hpp`, `Transport.hpp`, `Uuid.cpp`, `Uuid.hpp`
 - `client/session/`: `ClientSession.cpp`, `ClientSession.hpp`, `ProcessContext.cpp`, `ProcessContext.hpp`
-- `common/`: `CompilerDeps.h`, `CString.h`, `Error.cpp`, `Error.h`, `Exception.cpp`, `Exception.h`, `Globals.cpp`, `Globals.h`, `Log.cpp`, `Log.h`, `MessageBuffer.cpp`, `MessageBuffer.h`, `MidiAPI.cpp`, `MidiPort.cpp`, `MidiPort.h`, `Mutex.h`, `Ringbuffer.cpp`, `SystemDeps.h`, `Thread.h`, `Time.h`, `Tools.cpp`, `Tools.h`, `Types.h`, `Uuid.cpp`
-- `common/jack/`: `jslist.h`, `ringbuffer.h`, `systemdeps.h`, `types.h`, `uuid.h`
+- `common/`: `CompilerDeps.h`, `CString.h`, `Error.cpp`, `Error.h`, `Exception.cpp`, `Exception.h`, `Globals.cpp`, `Globals.h`, `Log.cpp`, `Log.h`, `MessageBuffer.cpp`, `MessageBuffer.h`, `MidiAPI.cpp`, `MidiPort.cpp`, `MidiPort.h`, `Mutex.h`, `SystemDeps.h`, `Thread.h`, `Time.h`, `Tools.cpp`, `Tools.h`, `Types.h`, `Uuid.cpp`, `Uuid.h`
 - `common/os/`: `LinuxTime.cpp`, `Platform.h`, `PosixMutex.cpp`, `PosixMutex.h`, `PosixProcessSync.cpp`, `PosixProcessSync.h`, `PosixThread.cpp`, `PosixThread.h`
 - `ipc/memory/`: `ActivationCount.cpp`, `ActivationCount.h`, `Atomic.h`, `AtomicArrayState.h`, `AtomicState.h`, `AudioPort.cpp`, `ClientControl.h`, `ClientInterface.h`, `ConnectionManager.cpp`, `ConnectionManager.h`, `EngineControl.cpp`, `EngineControl.h`, `FdSegment.cpp`, `FdSegment.h`, `FrameTimer.cpp`, `FrameTimer.h`, `GraphManager.cpp`, `GraphManager.h`, `PortType.cpp`, `PortType.h`, `ServerPort.cpp`, `ServerPort.h`, `ShmMem.cpp`, `ShmMem.h`, `TransportEngine.cpp`, `TransportEngine.h`
 - `ipc/protocol/`: `Channel.h`, `Constants.h`, `Message.h`, `Notification.h`, `Request.h`
@@ -55,7 +56,7 @@ The server, the drivers, and the ALSA driver. See `COPYING`.
 - `server/drivers/`: `AudioDriver.cpp`, `AudioDriver.h`, `Driver.cpp`, `Driver.h`, `DriverInfo.h`, `DriverLoader.cpp`, `DummyDriver.cpp`, `DummyDriver.h`, `FreewheelDriver.cpp`, `FreewheelDriver.h`, `Memops.cpp`, `Memops.h`, `ThreadedDriver.cpp`, `ThreadedDriver.h`, `TimedDriver.cpp`, `TimedDriver.h`
 - `server/drivers/alsa/`: `AlsaCardDiff.h`, `AlsaCardFailureSink.h`, `AlsaControl.cpp`, `AlsaControl.h`, `AlsaControlMonitor.cpp`, `AlsaControlMonitor.h`, `AlsaDriftController.cpp`, `AlsaDriftController.h`, `AlsaDriver.cpp`, `AlsaDriver.h`, `AlsaEnumerate.cpp`, `AlsaEnumerate.h`, `AlsaHotplug.cpp`, `AlsaHotplug.h`, `AlsaRateConverter.cpp`, `AlsaRateConverter.h`, `AlsaReconfigWorker.cpp`, `AlsaReconfigWorker.h`, `AlsaRingBuffer.cpp`, `AlsaRingBuffer.h`, `AlsaSecondaryCard.cpp`, `AlsaSecondaryCard.h`, `AlsaSecondaryConfig.cpp`, `AlsaSecondaryConfig.h`, `AlsaSlotTable.h`, `PcmAlsa.cpp`, `PcmAlsa.hpp`, `PcmCycle.hpp`, `PcmSession.cpp`, `PcmSession.hpp`
 - `server/drivers/alsa/resample/`: `Resampler.cpp`, `Resampler.h`, `pipewire_resample_bridge.c`, `pipewire_resample_bridge.h`
-- `tests/`: `AlsaFakeBackend.hpp`, `AlsaSecondaryUnit.cpp`, `CounterTsanUnit.cpp`, `Cpu.cpp`, `DeactivateGraphUnit.cpp`, `ExternalMetro.cpp`, `Iodelay.cpp`, `MemopsUnit.cpp`, `MessageFrameUnit.cpp`, `NotifyOverflowUnit.cpp`, `PcmCycleUnit.cpp`, `ProtocolConformanceUnit.cpp`, `RingbufferUnit.cpp`
+- `tests/`: `AlsaFakeBackend.hpp`, `AlsaSecondaryUnit.cpp`, `CounterTsanUnit.cpp`, `Cpu.cpp`, `DeactivateGraphUnit.cpp`, `ExternalMetro.cpp`, `Iodelay.cpp`, `MemopsUnit.cpp`, `MessageFrameUnit.cpp`, `NotifyOverflowUnit.cpp`, `PcmCycleUnit.cpp`, `ProtocolConformanceUnit.cpp`
 
 ## MIT
 

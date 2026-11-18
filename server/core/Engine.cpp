@@ -21,6 +21,7 @@
 #include <fstream>
 #include <iostream>
 #include <set>
+#include <span>
 
 #include "common/CString.h"
 #include "ipc/protocol/Channel.h"
@@ -33,7 +34,7 @@
 #include "server/core/ServerCore.h"
 #include "server/core/ServerGlobals.h"
 #include "common/SystemDeps.h"
-#include "jack/uuid.h"
+#include "common/Uuid.h"
 
 namespace jackmini {
 
@@ -518,15 +519,15 @@ bool Engine::clientCheckName(const char* name)
 
 void Engine::ensureUUID(UuidC uuid)
 {
-    if (jack_uuid_empty(uuid))
+    if (jackmini::uuid::empty(uuid))
         return;
 
     for (std::int32_t i = 0; i < kClientNum; i++) {
         ClientInterface* client = m_clientTable[i];
-        if (client && jack_uuid_compare(client->getClientControl()->m_sessionID, uuid) == 0) {
+        if (client && client->getClientControl()->m_sessionID == uuid) {
             // FIXME? this code does nothing, but jack1 has it like this too..
-            jack_uuid_clear(&uuid);
-            // client->GetClientControl()->fSessionID = jack_client_uuid_generate();
+            uuid = jackmini::uuid::kEmpty;
+            // client->GetClientControl()->fSessionID = jackmini::uuid::generateClient();
         }
     }
 }
@@ -560,8 +561,8 @@ Result<void> Engine::clientExternalOpen(const char* name, std::int32_t pid, Uuid
 {
     std::array<char, kClientNameSize + 1> realName { };
 
-    if (jack_uuid_empty(uuid)) {
-        uuid = jack_client_uuid_generate();
+    if (jackmini::uuid::empty(uuid)) {
+        uuid = jackmini::uuid::generateClient();
         strncpy(realName.data(), name, kClientNameSize);
     } else {
         std::map<std::int32_t, std::string>::iterator res = m_reservationMap.find(uuid);
@@ -702,8 +703,7 @@ Result<void> Engine::clientCloseAux(std::int32_t refnum, bool wait)
     ClientInterface* client = m_clientTable[refnum];
     m_engineControl->m_transport.resetTimebase(refnum);
 
-    UuidC uuid = kUuidEmptyInitializer;
-    jack_uuid_copy(&uuid, client->getClientControl()->m_sessionID);
+    UuidC uuid = client->getClientControl()->m_sessionID;
 
     // Unregister all ports ==> notifications are sent
     std::array<Int, kPortNumForClient> ports;
@@ -1045,7 +1045,8 @@ Result<void> Engine::getUUIDForClientName(const char* clientName, char* uuidRes)
         ClientInterface* client = m_clientTable[i];
 
         if (client && (strcmp(clientName, client->getClientControl()->m_name.data()) == 0)) {
-            jack_uuid_unparse(client->getClientControl()->m_sessionID, uuidRes);
+            jackmini::uuid::unparse(client->getClientControl()->m_sessionID,
+                std::span<char>(uuidRes, kUuidStringSize));
             return { };
         }
     }
@@ -1055,8 +1056,8 @@ Result<void> Engine::getUUIDForClientName(const char* clientName, char* uuidRes)
 
 Result<void> Engine::getClientNameForUUID(const char* uuidBuf, char* nameRes)
 {
-    UuidC uuid;
-    if (jack_uuid_parse(uuidBuf, &uuid) != 0)
+    const auto uuid = jackmini::uuid::parse(uuidBuf);
+    if (!uuid)
         return std::unexpected(Error::kInvalidArgument);
 
     for (std::int32_t i = 0; i < kClientNum; i++) {
@@ -1066,7 +1067,7 @@ Result<void> Engine::getClientNameForUUID(const char* uuidBuf, char* nameRes)
             continue;
         }
 
-        if (jack_uuid_compare(client->getClientControl()->m_sessionID, uuid) == 0) {
+        if (client->getClientControl()->m_sessionID == *uuid) {
             strncpy(nameRes, client->getClientControl()->m_name.data(), kClientNameSize);
             return { };
         }
@@ -1084,14 +1085,14 @@ Result<void> Engine::reserveClientName(const char* name, const char* uuidstr)
         return std::unexpected(Error::kNameTaken);
     }
 
-    UuidC uuid;
-    if (jack_uuid_parse(uuidstr, &uuid) != 0) {
+    const auto uuid = jackmini::uuid::parse(uuidstr);
+    if (!uuid) {
         jack_error("JackEngine::ReserveClientName invalid uuid %s", uuidstr);
         return std::unexpected(Error::kInvalidArgument);
     }
 
-    ensureUUID(uuid);
-    m_reservationMap[uuid] = name;
+    ensureUUID(*uuid);
+    m_reservationMap[*uuid] = name;
     return { };
 }
 
