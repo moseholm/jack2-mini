@@ -20,7 +20,7 @@ Limits of the method:
 ## Legacy C API cleanup (after the audit)
 
 The audit below was made before the old C API was removed. In the current tree, `common/jack/` is gone; its vocabulary
-types moved to `common/Types.h`, its UUID helpers to `common/Uuid.h`, and its byte ring buffer was deleted in favour of
+types moved to `common/Types.h`, its UUID helpers to `common/Uuid.hpp`, and its byte ring buffer was deleted in favour of
 the C++ `RingBuffer<T>`. The `jackring` library and `tests/RingbufferUnit.cpp` were removed too. Rows in the table that
 say "removed in the C API cleanup" describe the current state; the licences in those rows are still their original
 licences, so the removals do not change the licensing conclusion.
@@ -93,8 +93,8 @@ Every derived file keeps the licence it had in the original tree. No licence cha
 | `client/api/Port.hpp` | renamed | `client/api/port.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `client/api/Ringbuffer.hpp` | renamed | `client/api/ringbuffer.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `client/api/Transport.hpp` | renamed | `client/api/transport.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/api/Uuid.cpp` | renamed | `client/api/uuid.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `client/api/Uuid.hpp` | renamed | `client/api/uuid.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `client/api/Uuid.cpp` | removed in the UUID consolidation | `client/api/uuid.cpp` | LGPL-2.1-or-later | — |
+| `client/api/Uuid.hpp` | kept as a forwarding header | `client/api/uuid.hpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `ipc/memory/ActivationCount.cpp` | renamed | `common/JackActivationCount.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `ipc/memory/ActivationCount.h` | renamed | `common/JackActivationCount.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `ipc/memory/Atomic.h` | renamed | `common/JackAtomic.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
@@ -151,7 +151,8 @@ Every derived file keeps the licence it had in the original tree. No licence cha
 | `ipc/memory/TransportEngine.cpp` | renamed | `common/JackTransportEngine.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `ipc/memory/TransportEngine.h` | rewritten (name match) | `common/JackTransportEngine.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Types.h` | rewritten (name match) | `common/JackTypes.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
-| `common/Uuid.cpp` | renamed | `common/JackUuid.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/Uuid.cpp` | kept, edited as the one UUID implementation | `common/JackUuid.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `common/Uuid.hpp` | promoted from the public type and the internal helpers | `client/api/uuid.hpp`, `common/JackUuid.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/jack/jslist.h` | removed in the C API cleanup | `common/jack/jslist.h` | LGPL-2.1-or-later | — |
 | `common/jack/midiport.h` | removed | `common/jack/midiport.h` | LGPL-2.1-or-later | — |
 | `common/jack/ringbuffer.h` | removed in the C API cleanup | `common/jack/ringbuffer.h` | LGPL-2.1-or-later | — |

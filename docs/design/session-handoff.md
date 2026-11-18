@@ -124,7 +124,7 @@ Style and naming (PR #4, the WebKit style; `docs/design/style.md` is the referen
 
 - Types CamelCase without a `Jack` prefix. Functions and methods camelCase. Data members `m_` (classes and structs),
   static members `s_`, globals `g`, constants and enumerators `kCamelCase`. Files CamelCase, named after their main type.
-- Vocabulary types in `common/Types.h` carry a `C` suffix (e.g. `PortIdC`), and UUID helpers live in `common/Uuid.h`.
+- Vocabulary types in `common/Types.h` carry a `C` suffix (e.g. `PortIdC`), and the one UUID type and its helpers live in `common/Uuid.hpp`.
   The logging functions `jack_error`/`jack_info`/`jack_log` keep their names, but `jack_slist_*` is gone. Internal
   classes that clashed were renamed: `JackPort` is `ServerPort`, `JackServer` is `ServerCore`, `JackResult` is `Reply`.
 - Integers from `<cstdint>`; `char` for text only, `std::byte` for raw bytes; `std::array` for fixed arrays (the struct-hack
@@ -139,7 +139,7 @@ Licensing (agreed with the user; see "Current work"):
 ## Layout (current)
 
 - `common/`: genuinely shared code: logging (`libjacklog`), the MIDI buffer (`libjackmidi`), error and time helpers,
-  and the internal vocabulary types (`Types.h`, `Uuid.h`). The C byte ring buffer and its library are gone; the
+  and the internal vocabulary types (`Types.h`, `Uuid.hpp`). The C byte ring buffer and its library are gone; the
   client uses `RingBuffer<T>` in `client/api/Ringbuffer.hpp`. `common/os/` holds the POSIX/Linux primitives
   (threads, mutexes, process sync, clock). The installed C headers under `common/jack/` are gone.
 - `ipc/`: the client/server contract. `ipc/protocol/` has the request, reply and notification messages and
@@ -212,9 +212,8 @@ the server should do monitoring is a separate decision. The copy itself is not c
 
 Open issues found while porting (not fixed):
 
-- `Uuid::to_string()` prints 16 hex digits, but the server's internal `jackmini::uuid` helpers write decimal and the
-  client parses decimal. The tools print decimal. The two should agree; the hex form is used only by `jackmini_unit`'s
-  round trip.
+- Resolved: UUID text is decimal everywhere. `Uuid::toString()`, the `jackmini::uuid` helpers, the client and the tools
+  share one parser and formatter in `common/Uuid.{hpp,cpp}`; `client/api/Uuid.hpp` forwards to the public type.
 - `-A` (aliases) prints nothing: no code sets aliases.
 - `jackmini_lsp -u` prints a client's name, not its UUID, for a client that owns no ports (the listing is built from
   the ports).
@@ -248,7 +247,7 @@ allocations in the steady window; syscalls per cycle below the S0 baseline with 
 baseline. The RT hardware runs are the user's.
 
 The plan's steps are all done. Remaining work is the user's: the RT hardware runs, and the ARM boards. The next
-the tools are done (see "Tools"). Open decisions: the server's monitor request, and the UUID text format.
+the tools are done (see "Tools"). Open decision: the server's monitor request.
 
 S7 is done (gate: the protocol conformance and notify overflow suites pass). Left on purpose: `RequestDecoder::HandleRequest`
 and the framing returns (the protocol loop's `int`); `ExternalClient::ClientNotify` and `Close` (the client interface's `int`);

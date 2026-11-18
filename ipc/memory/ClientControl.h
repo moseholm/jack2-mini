@@ -21,7 +21,7 @@
 #include "ipc/memory/ServerPort.h"
 #include "ipc/memory/ShmMem.h"
 #include "ipc/sync/Synchro.h"
-#include "common/Uuid.h"
+#include "common/Uuid.hpp"
 #include <array>
 #include <atomic>
 #include <cstdint>

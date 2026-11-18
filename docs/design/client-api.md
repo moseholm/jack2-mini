@@ -65,7 +65,7 @@ Rules that follow from this:
 | Other callbacks | `jack_set_*_callback` (xrun, shutdown, buffer size, sample rate, latency, and so on) | `Client::on_xrun`, `on_shutdown`, and so on, with the same storage rule. |
 | Transport | `jack_transport_*` (1 header) | `Transport` member functions. |
 | Ring buffer | `jack_ringbuffer_*` (3 functions) | `RingBuffer<T>`, an SPSC ring with `std::atomic`. The C byte ring buffer and its library are gone. |
-| UUID | `jack_uuid_*` (10) | `Uuid`, a value type. The internal `jackmini::uuid` helpers keep the decimal text form used by the protocol and tools. |
+| UUID | `jack_uuid_*` (10) | `Uuid`, a value type. Its one implementation and decimal text form are shared with the protocol helpers and the tools. |
 | Statistics | `jack_cpu_load`, and so on | `Client::cpu_load()` and the like. |
 | Control API | `jackctl_*` (52) | `jackmini::control`. Same server-management operations, C++ types. |
 

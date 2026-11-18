@@ -26,7 +26,7 @@
 #include "ipc/memory/ShmMem.h"
 #include "common/Time.h"
 #include "common/Types.h"
-#include "common/Uuid.h"
+#include "common/Uuid.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -62,12 +62,6 @@ void showUsage(FILE* out)
     std::fprintf(out, "        -v, --version         Output version information and exit\n\n");
 }
 
-// The UUID as the server writes it: the decimal form produced by jackmini::uuid::unparse.
-std::string uuidText(jackmini::Uuid uuid)
-{
-    return std::to_string(uuid.value());
-}
-
 // The name with its client part replaced by the UUID of that client (-u), when the client is known.
 std::string withOwnerUuid(const std::string& name, const std::map<std::string, jackmini::Uuid>& owners)
 {
@@ -79,7 +73,7 @@ std::string withOwnerUuid(const std::string& name, const std::map<std::string, j
     if (owner == owners.end()) {
         return name;
     }
-    return uuidText(owner->second) + name.substr(colon);
+    return owner->second.toString() + name.substr(colon);
 }
 
 // Every filter string must occur in the port name (a substring, as jack_lsp matched them).
@@ -205,7 +199,7 @@ int main(std::int32_t argc, char** argv)
         std::printf("%s\n", options.m_uuid ? withOwnerUuid(port.m_name, owners).c_str() : port.m_name.c_str());
 
         if (options.m_portUuid) {
-            std::printf("\tuuid: %s\n", uuidText(port.m_portUuid).c_str());
+            std::printf("\tuuid: %s\n", port.m_portUuid.toString().c_str());
         }
 
         if (options.m_aliases) {

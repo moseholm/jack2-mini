@@ -18,7 +18,7 @@ the file is the reference for layout: run `clang-format -i` on the files you cha
 - Files are CamelCase and named after the main type they hold: `Client.hpp`, `ServerPort.h`, `PcmCycle.hpp`. Tests are
   named the same way: `MemopsUnit.cpp`.
 - There is no installed C API. The vocabulary types that the old C headers held are internal to `common/Types.h`,
-  the UUID helpers are in `common/Uuid.h`, and the byte ring buffer is replaced by `RingBuffer<T>` in
+  the one UUID type and its helpers are in `common/Uuid.hpp`, and the byte ring buffer is replaced by `RingBuffer<T>` in
   `client/api/Ringbuffer.hpp`. The driver descriptor still has a C entry point, but that is a module ABI, not a client
   API. The logging functions `jack_error`, `jack_info` and `jack_log` keep their names as internal helpers; the
   `jack_slist_*` helpers are gone. The public C++ surface is listed in `docs/design/client-api.md`.

@@ -25,20 +25,18 @@
 #include "ipc/protocol/Request.h"
 #include "common/Time.h"
 #include "common/Tools.h"
-#include "common/Uuid.h"
+#include "common/Uuid.hpp"
 
 #include "ipc/memory/FrameTimer.h"
 
 #include <sys/socket.h>
 #include <array>
 #include <cerrno>
-#include <charconv>
 #include <climits>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 
-#include "common/CString.h"
 #include "ipc/memory/FdSegment.h"
 
 namespace jackmini::client {
@@ -104,18 +102,6 @@ void shutDownFd(std::int32_t fd)
     if (fd >= 0) {
         ::shutdown(fd, SHUT_RDWR);
     }
-}
-
-// The server writes a uuid as a decimal number. A uuid has the type bits set, so a smaller number is not one.
-std::optional<std::uint64_t> parseServerUuid(std::string_view text)
-{
-    text = skipNumericPrefix(text);
-    std::uint64_t value = 0;
-    const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
-    if (ec != std::errc() || value < (std::uint64_t(1) << 32)) {
-        return std::nullopt;
-    }
-    return value;
 }
 
 void setupDriverSync(ProcessContext& context, bool freewheel)
@@ -685,11 +671,11 @@ Result<Uuid> ClientSession::lookupUuid()
     if (transact(request, reply) < 0 || reply.m_result < 0) {
         return std::unexpected(Error::kServerFailure);
     }
-    const auto parsed = parseServerUuid(reply.m_uUID.data());
+    const auto parsed = uuid::parse(reply.m_uUID.data());
     if (!parsed) {
         return std::unexpected(Error::kProtocol);
     }
-    return Uuid(*parsed);
+    return *parsed;
 }
 
 FrameCount ClientSession::sampleRate() const noexcept

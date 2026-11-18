@@ -33,9 +33,9 @@ The client library, its public C++ headers, and the shared code that it is built
 were once installed from `common/jack/` are gone; the vocabulary types they held are now internal headers in
 `common/`.
 
-- `client/api/`: `Client.cpp`, `Client.hpp`, `Error.cpp`, `Error.hpp`, `Jackmini.hpp`, `Midi.hpp`, `Options.hpp`, `Port.hpp`, `Ringbuffer.hpp`, `Transport.hpp`, `Uuid.cpp`, `Uuid.hpp`
+- `client/api/`: `Client.cpp`, `Client.hpp`, `Error.cpp`, `Error.hpp`, `Jackmini.hpp`, `Midi.hpp`, `Options.hpp`, `Port.hpp`, `Ringbuffer.hpp`, `Transport.hpp`, `Uuid.hpp`
 - `client/session/`: `ClientSession.cpp`, `ClientSession.hpp`, `ProcessContext.cpp`, `ProcessContext.hpp`
-- `common/`: `CompilerDeps.h`, `CString.h`, `Error.cpp`, `Error.h`, `Exception.cpp`, `Exception.h`, `Globals.cpp`, `Globals.h`, `Log.cpp`, `Log.h`, `MessageBuffer.cpp`, `MessageBuffer.h`, `MidiAPI.cpp`, `MidiPort.cpp`, `MidiPort.h`, `Mutex.h`, `SystemDeps.h`, `Thread.h`, `Time.h`, `Tools.cpp`, `Tools.h`, `Types.h`, `Uuid.cpp`, `Uuid.h`
+- `common/`: `CompilerDeps.h`, `CString.h`, `Error.cpp`, `Error.h`, `Exception.cpp`, `Exception.h`, `Globals.cpp`, `Globals.h`, `Log.cpp`, `Log.h`, `MessageBuffer.cpp`, `MessageBuffer.h`, `MidiAPI.cpp`, `MidiPort.cpp`, `MidiPort.h`, `Mutex.h`, `SystemDeps.h`, `Thread.h`, `Time.h`, `Tools.cpp`, `Tools.h`, `Types.h`, `Uuid.cpp`, `Uuid.hpp`
 - `common/os/`: `LinuxTime.cpp`, `Platform.h`, `PosixMutex.cpp`, `PosixMutex.h`, `PosixProcessSync.cpp`, `PosixProcessSync.h`, `PosixThread.cpp`, `PosixThread.h`
 - `ipc/memory/`: `ActivationCount.cpp`, `ActivationCount.h`, `Atomic.h`, `AtomicArrayState.h`, `AtomicState.h`, `AudioPort.cpp`, `ClientControl.h`, `ClientInterface.h`, `ConnectionManager.cpp`, `ConnectionManager.h`, `EngineControl.cpp`, `EngineControl.h`, `FdSegment.cpp`, `FdSegment.h`, `FrameTimer.cpp`, `FrameTimer.h`, `GraphManager.cpp`, `GraphManager.h`, `PortType.cpp`, `PortType.h`, `ServerPort.cpp`, `ServerPort.h`, `ShmMem.cpp`, `ShmMem.h`, `TransportEngine.cpp`, `TransportEngine.h`
 - `ipc/protocol/`: `Channel.h`, `Constants.h`, `Message.h`, `Notification.h`, `Request.h`
