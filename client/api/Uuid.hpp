@@ -16,33 +16,5 @@
 
 #pragma once
 
-#include <compare>
-#include <cstdint>
-#include <optional>
-#include <string>
-#include <string_view>
-
-namespace jackmini {
-
-// Identifies a client or a port across the server.  Zero is the empty value.
-class Uuid {
-public:
-    constexpr Uuid() noexcept = default;
-    constexpr explicit Uuid(std::uint64_t value) noexcept
-        : m_value(value)
-    {
-    }
-
-    constexpr std::uint64_t value() const noexcept { return m_value; }
-    constexpr bool empty() const noexcept { return m_value == 0; }
-
-    std::string toString() const;
-    static std::optional<Uuid> parse(std::string_view text);
-
-    friend constexpr auto operator<=>(Uuid, Uuid) = default;
-
-private:
-    std::uint64_t m_value = 0;
-};
-
-} // namespace jackmini
+// The installed name of the public UUID type.  Its one definition is in common/Uuid.hpp.
+#include "common/Uuid.hpp"

@@ -112,7 +112,6 @@ set(JACK_CLIENT_SOURCES
     ${JACK_COMMON_SOURCES}
     client/api/Client.cpp
     client/session/ProcessContext.cpp
-    client/api/Uuid.cpp
     client/session/ClientSession.cpp)
 
 set(JACK_SERVER_SOURCES
@@ -282,13 +281,16 @@ install(FILES
     client/api/Uuid.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/client/api)
 
+# client/api/Uuid.hpp forwards to this one definition of the public UUID type.
+install(FILES common/Uuid.hpp DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/common)
+
 # Server management is not part of the client API; only embedders need it.
 install(FILES
     server/control/Control.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/server/control)
 
 # The parts of the client API that need no server: Uuid and error text.  The tools link it too.
-add_library(jackmini_base STATIC client/api/Uuid.cpp client/api/Error.cpp)
+add_library(jackmini_base STATIC common/Uuid.cpp client/api/Error.cpp)
 target_include_directories(jackmini_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(jackmini_base PUBLIC cxx_std_23)
 

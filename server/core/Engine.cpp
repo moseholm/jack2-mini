@@ -34,7 +34,7 @@
 #include "server/core/ServerCore.h"
 #include "server/core/ServerGlobals.h"
 #include "common/SystemDeps.h"
-#include "common/Uuid.h"
+#include "common/Uuid.hpp"
 
 namespace jackmini {
 
@@ -519,7 +519,7 @@ bool Engine::clientCheckName(const char* name)
 
 void Engine::ensureUUID(UuidC uuid)
 {
-    if (jackmini::uuid::empty(uuid))
+    if (jackmini::uuid::empty(Uuid { uuid }))
         return;
 
     for (std::int32_t i = 0; i < kClientNum; i++) {
@@ -561,8 +561,8 @@ Result<void> Engine::clientExternalOpen(const char* name, std::int32_t pid, Uuid
 {
     std::array<char, kClientNameSize + 1> realName { };
 
-    if (jackmini::uuid::empty(uuid)) {
-        uuid = jackmini::uuid::generateClient();
+    if (jackmini::uuid::empty(Uuid { uuid })) {
+        uuid = jackmini::uuid::generateClient().value();
         strncpy(realName.data(), name, kClientNameSize);
     } else {
         std::map<std::int32_t, std::string>::iterator res = m_reservationMap.find(uuid);
@@ -1045,7 +1045,7 @@ Result<void> Engine::getUUIDForClientName(const char* clientName, char* uuidRes)
         ClientInterface* client = m_clientTable[i];
 
         if (client && (strcmp(clientName, client->getClientControl()->m_name.data()) == 0)) {
-            jackmini::uuid::unparse(client->getClientControl()->m_sessionID,
+            jackmini::uuid::unparse(Uuid { client->getClientControl()->m_sessionID },
                 std::span<char>(uuidRes, kUuidStringSize));
             return { };
         }
@@ -1067,7 +1067,7 @@ Result<void> Engine::getClientNameForUUID(const char* uuidBuf, char* nameRes)
             continue;
         }
 
-        if (client->getClientControl()->m_sessionID == *uuid) {
+        if (client->getClientControl()->m_sessionID == uuid->value()) {
             strncpy(nameRes, client->getClientControl()->m_name.data(), kClientNameSize);
             return { };
         }
@@ -1091,8 +1091,8 @@ Result<void> Engine::reserveClientName(const char* name, const char* uuidstr)
         return std::unexpected(Error::kInvalidArgument);
     }
 
-    ensureUUID(*uuid);
-    m_reservationMap[*uuid] = name;
+    ensureUUID(uuid->value());
+    m_reservationMap[uuid->value()] = name;
     return { };
 }
 

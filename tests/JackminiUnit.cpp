@@ -22,6 +22,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -134,11 +135,22 @@ void testRingProducerConsumer()
 void testUuid()
 {
     const jackmini::Uuid id { 0x0123456789abcdefULL };
-    CHECK(id.toString() == "0123456789abcdef");
+    CHECK(id.toString() == "81985529216486895");
     const auto parsed = jackmini::Uuid::parse(id.toString());
     CHECK(parsed.has_value() && *parsed == id);
-    CHECK(!jackmini::Uuid::parse("0123").has_value());
+    CHECK(jackmini::Uuid::parse("123").value() == jackmini::Uuid { 123 });
+    CHECK(!jackmini::Uuid::parse("81985529216486895x").has_value());
     CHECK(!jackmini::Uuid::parse("0123456789abcdeg").has_value());
+
+    // The wire helpers and the public value type share one parser and one formatter.
+    std::array<char, 64> text {};
+    jackmini::uuid::unparse(id, text);
+    CHECK(std::string_view(text.data()) == id.toString());
+    CHECK(jackmini::uuid::parse(text.data()) == id);
+
+    // A server UUID carries the type bits in its high word; the value type accepts any number.
+    CHECK(!jackmini::uuid::parse("123").has_value());
+    CHECK(jackmini::uuid::isServerUuid(id));
     CHECK(jackmini::Uuid { }.empty());
     CHECK(jackmini::Uuid { 1 } < jackmini::Uuid { 2 });
 }

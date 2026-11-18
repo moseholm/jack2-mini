@@ -70,6 +70,8 @@ int main(std::int32_t argc, char** argv)
     check("opened: not active", !client.isActive());
     check("opened: name", client.name() == "jackmini_lifecycle");
     check("opened: uuid is set", !client.uuid().empty());
+    check("opened: uuid text is decimal", client.uuid().toString() == std::to_string(client.uuid().value()));
+    check("opened: uuid text round-trips", Uuid::parse(client.uuid().toString()) == client.uuid());
     check("opened: sample rate is set", client.sampleRate() != 0);
     check("opened: buffer size is set", client.bufferSize() != 0);
 

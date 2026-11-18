@@ -40,6 +40,9 @@ namespace {
 
 std::int32_t gFailures = 0;
 
+// A decimal server UUID: the type bits of a client in the high word.
+constexpr const char* kUuidText = "8589934593";
+
 #define CHECK(cond)                                                     \
     do {                                                                \
         if (!(cond)) {                                                  \
@@ -156,7 +159,7 @@ private:
                 }
                 m_uUIDFor = req.m_name.data();
                 UUIDResult res;
-                std::snprintf(res.m_uUID.data(), sizeof(res.m_uUID), "%s", "00000000-0000-0000-0000-000000000042");
+                std::snprintf(res.m_uUID.data(), sizeof(res.m_uUID), "%s", kUuidText);
                 res.m_result = 0;
                 sendJackReply(&m_socket, res, header);
                 break;
@@ -205,7 +208,7 @@ void testRequestsGetTheirReplies()
     CHECK(uuid.write(&client) == 0);
     UUIDResult res4;
     CHECK(readJackReply(&client, uuid.m_type, uuid.m_requestId, res4) == 0);
-    CHECK(std::strcmp(res4.m_uUID.data(), "00000000-0000-0000-0000-000000000042") == 0);
+    CHECK(std::strcmp(res4.m_uUID.data(), kUuidText) == 0);
 
     ComputeTotalLatenciesRequest latencies;
     CHECK(latencies.write(&client) == 0);
