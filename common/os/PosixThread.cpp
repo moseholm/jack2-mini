@@ -94,7 +94,7 @@ std::int32_t PosixThread::startSync()
     }
 }
 
-std::int32_t PosixThread::startImp(NativeThreadC* thread, std::int32_t priority, std::int32_t realtime, void* (*startRoutine)(void*), void* arg)
+std::int32_t PosixThread::startImp(pthread_t* thread, std::int32_t priority, std::int32_t realtime, void* (*startRoutine)(void*), void* arg)
 {
     pthread_attr_t attributes;
     struct sched_param rtParam;
@@ -156,13 +156,13 @@ std::int32_t PosixThread::startImp(NativeThreadC* thread, std::int32_t priority,
 
 std::int32_t PosixThread::kill()
 {
-    if (m_thread != (NativeThreadC) nullptr) { // If thread has been started
+    if (m_thread != (pthread_t) nullptr) { // If thread has been started
         jack_log("JackPosixThread::Kill");
         void* status;
         pthread_cancel(m_thread);
         pthread_join(m_thread, &status);
         m_status = kIdle;
-        m_thread = (NativeThreadC) nullptr;
+        m_thread = (pthread_t) nullptr;
         return 0;
     } else {
         return -1;
@@ -171,21 +171,21 @@ std::int32_t PosixThread::kill()
 
 std::int32_t PosixThread::stop()
 {
-    if (m_thread != (NativeThreadC) nullptr) { // If thread has been started
+    if (m_thread != (pthread_t) nullptr) { // If thread has been started
         jack_log("JackPosixThread::Stop");
         void* status;
         m_status = kIdle; // Request for the thread to stop
         pthread_join(m_thread, &status);
-        m_thread = (NativeThreadC) nullptr;
+        m_thread = (pthread_t) nullptr;
         return 0;
     } else {
         return -1;
     }
 }
 
-std::int32_t PosixThread::killImp(NativeThreadC thread)
+std::int32_t PosixThread::killImp(pthread_t thread)
 {
-    if (thread != (NativeThreadC) nullptr) { // If thread has been started
+    if (thread != (pthread_t) nullptr) { // If thread has been started
         jack_log("JackPosixThread::Kill");
         void* status;
         pthread_cancel(thread);
@@ -196,9 +196,9 @@ std::int32_t PosixThread::killImp(NativeThreadC thread)
     }
 }
 
-std::int32_t PosixThread::stopImp(NativeThreadC thread)
+std::int32_t PosixThread::stopImp(pthread_t thread)
 {
-    if (thread != (NativeThreadC) nullptr) { // If thread has been started
+    if (thread != (pthread_t) nullptr) { // If thread has been started
         jack_log("JackPosixThread::Stop");
         void* status;
         pthread_join(thread, &status);
@@ -210,7 +210,7 @@ std::int32_t PosixThread::stopImp(NativeThreadC thread)
 
 std::int32_t PosixThread::acquireRealTime()
 {
-    return (m_thread != (NativeThreadC) nullptr) ? acquireRealTimeImp(m_thread, m_priority) : -1;
+    return (m_thread != (pthread_t) nullptr) ? acquireRealTimeImp(m_thread, m_priority) : -1;
 }
 
 std::int32_t PosixThread::acquireSelfRealTime()
@@ -229,7 +229,7 @@ std::int32_t PosixThread::acquireSelfRealTime(std::int32_t priority)
     m_priority = priority;
     return acquireSelfRealTime();
 }
-std::int32_t PosixThread::acquireRealTimeImp(NativeThreadC thread, std::int32_t priority)
+std::int32_t PosixThread::acquireRealTimeImp(pthread_t thread, std::int32_t priority)
 {
     struct sched_param rtparam;
     std::int32_t res;
@@ -256,7 +256,7 @@ std::int32_t PosixThread::acquireRealTimeImp(NativeThreadC thread, std::int32_t 
 
 std::int32_t PosixThread::dropRealTime()
 {
-    return (m_thread != (NativeThreadC) nullptr) ? dropRealTimeImp(m_thread) : -1;
+    return (m_thread != (pthread_t) nullptr) ? dropRealTimeImp(m_thread) : -1;
 }
 
 std::int32_t PosixThread::dropSelfRealTime()
@@ -264,7 +264,7 @@ std::int32_t PosixThread::dropSelfRealTime()
     return dropRealTimeImp(pthread_self());
 }
 
-std::int32_t PosixThread::dropRealTimeImp(NativeThreadC thread)
+std::int32_t PosixThread::dropRealTimeImp(pthread_t thread)
 {
     struct sched_param rtparam;
     std::int32_t res;
@@ -278,7 +278,7 @@ std::int32_t PosixThread::dropRealTimeImp(NativeThreadC thread)
     return 0;
 }
 
-NativeThreadC PosixThread::getThreadID()
+pthread_t PosixThread::getThreadID()
 {
     return m_thread;
 }

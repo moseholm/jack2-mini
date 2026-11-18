@@ -41,7 +41,7 @@ using DescribeFunction = DriverDesc* (*)();
 
 // Creates the driver's backend on the engine, with the parameters given on the command line or by the control API.
 // Returns nullptr on failure.
-using InitializeFunction = DriverClientInterface* (*)(LockedEngine* engine, Synchro* table, const JSListC* params);
+using InitializeFunction = DriverClientInterface* (*)(LockedEngine* engine, Synchro* table, DriverParamList params);
 
 struct Module {
     std::uint32_t m_version;

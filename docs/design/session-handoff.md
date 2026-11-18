@@ -43,6 +43,7 @@ The user wants the README to describe the new project honestly, and the licence 
 | S6: engine and graph | done (`a9a1be6c` to `e2124e88`) | see "Next" |
 | S7: server and protocol | done (`a0f275e1` to `ab182c4e`) | see "Next" |
 | S9: remove the C (resampler kernels stay) | done (`9ab39c81`, `38bcbfe5`) | see "Next" |
+| Legacy C API cleanup (`common/jack`) | done | this branch: C headers, jslist, byte ring buffer and C UUID helpers removed |
 | S10: validation | done (`f38b6e2c`; `docs/design/validation.md`) | see "Next" |
 | Tools: the command-line tools, rebuilt on the jackmini API | done (T0 to T5) | see "Tools" |
 | WebKit style (PR #4, merged into `develop`) | done | identifier names, CamelCase files, `std::array`, `constexpr`, `//` comments; see "Decisions" |
@@ -62,6 +63,7 @@ The user wants the README to describe the new project honestly, and the licence 
 | S6: engine and graph | done (`a9a1be6c` to `e2124e88`) | see "Next" |
 | S7: server and protocol | done (`a0f275e1` to `ab182c4e`) | see "Next" |
 | S9: remove the C (resampler kernels stay) | done (`9ab39c81`, `38bcbfe5`) | see "Next" |
+| Legacy C API cleanup (`common/jack`) | done | this branch: C headers, jslist, byte ring buffer and C UUID helpers removed |
 | S10: validation | done (`f38b6e2c`; `docs/design/validation.md`) | see "Next" |
 | Tools: the command-line tools, rebuilt on the jackmini API | done (T0 to T5) | see "Tools" |
 
@@ -70,11 +72,13 @@ The user wants the README to describe the new project honestly, and the licence 
 Architecture and scope:
 
 - Client/server architecture: server process, clients on a Unix socket, shared-memory graph, futex sync.
-- No compatibility with stock JACK. The C ABI, the C headers, the wire protocol and the shared-memory layout may change.
+- No compatibility with stock JACK. The C ABI and C headers are removed; the wire protocol and shared-memory layout are
+  project-internal and may change.
 - Class-compliant ALSA PCM only. Hardware quirk drivers (hammerfall, hdsp, ice1712, usx2y, generic_hw) are removed.
 - MIDI is client-to-client only. The server never reads or writes MIDI on hardware. The ALSA RawMIDI and
   sequencer backends, the `platform/alsarawmidi` module, the server's MIDI driver and its queues, and the
-  `midi-driver` option are removed. The client MIDI transport (`libjackmidi`, `jack_midi_*`, `client/api/Midi.hpp`) stays.
+  `midi-driver` option are removed. The client MIDI transport (`client/api/Midi.hpp` and the in-tree `MidiBuffer`)
+  stays. Its old C helper names are implementation details, not an installed API.
 - Resampler kernels stay in C (`server/drivers/alsa/resample/*.c`, `dbesi0.c`, and the PipeWire bridge), behind a C++ wrapper.
   The resampler is PipeWire only: the plugin ABI is gone.
 - Driver modules stay loadable (`dlopen`), with one `extern "C"` entry point. The driver descriptor
@@ -90,7 +94,9 @@ Client API and control:
   The symbols are exported with `JACKMINI_CONTROL_API` (default visibility).
 - Lifecycle: opened, active, inactive. Callbacks are set only while inactive (`Error::InvalidState` otherwise).
   `deactivate()` joins the realtime thread.
-- Keep the C names `jack_midi_*` and `jack_ringbuffer_*` (public, decision 4).
+- No C API is installed. The C entry points from `common/jack/` are gone, and the byte ring buffer is replaced by
+  `RingBuffer<T>`. The internal MIDI buffer helpers keep their C names for now; the C++ client calls them, but they
+  are not public.
 
 Engine and protocol:
 
@@ -118,9 +124,9 @@ Style and naming (PR #4, the WebKit style; `docs/design/style.md` is the referen
 
 - Types CamelCase without a `Jack` prefix. Functions and methods camelCase. Data members `m_` (classes and structs),
   static members `s_`, globals `g`, constants and enumerators `kCamelCase`. Files CamelCase, named after their main type.
-- Functions declared in `common/jack/`, `jack_error`/`jack_info`/`jack_log`, and `jack_slist_*` keep their names. C API
-  types in `common/jack/` carry a `C` suffix (e.g. `PortIdC`). Internal classes that clashed were renamed:
-  `JackPort` is `ServerPort`, `JackServer` is `ServerCore`, `JackResult` is `Reply`.
+- Vocabulary types in `common/Types.h` carry a `C` suffix (e.g. `PortIdC`), and UUID helpers live in `common/Uuid.h`.
+  The logging functions `jack_error`/`jack_info`/`jack_log` keep their names, but `jack_slist_*` is gone. Internal
+  classes that clashed were renamed: `JackPort` is `ServerPort`, `JackServer` is `ServerCore`, `JackResult` is `Reply`.
 - Integers from `<cstdint>`; `char` for text only, `std::byte` for raw bytes; `std::array` for fixed arrays (the struct-hack
   trailing arrays stay); `nullptr`; `constexpr` constants; `//` comments only.
 - The C files under `server/drivers/alsa/resample/` and their headers are untouched by the style work.
@@ -132,10 +138,10 @@ Licensing (agreed with the user; see "Current work"):
 
 ## Layout (current)
 
-- `common/`: genuinely shared code: logging (`libjacklog`), the ring buffer (`libjackring`), the MIDI buffer
-  (`libjackmidi`), error and time helpers. `common/os/` holds the POSIX/Linux primitives (threads, mutexes,
-  process sync, clock). `common/jack/` holds the installed C headers (`jslist.h`, `ringbuffer.h`,
-  `systemdeps.h`, `types.h`, `uuid.h`); `midiport.h`, `transport.h` and `weakmacros.h` are gone.
+- `common/`: genuinely shared code: logging (`libjacklog`), the MIDI buffer (`libjackmidi`), error and time helpers,
+  and the internal vocabulary types (`Types.h`, `Uuid.h`). The C byte ring buffer and its library are gone; the
+  client uses `RingBuffer<T>` in `client/api/Ringbuffer.hpp`. `common/os/` holds the POSIX/Linux primitives
+  (threads, mutexes, process sync, clock). The installed C headers under `common/jack/` are gone.
 - `ipc/`: the client/server contract. `ipc/protocol/` has the request, reply and notification messages and
   their channel and constants; `ipc/socket/` the shared socket and its permission helper; `ipc/memory/` the
   shared-memory graph, ports, engine control and descriptor-passed segments; `ipc/sync/` the futex-backed
@@ -206,8 +212,9 @@ the server should do monitoring is a separate decision. The copy itself is not c
 
 Open issues found while porting (not fixed):
 
-- `Uuid::to_string()` prints 16 hex digits, but the server and `jack_uuid_unparse` use decimal, and the client parses
-  decimal. The tools print decimal. The two should agree; the hex form is used only by `jackmini_unit`'s round trip.
+- `Uuid::to_string()` prints 16 hex digits, but the server's internal `jackmini::uuid` helpers write decimal and the
+  client parses decimal. The tools print decimal. The two should agree; the hex form is used only by `jackmini_unit`'s
+  round trip.
 - `-A` (aliases) prints nothing: no code sets aliases.
 - `jackmini_lsp -u` prints a client's name, not its UUID, for a client that owns no ports (the listing is built from
   the ports).
@@ -231,9 +238,10 @@ S6 is done. Its stages (each: build, `check.sh`, commit, push) are listed for th
    report, checked against the tree before the change (procedure below). A duplicate connect is now an error
    (`InvalidState`); it was a silent success.
 
-S9 is done. The only C left is the resampler kernels and their bridge (`server/drivers/alsa/resample/`). C linkage (`extern "C"`)
-is kept for the driver module entry points and descriptor, the `jack_midi_*` and `jack_ringbuffer_*` names, the bridge, and the
-allocation interposer in `tests/perf/`.
+S9 is done. After the legacy C API cleanup, the C left in the tree is the resampler kernels and their bridge
+(`server/drivers/alsa/resample/`), the driver module entry point and descriptor, the internal `jack_midi_*` buffer
+helpers, and the allocation interposer in `tests/perf/`. There is no installed C API and no `jack_ringbuffer_*`
+byte ring buffer. C linkage (`extern "C"`) is kept only for those module and implementation boundaries.
 
 S10 is done (`docs/design/validation.md`): ASan, UBSan and TSAN over the unit suites and the server e2e tests; zero
 allocations in the steady window; syscalls per cycle below the S0 baseline with no new kind; the latency matches the

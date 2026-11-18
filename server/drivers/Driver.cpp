@@ -25,7 +25,7 @@
 #include "ipc/memory/ServerPort.h"
 #include "common/SystemDeps.h"
 #include "common/Time.h"
-#include "jack/uuid.h"
+#include "common/Uuid.h"
 #include <assert.h>
 #include <math.h>
 #include <array>
@@ -38,7 +38,7 @@ namespace jackmini {
 Driver::Driver(const char* name, const char* alias, LockedEngine* engine, Synchro* table)
     : m_captureChannels(0)
     , m_playbackChannels(0)
-    , m_clientControl(name, jack_client_uuid_generate())
+    , m_clientControl(name, jackmini::uuid::generateClient())
     , m_withMonitorPorts(false)
 {
     assert(strlen(name) < kClientNameSize);

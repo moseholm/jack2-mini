@@ -20,7 +20,7 @@
 #include "ipc/memory/AtomicArrayState.h"
 #include "common/CompilerDeps.h"
 #include "client/api/Error.hpp"
-#include "common/jack/types.h"
+#include "common/Types.h"
 #include <atomic>
 #include <cstdint>
 

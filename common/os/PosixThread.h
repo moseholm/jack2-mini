@@ -32,18 +32,18 @@ inline constexpr std::int32_t kThreadStack = 524288;
 class SERVER_EXPORT PosixThread : public detail::ThreadInterface {
 
 protected:
-    NativeThreadC m_thread;
+    pthread_t m_thread;
     static void* threadHandler(void* arg);
 
 public:
     PosixThread(RunnableInterface* runnable, bool realTime, std::int32_t priority, std::int32_t cancellation)
         : ThreadInterface(runnable, priority, realTime, cancellation)
-        , m_thread((NativeThreadC) nullptr)
+        , m_thread((pthread_t) nullptr)
     {
     }
     PosixThread(RunnableInterface* runnable, std::int32_t cancellation = PTHREAD_CANCEL_ASYNCHRONOUS)
         : ThreadInterface(runnable, 0, false, cancellation)
-        , m_thread((NativeThreadC) nullptr)
+        , m_thread((pthread_t) nullptr)
     {
     }
 
@@ -62,18 +62,18 @@ public:
     std::int32_t dropRealTime(); // Used when called from another thread
     std::int32_t dropSelfRealTime(); // Used when called from thread itself
 
-    NativeThreadC getThreadID();
+    pthread_t getThreadID();
     bool isThread();
 
-    static std::int32_t acquireRealTimeImp(NativeThreadC thread, std::int32_t priority);
-    static std::int32_t acquireRealTimeImp(NativeThreadC thread, std::int32_t priority, UInt64 period, UInt64 computation, UInt64 constraint)
+    static std::int32_t acquireRealTimeImp(pthread_t thread, std::int32_t priority);
+    static std::int32_t acquireRealTimeImp(pthread_t thread, std::int32_t priority, UInt64 period, UInt64 computation, UInt64 constraint)
     {
         return PosixThread::acquireRealTimeImp(thread, priority);
     }
-    static std::int32_t dropRealTimeImp(NativeThreadC thread);
-    static std::int32_t startImp(NativeThreadC* thread, std::int32_t priority, std::int32_t realtime, void* (*startRoutine)(void*), void* arg);
-    static std::int32_t stopImp(NativeThreadC thread);
-    static std::int32_t killImp(NativeThreadC thread);
+    static std::int32_t dropRealTimeImp(pthread_t thread);
+    static std::int32_t startImp(pthread_t* thread, std::int32_t priority, std::int32_t realtime, void* (*startRoutine)(void*), void* arg);
+    static std::int32_t stopImp(pthread_t thread);
+    static std::int32_t killImp(pthread_t thread);
 };
 
 SERVER_EXPORT void threadExit();

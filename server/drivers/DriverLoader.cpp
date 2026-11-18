@@ -81,24 +81,6 @@ void printDriverParamUsage(DriverDesc* desc, std::uint64_t param, FILE* file)
     fprintf(file, "%s\n", desc->m_params[param].m_longDesc);
 }
 
-DriverDesc* findDriverDescriptor(JSListC* drivers, const char* name)
-{
-    DriverDesc* desc = 0;
-    JSListC* node;
-
-    for (node = drivers; node; node = jack_slist_next(node)) {
-        desc = (DriverDesc*)node->m_data;
-
-        if (strcmp(desc->m_name.data(), name) != 0) {
-            desc = nullptr;
-        } else {
-            break;
-        }
-    }
-
-    return desc;
-}
-
 // The names of the entries in a directory.  If the listing fails, ec is set
 // and the names read so far are returned.
 static std::vector<std::string> listDirectory(const char* dirPath, std::error_code& ec)
@@ -150,12 +132,10 @@ struct DriverModuleCloser {
 
 // Loads the module of a driver file, checks its interface version, and returns its descriptor. A driver whose name is
 // already in the list is refused, so the first one is used.
-static DriverDesc* loadDescriptor(JSListC* drivers, const char* sofile, const char* driverDir)
+static DriverDesc* loadDescriptor(const std::vector<DriverDesc*>& drivers, const char* sofile, const char* driverDir)
 {
     DriverDesc* descriptor = nullptr;
-    DriverDesc* otherDescriptor;
     std::array<char, 1024> filename { };
-    JSListC* node;
     void* rawHandle = nullptr;
 
     jackmini::formatCString(std::span<char>(filename.data(), 1022), "{}/{}", driverDir, sofile);
@@ -182,11 +162,10 @@ static DriverDesc* loadDescriptor(JSListC* drivers, const char* sofile, const ch
     }
 
     // check it doesn't exist already
-    for (node = drivers; node; node = jack_slist_next(node)) {
-        otherDescriptor = (DriverDesc*)node->m_data;
-        if (strcmp(descriptor->m_name.data(), otherDescriptor->m_name.data()) == 0) {
+    for (const DriverDesc* other : drivers) {
+        if (strcmp(descriptor->m_name.data(), other->m_name.data()) == 0) {
             jack_error("The drivers in '%s' and '%s' both have the name '%s'; using the first",
-                otherDescriptor->m_file, filename.data(), otherDescriptor->m_name);
+                other->m_file, filename.data(), other->m_name);
             // FIXME: delete the descriptor
             return nullptr;
         }
@@ -197,9 +176,9 @@ static DriverDesc* loadDescriptor(JSListC* drivers, const char* sofile, const ch
 }
 
 
-JSListC* driversLoad(JSListC* drivers)
+std::vector<DriverDesc*> driversLoad()
 {
-    JSListC* driverList = nullptr;
+    std::vector<DriverDesc*> driverList;
     DriverDesc* desc = nullptr;
 
     const char* driverDir;
@@ -214,7 +193,7 @@ JSListC* driversLoad(JSListC* drivers)
     if (ec) {
         jack_error("Could not open driver directory %s: %s",
             driverDir, ec.message().c_str());
-        return nullptr;
+        return {};
     }
 
     for (const std::string& name : entries) {
@@ -227,17 +206,17 @@ JSListC* driversLoad(JSListC* drivers)
             continue;
         }
 
-        desc = loadDescriptor(drivers, name.c_str(), driverDir);
+        desc = loadDescriptor(driverList, name.c_str(), driverDir);
         if (desc) {
-            driverList = jack_slist_append(driverList, desc);
+            driverList.push_back(desc);
         } else {
             jack_error("Driver file \"%s\" does not give a usable driver descriptor", name.c_str());
         }
     }
 
-    if (!driverList) {
+    if (driverList.empty()) {
         jack_error("Could not find any drivers in %s!", driverDir);
-        return nullptr;
+        return {};
     }
 
     return driverList;
@@ -247,7 +226,7 @@ JSListC* driversLoad(JSListC* drivers)
 jackmini::DriverClientInterface* DriverInfo::open(DriverDesc* driverDesc,
     jackmini::LockedEngine* engine,
     jackmini::Synchro* synchro,
-    const JSListC* params)
+    DriverParamList params)
 {
     const char* errstr;
 

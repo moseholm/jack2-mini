@@ -27,7 +27,6 @@
 #include "server/core/ServerLock.h"
 #include "common/Thread.h"
 #include "common/Tools.h"
-#include "common/jack/jslist.h"
 
 #include <getopt.h>
 #include <pthread.h>
@@ -45,6 +44,7 @@
 #include <span>
 #include <system_error>
 #include <utility>
+#include <vector>
 
 // The choices of the self connect mode.  The engine relies on these characters.
 struct SelfConnectChoice {
@@ -270,20 +270,14 @@ std::optional<DriverEntry> makeDriver(DescriptorPtr descriptor)
 
 bool loadDrivers(std::vector<DriverEntry>& drivers)
 {
-    JSListC* list = driversLoad(nullptr);
-    if (list == nullptr) {
+    std::vector<DriverDesc*> descriptors = driversLoad();
+    if (descriptors.empty()) {
         jack_error("Could not find any drivers in driver directory!");
         return false;
     }
 
-    while (list != nullptr) {
-        JSListC* node = list;
-        list = list->m_next;
-
-        DescriptorPtr descriptor(static_cast<DriverDesc*>(node->m_data));
-        free(node);
-
-        std::optional<DriverEntry> entry = makeDriver(std::move(descriptor));
+    for (DriverDesc* descriptor : descriptors) {
+        std::optional<DriverEntry> entry = makeDriver(DescriptorPtr(descriptor));
         if (entry) {
             drivers.push_back(std::move(*entry));
         }
@@ -292,39 +286,16 @@ bool loadDrivers(std::vector<DriverEntry>& drivers)
 }
 
 // The options the engine receives for a driver: the ones that were set.
-Result<JSListC*> createParamList(const std::vector<Parameter>& parameters)
+std::vector<DriverParam> createParamList(const std::vector<Parameter>& parameters)
 {
-    JSListC* list = nullptr;
+    std::vector<DriverParam> params;
     for (const Parameter& parameter : parameters) {
         if (!parameter.m_isSet) {
             continue;
         }
-        auto* param = static_cast<DriverParam*>(malloc(sizeof(DriverParam)));
-        if (param == nullptr) {
-            jack_error("Allocation of jack_driver_param_t structure failed");
-            for (JSListC* node = list; node != nullptr;) {
-                JSListC* next = node->m_next;
-                free(node->m_data);
-                free(node);
-                node = next;
-            }
-            return std::unexpected(Error::kServerFailure);
-        }
-        param->m_character = parameter.m_shortName;
-        param->m_value = valueToC(parameter.m_value);
-        list = jack_slist_append(list, param);
+        params.push_back({ parameter.m_shortName, valueToC(parameter.m_value) });
     }
-    return list;
-}
-
-void destroyParamList(JSListC* list)
-{
-    while (list != nullptr) {
-        JSListC* next = list->m_next;
-        free(list->m_data);
-        free(list);
-        list = next;
-    }
+    return params;
 }
 
 } // namespace
@@ -637,12 +608,8 @@ Result<void> Server::start()
         return fail(Error::kServerFailure);
     }
 
-    Result<JSListC*> params = createParamList(master.m_view.m_parameters);
-    if (!params) {
-        return fail(params.error());
-    }
-    auto opened = impl.m_engine->open(master.m_descriptor.get(), *params);
-    destroyParamList(*params);
+    std::vector<DriverParam> params = createParamList(master.m_view.m_parameters);
+    auto opened = impl.m_engine->open(master.m_descriptor.get(), params);
     if (!opened) {
         jack_error("JackServer::Open failed");
         return fail(opened.error());

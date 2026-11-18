@@ -14,87 +14,42 @@
 
 // The UUIDs of clients and ports, used by the server and the clients (not exported).
 
-#include "jack/uuid.h"
+#include "common/Uuid.h"
 #include "common/CString.h"
-#include "common/Error.h"
-#include <stdio.h>
-#include <string.h>
-#include <cctype>
+
 #include <charconv>
 #include <cstdint>
-#include <span>
-#include <string_view>
 
-using namespace jackmini;
+namespace jackmini::uuid {
 
-UuidC jack_client_uuid_generate()
+UuidC generateClient()
 {
-    static std::uint32_t uuidCnt = 0;
-    UuidC uuid = 0x2; // JackUUIDClient
-    ;
-    uuid = (uuid << 32) | ++uuidCnt;
-    return uuid;
+    static std::uint32_t count = 0;
+    return (UuidC { 2 } << 32) | ++count;
 }
 
-UuidC jack_port_uuid_generate(std::uint32_t portId)
+UuidC generatePort(std::uint32_t portId)
 {
-    UuidC uuid = 0x1; // JackUUIDPort
-    uuid = (uuid << 32) | (portId + 1);
-    return uuid;
+    return (UuidC { 1 } << 32) | (portId + 1);
 }
 
-std::uint32_t jack_uuid_to_index(UuidC u)
+std::optional<UuidC> parse(std::string_view text)
 {
-    return (u & 0xffff) - 1;
-}
-
-std::int32_t jack_uuid_compare(UuidC a, UuidC b)
-{
-    if (a == b) {
-        return 0;
-    }
-
-    if (a < b) {
-        return -1;
-    }
-
-    return 1;
-}
-
-void jack_uuid_copy(UuidC* dst, UuidC src)
-{
-    *dst = src;
-}
-
-void jack_uuid_clear(UuidC* u)
-{
-    *u = kUuidEmptyInitializer;
-}
-
-std::int32_t jack_uuid_parse(const char* b, UuidC* u)
-{
-    const std::string_view text = skipNumericPrefix(b);
-    std::uint64_t value = 0;
+    text = skipNumericPrefix(text);
+    UuidC value = 0;
     const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
-    if (ec != std::errc()) {
-        return -1;
+    if (ec != std::errc() || ptr == text.data()) {
+        return std::nullopt;
     }
-
-    *u = value;
-    if (*u < (0x1LL << 32)) {
-        // has not type bits set - not legal
-        return -1;
+    if (value < (UuidC { 1 } << 32)) {
+        return std::nullopt; // the type bits are missing
     }
-
-    return 0;
+    return value;
 }
 
-void jack_uuid_unparse(UuidC u, char b[kUuidStringSize])
+void unparse(UuidC value, std::span<char> dst)
 {
-    jackmini::formatCString(std::span<char>(b, kUuidStringSize), "{}", static_cast<std::uint64_t>(u));
+    formatCString(dst, "{}", static_cast<std::uint64_t>(value));
 }
 
-std::int32_t jack_uuid_empty(UuidC u)
-{
-    return u == kUuidEmptyInitializer;
-}
+} // namespace jackmini::uuid

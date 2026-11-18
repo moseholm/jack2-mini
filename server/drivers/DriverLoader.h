@@ -19,10 +19,10 @@
 
 #include <cstdint>
 #include <stdio.h>
+#include <vector>
 
 #include "server/drivers/DriverInterface.h"
 
-DriverDesc* findDriverDescriptor(JSListC* drivers, const char* name);
-JSListC* driversLoad(JSListC* drivers);
+std::vector<DriverDesc*> driversLoad();
 void printDriverParamUsage(DriverDesc* desc, std::uint64_t param, FILE* file);
 void printDriverOptions(DriverDesc* desc, FILE* file);

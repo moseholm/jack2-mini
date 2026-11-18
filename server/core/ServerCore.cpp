@@ -88,7 +88,7 @@ ServerCore::~ServerCore()
     m_engineControl.reset();
 }
 
-Result<void> ServerCore::open(DriverDesc* driverDesc, JSListC* driverParams)
+Result<void> ServerCore::open(DriverDesc* driverDesc, DriverParamList driverParams)
 {
     // TODO: move that in reworked JackServerGlobals::Init()
     if (!MessageBuffer::create()) {

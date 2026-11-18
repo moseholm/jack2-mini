@@ -1,4 +1,5 @@
 // Copyright (C) 2013 Paul Davis
+// Copyright (C) 2026 JACK contributors
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -16,22 +17,26 @@
 
 #pragma once
 
-#include <jack/types.h>
+#include "common/Types.h"
+
 #include <cstdint>
+#include <optional>
+#include <span>
+#include <string_view>
 
+namespace jackmini::uuid {
 
-inline constexpr std::int32_t kUuidSize = 36;
-inline constexpr std::int32_t kUuidStringSize = (kUuidSize + 1); // includes trailing null
-inline constexpr std::int32_t kUuidEmptyInitializer = 0;
+inline constexpr UuidC kEmpty = 0;
 
-extern UuidC jack_client_uuid_generate();
-extern UuidC jack_port_uuid_generate(std::uint32_t portId);
+// Client identifiers are numbered by the server; port identifiers are derived from the port number.
+// The high word holds the kind (2 for a client, 1 for a port).
+UuidC generateClient();
+UuidC generatePort(std::uint32_t portId);
 
-extern std::uint32_t jack_uuid_to_index(UuidC);
+// Text form is the decimal value, as used by the control protocol and the command-line tools.
+std::optional<UuidC> parse(std::string_view text);
+void unparse(UuidC value, std::span<char> dst);
 
-extern std::int32_t jack_uuid_compare(UuidC, UuidC);
-extern void jack_uuid_copy(UuidC* dst, UuidC src);
-extern void jack_uuid_clear(UuidC*);
-extern std::int32_t jack_uuid_parse(const char* buf, UuidC*);
-extern void jack_uuid_unparse(UuidC, char buf[kUuidStringSize]);
-extern std::int32_t jack_uuid_empty(UuidC);
+constexpr bool empty(UuidC value) noexcept { return value == kEmpty; }
+
+} // namespace jackmini::uuid

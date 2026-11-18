@@ -17,10 +17,10 @@
 
 #pragma once
 
-#include "common/jack/jslist.h"
 #include <limits.h>
 #include <array>
 #include <cstdint>
+#include <span>
 
 #include "common/CompilerDeps.h"
 #include "common/SystemDeps.h"
@@ -182,3 +182,6 @@ JACK_CONSTRAINT_COMPOSE_ENUM(str);
 #ifdef __cplusplus
 }
 #endif
+
+// Driver parameters cross the module boundary as a read-only view of plain values.
+using DriverParamList = std::span<const DriverParam>;

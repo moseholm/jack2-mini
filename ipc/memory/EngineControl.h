@@ -21,7 +21,7 @@
 #include "ipc/memory/FrameTimer.h"
 #include "ipc/memory/ShmMem.h"
 #include "ipc/memory/TransportEngine.h"
-#include "common/jack/types.h"
+#include "common/Types.h"
 #include <stdio.h>
 #include <array>
 #include <atomic>

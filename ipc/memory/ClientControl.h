@@ -21,6 +21,7 @@
 #include "ipc/memory/ServerPort.h"
 #include "ipc/memory/ShmMem.h"
 #include "ipc/sync/Synchro.h"
+#include "common/Uuid.h"
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -54,7 +55,7 @@ struct ClientControl : public ShmMemAble {
 
     ClientControl()
     {
-        init("", 0, -1, kUuidEmptyInitializer);
+        init("", 0, -1, jackmini::uuid::kEmpty);
     }
 
     void init(const char* name, std::int32_t pid, std::int32_t refnum, UuidC uuid)

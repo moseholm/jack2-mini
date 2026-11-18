@@ -26,7 +26,7 @@
 #include "common/os/Platform.h"
 #include "common/Thread.h"
 #include "server/drivers/alsa/resample/Resampler.h"
-#include "common/jack/types.h"
+#include "common/Types.h"
 
 #include <array>
 #include <atomic>

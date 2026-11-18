@@ -53,44 +53,40 @@ static DriverDesc* describeDriver()
     return desc;
 }
 
-static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine* engine, jackmini::Synchro* table, const JSListC* params)
+static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine* engine, jackmini::Synchro* table, DriverParamList params)
 {
     NframesC sampleRate = 48000;
     NframesC bufferSize = 1024;
     std::uint32_t capturePorts = 2;
     std::uint32_t playbackPorts = 2;
     std::int32_t waitTime = 0;
-    const JSListC* node;
-    const DriverParam* param;
     bool monitor = false;
 
-    for (node = params; node; node = jack_slist_next(node)) {
-        param = (const DriverParam*)node->m_data;
-
-        switch (param->m_character) {
+    for (const DriverParam& param : params) {
+        switch (param.m_character) {
 
         case 'C':
-            capturePorts = param->m_value.m_ui;
+            capturePorts = param.m_value.m_ui;
             break;
 
         case 'P':
-            playbackPorts = param->m_value.m_ui;
+            playbackPorts = param.m_value.m_ui;
             break;
 
         case 'r':
-            sampleRate = param->m_value.m_ui;
+            sampleRate = param.m_value.m_ui;
             break;
 
         case 'p':
-            bufferSize = param->m_value.m_ui;
+            bufferSize = param.m_value.m_ui;
             break;
 
         case 'w':
-            waitTime = param->m_value.m_ui;
+            waitTime = param.m_value.m_ui;
             break;
 
         case 'm':
-            monitor = param->m_value.m_i;
+            monitor = param.m_value.m_i;
             break;
         }
     }

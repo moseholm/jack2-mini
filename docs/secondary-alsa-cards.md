@@ -231,32 +231,12 @@ that rate. The log shows both rates:
 secondary card 'usb1': device runs at 48000 Hz, not the requested 44100 Hz; using 48000 Hz
 ```
 
-## Notifications
+## Rate-change visibility
 
-Applications register for rate changes with
-`jack_set_secondary_sample_rate_callback()`:
-
-```c
-#include <jack/jack.h>
-#include <jack/types.h>
-
-static int on_secondary_rate(jack_nframes_t rate, const char *card,
-                             int direction, void *arg)
-{
-    int capture  = direction & JackSecondaryRateCapture;
-    int playback = direction & JackSecondaryRatePlayback;
-    /* react to the new rate */
-    return 0;
-}
-
-jack_set_secondary_sample_rate_callback(client, on_secondary_rate, NULL);
-```
-
-- The callback runs on a non-real-time thread, after the new rate is active.
-- `direction` is a bitmask. A card whose capture and playback share one stream
-  reports both bits in one call.
-- Failed or refused changes are not reported.
-- Call it before `jack_activate()`.
+The old C callback for rate changes is not part of the C++ client API. The ALSA
+driver logs the change and reopens the card at the rate the device reports; a
+jackmini client has no notification for it yet. Failed or refused changes are
+not reported either.
 
 ## Limits
 

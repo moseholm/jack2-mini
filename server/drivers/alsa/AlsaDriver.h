@@ -52,7 +52,7 @@ private:
     std::string m_playbackDevice;
     NframesC m_captureFrameLatency;
     NframesC m_playbackFrameLatency;
-    NativeThreadC m_reservationLoopThread;
+    pthread_t m_reservationLoopThread;
     std::vector<AlsaSecondaryCard*> m_secondaryCards; // owned cards, guarded by fCardsMutex
     AlsaCardSlots m_slots; // the RT thread's view of promoted cards
     std::mutex m_cardsMutex;

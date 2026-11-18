@@ -1,16 +1,15 @@
 # C++ client API (P1 design)
 
-Status: decided. The headers are written in `client/api/` and compile
-standalone; the implementation is not started.
+Status: implemented. The headers are in `client/api/` and compile standalone.
 
 ## Scope
 
-The current client library exports about 179 C functions (`common/jack/*.h`
-plus `JackAPI.cpp`, `JackLibAPI.cpp`), and the control API adds 52 more
-(`jackctl_*`). The new API is C++23, in namespace `jackmini`, with no
-`extern "C"` exports. The architecture stays the same: the client connects to
-the server over a Unix socket, the graph lives in shared memory, and the sync
-primitives are futexes.
+The original JACK C client exported about 179 functions (`common/jack/*.h`
+plus `JackAPI.cpp`, `JackLibAPI.cpp`), and its control API added 52 more
+(`jackctl_*`). All of those C entry points and headers are gone. The replacement
+is C++23, in namespace `jackmini`, with no `extern "C"` exports. The
+architecture stays the same: the client connects to the server over a Unix
+socket, the graph lives in shared memory, and the sync primitives are futexes.
 
 ## Decisions
 
@@ -56,7 +55,7 @@ Rules that follow from this:
 
 ## Surface
 
-| Area | Current | New |
+| Area | Original C API | jackmini C++ |
 |---|---|---|
 | Client lifecycle | `jack_client_open/close`, `jack_activate/deactivate` | `Client` (RAII). `open`, `activate`, `deactivate`, `close`. |
 | Ports | `jack_port_register/unregister`, `jack_port_get_*`, aliases, connections | `Port` handle; `Client::register_port(name, type, flags)`. Aliases and connections are methods on the client. |
@@ -65,8 +64,8 @@ Rules that follow from this:
 | Process callback | `jack_set_process_callback(fn, arg)` | `Client::on_process(F)`. The callable is stored while inactive. Calling it does not allocate. Returns `bool`. |
 | Other callbacks | `jack_set_*_callback` (xrun, shutdown, buffer size, sample rate, latency, and so on) | `Client::on_xrun`, `on_shutdown`, and so on, with the same storage rule. |
 | Transport | `jack_transport_*` (1 header) | `Transport` member functions. |
-| Ring buffer | `jack_ringbuffer_*` (3 functions) | `RingBuffer<T>`, an SPSC ring with `std::atomic`. Part of the client API because clients use it. |
-| UUID | `jack_uuid_*` (10) | `Uuid`, a value type. |
+| Ring buffer | `jack_ringbuffer_*` (3 functions) | `RingBuffer<T>`, an SPSC ring with `std::atomic`. The C byte ring buffer and its library are gone. |
+| UUID | `jack_uuid_*` (10) | `Uuid`, a value type. The internal `jackmini::uuid` helpers keep the decimal text form used by the protocol and tools. |
 | Statistics | `jack_cpu_load`, and so on | `Client::cpu_load()` and the like. |
 | Control API | `jackctl_*` (52) | `jackmini::control`. Same server-management operations, C++ types. |
 
@@ -153,5 +152,5 @@ graph order and the freewheel callbacks of the public C API, the total latency q
    tested without a server (`tests/JackminiUnit.cpp`, TSAN clean). The
    server-facing tests run against a server.
 3. Done (Plan A): the client library is the session and the public client. The
-   `tests/*.cpp` programs that still use the C names (`cpu`, `rtbench`, `iodelay`,
-   `external_metro`) are on the public API.
+   benchmark programs (`cpu`, `iodelay`, `external_metro`) are on the public C++
+   API; the old C entry points are gone.
