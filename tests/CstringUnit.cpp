@@ -14,7 +14,7 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-// Unit tests for CopyCString(): truncation, termination and zero fill.
+// Unit tests for the fixed-string helpers: CopyCString() truncation, termination and zero fill, and the integer parsers.
 
 #include "common/CString.h"
 
@@ -89,6 +89,20 @@ void testLeadingInteger()
     CHECK(jackmini::parseLeadingInteger<std::uint32_t>("300") == 300u);
 }
 
+void testWholeInteger()
+{
+    // Unlike parseLeadingInteger(), no characters may follow the digits.
+    CHECK(jackmini::parseInteger<std::int32_t>("42") == 42);
+    CHECK(jackmini::parseInteger<std::int32_t>("  +7") == 7);
+    CHECK(jackmini::parseInteger<std::int32_t>("  -7") == -7);
+    CHECK(!jackmini::parseInteger<std::int32_t>("12abc").has_value());
+    CHECK(!jackmini::parseInteger<std::int32_t>("").has_value());
+    CHECK(!jackmini::parseInteger<std::int32_t>("+").has_value());
+    CHECK(!jackmini::parseInteger<std::int32_t>("+-3").has_value());
+    CHECK(!jackmini::parseInteger<std::int32_t>("99999999999").has_value());
+    CHECK(jackmini::parseInteger<std::uint64_t>("18446744073709551615") == 18446744073709551615ULL);
+}
+
 void testEmptyBuffer()
 {
     jackmini::copyCString(std::span<char> { }, "abc");
@@ -104,6 +118,7 @@ int main()
     testTruncates();
     testZeroFillsStaleBytes();
     testLeadingInteger();
+    testWholeInteger();
     testEmptyBuffer();
 
     std::printf("%d checks, %d failed\n", gChecks, gFailures);
