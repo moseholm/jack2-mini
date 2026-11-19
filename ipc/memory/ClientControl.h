@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "common/CString.h"
 #include "ipc/protocol/Notification.h"
 #include "ipc/memory/ServerPort.h"
 #include "ipc/memory/ShmMem.h"
@@ -60,7 +61,7 @@ struct ClientControl : public ShmMemAble {
 
     void init(const char* name, std::int32_t pid, std::int32_t refnum, UuidC uuid)
     {
-        strcpy(m_name.data(), name);
+        copyCString(m_name, name);
         for (std::int32_t i = 0; i < kMaxNotification; i++) {
             m_callback[i] = false;
         }

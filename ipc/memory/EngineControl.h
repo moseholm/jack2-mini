@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "common/CString.h"
 #include "ipc/protocol/Constants.h"
 #include "ipc/memory/FrameTimer.h"
 #include "ipc/memory/ShmMem.h"
@@ -107,8 +108,7 @@ struct SERVER_EXPORT EngineControl : public ShmMem {
         m_spareUsecs = 0;
         m_maxUsecs = 0;
         resetRollingUsecs();
-        strncpy(m_serverName.data(), serverName, sizeof(m_serverName));
-        m_serverName[sizeof(m_serverName) - 1] = 0;
+        copyCString(m_serverName, serverName);
         m_cPULoad = 0.f;
         m_maxCPULoad = 0.f;
         m_period = 0;
