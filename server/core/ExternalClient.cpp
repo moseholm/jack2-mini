@@ -86,7 +86,7 @@ std::int32_t ExternalClient::close()
     return 0;
 }
 
-ClientControl* ExternalClient::getClientControl() const
+ClientControl* ExternalClient::getClientControl() const JACK_REALTIME_FN
 {
     return m_clientControl;
 }

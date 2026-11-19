@@ -19,6 +19,7 @@
 
 #include "ipc/memory/AtomicArrayState.h"
 #include "common/CompilerDeps.h"
+#include "common/Realtime.h"
 #include "client/api/Error.hpp"
 #include "common/Types.h"
 #include <atomic>
@@ -141,10 +142,10 @@ public:
     }
 
     // \brief
-    void cycleBegin(NframesC frameRate, TimeC time);
+    void cycleBegin(NframesC frameRate, TimeC time) JACK_REALTIME_FN;
 
     // \brief
-    void cycleEnd(std::atomic<ClientInterface*>* table, NframesC frameRate, NframesC bufferSize);
+    void cycleEnd(std::atomic<ClientInterface*>* table, NframesC frameRate, NframesC bufferSize) JACK_REALTIME_FN;
 
     // \brief
     void setSyncTimeout(TimeC timeout)

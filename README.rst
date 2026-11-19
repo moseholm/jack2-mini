@@ -126,6 +126,28 @@ options ``-DCMAKE_INSTALL_PREFIX=/usr/local`` and
 The maximum number of clients and ports per application can be configured with
 ``-DJACK_MAX_CLIENTS=256`` and ``-DJACK_PORTS_PER_APPLICATION=2048``.
 
+Realtime sanitizer
+------------------
+
+With Clang 20 or newer (install clang 21 from apt.llvm.org if the distribution's
+clang is older), the build can be instrumented with Clang's RealtimeSanitizer::
+
+    CC=clang-21 CXX=clang++-21 cmake -S . -B build-rtsan -DCMAKE_BUILD_TYPE=Debug \
+        -DJACK_BUILD_TESTS=ON -DJACK_REALTIME_SANITIZER=ON
+    cmake --build build-rtsan --parallel
+    ctest --test-dir build-rtsan
+    tests/rtsan_e2e.sh build-rtsan
+
+``scripts/ci.sh`` takes the same path with ``RTSAN=ON``; the CI job ``linux-rtsan``
+runs it. Configuration verifies that the compiler, the flag and the runtime work
+by compiling and running a deliberately violating probe. RTSan only checks calls
+made from functions marked ``[[clang::nonblocking]]``; those start at the server's
+``Engine::process`` and the client's ``ClientSession::processCycle`` and cover the
+RT-safe helpers they call. The build also enforces ``-Werror=function-effects``,
+so an unannotated call from an RT function fails compilation; deliberate
+exceptions carry a documented ``JACK_RT_UNCHECKED`` in ``common/Realtime.h``.
+Run RTSan in a build of its own, not together with ASan, UBSan or TSan.
+
 Tests
 =====
 

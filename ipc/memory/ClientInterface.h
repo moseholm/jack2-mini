@@ -20,6 +20,7 @@
 #include <cstdint>
 
 #include "common/CompilerDeps.h"
+#include "common/Realtime.h"
 
 namespace jackmini {
 
@@ -41,7 +42,7 @@ public:
 
     virtual std::int32_t clientNotify(std::int32_t refnum, const char* name, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2) = 0;
 
-    virtual ClientControl* getClientControl() const = 0;
+    virtual ClientControl* getClientControl() const JACK_REALTIME_FN = 0;
 };
 
 

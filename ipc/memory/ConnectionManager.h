@@ -18,6 +18,7 @@
 
 #include "ipc/memory/ActivationCount.h"
 #include "common/CompilerDeps.h"
+#include "common/Realtime.h"
 #include "ipc/protocol/Constants.h"
 #include "common/Error.h"
 #include "client/api/Error.hpp"
@@ -446,8 +447,8 @@ public:
 
     // Graph
     // The live activation counters are passed in: they are not part of this (copied) state.
-    void resetGraph(ClientTiming* timing, std::atomic<SInt32>* live);
-    Result<void> resumeRefNum(ClientControl* control, Synchro* table, ClientTiming* timing, std::atomic<SInt32>* live);
+    void resetGraph(ClientTiming* timing, std::atomic<SInt32>* live) JACK_REALTIME_FN;
+    Result<void> resumeRefNum(ClientControl* control, Synchro* table, ClientTiming* timing, std::atomic<SInt32>* live) JACK_REALTIME_FN;
     Result<void> suspendRefNum(ClientControl* control, Synchro* table, ClientTiming* timing, std::int64_t timeOutUsec);
     void topologicalSort(std::vector<Int>& sorted);
 };

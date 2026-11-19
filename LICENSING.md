@@ -35,7 +35,7 @@ were once installed from `common/jack/` are gone; the vocabulary types they held
 
 - `client/api/`: `Client.cpp`, `Client.hpp`, `Error.cpp`, `Error.hpp`, `Jackmini.hpp`, `Midi.hpp`, `Options.hpp`, `Port.hpp`, `Ringbuffer.hpp`, `Transport.hpp`, `Uuid.hpp`
 - `client/session/`: `ClientSession.cpp`, `ClientSession.hpp`, `ProcessContext.cpp`, `ProcessContext.hpp`
-- `common/`: `CompilerDeps.h`, `CString.h`, `Error.cpp`, `Error.h`, `Exception.cpp`, `Exception.h`, `Globals.cpp`, `Globals.h`, `Log.cpp`, `Log.h`, `MessageBuffer.cpp`, `MessageBuffer.h`, `MidiAPI.cpp`, `MidiPort.cpp`, `MidiPort.h`, `Mutex.h`, `SystemDeps.h`, `Thread.h`, `Time.h`, `Tools.cpp`, `Tools.h`, `Types.h`, `Uuid.cpp`, `Uuid.hpp`
+- `common/`: `CompilerDeps.h`, `CString.h`, `Error.cpp`, `Error.h`, `Exception.cpp`, `Exception.h`, `Globals.cpp`, `Globals.h`, `Log.cpp`, `Log.h`, `MessageBuffer.cpp`, `MessageBuffer.h`, `MidiAPI.cpp`, `MidiPort.cpp`, `MidiPort.h`, `Mutex.h`, `Realtime.h`, `SystemDeps.h`, `Thread.h`, `Time.h`, `Tools.cpp`, `Tools.h`, `Types.h`, `Uuid.cpp`, `Uuid.hpp`
 - `common/os/`: `LinuxTime.cpp`, `Platform.h`, `PosixMutex.cpp`, `PosixMutex.h`, `PosixProcessSync.cpp`, `PosixProcessSync.h`, `PosixThread.cpp`, `PosixThread.h`
 - `ipc/`: `IpcName.h`
 - `ipc/memory/`: `ActivationCount.cpp`, `ActivationCount.h`, `Atomic.h`, `AtomicArrayState.h`, `AtomicState.h`, `AudioPort.cpp`, `ClientControl.h`, `ClientInterface.h`, `ConnectionManager.cpp`, `ConnectionManager.h`, `EngineControl.cpp`, `EngineControl.h`, `FdSegment.cpp`, `FdSegment.h`, `FrameTimer.cpp`, `FrameTimer.h`, `GraphManager.cpp`, `GraphManager.h`, `PortType.cpp`, `PortType.h`, `ServerPort.cpp`, `ServerPort.h`, `ShmMem.cpp`, `ShmMem.h`, `TransportEngine.cpp`, `TransportEngine.h`
@@ -83,7 +83,7 @@ PipeWire-derived shim headers, which are MIT by provenance.
 - `server/drivers/alsa/resample/spa-shim/spa/utils/`: `defs.h`, `overflow.h`
 - `scripts/`: `ci.sh`
 - `tests/perf/`: `Alloccount.cpp`, `Rtbench.cpp`, `run-baseline.sh`
-- `tests/`: `tools_e2e.sh`
+- `tests/`: `rtsan_e2e.sh`, `tools_e2e.sh`
 - `tools/`: `CMakeLists.txt`, `README.md`
 
 ## Changing this document

@@ -200,7 +200,7 @@ void Driver::cycleTakeEndTime()
     m_endDateUst = getMicroseconds(); // Take end date here
 }
 
-ClientControl* Driver::getClientControl() const
+ClientControl* Driver::getClientControl() const JACK_REALTIME_FN
 {
     return (ClientControl*)&m_clientControl;
 }

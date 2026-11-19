@@ -13,6 +13,7 @@ include(GNUInstallDirs)
 option(JACK_BUILD_TESTS "Build test programs" OFF)
 option(JACK_TOOLS "Build the command-line tools (jackmini_<tool>)" ON)
 option(JACK_RESAMPLER_SIMD "Build the x86 SSE/AVX2 resampler kernels and select one at runtime" ON)
+option(JACK_REALTIME_SANITIZER "Build with Clang RealtimeSanitizer (-fsanitize=realtime)" OFF)
 set(JACK_MAX_CLIENTS 256 CACHE STRING "Maximum number of JACK clients")
 set(JACK_PORTS_PER_APPLICATION 2048 CACHE STRING "Maximum number of ports per application")
 
@@ -50,7 +51,68 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-Wall)
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-invalid-offsetof>)
-    add_link_options(-Wl,--no-undefined)
+    # An RTSan-instrumented shared object keeps an unresolved
+    # __rtsan_ensure_initialized, resolved from the runtime linked into the
+    # executable that loads it (including dlopen'd drivers).
+    if(NOT JACK_REALTIME_SANITIZER)
+        add_link_options(-Wl,--no-undefined)
+    endif()
+endif()
+
+if(JACK_REALTIME_SANITIZER)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        message(FATAL_ERROR
+            "JACK_REALTIME_SANITIZER needs Clang. Reconfigure with CC=clang CXX=clang++.")
+    endif()
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20)
+        message(FATAL_ERROR
+            "JACK_REALTIME_SANITIZER needs Clang 20 or newer (found ${CMAKE_CXX_COMPILER_VERSION}).")
+    endif()
+
+    # RTSan only reports inside functions marked [[clang::nonblocking]], and the
+    # runtime must be present at startup for dlopen'd drivers to be checked.
+    # Prove both here: an un-instrumented build would otherwise pass CI silently.
+    set(JACK_RTSAN_PROBE_DIR "${CMAKE_CURRENT_BINARY_DIR}/rtsan-probe")
+    file(MAKE_DIRECTORY "${JACK_RTSAN_PROBE_DIR}")
+    file(WRITE "${JACK_RTSAN_PROBE_DIR}/main.cpp" [=[
+extern "C" void* malloc(unsigned long);
+extern "C" void free(void*);
+void violation() [[clang::nonblocking]] {
+    void* p = malloc(8);
+    free(p);
+}
+int main() { violation(); return 0; }
+]=])
+    execute_process(
+        COMMAND "${CMAKE_CXX_COMPILER}" -std=c++17 -fsanitize=realtime -g
+            "${JACK_RTSAN_PROBE_DIR}/main.cpp" -o "${JACK_RTSAN_PROBE_DIR}/probe"
+        RESULT_VARIABLE JACK_RTSAN_COMPILE_RESULT
+        OUTPUT_VARIABLE JACK_RTSAN_COMPILE_OUTPUT
+        ERROR_VARIABLE JACK_RTSAN_COMPILE_OUTPUT)
+    if(NOT JACK_RTSAN_COMPILE_RESULT EQUAL 0)
+        message(FATAL_ERROR "RealtimeSanitizer probe did not build:\n${JACK_RTSAN_COMPILE_OUTPUT}")
+    endif()
+    execute_process(
+        COMMAND "${JACK_RTSAN_PROBE_DIR}/probe"
+        RESULT_VARIABLE JACK_RTSAN_RUN_RESULT
+        ERROR_VARIABLE JACK_RTSAN_RUN_OUTPUT)
+    if(JACK_RTSAN_RUN_RESULT EQUAL 0 OR NOT JACK_RTSAN_RUN_OUTPUT MATCHES "RealtimeSanitizer")
+        message(FATAL_ERROR
+            "RealtimeSanitizer probe did not report a violation (status ${JACK_RTSAN_RUN_RESULT}):\n"
+            "${JACK_RTSAN_RUN_OUTPUT}")
+    endif()
+    message(STATUS "RealtimeSanitizer                         : enabled (Clang ${CMAKE_CXX_COMPILER_VERSION})")
+
+    # Link options as well as compile options: the runtime has to be loaded by
+    # jackd and by each client executable before any driver is dlopen'd.
+    add_compile_options(-fsanitize=realtime -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=realtime)
+    add_compile_definitions(JACK_REALTIME_SANITIZER=1)
+    # Function-effect analysis is now mandatory: every call from an annotated
+    # realtime function is either verified nonblocking or carries a documented
+    # JACK_RT_UNCHECKED exemption.
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Werror=function-effects>)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-perf-constraint-implies-noexcept>)
 endif()
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
@@ -460,3 +522,4 @@ message(STATUS "Install prefix                              : ${CMAKE_INSTALL_PR
 message(STATUS "Library directory                           : ${CMAKE_INSTALL_FULL_LIBDIR}")
 message(STATUS "Drivers directory                           : ${JACK_ADDON_DIR}")
 message(STATUS "Build tests                                 : ${JACK_BUILD_TESTS}")
+message(STATUS "RealtimeSanitizer                           : ${JACK_REALTIME_SANITIZER}")

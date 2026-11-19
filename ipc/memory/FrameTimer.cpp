@@ -23,7 +23,7 @@
 
 namespace jackmini {
 
-Timer::Timer()
+Timer::Timer() JACK_REALTIME_FN
 {
     m_initialized = false;
     m_frames = 0;
@@ -72,7 +72,7 @@ TimeC Timer::frames2Time(NframesC frames, NframesC bufferSize)
     }
 }
 
-std::int32_t Timer::getCycleTimes(NframesC* currentFrames, TimeC* currentUsecs, TimeC* nextUsecs, float* periodUsecs)
+std::int32_t Timer::getCycleTimes(NframesC* currentFrames, TimeC* currentUsecs, TimeC* nextUsecs, float* periodUsecs) JACK_REALTIME_FN
 {
     if (m_initialized) {
         *currentFrames = m_frames;
@@ -119,7 +119,7 @@ void FrameTimer::resetFrameTime(TimeC callbackUsecs)
 // Use the state returned by ReadCurrentState and check that the state was not changed during the read operation.
 // The operation is lock-free since there is no intermediate state in the write operation that could cause the
 // read to loop forever.
-void FrameTimer::readFrameTime(Timer* timer)
+void FrameTimer::readFrameTime(Timer* timer) JACK_REALTIME_FN
 {
     UInt16 nextIndex = getCurrentIndex();
     UInt16 curIndex;

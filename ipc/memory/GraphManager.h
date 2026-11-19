@@ -19,6 +19,7 @@
 
 #include "ipc/memory/AtomicState.h"
 #include "ipc/memory/ConnectionManager.h"
+#include "common/Realtime.h"
 #include "ipc/protocol/Constants.h"
 #include "common/os/Platform.h"
 #include "ipc/memory/ServerPort.h"
@@ -115,13 +116,13 @@ public:
     // Buffer management
     void* getBuffer(PortIdC portIndex, NframesC frames);
 
-    // Activation management
-    void runCurrentGraph();
-    bool runNextGraph();
-    bool isFinishedGraph();
+    // Activation management (called on the RT cycle)
+    void runCurrentGraph() JACK_REALTIME_FN;
+    bool runNextGraph() JACK_REALTIME_FN;
+    bool isFinishedGraph() JACK_REALTIME_FN;
 
     void initRefNum(std::int32_t refnum);
-    Result<void> resumeRefNum(ClientControl* control, Synchro* table);
+    Result<void> resumeRefNum(ClientControl* control, Synchro* table) JACK_REALTIME_FN;
     Result<void> suspendRefNum(ClientControl* control, Synchro* table, std::int64_t usecs);
     void topologicalSort(std::vector<Int>& sorted);
 

@@ -20,6 +20,7 @@
 #include "ipc/protocol/Constants.h"
 #include "ipc/memory/GraphManager.h"
 #include "common/Mutex.h"
+#include "common/Realtime.h"
 #include "common/os/Platform.h"
 #include "server/ipc/ServerChannels.h"
 #include "ipc/protocol/Request.h"
@@ -60,13 +61,13 @@ private:
     std::map<std::int32_t, std::string> m_reservationMap;
 
     Result<void> clientCloseAux(std::int32_t refnum, bool wait);
-    void checkXRun(TimeC callbackUsecs);
+    void checkXRun(TimeC callbackUsecs) JACK_REALTIME_FN;
 
     Result<void> notifyAddClient(ClientInterface* newClient, const char* newName, std::int32_t refnum);
     void notifyRemoveClient(const char* name, std::int32_t refnum);
 
-    void processNext(TimeC callbackUsecs);
-    void processCurrent(TimeC callbackUsecs);
+    void processNext(TimeC callbackUsecs) JACK_REALTIME_FN;
+    void processCurrent(TimeC callbackUsecs) JACK_REALTIME_FN;
 
     // Waits until fSwitchCount reaches count.  A change written to the next state is in effect after the second
     // switch that begins after the write (the first may have begun before it), so a waiter asks for two more switches.
@@ -137,8 +138,9 @@ public:
 
     Result<void> computeTotalLatencies();
 
-    // Graph
-    bool process(TimeC curCycleBegin, TimeC prevCycleEnd);
+    // Graph. The server's realtime cycle: start the RTSan context here, not at
+    // ThreadedDriver::execute(), which also does the driver's blocking wait.
+    bool process(TimeC curCycleBegin, TimeC prevCycleEnd) JACK_REALTIME_FN;
 
     // Notifications
     void notifyDriverXRun();

@@ -24,6 +24,7 @@
 #include <span>
 
 #include "common/CString.h"
+#include "common/Realtime.h"
 #include "ipc/protocol/Channel.h"
 #include "ipc/memory/ClientControl.h"
 #include "ipc/memory/EngineControl.h"
@@ -139,14 +140,22 @@ void Engine::releaseRefnum(std::int32_t refnum)
 // Graph management
 //------------------
 
-void Engine::processNext(TimeC curCycleBegin)
+void Engine::processNext(TimeC curCycleBegin) JACK_REALTIME_FN
 {
     m_lastSwitchUsecs = curCycleBegin;
     if (m_graphManager->runNextGraph()) { // True if the graph actually switched to a new state
-        m_channel.notify(kAllClients, kGraphOrderCallback, 0);
+        // The notification socket is non-blocking (SocketServerNotifyChannel::connect),
+        // so its sendmsg cannot block. RTSan still intercepts sendmsg as blocking.
+        JACK_RTSAN_SCOPED_DISABLE();
+        JACK_RT_UNCHECKED("non-blocking notification socket", m_channel.notify(kAllClients, kGraphOrderCallback, 0));
     }
     m_switchCount.fetch_add(1);
-    m_signal.signal(); // Signal for threads waiting for a switch
+    {
+        // Signalling without the lock only wakes the waiters; it does not wait.
+        // RTSan intercepts pthread_cond_signal as a blocking call.
+        JACK_RTSAN_SCOPED_DISABLE();
+        JACK_RT_UNCHECKED("cond signal only wakes waiters", m_signal.signal());
+    }
 }
 
 bool Engine::waitForSwitches(std::uint64_t count)
@@ -164,7 +173,7 @@ bool Engine::waitForSwitches(std::uint64_t count)
     return res;
 }
 
-void Engine::processCurrent(TimeC curCycleBegin)
+void Engine::processCurrent(TimeC curCycleBegin) JACK_REALTIME_FN
 {
     if (curCycleBegin < m_lastSwitchUsecs + 2 * m_engineControl->m_periodUsecs) { // Signal XRun only for the first failing cycle
         checkXRun(curCycleBegin);
@@ -172,7 +181,7 @@ void Engine::processCurrent(TimeC curCycleBegin)
     m_graphManager->runCurrentGraph();
 }
 
-bool Engine::process(TimeC curCycleBegin, TimeC prevCycleEnd)
+bool Engine::process(TimeC curCycleBegin, TimeC prevCycleEnd) JACK_REALTIME_FN
 {
     bool res = true;
 
@@ -187,13 +196,13 @@ bool Engine::process(TimeC curCycleBegin, TimeC prevCycleEnd)
         processNext(curCycleBegin);
         res = true;
     } else {
-        jack_log("Process: graph not finished!");
+        JACK_RT_UNCHECKED("error path logging", jack_log("Process: graph not finished!"));
         if (curCycleBegin > m_lastSwitchUsecs + m_engineControl->m_timeOutUsecs) {
-            jack_log("Process: switch to next state delta = %ld", std::int64_t(curCycleBegin - m_lastSwitchUsecs));
+            JACK_RT_UNCHECKED("error path logging", jack_log("Process: switch to next state delta = %ld", std::int64_t(curCycleBegin - m_lastSwitchUsecs)));
             processNext(curCycleBegin);
             res = true;
         } else {
-            jack_log("Process: waiting to switch delta = %ld", std::int64_t(curCycleBegin - m_lastSwitchUsecs));
+            JACK_RT_UNCHECKED("error path logging", jack_log("Process: waiting to switch delta = %ld", std::int64_t(curCycleBegin - m_lastSwitchUsecs)));
             processCurrent(curCycleBegin);
             res = false;
         }
@@ -223,7 +232,7 @@ static const char* state2String(ClientState state)
     }
 }
 
-void Engine::checkXRun(TimeC callbackUsecs) // REVOIR les conditions de fin
+void Engine::checkXRun(TimeC callbackUsecs) JACK_REALTIME_FN // REVOIR les conditions de fin
 {
     for (std::int32_t i = m_engineControl->m_driverNum; i < kClientNum; i++) {
         ClientInterface* client = m_clientTable[i];
@@ -233,13 +242,13 @@ void Engine::checkXRun(TimeC callbackUsecs) // REVOIR les conditions de fin
             TimeC finishedDate = timing->m_finishedAt;
 
             if (status != kNotTriggered && status != kFinished) {
-                jack_error("JackEngine::XRun: client = %s was not finished, state = %s", client->getClientControl()->m_name, state2String(status));
-                m_channel.notify(kAllClients, kXRunCallback, 0); // Notify all clients
+                JACK_RT_UNCHECKED("XRun error path logging", jack_error("JackEngine::XRun: client = %s was not finished, state = %s", client->getClientControl()->m_name, state2String(status)));
+                JACK_RT_UNCHECKED("non-blocking notification socket", m_channel.notify(kAllClients, kXRunCallback, 0));
             }
 
             if (status == kFinished && (std::int64_t)(finishedDate - callbackUsecs) > 0) {
-                jack_error("JackEngine::XRun: client %s finished after current callback", client->getClientControl()->m_name);
-                m_channel.notify(kAllClients, kXRunCallback, 0); // Notify all clients
+                JACK_RT_UNCHECKED("XRun error path logging", jack_error("JackEngine::XRun: client %s finished after current callback", client->getClientControl()->m_name));
+                JACK_RT_UNCHECKED("non-blocking notification socket", m_channel.notify(kAllClients, kXRunCallback, 0));
             }
         }
     }

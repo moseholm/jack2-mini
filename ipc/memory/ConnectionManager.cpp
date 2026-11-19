@@ -199,7 +199,7 @@ void ConnectionManager::initRefNum(std::int32_t refnum)
 }
 
 // \brief Reset all clients activation.
-void ConnectionManager::resetGraph(ClientTiming* timing, std::atomic<SInt32>* live)
+void ConnectionManager::resetGraph(ClientTiming* timing, std::atomic<SInt32>* live) JACK_REALTIME_FN
 {
     // Reset activation counter : must be done *before* starting to resume clients
     for (std::int32_t i = 0; i < kClientNum; i++) {
@@ -223,7 +223,7 @@ Result<void> ConnectionManager::suspendRefNum(ClientControl* control, Synchro* t
 }
 
 // \brief Signal clients connected to the given client.
-Result<void> ConnectionManager::resumeRefNum(ClientControl* control, Synchro* table, ClientTiming* timing, std::atomic<SInt32>* live)
+Result<void> ConnectionManager::resumeRefNum(ClientControl* control, Synchro* table, ClientTiming* timing, std::atomic<SInt32>* live) JACK_REALTIME_FN
 {
     TimeC currentDate = getMicroseconds();
     const Int* outputRef = m_connectionRef.getItems(control->m_refNum);
@@ -243,7 +243,7 @@ Result<void> ConnectionManager::resumeRefNum(ClientControl* control, Synchro* ta
             timing[i].m_signaledAt = currentDate;
 
             if (!ActivationCount::signal(live[i], table + i, control)) {
-                jack_log("JackConnectionManager::ResumeRefNum error: ref = %ld output = %ld ", control->m_refNum, i);
+                JACK_RT_UNCHECKED("error path logging", jack_log("JackConnectionManager::ResumeRefNum error: ref = %ld output = %ld ", control->m_refNum, i));
                 res = std::unexpected(Error::kServerFailure);
             }
         }

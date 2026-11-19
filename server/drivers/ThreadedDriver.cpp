@@ -177,7 +177,7 @@ std::int32_t ThreadedDriver::clientNotify(std::int32_t refnum, const char* name,
     return m_driver->clientNotify(refnum, name, notify, sync, message, value1, value2);
 }
 
-ClientControl* ThreadedDriver::getClientControl() const
+ClientControl* ThreadedDriver::getClientControl() const JACK_REALTIME_FN
 {
     return m_driver->getClientControl();
 }

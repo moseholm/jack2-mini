@@ -216,9 +216,11 @@ const char* clockSourceName(TimerType source)
     return "unknown";
 }
 
-TimeC getMicroseconds()
+TimeC getMicroseconds() JACK_REALTIME_FN
 {
-    return gCurrentClock();
+    // The clock function pointer is selected at startup and only ever reads a
+    // monotonic clock; the indirect call cannot be verified statically.
+    JACK_RT_UNCHECKED("selected monotonic clock", return gCurrentClock());
 }
 
 } // end of namespace jackmini
