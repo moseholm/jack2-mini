@@ -315,7 +315,7 @@ struct Server::Impl {
         m_engine.reset();
 
         jack_log("Cleaning up files");
-        Tools::cleanupFiles(m_name.c_str());
+        Tools::cleanupFiles(m_name);
         jack_log("Releasing lock of server `%s'", m_name.c_str());
         releaseServerLock();
     }
@@ -566,11 +566,11 @@ Result<void> Server::start()
     jack_log("Server `%s' locked", name.c_str());
 
     // Clean up files from any previous instance of this server name.
-    Tools::cleanupFiles(name.c_str());
+    Tools::cleanupFiles(name);
 
     auto fail = [&impl, &name](Error error) {
         jack_log("Cleaning up files");
-        Tools::cleanupFiles(name.c_str());
+        Tools::cleanupFiles(name);
         jack_log("Releasing lock of server `%s'", name.c_str());
         releaseServerLock();
         impl.m_engine.reset();

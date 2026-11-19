@@ -19,6 +19,7 @@
 #include "ipc/protocol/Constants.h"
 #include "server/drivers/DriverInterface.h"
 #include "common/Error.h"
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -43,11 +44,11 @@ void Tools::killServer()
     kill(getPID(), SIGINT);
 }
 
-std::int32_t Tools::mkDir(const char* path)
+std::int32_t Tools::mkDir(std::string_view path)
 {
     std::error_code ec;
     // create_directory() reports an existing directory as "not created", which is an error here.
-    return !std::filesystem::create_directory(path, ec);
+    return !std::filesystem::create_directory(std::string(path), ec);
 }
 
 std::int32_t Tools::getPID()
@@ -60,17 +61,14 @@ std::int32_t Tools::getUID()
     return geteuid();
 }
 
-const char* Tools::defaultServerName()
+std::string_view Tools::defaultServerName()
 {
-    const char* serverName;
-    if ((serverName = getenv("JACK_DEFAULT_SERVER")) == nullptr) {
-        serverName = kDefaultServerName;
-    }
-    return serverName;
+    const char* serverName = getenv("JACK_DEFAULT_SERVER");
+    return serverName != nullptr ? std::string_view(serverName) : std::string_view(kDefaultServerName);
 }
 
 // returns the name of the per-user subdirectory of jack_tmpdir
-const char* Tools::userDir()
+std::string_view Tools::userDir()
 {
     static std::array<char, kPathMax + 1> userDir { };
 
@@ -87,19 +85,18 @@ const char* Tools::userDir()
 }
 
 // returns the name of the per-server subdirectory of jack_user_dir()
-const char* Tools::serverDir(const char* serverName, char* serverDir)
+void Tools::serverDir(std::string_view serverName, std::span<char> serverDir)
 {
-    // format the path name into the suppled server_dir char array,
-    // assuming that server_dir is at least as large as JACK_PATH_MAX + 1
+    // format the path name into the supplied serverDir char array,
+    // assuming that serverDir is at least as large as JACK_PATH_MAX + 1
 
-    jackmini::formatCString(std::span<char>(serverDir, kPathMax + 1), "{}/{}", userDir(), serverName);
-    return serverDir;
+    jackmini::formatCString(serverDir, "{}/{}", userDir(), serverName);
 }
 
-void Tools::cleanupFiles(const char* serverName)
+void Tools::cleanupFiles(std::string_view serverName)
 {
     std::array<char, kPathMax + 1> dirName { };
-    serverDir(serverName, dirName.data());
+    serverDir(serverName, dirName);
 
     // On termination, we remove all files that jackd creates so
     // subsequent attempts to start jackd will not believe that an
@@ -142,9 +139,10 @@ void Tools::cleanupFiles(const char* serverName)
 
     // finally, delete the per-user subdirectory, if empty
     std::error_code userEc;
-    std::filesystem::remove(userDir(), userEc);
+    const std::string_view userDirPath = userDir();
+    std::filesystem::remove(std::filesystem::path(userDirPath), userEc);
     if (userEc && userEc != std::make_error_code(std::errc::directory_not_empty)) {
-        jack_error("cannot remove `%s' (%s)", userDir(), userEc.message().c_str());
+        jack_error("cannot remove `%s' (%s)", std::string(userDirPath).c_str(), userEc.message().c_str());
     }
 }
 
@@ -177,25 +175,29 @@ std::int32_t Tools::getTmpdir()
     return 0;
 }
 
-void Tools::rewriteName(const char* name, char* newName)
+void Tools::rewriteName(std::string_view name, std::span<char> newName)
 {
-    size_t i;
-    for (i = 0; i < std::strlen(name); i++) {
+    if (newName.empty()) {
+        return;
+    }
+    const size_t count = std::min(name.size(), newName.size() - 1);
+    for (size_t i = 0; i < count; i++) {
         if ((name[i] == '/') || (name[i] == '\\')) {
             newName[i] = '_';
         } else {
             newName[i] = name[i];
         }
     }
-    newName[i] = '\0';
+    newName[count] = '\0';
 }
 
-void printLoadError(const char* soName)
+void printLoadError(std::string_view soName)
 {
-    jack_log("error loading %s err = %s", soName, dlerror());
+    const std::string name(soName);
+    jack_log("error loading %s err = %s", name.c_str(), dlerror());
 }
 
-void buildClientPath(char* pathToSo, std::int32_t pathLen, const char* soName)
+void buildClientPath(std::span<char> pathToSo, std::string_view soName)
 {
     const char* internalDir;
     if ((internalDir = getenv("JACK_INTERNAL_DIR")) == 0) {
@@ -204,7 +206,7 @@ void buildClientPath(char* pathToSo, std::int32_t pathLen, const char* soName)
         }
     }
 
-    jackmini::formatCString(std::span<char>(pathToSo, pathLen), "{}/{}.so", internalDir, soName);
+    jackmini::formatCString(pathToSo, "{}/{}.so", internalDir, soName);
 }
 
 } // namespace jackmini

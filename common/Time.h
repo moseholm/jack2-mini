@@ -18,6 +18,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 #include "common/CompilerDeps.h"
 #include "common/Realtime.h"
@@ -31,6 +32,6 @@ SERVER_EXPORT TimeC getMicroseconds() JACK_REALTIME_FN;
 SERVER_EXPORT void sleepMicroseconds(std::int64_t usec);
 
 void setClockSource(TimerType source);
-const char* clockSourceName(TimerType source);
+std::string_view clockSourceName(TimerType source);
 
 } // namespace jackmini
