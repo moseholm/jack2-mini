@@ -1378,10 +1378,10 @@ static DriverDesc* describeDriver()
 
     desc = jack_driver_descriptor_construct("alsa", kDriverMaster, "Linux ALSA API based audio backend", &filler);
 
-    strcpy(value.m_str.data(), "");
+    jackmini::copyCString(value.m_str, "");
     jack_driver_descriptor_add_parameter(desc, &filler, "device", 'd', kDriverParamString, &value, enumAlsaDevices(), "ALSA device name", nullptr);
 
-    strcpy(value.m_str.data(), "none");
+    jackmini::copyCString(value.m_str, "none");
     jack_driver_descriptor_add_parameter(desc, &filler, "capture", 'C', kDriverParamString, &value, nullptr, "Provide capture ports.  Optionally set device", nullptr);
     jack_driver_descriptor_add_parameter(desc, &filler, "playback", 'P', kDriverParamString, &value, nullptr, "Provide playback ports.  Optionally set device", nullptr);
 
@@ -1434,7 +1434,7 @@ static DriverDesc* describeDriver()
     jack_driver_descriptor_add_parameter(desc, &filler, "input-latency", 'I', kDriverParamUInt, &value, nullptr, "Extra input latency (frames)", nullptr);
     jack_driver_descriptor_add_parameter(desc, &filler, "output-latency", 'O', kDriverParamUInt, &value, nullptr, "Extra output latency (frames)", nullptr);
 
-    strcpy(value.m_str.data(), "none");
+    jackmini::copyCString(value.m_str, "none");
     jack_driver_descriptor_add_parameter(desc, &filler, "secondary", 'Y', kDriverParamString, &value, nullptr,
         "Secondary ALSA card (repeatable)",
         "Secondary ALSA card, repeatable. Keys: name, device, mode (duplex|capture|playback), channels, rate, nperiods, clock (async|sync), format (auto|float|s32|s16), resampler, optional, follow_hw_rate. Example: name=usb1;device=hw:1;mode=capture;clock=async");
