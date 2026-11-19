@@ -558,10 +558,8 @@ struct PortRegisterRequest : public RequestImpl<sizeof(std::int32_t) + kPortName
         , m_flags(flags)
         , m_bufferSize(bufferSize)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
-        memset(m_portType.data(), 0, sizeof(m_portType));
-        strncpy(m_name.data(), name, sizeof(m_name) - 1);
-        strncpy(m_portType.data(), portType, sizeof(m_portType) - 1);
+        copyCString(m_name, name);
+        copyCString(m_portType, portType);
     }
 
     std::int32_t read(detail::ChannelTransactionInterface* trans) override
@@ -668,10 +666,8 @@ struct PortConnectNameRequest : public RequestImpl<sizeof(std::int32_t) + 2 * kR
         : RequestImpl(kConnectNamePorts)
         , m_refNum(refnum)
     {
-        memset(m_src.data(), 0, sizeof(m_src));
-        memset(m_dst.data(), 0, sizeof(m_dst));
-        strncpy(m_src.data(), srcName, sizeof(m_src) - 1);
-        strncpy(m_dst.data(), dstName, sizeof(m_dst) - 1);
+        copyCString(m_src, srcName);
+        copyCString(m_dst, dstName);
     }
 
     std::int32_t read(detail::ChannelTransactionInterface* trans) override
@@ -712,10 +708,8 @@ struct PortDisconnectNameRequest : public RequestImpl<sizeof(std::int32_t) + 2 *
         : RequestImpl(kDisconnectNamePorts)
         , m_refNum(refnum)
     {
-        memset(m_src.data(), 0, sizeof(m_src));
-        memset(m_dst.data(), 0, sizeof(m_dst));
-        strncpy(m_src.data(), srcName, sizeof(m_src) - 1);
-        strncpy(m_dst.data(), dstName, sizeof(m_dst) - 1);
+        copyCString(m_src, srcName);
+        copyCString(m_dst, dstName);
     }
 
     std::int32_t read(detail::ChannelTransactionInterface* trans) override
@@ -841,8 +835,7 @@ struct PortRenameRequest : public RequestImpl<sizeof(std::int32_t) + sizeof(Port
         , m_refNum(refnum)
         , m_port(port)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
-        strncpy(m_name.data(), name, sizeof(m_name) - 1);
+        copyCString(m_name, name);
     }
 
     std::int32_t read(detail::ChannelTransactionInterface* trans) override
@@ -1087,8 +1080,7 @@ struct ClientNameResult : public Reply {
     ClientNameResult(std::int32_t result, const char* name)
         : Reply(result)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
-        strncpy(m_name.data(), name, sizeof(m_name) - 1);
+        copyCString(m_name, name);
     }
 
     std::int32_t read(detail::ChannelTransactionInterface* trans) override
@@ -1117,8 +1109,7 @@ struct UUIDResult : public Reply {
     UUIDResult(std::int32_t result, const char* uuid)
         : Reply(result)
     {
-        memset(m_uUID.data(), 0, sizeof(m_uUID));
-        strncpy(m_uUID.data(), uuid, sizeof(m_uUID) - 1);
+        copyCString(m_uUID, uuid);
     }
 
     std::int32_t read(detail::ChannelTransactionInterface* trans) override
@@ -1148,8 +1139,7 @@ struct GetUUIDRequest : public RequestImpl<kClientNameSize1> {
     GetUUIDRequest(const char* clientName)
         : RequestImpl(kGetUUIDByClient)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
-        strncpy(m_name.data(), clientName, sizeof(m_name) - 1);
+        copyCString(m_name, clientName);
     }
 
     std::int32_t read(detail::ChannelTransactionInterface* trans) override
@@ -1178,8 +1168,7 @@ struct GetClientNameRequest : public RequestImpl<kUuidStringSize> {
     GetClientNameRequest(const char* uuid)
         : RequestImpl(kGetClientByUUID)
     {
-        memset(m_uUID.data(), 0, sizeof(m_uUID));
-        strncpy(m_uUID.data(), uuid, sizeof(m_uUID) - 1);
+        copyCString(m_uUID, uuid);
     }
 
     std::int32_t read(detail::ChannelTransactionInterface* trans) override
@@ -1213,10 +1202,8 @@ struct ReserveNameRequest : public RequestImpl<sizeof(std::int32_t) + kClientNam
         : RequestImpl(kReserveClientName)
         , m_refNum(refnum)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
-        memset(m_uUID.data(), 0, sizeof(m_uUID));
-        strncpy(m_name.data(), name, sizeof(m_name) - 1);
-        strncpy(m_uUID.data(), uuid, sizeof(m_uUID) - 1);
+        copyCString(m_name, name);
+        copyCString(m_uUID, uuid);
     }
 
     std::int32_t read(detail::ChannelTransactionInterface* trans) override
@@ -1268,12 +1255,9 @@ struct ClientNotification {
         , m_value2(value2)
         , m_sync(sync)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
-        memset(m_message.data(), 0, sizeof(m_message));
-        strncpy(m_name.data(), name, sizeof(m_name) - 1);
-        if (message) {
-            strncpy(m_message.data(), message, sizeof(m_message) - 1);
-        }
+        copyCString(m_name, name);
+        // A null message is an empty one, and the buffer stays zero-filled.
+        copyCString(m_message, message ? message : "");
     }
 
     // The payload of a notification message.  The header's type is the notification kind (fNotify), and its request id
