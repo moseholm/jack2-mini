@@ -38,6 +38,12 @@
 
 namespace jackmini {
 
+// The callers pass a client-name buffer of this size to the engine.
+static std::span<char> clientNameBuffer(char* nameRes)
+{
+    return { nameRes, static_cast<std::size_t>(kClientNameSize + 1) };
+}
+
 Engine::Engine(GraphManager* manager,
     Synchro* table,
     EngineControl* control,
@@ -433,7 +439,7 @@ Result<void> Engine::clientCheck(const char* name, UuidC uuid, char* nameRes, st
 {
     // Clear status
     *status = 0;
-    strcpy(nameRes, name);
+    copyCString(clientNameBuffer(nameRes), name);
 
     jack_log("Check protocol client = %ld server = %ld", protocol, kProtocolVersion);
 
@@ -446,7 +452,7 @@ Result<void> Engine::clientCheck(const char* name, UuidC uuid, char* nameRes, st
     std::map<std::int32_t, std::string>::iterator res = m_reservationMap.find(uuid);
 
     if (res != m_reservationMap.end()) {
-        strncpy(nameRes, res->second.c_str(), kClientNameSize);
+        copyCString(clientNameBuffer(nameRes), res->second);
     } else if (clientCheckName(name)) {
 
         *status |= kNameNotUnique;
@@ -563,14 +569,14 @@ Result<void> Engine::clientExternalOpen(const char* name, std::int32_t pid, Uuid
 
     if (jackmini::uuid::empty(Uuid { uuid })) {
         uuid = jackmini::uuid::generateClient().value();
-        strncpy(realName.data(), name, kClientNameSize);
+        copyCString(realName, name);
     } else {
         std::map<std::int32_t, std::string>::iterator res = m_reservationMap.find(uuid);
         if (res != m_reservationMap.end()) {
-            strncpy(realName.data(), res->second.c_str(), kClientNameSize);
+            copyCString(realName, res->second);
             m_reservationMap.erase(uuid);
         } else {
-            strncpy(realName.data(), name, kClientNameSize);
+            copyCString(realName, name);
         }
         ensureUUID(uuid);
     }
@@ -1030,7 +1036,7 @@ Result<void> Engine::portDisconnect(std::int32_t refnum, PortIdC src, PortIdC ds
 Result<void> Engine::portRename(std::int32_t refnum, PortIdC port, const char* name)
 {
     std::array<char, kRealJackPortNameSize + 1> oldName { };
-    strcpy(oldName.data(), m_graphManager->getPort(port)->getName());
+    copyCString(oldName, m_graphManager->getPort(port)->getName());
     m_graphManager->getPort(port)->setName(name);
     notifyPortRename(port, oldName.data());
     return { };
@@ -1068,7 +1074,7 @@ Result<void> Engine::getClientNameForUUID(const char* uuidBuf, char* nameRes)
         }
 
         if (client->getClientControl()->m_sessionID == uuid->value()) {
-            strncpy(nameRes, client->getClientControl()->m_name.data(), kClientNameSize);
+            copyCString(clientNameBuffer(nameRes), client->getClientControl()->m_name.data());
             return { };
         }
     }
