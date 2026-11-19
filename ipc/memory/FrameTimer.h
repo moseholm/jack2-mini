@@ -21,6 +21,7 @@
 
 #include "ipc/memory/AtomicState.h"
 #include "common/CompilerDeps.h"
+#include "common/Realtime.h"
 #include "common/Types.h"
 
 namespace jackmini {
@@ -42,7 +43,7 @@ private:
     bool m_initialized;
 
 public:
-    Timer();
+    Timer() JACK_REALTIME_FN;
     ~Timer()
     {
     }
@@ -50,7 +51,7 @@ public:
     NframesC time2Frames(TimeC time, NframesC bufferSize);
     TimeC frames2Time(NframesC frames, NframesC bufferSize);
     NframesC framesSinceCycleStart(TimeC curTime, NframesC framesRate);
-    std::int32_t getCycleTimes(NframesC* currentFrames, TimeC* currentUsecs, TimeC* nextUsecs, float* periodUsecs);
+    std::int32_t getCycleTimes(NframesC* currentFrames, TimeC* currentUsecs, TimeC* nextUsecs, float* periodUsecs) JACK_REALTIME_FN;
 
     NframesC curFrame()
     {
@@ -85,7 +86,7 @@ public:
     void initFrameTime();
     void resetFrameTime(TimeC callbackUsecs);
     void incFrameTime(NframesC bufferSize, TimeC callbackUsecs, TimeC periodUsecs);
-    void readFrameTime(Timer* timer);
+    void readFrameTime(Timer* timer) JACK_REALTIME_FN;
 };
 
 

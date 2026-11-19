@@ -20,13 +20,14 @@
 #include <cstdint>
 
 #include "common/CompilerDeps.h"
+#include "common/Realtime.h"
 #include "common/Types.h"
 
 namespace jackmini {
 
 SERVER_EXPORT void initTime();
 SERVER_EXPORT void endTime();
-SERVER_EXPORT TimeC getMicroseconds();
+SERVER_EXPORT TimeC getMicroseconds() JACK_REALTIME_FN;
 SERVER_EXPORT void sleepMicroseconds(std::int64_t usec);
 
 void setClockSource(TimerType source);

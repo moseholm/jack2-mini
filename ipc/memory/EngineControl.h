@@ -18,6 +18,7 @@
 #pragma once
 
 #include "common/CString.h"
+#include "common/Realtime.h"
 #include "ipc/protocol/Constants.h"
 #include "ipc/memory/FrameTimer.h"
 #include "ipc/memory/ShmMem.h"
@@ -139,13 +140,13 @@ struct SERVER_EXPORT EngineControl : public ShmMem {
         m_frameTimer.incFrameTime(m_bufferSize, callbackUsecs, m_periodUsecs);
     }
 
-    void cycleBegin(std::atomic<ClientInterface*>* table, GraphManager* manager, TimeC curCycleBegin, TimeC prevCycleEnd)
+    void cycleBegin(std::atomic<ClientInterface*>* table, GraphManager* manager, TimeC curCycleBegin, TimeC prevCycleEnd) JACK_REALTIME_FN
     {
         m_transport.cycleBegin(m_sampleRate, curCycleBegin);
         calcCPULoad(table, manager, curCycleBegin, prevCycleEnd);
     }
 
-    void cycleEnd(std::atomic<ClientInterface*>* table)
+    void cycleEnd(std::atomic<ClientInterface*>* table) JACK_REALTIME_FN
     {
         m_transport.cycleEnd(table, m_sampleRate, m_bufferSize);
     }
@@ -161,7 +162,7 @@ struct SERVER_EXPORT EngineControl : public ShmMem {
         m_frameTimer.resetFrameTime(callbackUsecs);
     }
 
-    void readFrameTime(Timer* timer)
+    void readFrameTime(Timer* timer) JACK_REALTIME_FN
     {
         m_frameTimer.readFrameTime(timer);
     }
@@ -174,8 +175,8 @@ struct SERVER_EXPORT EngineControl : public ShmMem {
     }
 
     // Private
-    void calcCPULoad(std::atomic<ClientInterface*>* table, GraphManager* manager, TimeC curCycleBegin, TimeC prevCycleEnd);
-    void resetRollingUsecs();
+    void calcCPULoad(std::atomic<ClientInterface*>* table, GraphManager* manager, TimeC curCycleBegin, TimeC prevCycleEnd) JACK_REALTIME_FN;
+    void resetRollingUsecs() JACK_REALTIME_FN;
 };
 
 } // namespace jackmini

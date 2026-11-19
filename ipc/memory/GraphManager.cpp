@@ -109,14 +109,14 @@ void GraphManager::initRefNum(std::int32_t refnum)
 }
 
 // RT
-void GraphManager::runCurrentGraph()
+void GraphManager::runCurrentGraph() JACK_REALTIME_FN
 {
     ConnectionManager* manager = readCurrentState();
     manager->resetGraph(m_clientTiming.data(), m_activation.data());
 }
 
 // RT
-bool GraphManager::runNextGraph()
+bool GraphManager::runNextGraph() JACK_REALTIME_FN
 {
     bool res;
     ConnectionManager* manager = trySwitchState(&res);
@@ -125,13 +125,13 @@ bool GraphManager::runNextGraph()
 }
 
 // RT
-bool GraphManager::isFinishedGraph()
+bool GraphManager::isFinishedGraph() JACK_REALTIME_FN
 {
     return (m_activation[kFreewheelDriverRefnum].load() == 0);
 }
 
 // RT
-Result<void> GraphManager::resumeRefNum(ClientControl* control, Synchro* table)
+Result<void> GraphManager::resumeRefNum(ClientControl* control, Synchro* table) JACK_REALTIME_FN
 {
     ConnectionManager* manager = readCurrentState();
     return manager->resumeRefNum(control, table, m_clientTiming.data(), m_activation.data());

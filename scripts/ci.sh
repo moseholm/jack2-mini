@@ -2,19 +2,20 @@
 # The build and test steps of .github/workflows/build.yml. The workflow runs this script, so a local run and a CI run
 # take the same steps with the same flags.
 #
-#   scripts/ci.sh configure|build|test|install
+#   scripts/ci.sh configure|build|test|test-rtsan|install
 #
 # Environment:
 #   CC, CXX         the compilers (default: the system ones)
 #   GENERATOR       the CMake generator (default: the CMake default, Make)
 #   BUILD_TYPE      the CMake build type (default: Release). Debug keeps the asserts enabled.
 #   EXTRA_FLAGS     extra C and C++ flags, e.g. "-msse4.1 -mavx2" for the SIMD kernels
+#   RTSAN           set to ON to build with Clang RealtimeSanitizer (needs Clang 20+)
 #   BUILD_DIR       the build directory (default: build-ci)
 #   DESTDIR         the install root (default: build-ci/destdir)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-step=${1:?usage: scripts/ci.sh configure|build|test|install}
+step=${1:?usage: scripts/ci.sh configure|build|test|test-rtsan|install}
 build_dir=${BUILD_DIR:-build-ci}
 jobs=$(nproc)
 
@@ -23,6 +24,7 @@ configure)
     # shellcheck disable=SC2086
     cmake -S . -B "$build_dir" ${GENERATOR:+-G "$GENERATOR"} \
         -DCMAKE_BUILD_TYPE="${BUILD_TYPE:-Release}" -DJACK_BUILD_TESTS=ON \
+        -DJACK_REALTIME_SANITIZER="${RTSAN:-OFF}" \
         ${EXTRA_FLAGS:+-DCMAKE_C_FLAGS="$EXTRA_FLAGS" -DCMAKE_CXX_FLAGS="$EXTRA_FLAGS"}
     ;;
 build)
@@ -30,6 +32,9 @@ build)
     ;;
 test)
     ctest --test-dir "$build_dir" --output-on-failure
+    ;;
+test-rtsan)
+    tests/rtsan_e2e.sh "$build_dir"
     ;;
 install)
     DESTDIR="${DESTDIR:-$build_dir/destdir}" cmake --install "$build_dir"

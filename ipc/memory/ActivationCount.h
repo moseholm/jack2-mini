@@ -54,7 +54,7 @@ public:
     }
 
     // Decrements the live counter; signals the client when it reaches zero.
-    static bool signal(std::atomic<SInt32>& live, Synchro* synchro, ClientControl* control);
+    static bool signal(std::atomic<SInt32>& live, Synchro* synchro, ClientControl* control) JACK_REALTIME_FN;
 
     inline void setValue(std::int32_t val)
     {

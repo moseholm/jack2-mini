@@ -149,7 +149,7 @@ void TransportEngine::makeAllLocating(std::atomic<ClientInterface*>* table)
 }
 
 // RT
-void TransportEngine::cycleBegin(NframesC frameRate, TimeC time)
+void TransportEngine::cycleBegin(NframesC frameRate, TimeC time) JACK_REALTIME_FN
 {
     PositionC* pending = writeNextStateStart(1); // Update "pending" state
     pending->m_usecs = time;
@@ -158,8 +158,12 @@ void TransportEngine::cycleBegin(NframesC frameRate, TimeC time)
 }
 
 // RT
-void TransportEngine::cycleEnd(std::atomic<ClientInterface*>* table, NframesC frameRate, NframesC bufferSize)
+void TransportEngine::cycleEnd(std::atomic<ClientInterface*>* table, NframesC frameRate, NframesC bufferSize) JACK_REALTIME_FN
 {
+    // All logging below is on transport-command / state-transition branches,
+    // which do not run on a steady realtime cycle. The state helpers only
+    // touch shared-memory atomics. The helpers are not annotated individually.
+    JACK_RT_UNCHECKED("transport transitions only", {
     trySwitchState(1); // Switch from "pending" to "current", it always works since there is always a pending state
 
     // Handle any new transport command from the last cycle.
@@ -243,6 +247,7 @@ void TransportEngine::cycleEnd(std::atomic<ClientInterface*>* table, NframesC fr
         copyPosition(request, pending);
         writeNextStateStop(1);
     }
+    });
 }
 
 // Client

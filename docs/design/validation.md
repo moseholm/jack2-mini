@@ -29,6 +29,49 @@ Findings, all fixed in `f38b6e2c`:
 After the fixes: the 15 unit suites pass under all three sanitizers, and the server e2e tests are clean under ASan
 and UBSan (no sanitizer report, no leak report from the server).
 
+## RealtimeSanitizer (RTSan)
+
+RTSan detects realtime-unsafe library calls made from functions marked `[[clang::nonblocking]]`. Clang 20+ is
+required; CI installs Clang 21 from apt.llvm.org. Build and run with:
+
+    CC=clang-21 CXX=clang++-21 cmake -S . -B build-rtsan -DCMAKE_BUILD_TYPE=Debug \
+        -DJACK_BUILD_TESTS=ON -DJACK_REALTIME_SANITIZER=ON
+    cmake --build build-rtsan --parallel
+    ctest --test-dir build-rtsan
+    tests/rtsan_e2e.sh build-rtsan
+
+`tests/rtsan_e2e.sh` starts a private `jackd -d dummy`, runs `jack_rtbench` (an active client with an audio process
+callback) and `jack_midi_writer`, and fails on any non-zero exit or any `ERROR: RealtimeSanitizer` line. CMake
+verifies at configure time that the flag and runtime work by compiling and running a deliberately violating probe,
+so an un-instrumented toolchain cannot pass silently.
+
+The annotations start at `Engine::process` (server graph cycle) and `ClientSession::processCycle` (client cycle,
+after the graph wait). The wait and the driver's device sleep stay unannotated. Function-effect analysis is mandatory:
+the RTSan build uses `-Werror=function-effects`, so a new unannotated call from a realtime function fails the build.
+RT-safe helpers along the cycle (engine control, graph manager, transport, frame timer, activation count, futex wake)
+are marked `JACK_REALTIME_FN`; `JACK_BLOCKING_FN` is available for the waiting counterparts.
+
+Findings and documented exemptions. A runtime `JACK_RTSAN_SCOPED_DISABLE()` and a static `JACK_RT_UNCHECKED(reason, …)`
+are paired wherever a call is deliberately exempt, so the dynamic and static checks agree:
+
+| Where | Call | Why it is exempt |
+|---|---|---|
+| `Engine::processNext` | `sendmsg` via the notify socket | `SocketServerNotifyChannel::connect` sets the socket non-blocking, so the notification cannot block; RTSan still intercepts `sendmsg`. |
+| `Engine::processNext` | `pthread_cond_signal` via `ProcessSync::signal` | Only wakes waiters; no lock is taken and no wait is performed. |
+| `Engine::checkXRun` | `jack_error`, notify socket | XRun error path only. |
+| `Engine::process` | `jack_log` | Graph-switch error path only. |
+| `ClientSession::processCycle` | `m_process` | Type-erased user callback; JACK's realtime contract requires the application callback to be RT-safe, but `std::move_only_function` cannot carry the attribute. |
+| `ClientSession::signalCycle` | `jack_error` | Error path only. |
+| `ConnectionManager::resumeRefNum` | `jack_log` | Error path only. |
+| `ActivationCount::signal` | `jack_log`, futex wake | Error path; `FUTEX_WAKE` only wakes waiters. |
+| `getMicroseconds` | selected clock function pointer | Chosen at startup; reads a monotonic clock. The indirect call cannot be verified statically. |
+| `TransportEngine::cycleEnd` | state-transition logging and helpers | The logging is only on transport-command / state-transition branches, not on a steady cycle. |
+
+A negative test (temporarily calling `malloc` inside `ClientSession::processCycle`) produced an `unsafe-library-call`
+report and a failing e2e run; the patch was reverted. With the deeper annotations, `counter_unit` also caught a raw
+`FUTEX_WAKE` syscall from `ActivationCount::signal`, confirming the dynamic check follows the annotated helpers; the
+scoped disabler above documents that exception.
+
 ### TSAN: no new report
 
 The TSAN reports of the server e2e runs (the client processes; the server is clean) fall in the known groups:

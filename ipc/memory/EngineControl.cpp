@@ -28,7 +28,7 @@ namespace jackmini {
 void EngineControl::calcCPULoad(std::atomic<ClientInterface*>* table,
     GraphManager* manager,
     TimeC curCycleBegin,
-    TimeC prevCycleEnd)
+    TimeC prevCycleEnd) JACK_REALTIME_FN
 {
     m_prevCycleTime = m_curCycleTime;
     m_curCycleTime = curCycleBegin;
@@ -86,7 +86,7 @@ void EngineControl::calcCPULoad(std::atomic<ClientInterface*>* table,
     m_rollingClientUsecsCnt++;
 }
 
-void EngineControl::resetRollingUsecs()
+void EngineControl::resetRollingUsecs() JACK_REALTIME_FN
 {
     memset(m_rollingClientUsecs.data(), 0, sizeof(m_rollingClientUsecs));
     m_rollingClientUsecsIndex = 0;

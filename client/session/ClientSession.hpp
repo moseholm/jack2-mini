@@ -36,6 +36,7 @@
 #include "ipc/protocol/Request.h"
 #include "ipc/memory/ShmMem.h"
 #include "ipc/socket/Socket.h"
+#include "common/Realtime.h"
 #include "common/Types.h"
 #include "client/api/Client.hpp"
 #include "client/api/Error.hpp"
@@ -158,8 +159,11 @@ private:
     void stopRealtime();
     void realtimeRun();
     bool waitCycle();
-    void signalCycle();
-    Cycle buildCycle() const;
+    // The cycle after the graph wait: the RTSan context starts here so the
+    // intentional futex wait in waitCycle() is not treated as a violation.
+    bool processCycle() JACK_REALTIME_FN;
+    void signalCycle() JACK_REALTIME_FN;
+    Cycle buildCycle() const JACK_REALTIME_FN;
     void endCyclesOnFailure();
 
     ProcessContext* m_context;

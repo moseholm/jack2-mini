@@ -46,6 +46,31 @@ jobs:
     - name: Install
       run: scripts/ci.sh install
 
+  linux-rtsan:
+    # Clang RealtimeSanitizer (-fsanitize=realtime). The clang in Ubuntu is too
+    # old for RTSan, so install a pinned Clang 21 from apt.llvm.org.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install clang 21 and dependencies
+      run: |
+        wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 21
+        sudo apt-get update -qq
+        sudo apt-get install -y cmake ninja-build libasound2-dev libudev-dev
+    - name: Configure
+      env:
+        CC: clang-21
+        CXX: clang++-21
+        RTSAN: 'ON'
+      run: scripts/ci.sh configure
+    - name: Build
+      run: scripts/ci.sh build
+    - name: Unit tests
+      run: scripts/ci.sh test
+    - name: Realtime sanitizer e2e
+      run: scripts/ci.sh test-rtsan
+
   linux-aarch64:
     # Native AArch64 build and test on GitHub's arm64 runner.  Matches the
     # target architecture; it does not measure realtime performance, which is

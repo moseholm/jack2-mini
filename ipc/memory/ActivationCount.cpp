@@ -22,14 +22,16 @@
 
 namespace jackmini {
 
-bool ActivationCount::signal(std::atomic<SInt32>& live, Synchro* synchro, ClientControl* control)
+bool ActivationCount::signal(std::atomic<SInt32>& live, Synchro* synchro, ClientControl* control) JACK_REALTIME_FN
 {
     if (live.load() == 0) {
         // Transfer activation to next clients
-        jack_log("JackActivationCount::Signal value = 0 ref = %ld", control->m_refNum);
-        return synchro->signal();
+        JACK_RT_UNCHECKED("error path logging", jack_log("JackActivationCount::Signal value = 0 ref = %ld", control->m_refNum));
+        JACK_RTSAN_SCOPED_DISABLE(); // FUTEX_WAKE only wakes waiters; it cannot block.
+        JACK_RT_UNCHECKED("futex wake does not block", return synchro->signal());
     } else if (live.fetch_sub(1) == 1) {
-        return synchro->signal();
+        JACK_RTSAN_SCOPED_DISABLE(); // FUTEX_WAKE only wakes waiters; it cannot block.
+        JACK_RT_UNCHECKED("futex wake does not block", return synchro->signal());
     } else {
         return true;
     }

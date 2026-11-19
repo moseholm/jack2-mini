@@ -21,6 +21,7 @@
 #include "ipc/protocol/Constants.h"
 #include "common/Error.h"
 #include "common/Globals.h"
+#include "common/Realtime.h"
 #include "ipc/protocol/Message.h"
 #include "ipc/protocol/Request.h"
 #include "common/Time.h"
@@ -813,14 +814,22 @@ void ClientSession::realtimeRun()
             }
             return;
         }
-        const Cycle cycle = buildCycle();
-        if (!m_process(cycle)) {
-            signalCycle();
+        if (!processCycle()) {
             endCyclesOnFailure();
             return;
         }
-        signalCycle();
     }
+}
+
+bool ClientSession::processCycle() JACK_REALTIME_FN
+{
+    const Cycle cycle = buildCycle();
+    // The process callback is user code; the JACK realtime contract requires it
+    // to be RT-safe, but the type-erased std::move_only_function is not annotated.
+    bool ok = false;
+    JACK_RT_UNCHECKED("user realtime callback", ok = m_process(cycle));
+    signalCycle();
+    return ok;
 }
 
 bool ClientSession::waitCycle()
@@ -832,14 +841,14 @@ bool ClientSession::waitCycle()
     return !m_realtimeStop;
 }
 
-void ClientSession::signalCycle()
+void ClientSession::signalCycle() JACK_REALTIME_FN
 {
     if (!m_context->m_graph->resumeRefNum(m_client.getShmAddress(), m_context->m_synchro.data())) {
-        jack_error("ResumeRefNum error");
+        JACK_RT_UNCHECKED("error path logging", jack_error("ResumeRefNum error"));
     }
 }
 
-Cycle ClientSession::buildCycle() const
+Cycle ClientSession::buildCycle() const JACK_REALTIME_FN
 {
     Cycle cycle;
     cycle.m_frames = m_context->m_engine->m_bufferSize;
