@@ -24,6 +24,9 @@ namespace jackmini {
 // Looks up the gid of a UNIX group, given by name or by number. Returns -1 if it is unknown.
 std::int32_t groupToGid(const char* group);
 
+// Reads JACK_PROMISCUOUS_SERVER into the promiscuous state of a socket or a futex.
+void readPromiscuousConfig(bool& enabled, std::int32_t& gid);
+
 // Sets promiscuous permissions on the object referenced by fd, or by path when fd is negative.
 std::int32_t setPromiscuousPerms(std::int32_t fd, const char* path, gid_t gid);
 

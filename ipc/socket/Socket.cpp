@@ -48,9 +48,7 @@ ClientSocket::ClientSocket()
     , m_timeOut(0)
     , m_nonBlocking(false)
 {
-    const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
-    m_promiscuous = (promiscuous != nullptr);
-    m_promiscuousGid = jackmini::groupToGid(promiscuous);
+    readPromiscuousConfig(m_promiscuous, m_promiscuousGid);
 }
 
 ClientSocket::ClientSocket(std::int32_t socket)
@@ -229,9 +227,7 @@ std::int32_t ClientSocket::readWithFds(void* data, std::int32_t len, std::vector
 ServerSocket::ServerSocket()
     : m_socket(-1)
 {
-    const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
-    m_promiscuous = (promiscuous != nullptr);
-    m_promiscuousGid = jackmini::groupToGid(promiscuous);
+    readPromiscuousConfig(m_promiscuous, m_promiscuousGid);
 }
 
 std::int32_t ServerSocket::bind(const char* dir, const char* name, std::int32_t which) // A revoir : utilisation de "which"

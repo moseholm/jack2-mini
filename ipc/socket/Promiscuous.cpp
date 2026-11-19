@@ -56,6 +56,14 @@ std::int32_t groupToGid(const char* group)
     return static_cast<std::int32_t>(entry.gr_gid);
 }
 
+void readPromiscuousConfig(bool& enabled, std::int32_t& gid)
+{
+    // The variable names the group to share with; its presence alone enables promiscuous mode.
+    const char* group = getenv("JACK_PROMISCUOUS_SERVER");
+    enabled = group != nullptr;
+    gid = groupToGid(group);
+}
+
 std::int32_t setPromiscuousPerms(std::int32_t fd, const char* path, gid_t gid)
 {
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;

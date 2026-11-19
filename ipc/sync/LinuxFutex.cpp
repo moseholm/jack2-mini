@@ -42,9 +42,7 @@ LinuxFutex::LinuxFutex()
     , m_futex(nullptr)
     , m_private(false)
 {
-    const char* promiscuous = getenv("JACK_PROMISCUOUS_SERVER");
-    m_promiscuous = (promiscuous != nullptr);
-    m_promiscuousGid = jackmini::groupToGid(promiscuous);
+    readPromiscuousConfig(m_promiscuous, m_promiscuousGid);
 }
 
 void LinuxFutex::buildName(const char* clientName, const char* serverName, char* res, std::int32_t size)
