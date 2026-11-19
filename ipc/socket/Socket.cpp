@@ -17,29 +17,21 @@
 #include "ipc/socket/Socket.h"
 #include "common/CString.h"
 #include "ipc/protocol/Constants.h"
+#include "ipc/IpcName.h"
 #include "common/Error.h"
 #include "ipc/socket/Promiscuous.hpp"
-#include "common/Tools.h"
 #include <fcntl.h>
 #include <pthread.h>
 #include <string.h>
-#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <format>
 #include <span>
 
 namespace jackmini {
 
 static void buildName(const char* clientName, char* res, const char* dir, std::int32_t which, std::int32_t size, bool promiscuous)
 {
-    std::array<char, kSyncMaxNameSize + 1> extClientName;
-    Tools::rewriteName(clientName, extClientName.data());
-    const std::string_view extName = extClientName.data();
-    const auto end = promiscuous
-        ? std::format_to_n(res, size - 1, "{}/jack_{}_{}", dir, extName, which)
-        : std::format_to_n(res, size - 1, "{}/jack_{}_{}_{}", dir, extName, Tools::getUID(), which);
-    *end.out = '\0';
+    buildSocketName(clientName, dir, which, promiscuous, std::span<char>(res, static_cast<std::size_t>(size)));
 }
 
 ClientSocket::ClientSocket()

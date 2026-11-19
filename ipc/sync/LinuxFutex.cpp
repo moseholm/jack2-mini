@@ -16,19 +16,18 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "ipc/sync/LinuxFutex.h"
-#include "common/CString.h"
-#include "ipc/protocol/Constants.h"
+#include "ipc/IpcName.h"
 #include "common/Error.h"
 #include "ipc/socket/Promiscuous.hpp"
-#include "common/Tools.h"
 #include <fcntl.h>
 #include <linux/futex.h>
 #include <stdio.h>
 #include <sys/mman.h>
 #include <syscall.h>
-#include <array>
 #include <climits>
+#include <cstddef>
 #include <cstdint>
+#include <span>
 
 #if !defined(SYS_futex) && defined(SYS_futex_time64)
 #define SYS_futex SYS_futex_time64
@@ -47,13 +46,7 @@ LinuxFutex::LinuxFutex()
 
 void LinuxFutex::buildName(const char* clientName, const char* serverName, char* res, std::int32_t size)
 {
-    std::array<char, kSyncMaxNameSize + 1> extClientName { };
-    Tools::rewriteName(clientName, extClientName.data());
-    if (m_promiscuous) {
-        jackmini::formatCString(std::span<char>(res, size), "jack_sem.{}_{}", serverName, extClientName.data());
-    } else {
-        jackmini::formatCString(std::span<char>(res, size), "jack_sem.{}_{}_{}", Tools::getUID(), serverName, extClientName.data());
-    }
+    buildFutexName(clientName, serverName, m_promiscuous, std::span<char>(res, static_cast<std::size_t>(size)));
 }
 
 bool LinuxFutex::signal()
