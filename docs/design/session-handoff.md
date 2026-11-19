@@ -156,8 +156,24 @@ Licensing (agreed with the user; see "Current work"):
 - `tests/`: unit and end-to-end tests (`jackmini_*`, `*_unit.cpp`), the benchmark tools (`cpu`, `iodelay`,
   `external_metro`), `tests/perf/` (`rtbench.cpp`, `alloccount.cpp`, `run-baseline.sh`).
 
+## Consolidation (B0 and B1)
+
+On `refactor/uuid-consolidation`, one decision per commit:
+
+- B0 (`5a6064be`): one `jackmini::Uuid` in the installed `common/Uuid.hpp`, with `client/api/Uuid.hpp` as a
+  forwarding header. UUID text is decimal everywhere; the type-bit check is the separate `uuid::isServerUuid()`
+  predicate, not a second parser.
+- B1 (`e0f892d1` through `a70adae8`): one home each for the default server name (`Tools`), the promiscuous
+  environment/group lookup (`Promiscuous.cpp`) and the global socket/futex name builders (`ipc/IpcName.h`).
+  `CString.h`'s `parseInteger<T>()` is the strict whole-integer parser used by both `Uuid::parse` and the ALSA
+  secondary config. All fixed-size text copies go through `copyCString()`; no raw `strcpy`/`strncpy` remains.
+- The socket and futex names did not change, and `protocol_conformance_unit` now pins both formats and the
+  promiscuous variants. The 17 tool e2e failures and the server-backed e2e failures are unchanged from
+  `origin/develop`; the intermittent freewheel segfault did not reproduce.
+
 ## Done (newest first; `git log` has the detail)
 
+- B0 and B1 (`5a6064be` … `a70adae8`): the UUID and helper consolidation; see "Consolidation" above.
 - `86daa0be` cleanup: the metadata store is removed (a stub, dropped by the design).
 - `0f2e9a67` cleanup: `common/jack/jack.h` (the old C client header), `thread.h` and `platform/driver.h` are removed.
 - `05a8a528` control: `jackmini::control` replaces the C control API (52 functions) and `common/jack/control.h`.
