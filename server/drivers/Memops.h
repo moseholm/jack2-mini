@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <string.h>
+#include <cstring>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -89,7 +89,7 @@ sampleMerge(DefaultAudioSampleC* dst, DefaultAudioSampleC* src, std::uint64_t cn
 static __inline__ void
 sampleMemcpy(DefaultAudioSampleC* dst, DefaultAudioSampleC* src, std::uint64_t cnt)
 {
-    memcpy(dst, src, cnt * sizeof(DefaultAudioSampleC));
+    std::memcpy(dst, src, cnt * sizeof(DefaultAudioSampleC));
 }
 
 void memsetInterleave(std::byte* dst, std::byte val, std::uint64_t bytes, std::uint64_t unitBytes, std::uint64_t skipBytes);

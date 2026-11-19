@@ -27,9 +27,9 @@
 #include "common/Time.h"
 #include "common/Types.h"
 #include "common/Uuid.hpp"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -150,7 +150,7 @@ struct RequestImpl : Request {
         }
         jack_log("JackRequestImpl::WritePacket ok for type %d, pos %d, len %d, total size %d (new pos %d)",
             m_type, m_packetPos, len, kTotalSize, m_packetPos + len);
-        memcpy(m_packetData.data() + m_packetPos, data, len);
+        std::memcpy(m_packetData.data() + m_packetPos, data, len);
         m_packetPos += len;
         return 0;
     }
@@ -264,7 +264,7 @@ struct ClientCheckRequest : public RequestImpl<kClientNameSize1 + 3 * sizeof(std
         , m_open(0)
         , m_uUID(jackmini::uuid::kEmpty)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_name.data(), 0, sizeof(m_name));
     }
 
     ClientCheckRequest(const char* name, std::int32_t protocol, std::int32_t options, UuidC uuid, std::int32_t open = false)
@@ -274,7 +274,7 @@ struct ClientCheckRequest : public RequestImpl<kClientNameSize1 + 3 * sizeof(std
         , m_open(open)
         , m_uUID(uuid)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_name.data(), 0, sizeof(m_name));
         copyCString(m_name, name);
     }
 
@@ -312,13 +312,13 @@ struct ClientCheckResult : public Reply {
         : Reply()
         , m_status(0)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_name.data(), 0, sizeof(m_name));
     }
     ClientCheckResult(std::int32_t result, const char* name, std::int32_t status)
         : Reply(result)
         , m_status(status)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_name.data(), 0, sizeof(m_name));
         copyCString(m_name, name);
     }
 
@@ -352,13 +352,13 @@ struct ClientOpenRequest : public RequestImpl<sizeof(std::int32_t) + sizeof(Uuid
         , m_pID(0)
         , m_uUID(jackmini::uuid::kEmpty)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_name.data(), 0, sizeof(m_name));
     }
 
     ClientOpenRequest(const char* name, std::int32_t pid, UuidC uuid)
         : RequestImpl(kClientOpen)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_name.data(), 0, sizeof(m_name));
         copyCString(m_name, name);
         m_pID = pid;
         m_uUID = uuid;
@@ -548,8 +548,8 @@ struct PortRegisterRequest : public RequestImpl<sizeof(std::int32_t) + kPortName
         , m_flags(0)
         , m_bufferSize(0)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
-        memset(m_portType.data(), 0, sizeof(m_portType));
+        std::memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_portType.data(), 0, sizeof(m_portType));
     }
 
     PortRegisterRequest(std::int32_t refnum, const char* name, const char* portType, std::uint32_t flags, std::uint32_t bufferSize)
@@ -658,8 +658,8 @@ struct PortConnectNameRequest : public RequestImpl<sizeof(std::int32_t) + 2 * kR
         : RequestImpl(kConnectNamePorts)
         , m_refNum(0)
     {
-        memset(m_src.data(), 0, sizeof(m_src));
-        memset(m_dst.data(), 0, sizeof(m_dst));
+        std::memset(m_src.data(), 0, sizeof(m_src));
+        std::memset(m_dst.data(), 0, sizeof(m_dst));
     }
 
     PortConnectNameRequest(std::int32_t refnum, const char* srcName, const char* dstName)
@@ -700,8 +700,8 @@ struct PortDisconnectNameRequest : public RequestImpl<sizeof(std::int32_t) + 2 *
         : RequestImpl(kDisconnectNamePorts)
         , m_refNum(0)
     {
-        memset(m_src.data(), 0, sizeof(m_src));
-        memset(m_dst.data(), 0, sizeof(m_dst));
+        std::memset(m_src.data(), 0, sizeof(m_src));
+        std::memset(m_dst.data(), 0, sizeof(m_dst));
     }
 
     PortDisconnectNameRequest(std::int32_t refnum, const char* srcName, const char* dstName)
@@ -827,7 +827,7 @@ struct PortRenameRequest : public RequestImpl<sizeof(std::int32_t) + sizeof(Port
         , m_refNum(0)
         , m_port(0)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_name.data(), 0, sizeof(m_name));
     }
 
     PortRenameRequest(std::int32_t refnum, PortIdC port, const char* name)
@@ -1075,7 +1075,7 @@ struct ClientNameResult : public Reply {
     ClientNameResult()
         : Reply()
     {
-        memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_name.data(), 0, sizeof(m_name));
     }
     ClientNameResult(std::int32_t result, const char* name)
         : Reply(result)
@@ -1104,7 +1104,7 @@ struct UUIDResult : public Reply {
     UUIDResult()
         : Reply()
     {
-        memset(m_uUID.data(), 0, sizeof(m_uUID));
+        std::memset(m_uUID.data(), 0, sizeof(m_uUID));
     }
     UUIDResult(std::int32_t result, const char* uuid)
         : Reply(result)
@@ -1133,7 +1133,7 @@ struct GetUUIDRequest : public RequestImpl<kClientNameSize1> {
     GetUUIDRequest()
         : RequestImpl(kGetUUIDByClient)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_name.data(), 0, sizeof(m_name));
     }
 
     GetUUIDRequest(const char* clientName)
@@ -1162,7 +1162,7 @@ struct GetClientNameRequest : public RequestImpl<kUuidStringSize> {
     GetClientNameRequest()
         : RequestImpl(kGetClientByUUID)
     {
-        memset(m_uUID.data(), 0, sizeof(m_uUID));
+        std::memset(m_uUID.data(), 0, sizeof(m_uUID));
     }
 
     GetClientNameRequest(const char* uuid)
@@ -1194,8 +1194,8 @@ struct ReserveNameRequest : public RequestImpl<sizeof(std::int32_t) + kClientNam
         : RequestImpl(kReserveClientName)
         , m_refNum(0)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
-        memset(m_uUID.data(), 0, sizeof(m_uUID));
+        std::memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_uUID.data(), 0, sizeof(m_uUID));
     }
 
     ReserveNameRequest(std::int32_t refnum, const char* name, const char* uuid)
@@ -1245,8 +1245,8 @@ struct ClientNotification {
         , m_value2(-1)
         , m_sync(0)
     {
-        memset(m_name.data(), 0, sizeof(m_name));
-        memset(m_message.data(), 0, sizeof(m_message));
+        std::memset(m_name.data(), 0, sizeof(m_name));
+        std::memset(m_message.data(), 0, sizeof(m_message));
     }
     ClientNotification(const char* name, std::int32_t refnum, std::int32_t notify, std::int32_t sync, const char* message, std::int32_t value1, std::int32_t value2)
         : m_refNum(refnum)
@@ -1279,7 +1279,7 @@ struct ClientNotification {
         std::array<std::byte, kPayloadSize> payload { };
         std::byte* out = payload.data();
         auto put = [&out](const void* data, std::size_t size) {
-            memcpy(out, data, size);
+            std::memcpy(out, data, size);
             out += size;
         };
         put(m_name.data(), sizeof(m_name));

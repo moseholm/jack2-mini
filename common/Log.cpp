@@ -17,9 +17,9 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "common/Log.h"
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
+#include <cassert>
+#include <cstdio>
+#include <cstring>
 #include <array>
 #include <cstdint>
 
@@ -29,14 +29,14 @@ static void formatAndLog(std::int32_t level, const char* prefix, const char* fmt
     size_t len;
 
     if (prefix != nullptr) {
-        len = strlen(prefix);
+        len = std::strlen(prefix);
         assert(len < 256);
-        memcpy(buffer.data(), prefix, len);
+        std::memcpy(buffer.data(), prefix, len);
     } else {
         len = 0;
     }
 
-    vsnprintf(buffer.data() + len, sizeof(buffer) - len, fmt, ap);
+    std::vsnprintf(buffer.data() + len, sizeof(buffer) - len, fmt, ap);
     gJackLogRouter(level, buffer.data());
 }
 
@@ -83,14 +83,14 @@ LogFunction gJackLogRouter = &logDirect;
 
 void defaultJackErrorCallback(const char* desc)
 {
-    fprintf(stderr, "%s\n", desc);
-    fflush(stderr);
+    std::fprintf(stderr, "%s\n", desc);
+    std::fflush(stderr);
 }
 
 void defaultJackInfoCallback(const char* desc)
 {
-    fprintf(stdout, "%s\n", desc);
-    fflush(stdout);
+    std::fprintf(stdout, "%s\n", desc);
+    std::fflush(stdout);
 }
 
 void silentJackErrorCallback(const char* desc)

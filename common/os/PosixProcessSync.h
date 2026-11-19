@@ -18,8 +18,6 @@
 
 #include "common/Exception.h"
 #include "common/os/PosixMutex.h"
-#include <sys/time.h>
-#include <unistd.h>
 #include <cstdint>
 
 namespace jackmini {

@@ -22,7 +22,8 @@
 #include "ipc/protocol/Constants.h"
 #include "common/Error.h"
 #include "client/api/Error.hpp"
-#include <assert.h>
+#include <cassert>
+#include <cstring>
 #include <array>
 #include <cstdint>
 #include <vector>
@@ -226,7 +227,7 @@ public:
     void copy(FixedMatrix& copy)
     {
         for (std::int32_t i = 0; i < SIZE; i++) {
-            memcpy(copy.m_table[i], m_table[i], sizeof(Int) * SIZE);
+            std::memcpy(copy.m_table[i], m_table[i], sizeof(Int) * SIZE);
         }
     }
 };

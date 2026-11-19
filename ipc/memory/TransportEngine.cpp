@@ -22,9 +22,8 @@
 #include "common/Error.h"
 #include "common/Globals.h"
 #include "common/Time.h"
-#include <assert.h>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include <cstdint>
 
 using namespace std;
@@ -257,7 +256,7 @@ void TransportEngine::readCurrentPos(PositionC* pos)
     UInt16 curIndex;
     do {
         curIndex = nextIndex;
-        memcpy(pos, readCurrentState(), sizeof(PositionC));
+        std::memcpy(pos, readCurrentState(), sizeof(PositionC));
         nextIndex = getCurrentIndex();
     } while (curIndex != nextIndex); // Until a coherent state has been read
 }
@@ -285,7 +284,7 @@ NframesC TransportEngine::getCurrentFrame()
 
     if (m_transportState == kTransportRolling) {
         float usecs = getMicroseconds() - pos.m_usecs;
-        NframesC elapsed = (NframesC)floor((((float)pos.m_frameRate) / 1000000.0f) * usecs);
+        NframesC elapsed = (NframesC)std::floor((((float)pos.m_frameRate) / 1000000.0f) * usecs);
         return pos.m_frame + elapsed;
     } else {
         return pos.m_frame;
@@ -309,7 +308,7 @@ void TransportEngine::copyPosition(PositionC* from, PositionC* to)
             // debug code to avoid system hangs...
             if (--timeout == 0) {
                 jack_error("hung in loop copying position B");
-                abort();
+                std::abort();
             }
         }
         *to = *from;

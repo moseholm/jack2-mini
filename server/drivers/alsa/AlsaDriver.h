@@ -18,9 +18,7 @@
 #pragma once
 
 #include "server/drivers/alsa/AlsaCardDiff.h"
-#include "server/drivers/alsa/AlsaControlMonitor.h"
 #include "server/drivers/alsa/AlsaEnumerate.h"
-#include "server/drivers/alsa/AlsaHotplug.h"
 #include "server/drivers/alsa/AlsaReconfigWorker.h"
 #include "server/drivers/alsa/AlsaSecondaryCard.h"
 #include "server/drivers/alsa/AlsaSecondaryConfig.h"
@@ -36,6 +34,9 @@
 #include <vector>
 
 namespace jackmini {
+
+class AlsaControlMonitor;
+class AlsaHotplug;
 
 // \brief The ALSA driver.
 

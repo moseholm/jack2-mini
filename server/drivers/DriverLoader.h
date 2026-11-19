@@ -18,7 +18,7 @@
 #pragma once
 
 #include <cstdint>
-#include <stdio.h>
+#include <cstdio>
 #include <vector>
 
 #include "server/drivers/DriverInterface.h"

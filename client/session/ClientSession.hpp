@@ -31,20 +31,25 @@
 #include <pthread.h>
 
 #include "ipc/memory/ClientControl.h"
-#include "ipc/protocol/Notification.h"
-#include "client/session/ProcessContext.hpp"
-#include "ipc/protocol/Request.h"
 #include "ipc/memory/ShmMem.h"
 #include "ipc/socket/Socket.h"
 #include "common/Realtime.h"
 #include "common/Types.h"
 #include "client/api/Client.hpp"
 #include "client/api/Error.hpp"
-#include "client/api/Options.hpp"
 #include "client/api/Port.hpp"
 #include "client/api/Uuid.hpp"
 
-namespace jackmini::client {
+namespace jackmini {
+
+struct ClientNotification;
+struct OpenOptions;
+struct Reply;
+struct Request;
+
+namespace client {
+
+class ProcessContext;
 
 // One client's connection to the server: the request socket, the notification socket and its thread, and the shared
 // memory of the client. The public Client wraps one session; the session knows nothing of the callbacks.
@@ -197,4 +202,5 @@ private:
     std::atomic<bool> m_realtimeStop { false };
 };
 
-} // namespace jackmini::client
+} // namespace client
+} // namespace jackmini

@@ -19,10 +19,9 @@
 #include "ipc/memory/EngineControl.h"
 #include "common/Error.h"
 #include "common/Globals.h"
-#include <assert.h>
+#include <cassert>
 #include <array>
 #include <cstdint>
-#include <iostream>
 #include <set>
 
 namespace jackmini {

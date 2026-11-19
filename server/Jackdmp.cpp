@@ -42,7 +42,7 @@ void silentJackErrorCallback(const char* desc);
 
 static void copyright(FILE* file)
 {
-    fprintf(file, "jackdmp " JACK_VERSION "\n"
+    std::fprintf(file, "jackdmp " JACK_VERSION "\n"
                   "Copyright 2001-2005 Paul Davis and others.\n"
                   "Copyright 2004-2016 Grame.\n"
                   "Copyright 2016-2026 Filipe Coelho.\n"
@@ -53,16 +53,16 @@ static void copyright(FILE* file)
 
 static void printServerDrivers(const Server& server, FILE* file)
 {
-    fprintf(file, "Available backends:\n");
+    std::fprintf(file, "Available backends:\n");
     for (const Driver& driver : server.drivers()) {
-        fprintf(file, "      %s (%s)\n", driver.m_name.c_str(), driver.m_master ? "master" : "slave");
+        std::fprintf(file, "      %s (%s)\n", driver.m_name.c_str(), driver.m_master ? "master" : "slave");
     }
-    fprintf(file, "\n");
+    std::fprintf(file, "\n");
 }
 
 static void usage(FILE* file, const Server& server, bool full = true)
 {
-    fprintf(file, "\n"
+    std::fprintf(file, "\n"
                   "Usage: jackdmp [ --no-realtime OR -r ]\n"
                   "               [ --realtime OR -R [ --realtime-priority OR -P priority ] ]\n"
                   "      (the two previous arguments are mutually exclusive. The default is --realtime)\n"
@@ -77,18 +77,18 @@ static void usage(FILE* file, const Server& server, bool full = true)
         if (parameter.m_name != "self-connect-mode") {
             continue;
         }
-        fprintf(file, "                 where <modechar> is one of:\n");
+        std::fprintf(file, "                 where <modechar> is one of:\n");
         for (const Choice& choice : parameter.m_choices) {
             const char mode = std::get<char>(choice.m_value);
-            fprintf(file, "                   '%c' - %s", mode, choice.m_description.c_str());
+            std::fprintf(file, "                   '%c' - %s", mode, choice.m_description.c_str());
             if (mode == std::get<char>(parameter.m_defaultValue)) {
-                fprintf(file, " (default)");
+                std::fprintf(file, " (default)");
             }
-            fprintf(file, "\n");
+            std::fprintf(file, "\n");
         }
     }
 
-    fprintf(file,
+    std::fprintf(file,
         "               [ --silent OR -s ]\n"
         "               [ --sync OR -S ]\n"
         "               [ --temporary OR -T ]\n"
@@ -105,7 +105,7 @@ static void usage(FILE* file, const Server& server, bool full = true)
 
 static void printVersion()
 {
-    printf("jackdmp version " JACK_VERSION " tmpdir %s protocol %d"
+    std::printf("jackdmp version " JACK_VERSION " tmpdir %s protocol %d"
            "\n",
         kServerDir, kProtocolVersion);
 }
@@ -129,7 +129,7 @@ static bool selfConnectModeIsValid(const Server& server, char mode)
 int main(std::int32_t argc, char** argv)
 {
     for (std::int32_t a = 1; a < argc; ++a) {
-        if (!strcmp(argv[a], "--version") || !strcmp(argv[a], "-V")) {
+        if (!std::strcmp(argv[a], "--version") || !std::strcmp(argv[a], "-V")) {
             printVersion();
             return 0;
         }
@@ -159,7 +159,7 @@ int main(std::int32_t argc, char** argv)
     copyright(stdout);
     auto created = Server::create("");
     if (!created) {
-        fprintf(stderr, "Failed to create server object\n");
+        std::fprintf(stderr, "Failed to create server object\n");
         return -1;
     }
     Server server = std::move(*created);
@@ -171,9 +171,9 @@ int main(std::int32_t argc, char** argv)
         switch (opt) {
 
         case 'c':
-            if (tolower(optarg[0]) == 'h') {
+            if (std::tolower(optarg[0]) == 'h') {
                 server.setParameter("clock-source", static_cast<std::uint64_t>(kTimerHpet));
-            } else if (tolower(optarg[0]) == 'c' || tolower(optarg[0]) == 's') {
+            } else if (std::tolower(optarg[0]) == 'c' || std::tolower(optarg[0]) == 's') {
                 // The cycle clock is not offered: a request for it gets the system clock, as before.
                 server.setParameter("clock-source", static_cast<std::uint64_t>(kTimerSystemClock));
             } else {
@@ -243,7 +243,7 @@ int main(std::int32_t argc, char** argv)
             return 0;
 
         default:
-            fprintf(stderr, "unknown option character %c\n", optopt);
+            std::fprintf(stderr, "unknown option character %c\n", optopt);
             usage(stdout, server);
             return -1;
         }
@@ -270,14 +270,14 @@ int main(std::int32_t argc, char** argv)
     const auto signals = jackmini::control::setupSignals();
 
     if (!server.start()) {
-        fprintf(stderr, "Failed to start server\n");
+        std::fprintf(stderr, "Failed to start server\n");
         return -1;
     }
 
     jackmini::control::waitForSignal(signals);
 
     if (!server.stop()) {
-        fprintf(stderr, "Cannot stop server...\n");
+        std::fprintf(stderr, "Cannot stop server...\n");
     }
     return 0;
 }

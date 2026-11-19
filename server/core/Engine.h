@@ -18,7 +18,6 @@
 
 #include "ipc/protocol/Channel.h"
 #include "ipc/protocol/Constants.h"
-#include "ipc/memory/GraphManager.h"
 #include "common/Mutex.h"
 #include "common/Realtime.h"
 #include "common/os/Platform.h"
@@ -37,6 +36,8 @@ namespace jackmini {
 class ClientInterface;
 struct EngineControl;
 class ExternalClient;
+class GraphManager;
+struct ShmSegment;
 
 // \brief Engine description.
 

@@ -16,15 +16,14 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "server/drivers/DriverLoader.h"
+#include <cassert>
 #include "common/CString.h"
 #include "ipc/protocol/Constants.h"
 #include "server/drivers/DriverInfo.h"
 #include "common/Error.h"
 #include "common/SystemDeps.h"
-#include <errno.h>
-#include <getopt.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -35,7 +34,6 @@
 #include <system_error>
 #include <vector>
 
-#include <dirent.h>
 
 
 void printDriverOptions(DriverDesc* desc, FILE* file)
@@ -55,7 +53,7 @@ void printDriverOptions(DriverDesc* desc, FILE* file)
             jackmini::formatCString(argDefault, "{}", desc->m_params[i].m_value.m_c);
             break;
         case kDriverParamString:
-            if (strcmp(desc->m_params[i].m_value.m_str.data(), "") != 0) {
+            if (std::strcmp(desc->m_params[i].m_value.m_str.data(), "") != 0) {
                 jackmini::formatCString(argDefault, "{}", desc->m_params[i].m_value.m_str.data());
             } else {
                 jackmini::formatCString(argDefault, "none");
@@ -66,7 +64,7 @@ void printDriverOptions(DriverDesc* desc, FILE* file)
             break;
         }
 
-        fprintf(file, "\t-%c, --%s \t%s (default: %s)\n",
+        std::fprintf(file, "\t-%c, --%s \t%s (default: %s)\n",
             desc->m_params[i].m_character,
             desc->m_params[i].m_name,
             desc->m_params[i].m_longDesc,
@@ -76,9 +74,9 @@ void printDriverOptions(DriverDesc* desc, FILE* file)
 
 void printDriverParamUsage(DriverDesc* desc, std::uint64_t param, FILE* file)
 {
-    fprintf(file, "Usage information for the '%s' parameter for driver '%s':\n",
+    std::fprintf(file, "Usage information for the '%s' parameter for driver '%s':\n",
         desc->m_params[param].m_name, desc->m_name);
-    fprintf(file, "%s\n", desc->m_params[param].m_longDesc);
+    std::fprintf(file, "%s\n", desc->m_params[param].m_longDesc);
 }
 
 // The names of the entries in a directory.  If the listing fails, ec is set
@@ -163,7 +161,7 @@ static DriverDesc* loadDescriptor(const std::vector<DriverDesc*>& drivers, const
 
     // check it doesn't exist already
     for (const DriverDesc* other : drivers) {
-        if (strcmp(descriptor->m_name.data(), other->m_name.data()) == 0) {
+        if (std::strcmp(descriptor->m_name.data(), other->m_name.data()) == 0) {
             jack_error("The drivers in '%s' and '%s' both have the name '%s'; using the first",
                 other->m_file, filename.data(), other->m_name);
             // FIXME: delete the descriptor
@@ -278,8 +276,8 @@ SERVER_EXPORT DriverDesc* jack_driver_descriptor_construct(
     size_t descriptionLen;
     DriverDesc* descPtr;
 
-    nameLen = strlen(name);
-    descriptionLen = strlen(description);
+    nameLen = std::strlen(name);
+    descriptionLen = std::strlen(description);
 
     if (nameLen > sizeof(descPtr->m_name) - 1 || descriptionLen > sizeof(descPtr->m_desc) - 1) {
         assert(false);
@@ -292,8 +290,8 @@ SERVER_EXPORT DriverDesc* jack_driver_descriptor_construct(
         return 0;
     }
 
-    memcpy(descPtr->m_name.data(), name, nameLen + 1);
-    memcpy(descPtr->m_desc.data(), description, descriptionLen + 1);
+    std::memcpy(descPtr->m_name.data(), name, nameLen + 1);
+    std::memcpy(descPtr->m_desc.data(), description, descriptionLen + 1);
 
     descPtr->m_nparams = 0;
     descPtr->m_type = type;
@@ -322,11 +320,11 @@ SERVER_EXPORT std::int32_t jack_driver_descriptor_add_parameter(
     DriverParamDesc* paramPtr;
     size_t newsize;
 
-    nameLen = strlen(name);
-    shortDescLen = strlen(shortDesc);
+    nameLen = std::strlen(name);
+    shortDescLen = std::strlen(shortDesc);
 
     if (longDesc != nullptr) {
-        longDescLen = strlen(longDesc);
+        longDescLen = std::strlen(longDesc);
     } else {
         longDesc = shortDesc;
         longDescLen = shortDescLen;
@@ -351,13 +349,13 @@ SERVER_EXPORT std::int32_t jack_driver_descriptor_add_parameter(
     assert(descPtr->m_nparams < fillerPtr->m_size);
     paramPtr = descPtr->m_params + descPtr->m_nparams;
 
-    memcpy(paramPtr->m_name.data(), name, nameLen + 1);
+    std::memcpy(paramPtr->m_name.data(), name, nameLen + 1);
     paramPtr->m_character = character;
     paramPtr->m_type = type;
     paramPtr->m_value = *valuePtr;
     paramPtr->m_constraint = constraint;
-    memcpy(paramPtr->m_shortDesc.data(), shortDesc, shortDescLen + 1);
-    memcpy(paramPtr->m_longDesc.data(), longDesc, longDescLen + 1);
+    std::memcpy(paramPtr->m_shortDesc.data(), shortDesc, shortDescLen + 1);
+    std::memcpy(paramPtr->m_longDesc.data(), longDesc, longDescLen + 1);
 
     descPtr->m_nparams++;
     return true;
@@ -375,7 +373,7 @@ std::int32_t jack_constraint_add_enum(
     DriverParamValueEnum* possibleValuePtr;
     size_t len;
 
-    len = strlen(shortDesc) + 1;
+    len = std::strlen(shortDesc) + 1;
     if (len > sizeof(possibleValuePtr->m_shortDesc)) {
         assert(false);
         return false;
@@ -412,7 +410,7 @@ std::int32_t jack_constraint_add_enum(
     constraintPtr->m_constraint.m_enumeration.m_count++;
 
     possibleValuePtr->m_value = *valuePtr;
-    memcpy(possibleValuePtr->m_shortDesc.data(), shortDesc, len);
+    std::memcpy(possibleValuePtr->m_shortDesc.data(), shortDesc, len);
 
     *constraintPtrPtr = constraintPtr;
     *arraySizePtr = arraySize;

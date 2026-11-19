@@ -20,10 +20,7 @@
 #include "common/Error.h"
 #include "ipc/memory/FdSegment.h"
 
-#include <errno.h>
-#include <stdlib.h>
 #include <sys/mman.h>
-#include <sys/types.h>
 #include <cstddef>
 #include <cstdint>
 #include <new> // GCC 4.0

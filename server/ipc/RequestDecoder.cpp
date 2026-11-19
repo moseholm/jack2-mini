@@ -19,8 +19,6 @@
 #include "server/core/LockedEngine.h"
 #include "server/core/ServerCore.h"
 
-#include <assert.h>
-#include <signal.h>
 #include <cstdint>
 
 using namespace std;

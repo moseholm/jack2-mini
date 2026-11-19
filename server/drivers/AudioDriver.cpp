@@ -25,7 +25,6 @@
 #include "ipc/memory/ServerPort.h"
 #include "common/SystemDeps.h"
 #include "common/Time.h"
-#include <assert.h>
 #include <array>
 #include <cstdint>
 
@@ -79,9 +78,9 @@ std::int32_t AudioDriver::open(NframesC bufferSize,
     m_captureChannels = inchannels;
     m_playbackChannels = outchannels;
     m_withMonitorPorts = monitor;
-    memset(m_capturePortList.data(), 0, sizeof(PortIdC) * kDriverPortNum);
-    memset(m_playbackPortList.data(), 0, sizeof(PortIdC) * kDriverPortNum);
-    memset(m_monitorPortList.data(), 0, sizeof(PortIdC) * kDriverPortNum);
+    std::memset(m_capturePortList.data(), 0, sizeof(PortIdC) * kDriverPortNum);
+    std::memset(m_playbackPortList.data(), 0, sizeof(PortIdC) * kDriverPortNum);
+    std::memset(m_monitorPortList.data(), 0, sizeof(PortIdC) * kDriverPortNum);
     return Driver::open(bufferSize, samplerate, capturing, playing, inchannels, outchannels,
         monitor, captureDriverName, playbackDriverName, captureLatency, playbackLatency);
 }
@@ -191,7 +190,7 @@ std::int32_t AudioDriver::write()
             std::int32_t size = sizeof(DefaultAudioSampleC) * m_engineControl->m_bufferSize;
             // Monitor ports
             if (m_withMonitorPorts && m_graphManager->getConnectionsNum(m_monitorPortList[i]) > 0) {
-                memcpy(getMonitorBuffer(i), buffer, size);
+                std::memcpy(getMonitorBuffer(i), buffer, size);
             }
         }
     }

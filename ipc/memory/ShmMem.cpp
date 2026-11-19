@@ -17,8 +17,8 @@
 #include "ipc/memory/ShmMem.h"
 #include "common/CString.h"
 #include "common/Error.h"
-#include <stdio.h>
 #include <array>
+#include <cstring>
 #include <cstdint>
 
 namespace jackmini {
@@ -103,17 +103,17 @@ void lockMemoryImp(void* ptr, size_t size)
     if (checkMlock(ptr, size)) {
         jack_log("Succeeded in locking %u byte memory area", size);
     } else {
-        jack_error("Cannot lock down %u byte memory area (%s)", size, strerror(errno));
+        jack_error("Cannot lock down %u byte memory area (%s)", size, std::strerror(errno));
     }
 }
 
 void initLockMemoryImp(void* ptr, size_t size)
 {
     if (checkMlock(ptr, size)) {
-        memset(ptr, 0, size);
+        std::memset(ptr, 0, size);
         jack_log("Succeeded in locking %u byte memory area", size);
     } else {
-        jack_error("Cannot lock down %u byte memory area (%s)", size, strerror(errno));
+        jack_error("Cannot lock down %u byte memory area (%s)", size, std::strerror(errno));
     }
 }
 
@@ -122,7 +122,7 @@ void unlockMemoryImp(void* ptr, size_t size)
     if (checkMunlock(ptr, size)) {
         jack_log("Succeeded in unlocking %u byte memory area", size);
     } else {
-        jack_error("Cannot unlock down %u byte memory area (%s)", size, strerror(errno));
+        jack_error("Cannot unlock down %u byte memory area (%s)", size, std::strerror(errno));
     }
 }
 
@@ -131,7 +131,7 @@ void lockAllMemory()
     if (checkMlockall()) {
         jack_log("Succeeded in locking all memory");
     } else {
-        jack_error("Cannot lock all memory (%s)", strerror(errno));
+        jack_error("Cannot lock all memory (%s)", std::strerror(errno));
     }
 }
 
@@ -140,7 +140,7 @@ void unlockAllMemory()
     if (checkMunlockall()) {
         jack_log("Succeeded in unlocking all memory");
     } else {
-        jack_error("Cannot unlock all memory (%s)", strerror(errno));
+        jack_error("Cannot unlock all memory (%s)", std::strerror(errno));
     }
 }
 

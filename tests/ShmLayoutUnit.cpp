@@ -35,7 +35,6 @@
 
 #include <atomic>
 #include <cstddef>
-#include <cstdint>
 
 using namespace jackmini;
 

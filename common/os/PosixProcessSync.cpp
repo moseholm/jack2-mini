@@ -17,6 +17,7 @@
 #include "common/os/PosixProcessSync.h"
 #include "common/Error.h"
 #include <chrono>
+#include <cstring>
 #include <cstdint>
 
 namespace jackmini {
@@ -35,7 +36,7 @@ void PosixProcessSync::signal()
 {
     std::int32_t res = pthread_cond_signal(&m_cond);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::Signal error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::Signal error err = %s", std::strerror(res));
     }
 }
 
@@ -44,15 +45,15 @@ void PosixProcessSync::lockedSignal()
 {
     std::int32_t res = pthread_mutex_lock(&m_mutex);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::LockedSignal error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::LockedSignal error err = %s", std::strerror(res));
     }
     res = pthread_cond_signal(&m_cond);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::LockedSignal error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::LockedSignal error err = %s", std::strerror(res));
     }
     res = pthread_mutex_unlock(&m_mutex);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::LockedSignal error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::LockedSignal error err = %s", std::strerror(res));
     }
 }
 
@@ -60,7 +61,7 @@ void PosixProcessSync::signalAll()
 {
     std::int32_t res = pthread_cond_broadcast(&m_cond);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::SignalAll error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::SignalAll error err = %s", std::strerror(res));
     }
 }
 
@@ -69,15 +70,15 @@ void PosixProcessSync::lockedSignalAll()
 {
     std::int32_t res = pthread_mutex_lock(&m_mutex);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::LockedSignalAll error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::LockedSignalAll error err = %s", std::strerror(res));
     }
     res = pthread_cond_broadcast(&m_cond);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::LockedSignalAll error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::LockedSignalAll error err = %s", std::strerror(res));
     }
     res = pthread_mutex_unlock(&m_mutex);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::LockedSignalAll error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::LockedSignalAll error err = %s", std::strerror(res));
     }
 }
 
@@ -88,7 +89,7 @@ void PosixProcessSync::wait()
 
     std::int32_t res = pthread_cond_wait(&m_cond, &m_mutex);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::Wait error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::Wait error err = %s", std::strerror(res));
     } else {
         m_owner = pthread_self();
     }
@@ -100,14 +101,14 @@ void PosixProcessSync::lockedWait()
     std::int32_t res;
     res = pthread_mutex_lock(&m_mutex);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::LockedWait error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::LockedWait error err = %s", std::strerror(res));
     }
     if ((res = pthread_cond_wait(&m_cond, &m_mutex)) != 0) {
-        jack_error("JackPosixProcessSync::LockedWait error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::LockedWait error err = %s", std::strerror(res));
     }
     res = pthread_mutex_unlock(&m_mutex);
     if (res != 0) {
-        jack_error("JackPosixProcessSync::LockedWait error err = %s", strerror(res));
+        jack_error("JackPosixProcessSync::LockedWait error err = %s", std::strerror(res));
     }
 }
 
@@ -124,7 +125,7 @@ bool PosixProcessSync::timedWait(std::int64_t usec)
     const timespec deadline = realtimeDeadline(usec);
     res = pthread_cond_timedwait(&m_cond, &m_mutex, &deadline);
     if (res != 0 && res != ETIMEDOUT) {
-        jack_error("JackPosixProcessSync::TimedWait error usec = %ld err = %s", usec, strerror(res));
+        jack_error("JackPosixProcessSync::TimedWait error usec = %ld err = %s", usec, std::strerror(res));
     } else {
         m_owner = pthread_self();
     }
@@ -142,7 +143,7 @@ bool PosixProcessSync::lockedTimedWait(std::int64_t usec)
 
     res1 = pthread_mutex_lock(&m_mutex);
     if (res1 != 0) {
-        jack_error("JackPosixProcessSync::LockedTimedWait error err = %s", usec, strerror(res1));
+        jack_error("JackPosixProcessSync::LockedTimedWait error err = %s", usec, std::strerror(res1));
     }
 
     jack_log("JackPosixProcessSync::TimedWait time out = %ld", usec);
@@ -151,12 +152,12 @@ bool PosixProcessSync::lockedTimedWait(std::int64_t usec)
     const timespec deadline = realtimeDeadline(usec);
     res2 = pthread_cond_timedwait(&m_cond, &m_mutex, &deadline);
     if (res2 != 0) {
-        jack_error("JackPosixProcessSync::LockedTimedWait error usec = %ld err = %s", usec, strerror(res2));
+        jack_error("JackPosixProcessSync::LockedTimedWait error usec = %ld err = %s", usec, std::strerror(res2));
     }
 
     res1 = pthread_mutex_unlock(&m_mutex);
     if (res1 != 0) {
-        jack_error("JackPosixProcessSync::LockedTimedWait error err = %s", usec, strerror(res1));
+        jack_error("JackPosixProcessSync::LockedTimedWait error err = %s", usec, std::strerror(res1));
     }
 
     jack_log("JackPosixProcessSync::TimedWait finished delta = %5.1lf",

@@ -30,11 +30,9 @@
 
 #include <getopt.h>
 #include <pthread.h>
-#include <signal.h>
 #include <strings.h>
 #include <unistd.h>
 #include <array>
-#include <cerrno>
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
@@ -452,15 +450,15 @@ Result<void> Server::parseDriverArguments(std::int32_t argc, char* argv[])
         return { };
     }
 
-    if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+    if (std::strcmp(argv[1], "-h") == 0 || std::strcmp(argv[1], "--help") == 0) {
         if (argc > 2) {
             for (std::uint32_t i = 0; i < desc.m_nparams; i++) {
-                if (strcmp(desc.m_params[i].m_name.data(), argv[2]) == 0) {
+                if (std::strcmp(desc.m_params[i].m_name.data(), argv[2]) == 0) {
                     printDriverParamUsage(&desc, i, stdout);
                     return std::unexpected(Error::kInvalidArgument);
                 }
             }
-            fprintf(stderr, "Jackd: unknown option '%s' for driver '%s'\n", argv[2], desc.m_name);
+            std::fprintf(stderr, "Jackd: unknown option '%s' for driver '%s'\n", argv[2], desc.m_name);
         }
         jack_log("Parameters for driver '%s' (all parameters are optional):", desc.m_name);
         printDriverOptions(&desc, stdout);
@@ -486,11 +484,11 @@ Result<void> Server::parseDriverArguments(std::int32_t argc, char* argv[])
     while ((opt = getopt_long(argc, argv, options.data(), longOptions.data(), nullptr)) != -1) {
         if (opt == ':' || opt == '?') {
             if (opt == ':') {
-                fprintf(stderr, "Missing option to argument '%c'\n", optopt);
+                std::fprintf(stderr, "Missing option to argument '%c'\n", optopt);
             } else {
-                fprintf(stderr, "Unknownage with option '%c'\n", optopt);
+                std::fprintf(stderr, "Unknownage with option '%c'\n", optopt);
             }
-            fprintf(stderr, "Options for driver '%s':\n", desc.m_name);
+            std::fprintf(stderr, "Options for driver '%s':\n", desc.m_name);
             printDriverOptions(&desc, stderr);
             return std::unexpected(Error::kInvalidArgument);
         }
@@ -506,7 +504,7 @@ Result<void> Server::parseDriverArguments(std::int32_t argc, char* argv[])
             continue;
         }
 
-        if (!optarg && optind < argc && strlen(argv[optind]) && argv[optind][0] != '-') {
+        if (!optarg && optind < argc && std::strlen(argv[optind]) && argv[optind][0] != '-') {
             optarg = argv[optind];
         }
 
@@ -675,7 +673,7 @@ void waitForSignal(const SignalSet& set)
     std::int32_t sig = 0;
     for (;;) {
         sigwait(&set.m_signals, &sig);
-        fprintf(stderr, "Jack main caught signal %d\n", sig);
+        std::fprintf(stderr, "Jack main caught signal %d\n", sig);
         if (sig != SIGUSR1 && sig != SIGTTOU) {
             break;
         }

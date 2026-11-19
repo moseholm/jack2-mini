@@ -24,7 +24,6 @@
 #include "ipc/memory/ShmMem.h"
 #include "ipc/memory/TransportEngine.h"
 #include "common/Types.h"
-#include <stdio.h>
 #include <array>
 #include <atomic>
 #include <cstdint>

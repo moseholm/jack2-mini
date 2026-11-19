@@ -17,9 +17,9 @@
 #pragma once
 
 #include <dlfcn.h>
-#include <inttypes.h>
+#include <cinttypes>
 #include <pthread.h>
-#include <signal.h>
+#include <csignal>
 #include <sys/types.h>
 
 #ifndef UINT32_MAX

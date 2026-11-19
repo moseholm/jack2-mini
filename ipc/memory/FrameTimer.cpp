@@ -17,8 +17,7 @@
 
 #include "ipc/memory/FrameTimer.h"
 #include "common/Error.h"
-#include <math.h>
-#include <stdio.h>
+#include <cmath>
 #include <cstdint>
 
 namespace jackmini {
@@ -87,7 +86,7 @@ std::int32_t Timer::getCycleTimes(NframesC* currentFrames, TimeC* currentUsecs, 
 
 NframesC Timer::framesSinceCycleStart(TimeC curTime, NframesC framesRate)
 {
-    return (NframesC)floor((((float)framesRate) / 1000000.0f) * (curTime - m_currentCallback));
+    return (NframesC)std::floor((((float)framesRate) / 1000000.0f) * (curTime - m_currentCallback));
 }
 
 void FrameTimer::initFrameTime()
@@ -125,7 +124,7 @@ void FrameTimer::readFrameTime(Timer* timer) JACK_REALTIME_FN
     UInt16 curIndex;
     do {
         curIndex = nextIndex;
-        memcpy(timer, readCurrentState(), sizeof(Timer));
+        std::memcpy(timer, readCurrentState(), sizeof(Timer));
         nextIndex = getCurrentIndex();
     } while (curIndex != nextIndex); // Until a coherent state has been read
 }

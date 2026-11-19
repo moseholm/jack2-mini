@@ -18,6 +18,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "ipc/memory/EngineControl.h"
+#include "ipc/memory/GraphManager.h"
 #include "server/drivers/FreewheelDriver.h"
 #include "server/core/LockedEngine.h"
 #include "common/SystemDeps.h"

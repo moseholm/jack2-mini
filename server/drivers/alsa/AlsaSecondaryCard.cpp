@@ -15,14 +15,17 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "server/drivers/alsa/AlsaSecondaryCard.h"
+#include "server/drivers/alsa/AlsaCardFailureSink.h"
+#include "server/drivers/alsa/AlsaRateConverter.h"
+#include "server/drivers/alsa/AlsaRingBuffer.h"
 #include "server/drivers/alsa/AlsaSecondaryConfig.h"
 #include "common/Error.h"
 #include "ipc/memory/GraphManager.h"
 #include "server/drivers/alsa/PcmSession.hpp"
 
-#include <errno.h>
-#include <math.h>
-#include <string.h>
+#include <cerrno>
+#include <cmath>
+#include <cstring>
 #include <sys/mman.h>
 #include <algorithm>
 #include <chrono>
@@ -36,7 +39,7 @@ static float** allocChannelBuffers(std::int32_t channels, std::uint32_t frames)
     float** buffers = new float*[channels];
     for (std::int32_t i = 0; i < channels; i++) {
         buffers[i] = new float[frames];
-        memset(buffers[i], 0, sizeof(float) * frames);
+        std::memset(buffers[i], 0, sizeof(float) * frames);
     }
     return buffers;
 }
@@ -261,13 +264,13 @@ std::int32_t AlsaSecondaryCard::buildBuffers(NframesC primaryBufferSize,
     m_captureTemp = new float*[m_captureChannels];
     for (std::int32_t i = 0; i < m_captureChannels; i++) {
         m_captureTemp[i] = new float[m_period];
-        memset(m_captureTemp[i], 0, sizeof(float) * m_period);
+        std::memset(m_captureTemp[i], 0, sizeof(float) * m_period);
     }
 
     m_playbackTemp = new float*[m_playbackChannels];
     for (std::int32_t i = 0; i < m_playbackChannels; i++) {
         m_playbackTemp[i] = new float[m_period];
-        memset(m_playbackTemp[i], 0, sizeof(float) * m_period);
+        std::memset(m_playbackTemp[i], 0, sizeof(float) * m_period);
     }
 
     std::int32_t scratchChannels = std::max(m_captureChannels, m_playbackChannels);
@@ -275,7 +278,7 @@ std::int32_t AlsaSecondaryCard::buildBuffers(NframesC primaryBufferSize,
 
     NframesC silenceSize = std::max(primaryBufferSize, m_period);
     m_silence = new float[silenceSize];
-    memset(m_silence, 0, sizeof(float) * silenceSize);
+    std::memset(m_silence, 0, sizeof(float) * silenceSize);
 
     m_convCap = std::max(primaryBufferSize, m_period) * 4 + 1024;
     // Asynchronous clocks always go through a converter, even at equal rates,
@@ -424,7 +427,7 @@ NframesC AlsaSecondaryCard::captureLatency() const
         // The RT side keeps about three periods in the ring, and the converter adds its filter delay.
         frames += (3.0 * m_period + m_captureConverter->delay()) * ratio;
     }
-    return (NframesC)ceil(frames);
+    return (NframesC)std::ceil(frames);
 }
 
 NframesC AlsaSecondaryCard::playbackLatency() const
@@ -438,7 +441,7 @@ NframesC AlsaSecondaryCard::playbackLatency() const
     if (m_playbackConverter) {
         cardFrames += m_playbackConverter->delay();
     }
-    return (NframesC)ceil(m_primaryBufferSize + cardFrames * ratio);
+    return (NframesC)std::ceil(m_primaryBufferSize + cardFrames * ratio);
 }
 
 std::int32_t AlsaSecondaryCard::openControls()
@@ -514,7 +517,7 @@ void AlsaSecondaryCard::closeControls()
             // ENODEV: the card has been unplugged, so its control is already gone.
             if (err < 0 && err != -ENODEV) {
                 jack_error("secondary card '%s': cannot remove control '%s' (%s)",
-                    m_config.m_name.c_str(), m_rateElem[d].m_name.c_str(), strerror(-err));
+                    m_config.m_name.c_str(), m_rateElem[d].m_name.c_str(), std::strerror(-err));
             }
         }
         m_rateValid[d] = false;
@@ -895,7 +898,7 @@ void AlsaSecondaryCard::readToPorts(GraphManager* graphManager, NframesC nframes
         for (std::int32_t i = 0; i < m_captureChannels; i++) {
             float* buf = (float*)graphManager->getBuffer(m_capturePorts[i], nframes);
             if (buf) {
-                memset(buf, 0, sizeof(float) * nframes);
+                std::memset(buf, 0, sizeof(float) * nframes);
             }
         }
         return;
@@ -924,7 +927,7 @@ void AlsaSecondaryCard::readToPorts(GraphManager* graphManager, NframesC nframes
     std::uint32_t got = m_captureConverter->convert(m_captureConvIn, need, m_portScratch, nframes);
     for (std::int32_t i = 0; i < m_captureChannels; i++) {
         if (got < nframes) {
-            memset(m_portScratch[i] + got, 0, sizeof(float) * (nframes - got));
+            std::memset(m_portScratch[i] + got, 0, sizeof(float) * (nframes - got));
         }
     }
 }
@@ -979,7 +982,7 @@ void AlsaSecondaryCard::readInput(const jackmini::alsa::MappedFrames& mapped, st
 void AlsaSecondaryCard::clearOutput()
 {
     for (std::int32_t i = 0; i < m_playbackChannels; i++) {
-        memset(m_playbackTemp[i], 0, sizeof(float) * m_period);
+        std::memset(m_playbackTemp[i], 0, sizeof(float) * m_period);
     }
 }
 

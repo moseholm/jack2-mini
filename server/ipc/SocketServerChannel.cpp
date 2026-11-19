@@ -24,8 +24,8 @@
 #include "server/core/ServerCore.h"
 #include "common/Tools.h"
 
-#include <assert.h>
-#include <signal.h>
+#include <cassert>
+#include <csignal>
 #include <cstdint>
 
 using namespace std;
@@ -209,7 +209,7 @@ bool SocketServerChannel::execute()
 
         // Global poll
         if ((poll(m_pollTable.data(), m_socketTable.size() + 1, 10000) < 0) && (errno != EINTR)) {
-            jack_error("JackSocketServerChannel::Execute : engine poll failed err = %s request thread quits...", strerror(errno));
+            jack_error("JackSocketServerChannel::Execute : engine poll failed err = %s request thread quits...", std::strerror(errno));
             return false;
         } else {
 
@@ -217,7 +217,7 @@ bool SocketServerChannel::execute()
             for (std::uint32_t i = 1; i < m_socketTable.size() + 1; i++) {
                 std::int32_t fd = m_pollTable[i].fd;
                 if (m_pollTable[i].revents & ~POLLIN) {
-                    jack_log("JackSocketServerChannel::Execute : poll client error err = %s", strerror(errno));
+                    jack_log("JackSocketServerChannel::Execute : poll client error err = %s", std::strerror(errno));
                     clientKill(fd);
                 } else if (m_pollTable[i].revents & POLLIN) {
                     ClientSocket* socket = m_socketTable[fd].second;
@@ -240,7 +240,7 @@ bool SocketServerChannel::execute()
 
             // Check the server request socket */
             if (m_pollTable[0].revents & POLLERR) {
-                jack_error("Error on server request socket err = %s", strerror(errno));
+                jack_error("Error on server request socket err = %s", std::strerror(errno));
             }
 
             if (m_pollTable[0].revents & POLLIN) {

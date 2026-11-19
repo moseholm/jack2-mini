@@ -17,10 +17,10 @@
 #include "server/drivers/alsa/AlsaHotplug.h"
 #include "common/Error.h"
 
-#include <errno.h>
+#include <cerrno>
 #include <libudev.h>
 #include <poll.h>
-#include <string.h>
+#include <cstring>
 #include <sys/eventfd.h>
 #include <unistd.h>
 #include <array>
@@ -93,7 +93,7 @@ bool AlsaHotplug::execute()
             if (errno == EINTR) {
                 return true;
             }
-            jack_error("hot-plug: poll failed (%s)", strerror(errno));
+            jack_error("hot-plug: poll failed (%s)", std::strerror(errno));
             return false;
         }
         if (fds[1].revents & POLLIN) {
@@ -103,7 +103,7 @@ bool AlsaHotplug::execute()
             struct udev_device* device;
             while ((device = udev_monitor_receive_device(m_monitor)) != nullptr) {
                 const char* action = udev_device_get_action(device);
-                if (action != nullptr && (strcmp(action, "add") == 0 || strcmp(action, "remove") == 0 || strcmp(action, "change") == 0)) {
+                if (action != nullptr && (std::strcmp(action, "add") == 0 || std::strcmp(action, "remove") == 0 || std::strcmp(action, "change") == 0)) {
                     pending = true;
                 }
                 udev_device_unref(device);

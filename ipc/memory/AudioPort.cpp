@@ -19,7 +19,7 @@
 #include "common/Globals.h"
 #include "ipc/memory/PortType.h"
 
-#include <string.h>
+#include <cstring>
 #include <cstdint>
 
 #if defined(__SSE__)
@@ -32,7 +32,7 @@ namespace jackmini {
 
 static void audioBufferInit(void* buffer, size_t bufferSize, NframesC)
 {
-    memset(buffer, 0, bufferSize);
+    std::memset(buffer, 0, bufferSize);
 }
 
 static inline void mixAudioBuffer(DefaultAudioSampleC* mixbuffer, DefaultAudioSampleC* buffer, NframesC frames)
@@ -135,7 +135,7 @@ static void audioBufferMixdown(void* mixbuffer, void** srcBuffers, std::int32_t 
         target[i] = source[i];
     }
 #else
-    memcpy(mixbuffer, srcBuffers[0], nframes * sizeof(DefaultAudioSampleC));
+    std::memcpy(mixbuffer, srcBuffers[0], nframes * sizeof(DefaultAudioSampleC));
 #endif
 
     // Mix remaining buffers

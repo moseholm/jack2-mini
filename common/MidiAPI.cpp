@@ -17,8 +17,8 @@
 
 #include "common/Error.h"
 #include "common/MidiPort.h"
-#include <errno.h>
-#include <string.h>
+#include <cerrno>
+#include <cstring>
 #include <cstdint>
 
 #ifdef __cplusplus
@@ -143,7 +143,7 @@ std::int32_t jack_midi_event_write(void* portBuffer,
     if (!dest) {
         return -ENOBUFS;
     }
-    memcpy(dest, data, dataSize);
+    std::memcpy(dest, data, dataSize);
     return 0;
 }
 

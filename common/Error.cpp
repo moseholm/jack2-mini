@@ -19,8 +19,7 @@
 #include "common/Error.h"
 #include "common/Globals.h"
 #include "common/MessageBuffer.h"
-#include <stdarg.h>
-#include <stdio.h>
+#include <cstdarg>
 #include <cstdint>
 
 using namespace jackmini;

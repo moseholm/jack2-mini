@@ -17,18 +17,22 @@
 
 #include "client/session/ClientSession.hpp"
 
+#include "client/session/ProcessContext.hpp"
+#include "client/api/Options.hpp"
 #include "ipc/memory/ClientControl.h"
 #include "ipc/protocol/Constants.h"
 #include "common/Error.h"
 #include "common/Globals.h"
 #include "common/Realtime.h"
 #include "ipc/protocol/Message.h"
+#include "ipc/protocol/Notification.h"
 #include "ipc/protocol/Request.h"
 #include "common/Time.h"
 #include "common/Tools.h"
 #include "common/Uuid.hpp"
 
 #include "ipc/memory/FrameTimer.h"
+#include "ipc/memory/TransportEngine.h"
 
 #include <sys/socket.h>
 #include <array>
@@ -66,7 +70,7 @@ std::int32_t acquireRealtime(pthread_t thread, std::int32_t priority)
     if (pthread_setschedparam(thread, SCHED_FIFO | SCHED_RESET_ON_FORK, &param) == 0) {
         return 0;
     }
-    jack_error("Cannot use real-time scheduling (RR/%d) (%d: %s)", priority, res, strerror(res));
+    jack_error("Cannot use real-time scheduling (RR/%d) (%d: %s)", priority, res, std::strerror(res));
     return -1;
 }
 
@@ -74,7 +78,7 @@ void dropRealtime(pthread_t thread)
 {
     sched_param param { };
     if (pthread_setschedparam(thread, SCHED_OTHER, &param) != 0) {
-        jack_error("Cannot switch to normal scheduling priority(%s)", strerror(errno));
+        jack_error("Cannot switch to normal scheduling priority(%s)", std::strerror(errno));
     }
 }
 

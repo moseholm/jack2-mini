@@ -19,7 +19,7 @@
 #include "ipc/memory/ClientControl.h"
 #include "ipc/memory/ClientInterface.h"
 #include "ipc/memory/GraphManager.h"
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <cstdint>
 
@@ -88,11 +88,11 @@ void EngineControl::calcCPULoad(std::atomic<ClientInterface*>* table,
 
 void EngineControl::resetRollingUsecs() JACK_REALTIME_FN
 {
-    memset(m_rollingClientUsecs.data(), 0, sizeof(m_rollingClientUsecs));
+    std::memset(m_rollingClientUsecs.data(), 0, sizeof(m_rollingClientUsecs));
     m_rollingClientUsecsIndex = 0;
     m_rollingClientUsecsCnt = 0;
     m_spareUsecs = 0;
-    m_rollingInterval = std::int32_t(floor((kEngineRollingInterval * 1000.f) / m_periodUsecs));
+    m_rollingInterval = std::int32_t(std::floor((kEngineRollingInterval * 1000.f) / m_periodUsecs));
 }
 
 void EngineControl::notifyXRun(TimeC callbackUsecs, float delayedUsecs)

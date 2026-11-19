@@ -21,7 +21,6 @@
 #include "client/api/Error.hpp"
 
 #include <cstdint>
-#include <expected>
 
 namespace jackmini {
 

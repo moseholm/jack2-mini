@@ -20,10 +20,8 @@
 #include "server/drivers/DriverLoader.h"
 #include "server/drivers/DriverModule.h"
 #include "server/drivers/ThreadedDriver.h"
-#include <math.h>
-#include <unistd.h>
+#include <cmath>
 #include <cstdint>
-#include <iostream>
 
 
 static DriverDesc* describeDriver()

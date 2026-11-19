@@ -32,6 +32,8 @@
 
 namespace jackmini {
 
+struct ClientControl;
+
 // \brief Graph manager: contains the connection manager and the port array.
 
 

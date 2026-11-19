@@ -25,13 +25,11 @@
 #include <string>
 #include <system_error>
 
-#include <assert.h>
 #include <dlfcn.h>
-#include <errno.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 using namespace std;
 
@@ -165,7 +163,7 @@ std::int32_t Tools::getTmpdir()
         return -1;
     }
 
-    len = strlen(buf.data());
+    len = std::strlen(buf.data());
 
     if (buf[len - 1] != '\n') {
         // didn't get a whole line
@@ -182,7 +180,7 @@ std::int32_t Tools::getTmpdir()
 void Tools::rewriteName(const char* name, char* newName)
 {
     size_t i;
-    for (i = 0; i < strlen(name); i++) {
+    for (i = 0; i < std::strlen(name); i++) {
         if ((name[i] == '/') || (name[i] == '\\')) {
             newName[i] = '_';
         } else {

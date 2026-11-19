@@ -15,9 +15,10 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "server/drivers/alsa/AlsaControlMonitor.h"
+#include <cstring>
 #include "common/Error.h"
 
-#include <errno.h>
+#include <cerrno>
 #include <poll.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
@@ -298,7 +299,7 @@ bool AlsaControlMonitor::execute()
         if (errno == EINTR) {
             return true;
         }
-        jack_error("control monitor: poll failed (%s)", strerror(errno));
+        jack_error("control monitor: poll failed (%s)", std::strerror(errno));
         return false;
     }
 
@@ -339,7 +340,7 @@ std::int32_t AlsaControlMonitor::start()
     if (m_wakeFd < 0) {
         m_wakeFd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
         if (m_wakeFd < 0) {
-            jack_error("control monitor: cannot create wake-up fd (%s)", strerror(errno));
+            jack_error("control monitor: cannot create wake-up fd (%s)", std::strerror(errno));
             return -1;
         }
     }
