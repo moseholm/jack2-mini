@@ -121,6 +121,7 @@ Every derived file keeps the licence it had in the original tree. No licence cha
 | `common/Globals.h` | renamed | `common/JackGlobals.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `ipc/memory/GraphManager.cpp` | renamed | `common/JackGraphManager.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `ipc/memory/GraphManager.h` | rewritten (name match) | `common/JackGraphManager.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
+| `ipc/IpcName.h` | extracted in the name-helper cleanup | `platform/JackSocket.cpp`, `platform/JackLinuxFutex.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Log.cpp` | renamed | `common/JackLog.cpp` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `common/Log.h` | renamed | `common/JackLog.h` | LGPL-2.1-or-later | LGPL-2.1-or-later |
 | `server/drivers/Memops.cpp` | renamed | `common/memops.cpp` | GPL-2.0 | GPL-2.0 |
