@@ -136,7 +136,7 @@ DriverParamValue valueToC(const Value& value)
         break;
     default: {
         const std::string& text = std::get<std::string>(value);
-        strncpy(out.m_str.data(), text.c_str(), kDriverParamStringMax);
+        copyCString(out.m_str, text);
         break;
     }
     }
