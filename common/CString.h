@@ -24,6 +24,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <format>
+#include <optional>
 #include <span>
 #include <string_view>
 #include <system_error>
@@ -91,6 +92,25 @@ T parseLeadingInteger(std::string_view text)
     T value { };
     const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
     return ec == std::errc() ? value : T { };
+}
+
+// \brief Parse a whole integer, the way strtol() plus an end-of-string check did.
+//
+// Accepts the same prefix as parseLeadingInteger() but requires the digits to consume the whole text.
+// Returns std::nullopt for an empty prefix, trailing characters, or a value that does not fit.
+template <std::integral T>
+std::optional<T> parseInteger(std::string_view text)
+{
+    text = skipNumericPrefix(text);
+    if (text.empty()) {
+        return std::nullopt;
+    }
+    T value { };
+    const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
+    if (ec != std::errc() || ptr != text.data() + text.size()) {
+        return std::nullopt;
+    }
+    return value;
 }
 
 } // namespace jackmini

@@ -19,7 +19,6 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
-#include <charconv>
 #include <cstdint>
 #include <format>
 #include <fstream>
@@ -92,18 +91,11 @@ static bool parseBool(std::string_view value, bool* result)
 
 static bool parseInt(std::string_view value, std::int32_t* result)
 {
-    // Accepts what strtol() accepted (leading white space and '+'), but stays strict after the digits.
-    value = skipNumericPrefix(value);
-    if (value.empty()) {
+    const auto parsed = parseInteger<std::int32_t>(value);
+    if (!parsed) {
         return false;
     }
-    std::int32_t parsed = 0;
-    const char* end = value.data() + value.size();
-    const auto [ptr, ec] = std::from_chars(value.data(), end, parsed);
-    if (ec != std::errc() || ptr != end) {
-        return false;
-    }
-    *result = parsed;
+    *result = *parsed;
     return true;
 }
 

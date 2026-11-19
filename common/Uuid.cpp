@@ -19,8 +19,6 @@
 #include "common/Uuid.hpp"
 #include "common/CString.h"
 
-#include <charconv>
-
 namespace jackmini {
 
 std::string Uuid::toString() const
@@ -30,13 +28,11 @@ std::string Uuid::toString() const
 
 std::optional<Uuid> Uuid::parse(std::string_view text)
 {
-    text = skipNumericPrefix(text);
-    std::uint64_t value = 0;
-    const auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
-    if (ec != std::errc() || ptr != text.data() + text.size()) {
+    const auto value = parseInteger<std::uint64_t>(text);
+    if (!value) {
         return std::nullopt;
     }
-    return Uuid { value };
+    return Uuid { *value };
 }
 
 namespace uuid {
