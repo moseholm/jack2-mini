@@ -30,6 +30,9 @@ the file is the reference for layout: run `clang-format -i` on the files you cha
 - `char` is for text only: C strings, names, format strings. Raw bytes, such as audio samples and shared memory, are
   `std::byte`. Counters that are byte-sized are `std::uint8_t`.
 - Fixed-size arrays are `std::array`. A trailing array that is sized at run time (the struct hack) stays a C array.
+- Text copied into a fixed-size C string goes through `copyCString()` in `common/CString.h`: it truncates, terminates
+  and zero-fills. There are no raw `strcpy`/`strncpy` calls. `formatCString()` is its checked `std::format`
+  counterpart, and `parseLeadingInteger<T>()` / `parseInteger<T>()` are the permissive and strict integer parsers.
 - `nullptr`, never `NULL`.
 - Macros are not used for constants. The macros that remain are the ones C++ cannot replace: export and attribute
   macros, feature-test and system macros, and the statement macros that return from the caller or use `#` and `##`
