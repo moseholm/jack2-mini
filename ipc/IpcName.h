@@ -32,10 +32,10 @@ namespace jackmini {
 // here so they stay in step; the formats themselves are unchanged.
 
 // <dir>/jack_<name>[_<uid>]_<which>
-inline void buildSocketName(const char* clientName, const char* dir, std::int32_t which, bool promiscuous, std::span<char> dst)
+inline void buildSocketName(std::string_view clientName, std::string_view dir, std::int32_t which, bool promiscuous, std::span<char> dst)
 {
     std::array<char, kSyncMaxNameSize + 1> extClientName {};
-    Tools::rewriteName(clientName, extClientName.data());
+    Tools::rewriteName(clientName, extClientName);
     const std::string_view extName = extClientName.data();
     if (promiscuous) {
         formatCString(dst, "{}/jack_{}_{}", dir, extName, which);
@@ -45,10 +45,10 @@ inline void buildSocketName(const char* clientName, const char* dir, std::int32_
 }
 
 // jack_sem[.<uid>]_<server>_<name>
-inline void buildFutexName(const char* clientName, const char* serverName, bool promiscuous, std::span<char> dst)
+inline void buildFutexName(std::string_view clientName, std::string_view serverName, bool promiscuous, std::span<char> dst)
 {
     std::array<char, kSyncMaxNameSize + 1> extClientName {};
-    Tools::rewriteName(clientName, extClientName.data());
+    Tools::rewriteName(clientName, extClientName);
     if (promiscuous) {
         formatCString(dst, "jack_sem.{}_{}", serverName, extClientName.data());
     } else {

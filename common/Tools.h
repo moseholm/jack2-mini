@@ -18,6 +18,8 @@
 
 inline constexpr char kDirSeparator = '/';
 #include <cstdint>
+#include <span>
+#include <string_view>
 
 #include "common/CompilerDeps.h"
 #include "common/Error.h"
@@ -32,13 +34,13 @@ struct SERVER_EXPORT Tools {
 
     static void killServer();
 
-    static std::int32_t mkDir(const char* path);
-    static const char* userDir();
-    static const char* serverDir(const char* serverName, char* serverDir);
-    static const char* defaultServerName();
-    static void cleanupFiles(const char* serverName);
+    static std::int32_t mkDir(std::string_view path);
+    static std::string_view userDir();
+    static void serverDir(std::string_view serverName, std::span<char> serverDir);
+    static std::string_view defaultServerName();
+    static void cleanupFiles(std::string_view serverName);
     static std::int32_t getTmpdir();
-    static void rewriteName(const char* name, char* newName);
+    static void rewriteName(std::string_view name, std::span<char> newName);
 
     static std::int32_t computationMicroSec(std::int32_t bufferSize)
     {
@@ -52,7 +54,7 @@ struct SERVER_EXPORT Tools {
     }
 };
 
-void buildClientPath(char* pathToSo, std::int32_t pathLen, const char* soName);
-void printLoadError(const char* soName);
+void buildClientPath(std::span<char> pathToSo, std::string_view soName);
+void printLoadError(std::string_view soName);
 
 } // namespace jackmini

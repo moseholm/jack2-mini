@@ -21,6 +21,9 @@
 #include "common/Time.h"
 #include "common/Types.h"
 
+#include <string>
+#include <string_view>
+
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -185,7 +188,7 @@ void endTime()
 
 void setClockSource(TimerType source)
 {
-    jack_log("Clock source : %s", clockSourceName(source));
+    jack_log("Clock source : %s", std::string(clockSourceName(source)).c_str());
 
     switch (source) {
     case kTimerHpet:
@@ -203,7 +206,7 @@ void setClockSource(TimerType source)
     }
 }
 
-const char* clockSourceName(TimerType source)
+std::string_view clockSourceName(TimerType source)
 {
     switch (source) {
     case kTimerHpet:
