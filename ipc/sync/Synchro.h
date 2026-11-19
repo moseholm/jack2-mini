@@ -20,6 +20,7 @@
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <string_view>
 
 namespace jackmini {
 
@@ -58,19 +59,19 @@ public:
     {
         return true;
     }
-    bool allocate(const char* name, const char* serverName, std::int32_t value)
+    bool allocate(std::string_view name, std::string_view serverName, std::int32_t value)
     {
         return true;
     }
-    bool connect(const char* name, const char* serverName)
+    bool connect(std::string_view name, std::string_view serverName)
     {
         return true;
     }
-    bool connectInput(const char* name, const char* serverName)
+    bool connectInput(std::string_view name, std::string_view serverName)
     {
         return true;
     }
-    bool connectOutput(const char* name, const char* serverName)
+    bool connectOutput(std::string_view name, std::string_view serverName)
     {
         return true;
     }
