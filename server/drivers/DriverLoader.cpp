@@ -181,7 +181,7 @@ std::vector<DriverDesc*> driversLoad()
 
     const char* driverDir;
     if ((driverDir = getenv("JACK_DRIVER_DIR")) == 0) {
-        driverDir = kAddonDir;
+        driverDir = kAddonDir.data();
     }
 
     // search through the driver_dir and add get descriptors
