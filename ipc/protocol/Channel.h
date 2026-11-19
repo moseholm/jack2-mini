@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace jackmini {
@@ -62,7 +63,7 @@ public:
     {
     }
 
-    virtual std::int32_t connect(const char* dir, const char* name, std::int32_t which) = 0;
+    virtual std::int32_t connect(std::string_view dir, std::string_view name, std::int32_t which) = 0;
     virtual std::int32_t close() = 0;
 };
 
@@ -79,7 +80,7 @@ public:
     virtual std::int32_t read(void* data, std::int32_t len) { return -1; }
     virtual std::int32_t write(void* data, std::int32_t len) { return -1; }
 
-    virtual std::int32_t connect(const char* dir, const char* name, std::int32_t which) { return -1; }
+    virtual std::int32_t connect(std::string_view dir, std::string_view name, std::int32_t which) { return -1; }
     virtual std::int32_t close() { return -1; }
 };
 

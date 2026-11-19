@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 #include "ipc/socket/Socket.h"
 #include "client/api/Error.hpp"
@@ -34,7 +35,7 @@ public:
     {
     }
 
-    Result<void> open(const char* serverName);
+    Result<void> open(std::string_view serverName);
     void close();
 
     void notify(std::int32_t refnum, std::int32_t notify, std::int32_t value);

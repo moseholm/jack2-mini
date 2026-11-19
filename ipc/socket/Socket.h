@@ -18,6 +18,8 @@
 
 #include <array>
 #include <cstdint>
+#include <span>
+#include <string_view>
 
 #include "ipc/protocol/Channel.h"
 
@@ -38,10 +40,10 @@ public:
     ClientSocket();
     ClientSocket(std::int32_t socket);
 
-    std::int32_t connect(const char* dir, const char* name, std::int32_t which);
-    std::int32_t close();
-    std::int32_t read(void* data, std::int32_t len);
-    std::int32_t write(void* data, std::int32_t len);
+    std::int32_t connect(std::string_view dir, std::string_view name, std::int32_t which) override;
+    std::int32_t close() override;
+    std::int32_t read(void* data, std::int32_t len) override;
+    std::int32_t write(void* data, std::int32_t len) override;
     std::int32_t readWithFds(void* data, std::int32_t len, std::vector<UniqueFd>& fds) override;
     std::int32_t writeWithFds(void* data, std::int32_t len, std::span<const std::int32_t> fds) override;
     std::int32_t getFd()
@@ -73,7 +75,7 @@ public:
     {
     }
 
-    std::int32_t bind(const char* dir, const char* name, std::int32_t which);
+    std::int32_t bind(std::string_view dir, std::string_view name, std::int32_t which);
     ClientSocket* accept();
     std::int32_t close();
     std::int32_t getFd()
