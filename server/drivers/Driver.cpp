@@ -18,6 +18,7 @@
 #include "server/drivers/Driver.h"
 #include "ipc/memory/ClientControl.h"
 #include "ipc/memory/EngineControl.h"
+#include "common/CString.h"
 #include "common/Error.h"
 #include "common/Globals.h"
 #include "ipc/memory/GraphManager.h"
@@ -43,7 +44,7 @@ Driver::Driver(const char* name, const char* alias, LockedEngine* engine, Synchr
 {
     assert(strlen(name) < kClientNameSize);
     m_synchroTable = table;
-    strcpy(m_aliasName.data(), alias);
+    copyCString(m_aliasName, alias);
     m_engine = engine;
     m_graphManager = nullptr;
     m_beginDateUst = 0;
@@ -98,7 +99,7 @@ std::int32_t Driver::open(NframesC bufferSize,
         jack_error("Client name = %s conflits with another running client", m_clientControl.m_name);
         return -1;
     }
-    strcpy(m_clientControl.m_name.data(), nameRes.data());
+    copyCString(m_clientControl.m_name, nameRes.data());
 
     if (!m_engine->registerDriver(m_clientControl.m_name.data(), &refnum, &m_engineControl, &m_graphManager, this, false)) {
         jack_error("Cannot allocate internal client for driver");
@@ -120,8 +121,8 @@ std::int32_t Driver::open(NframesC bufferSize,
     assert(strlen(captureDriverName) < kClientNameSize);
     assert(strlen(playbackDriverName) < kClientNameSize);
 
-    strcpy(m_captureDriverName.data(), captureDriverName);
-    strcpy(m_playbackDriverName.data(), playbackDriverName);
+    copyCString(m_captureDriverName, captureDriverName);
+    copyCString(m_playbackDriverName, playbackDriverName);
 
     m_engineControl->updateTimeOut();
 

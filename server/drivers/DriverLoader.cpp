@@ -171,7 +171,7 @@ static DriverDesc* loadDescriptor(const std::vector<DriverDesc*>& drivers, const
         }
     }
 
-    strncpy(descriptor->m_file.data(), filename.data(), kPathMax);
+    jackmini::copyCString(descriptor->m_file, filename.data());
     return descriptor;
 }
 
@@ -464,4 +464,4 @@ void jack_constraint_free(
 JACK_CONSTRAINT_COMPOSE_ENUM_IMPL(uint32, value.m_c = descr_ptr->m_value);
 JACK_CONSTRAINT_COMPOSE_ENUM_IMPL(sint32, value.m_c = descr_ptr->m_value);
 JACK_CONSTRAINT_COMPOSE_ENUM_IMPL(char, value.m_c = descr_ptr->m_value);
-JACK_CONSTRAINT_COMPOSE_ENUM_IMPL(str, strcpy(value.m_str.data(), descr_ptr->m_value));
+JACK_CONSTRAINT_COMPOSE_ENUM_IMPL(str, jackmini::copyCString(value.m_str, descr_ptr->m_value));
