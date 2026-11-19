@@ -24,6 +24,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <string_view>
 #include <thread>
 
 namespace jackmini {
@@ -65,7 +66,7 @@ public:
     {
     }
 
-    std::int32_t open(const char* name); // Open the Server/Client connection
+    std::int32_t open(std::string_view name); // Open the Server/Client connection
     // Uses a connected socket instead of connecting one: the tests attach one end of a socket pair.
     std::int32_t attach(std::int32_t fd);
     void close(); // Close the Server/Client connection

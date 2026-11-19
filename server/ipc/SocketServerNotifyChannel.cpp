@@ -24,7 +24,7 @@
 
 namespace jackmini {
 
-Result<void> SocketServerNotifyChannel::open(const char* serverName)
+Result<void> SocketServerNotifyChannel::open(std::string_view serverName)
 {
     if (m_requestSocket.connect(kServerDir, serverName, 0) < 0) {
         jack_error("Cannot connect to server socket");

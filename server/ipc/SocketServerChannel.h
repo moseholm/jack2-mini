@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 namespace jackmini {
@@ -58,7 +59,7 @@ public:
     SocketServerChannel();
     ~SocketServerChannel();
 
-    Result<void> open(const char* serverName, ServerCore* server); // Open the Server/Client connection
+    Result<void> open(std::string_view serverName, ServerCore* server); // Open the Server/Client connection
     void close(); // Close the Server/Client connection
 
     Result<void> start();

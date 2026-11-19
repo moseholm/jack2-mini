@@ -29,12 +29,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string_view>
 
 namespace jackmini {
 
-static void buildName(const char* clientName, char* res, const char* dir, std::int32_t which, std::int32_t size, bool promiscuous)
+static void buildName(std::string_view clientName, std::span<char> res, std::string_view dir, std::int32_t which, bool promiscuous)
 {
-    buildSocketName(clientName, dir, which, promiscuous, std::span<char>(res, static_cast<std::size_t>(size)));
+    buildSocketName(clientName, dir, which, promiscuous, res);
 }
 
 ClientSocket::ClientSocket()
@@ -86,7 +87,7 @@ void ClientSocket::setNonBlocking(bool onoff)
     }
 }
 
-std::int32_t ClientSocket::connect(const char* dir, const char* name, std::int32_t which) // A revoir : utilisation de "which"
+std::int32_t ClientSocket::connect(std::string_view dir, std::string_view name, std::int32_t which) // A revoir : utilisation de "which"
 {
     struct sockaddr_un addr;
 
@@ -96,7 +97,7 @@ std::int32_t ClientSocket::connect(const char* dir, const char* name, std::int32
     }
 
     addr.sun_family = AF_UNIX;
-    buildName(name, addr.sun_path, dir, which, sizeof(addr.sun_path), m_promiscuous);
+    buildName(name, std::span<char>(addr.sun_path), dir, which, m_promiscuous);
     jack_log("JackClientSocket::Connect : addr.sun_path %s", addr.sun_path);
 
     if (::connect(m_socket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
@@ -225,7 +226,7 @@ ServerSocket::ServerSocket()
     readPromiscuousConfig(m_promiscuous, m_promiscuousGid);
 }
 
-std::int32_t ServerSocket::bind(const char* dir, const char* name, std::int32_t which) // A revoir : utilisation de "which"
+std::int32_t ServerSocket::bind(std::string_view dir, std::string_view name, std::int32_t which) // A revoir : utilisation de "which"
 {
     struct sockaddr_un addr;
 
@@ -236,7 +237,7 @@ std::int32_t ServerSocket::bind(const char* dir, const char* name, std::int32_t 
 
     addr.sun_family = AF_UNIX;
     // Socket name has to be kept in fName to be "unlinked".
-    buildName(name, m_name.data(), dir, which, sizeof(addr.sun_path), m_promiscuous);
+    buildName(name, m_name, dir, which, m_promiscuous);
     copyCString(std::span<char>(addr.sun_path), m_name.data());
 
     jack_log("JackServerSocket::Bind : addr.sun_path %s", addr.sun_path);

@@ -25,9 +25,9 @@
 namespace jackmini {
 
 // Server to client
-std::int32_t SocketNotifyChannel::open(const char* name)
+std::int32_t SocketNotifyChannel::open(std::string_view name)
 {
-    jack_log("JackSocketNotifyChannel::Open name = %s", name);
+    jack_log("JackSocketNotifyChannel::Open name = %.*s", static_cast<int>(name.size()), name.data());
 
     // Connect to client listen socket
     if (m_notifySocket.connect(kClientDir, name, 0) < 0) {

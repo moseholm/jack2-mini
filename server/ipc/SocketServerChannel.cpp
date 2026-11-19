@@ -42,7 +42,7 @@ SocketServerChannel::~SocketServerChannel()
 {
 }
 
-Result<void> SocketServerChannel::open(const char* serverName, ServerCore* server)
+Result<void> SocketServerChannel::open(std::string_view serverName, ServerCore* server)
 {
     jack_log("JackSocketServerChannel::Open");
 
