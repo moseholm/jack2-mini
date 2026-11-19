@@ -56,8 +56,18 @@ the file is the reference for layout: run `clang-format -i` on the files you cha
 ## Callbacks and data
 
 - Callbacks are `std::move_only_function` with a typed signature, such as `bool(const Cycle&)`.
-- Buffers are `std::span`. Names are `std::string_view` where the caller keeps the storage.
+- Buffers are `std::span`. Names are `std::string_view` where the caller keeps the storage. When a name or buffer is optional, prefer an empty view if "unset" and "empty" mean the same thing, otherwise `std::optional<std::string_view>`; keep a pointer only when required by a C boundary.
+- Text that the callee stores or returns to the caller is `std::string` (or `Result<std::string>`). A `std::string_view` return must outlive every use of the view.
+- `std::string_view::data()` is not guaranteed to be null-terminated. When a view reaches a C or POSIX API, materialize a local `std::string` and pass `.c_str()`. The realtime cycle does not allocate, so such materialization belongs on control paths.
+- Byte buffers passed across interfaces are `std::span<std::byte>` / `std::span<const std::byte>`, not `void*` plus a length.
 - Atomics on shared fields use `std::atomic_ref` or `std::atomic` in the shared structures.
+
+## C-style string exceptions
+
+- `printf`-style format strings and varargs keep their C types.
+- `main(int, char*[])` and command-line parsing keep `char*`.
+- `extern "C"` entry points, C ABI callbacks, driver/module descriptors, and vendored C code keep C types.
+- Fixed-size text fields in shared-memory and wire/protocol structs remain `std::array<char, N>` (or the existing C form) so layout is unchanged; constructor parameters and accessors may still use `std::string_view`/`std::span<char>`.
 
 ## Realtime
 
