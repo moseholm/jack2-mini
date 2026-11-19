@@ -34,7 +34,6 @@
 #include <cerrno>
 #include <climits>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 
 #include "ipc/memory/FdSegment.h"
@@ -76,12 +75,6 @@ void dropRealtime(pthread_t thread)
     if (pthread_setschedparam(thread, SCHED_OTHER, &param) != 0) {
         jack_error("Cannot switch to normal scheduling priority(%s)", strerror(errno));
     }
-}
-
-std::string defaultServerName()
-{
-    const char* name = getenv("JACK_DEFAULT_SERVER");
-    return name ? name : kDefaultServerName;
 }
 
 // The bits of the options that the server reads when it checks a new client.
@@ -143,7 +136,7 @@ Result<std::unique_ptr<ClientSession>> ClientSession::open(std::string_view name
 Result<void> ClientSession::connectAndRegister(std::string_view nameView, const OpenOptions& options)
 {
     const std::string name(nameView);
-    m_serverName = options.m_serverName.empty() ? defaultServerName() : options.m_serverName;
+    m_serverName = options.m_serverName.empty() ? std::string(Tools::defaultServerName()) : options.m_serverName;
     const std::int32_t bits = optionBits(options);
 
     // A client never starts a server.  If the server is not there, opening fails.
