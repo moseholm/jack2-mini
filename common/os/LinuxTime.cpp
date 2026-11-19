@@ -23,7 +23,6 @@
 
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <cerrno>
@@ -77,13 +76,13 @@ public:
     {
         m_fd = ::open("/dev/hpet", O_RDONLY);
         if (m_fd < 0) {
-            jack_error("This system has no accessible HPET device (%s)", strerror(errno));
+            jack_error("This system has no accessible HPET device (%s)", std::strerror(errno));
             return false;
         }
 
         void* map = mmap(nullptr, kHpetMapSize, PROT_READ, MAP_SHARED, m_fd, 0);
         if (map == MAP_FAILED) {
-            jack_error("This system has no mappable HPET device (%s)", strerror(errno));
+            jack_error("This system has no mappable HPET device (%s)", std::strerror(errno));
             close(m_fd);
             m_fd = -1;
             return false;

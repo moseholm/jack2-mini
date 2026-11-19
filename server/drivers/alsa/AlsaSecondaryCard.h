@@ -16,11 +16,8 @@
 
 #pragma once
 
-#include "server/drivers/alsa/AlsaCardFailureSink.h"
 #include "server/drivers/alsa/AlsaControl.h"
 #include "server/drivers/alsa/AlsaDriftController.h"
-#include "server/drivers/alsa/AlsaRateConverter.h"
-#include "server/drivers/alsa/AlsaRingBuffer.h"
 #include "server/drivers/alsa/AlsaSecondaryConfig.h"
 #include "server/drivers/alsa/PcmSession.hpp"
 #include "common/os/Platform.h"
@@ -36,6 +33,9 @@
 
 namespace jackmini {
 
+class AlsaCardFailureSink;
+class AlsaRateConverter;
+class AlsaRingBuffer;
 class GraphManager;
 
 // \brief One secondary ALSA card.

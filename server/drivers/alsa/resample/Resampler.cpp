@@ -17,7 +17,7 @@
 #include "Resampler.h"
 #include "pipewire_resample_bridge.h"
 
-#include <string.h>
+#include <cstring>
 #include <cstdint>
 
 static constexpr std::int32_t kResampleDefaultQuality = 4;
@@ -98,7 +98,7 @@ ResamplerFactory* ResamplerFactory::find(const char* name)
     if (name == nullptr) {
         return nullptr;
     }
-    if (strcmp(name, pipewire.name()) == 0) {
+    if (std::strcmp(name, pipewire.name()) == 0) {
         return &pipewire;
     }
     return nullptr;

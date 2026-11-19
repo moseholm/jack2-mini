@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <stddef.h>
+#include <cstddef>
 #include <array>
 #include <atomic>
 #include <cstdint>

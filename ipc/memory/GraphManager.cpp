@@ -19,10 +19,9 @@
 #include "ipc/protocol/Constants.h"
 #include "common/Error.h"
 #include "common/Uuid.hpp"
-#include <assert.h>
+#include <cassert>
 #include <regex.h>
-#include <stdlib.h>
-#include <algorithm>
+#include <cstdlib>
 #include <array>
 #include <cstdint>
 
@@ -454,7 +453,7 @@ void GraphManager::getInputPorts(std::int32_t refnum, Int* res)
 {
     ConnectionManager* manager = writeNextStateStart();
     const Int* input = manager->getInputPorts(refnum);
-    memcpy(res, input, sizeof(Int) * kPortNumForClient);
+    std::memcpy(res, input, sizeof(Int) * kPortNumForClient);
     writeNextStateStop();
 }
 
@@ -462,7 +461,7 @@ void GraphManager::getOutputPorts(std::int32_t refnum, Int* res)
 {
     ConnectionManager* manager = writeNextStateStart();
     const Int* output = manager->getOutputPorts(refnum);
-    memcpy(res, output, sizeof(Int) * kPortNumForClient);
+    std::memcpy(res, output, sizeof(Int) * kPortNumForClient);
     writeNextStateStop();
 }
 
@@ -562,7 +561,7 @@ void GraphManager::getConnections(PortIdC portIndex, Int* res)
 {
     ConnectionManager* manager = writeNextStateStart();
     const Int* connections = manager->getConnections(portIndex);
-    memcpy(res, connections, sizeof(Int) * kConnectionNumForPort);
+    std::memcpy(res, connections, sizeof(Int) * kConnectionNumForPort);
     writeNextStateStop();
 }
 
@@ -780,7 +779,7 @@ void GraphManager::getConnectionsAux(ConnectionManager* manager, const char** re
     std::int32_t i;
 
     // Cleanup connection array
-    memset(res, 0, sizeof(char*) * kConnectionNumForPort);
+    std::memset(res, 0, sizeof(char*) * kConnectionNumForPort);
 
     for (i = 0; (i < kConnectionNumForPort) && ((index = connections[i]) != kEmpty); i++) {
         ServerPort* port = getPort(index);
@@ -821,7 +820,7 @@ const char** GraphManager::getConnections(PortIdC portIndex)
 void GraphManager::getPortsAux(const char** matchingPorts, const char* portNamePattern, const char* typeNamePattern, std::uint64_t flags)
 {
     // Cleanup port array
-    memset(matchingPorts, 0, sizeof(char*) * m_portMax);
+    std::memset(matchingPorts, 0, sizeof(char*) * m_portMax);
 
     std::int32_t matchCnt = 0;
     regex_t portRegex, typeRegex;
@@ -908,7 +907,7 @@ const char** GraphManager::getPorts(const char* portNamePattern, const char* typ
 void GraphManager::save(ConnectionManager* dst)
 {
     ConnectionManager* manager = writeNextStateStart();
-    memcpy(dst, manager, sizeof(ConnectionManager));
+    std::memcpy(dst, manager, sizeof(ConnectionManager));
     writeNextStateStop();
 }
 
@@ -916,7 +915,7 @@ void GraphManager::save(ConnectionManager* dst)
 void GraphManager::restore(ConnectionManager* src)
 {
     ConnectionManager* manager = writeNextStateStart();
-    memcpy(manager, src, sizeof(ConnectionManager));
+    std::memcpy(manager, src, sizeof(ConnectionManager));
     writeNextStateStop();
 }
 

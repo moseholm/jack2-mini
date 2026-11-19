@@ -23,13 +23,11 @@
 
 #include <array>
 #include <atomic>
-#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <string>
-#include <thread>
 
 using namespace jackmini;
 

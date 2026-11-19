@@ -14,13 +14,12 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-#include <assert.h>
-#include <ctype.h>
+#include "server/core/Engine.h"
+
+#include <cassert>
+#include <cctype>
 #include <array>
 #include <cstdint>
-#include <fstream>
-#include <iostream>
-#include <set>
 #include <span>
 
 #include "common/CString.h"
@@ -28,6 +27,8 @@
 #include "ipc/protocol/Channel.h"
 #include "ipc/memory/ClientControl.h"
 #include "ipc/memory/EngineControl.h"
+#include "ipc/memory/GraphManager.h"
+#include "ipc/memory/ShmMem.h"
 #include "common/Error.h"
 #include "server/core/ExternalClient.h"
 #include "common/Globals.h"
@@ -484,7 +485,7 @@ Result<void> Engine::clientCheck(const char* name, UuidC uuid, char* nameRes, st
 bool Engine::generateUniqueName(char* name)
 {
     std::int32_t tens, ones;
-    std::int32_t length = strlen(name);
+    std::int32_t length = std::strlen(name);
 
     if (length > kClientNameSize - 4) {
         jack_error("%s exists and is too long to make unique", name);
@@ -518,7 +519,7 @@ bool Engine::clientCheckName(const char* name)
 {
     for (std::int32_t i = 0; i < kClientNum; i++) {
         ClientInterface* client = m_clientTable[i];
-        if (client && (strcmp(client->getClientControl()->m_name.data(), name) == 0)) {
+        if (client && (std::strcmp(client->getClientControl()->m_name.data(), name) == 0)) {
             return true;
         }
     }
@@ -551,7 +552,7 @@ Result<std::int32_t> Engine::getClientPID(const char* name)
 {
     for (std::int32_t i = 0; i < kClientNum; i++) {
         ClientInterface* client = m_clientTable[i];
-        if (client && (strcmp(client->getClientControl()->m_name.data(), name) == 0)) {
+        if (client && (std::strcmp(client->getClientControl()->m_name.data(), name) == 0)) {
             return client->getClientControl()->m_pID;
         }
     }
@@ -563,7 +564,7 @@ Result<std::int32_t> Engine::getClientRefNum(const char* name)
 {
     for (std::int32_t i = 0; i < kClientNum; i++) {
         ClientInterface* client = m_clientTable[i];
-        if (client && (strcmp(client->getClientControl()->m_name.data(), name) == 0)) {
+        if (client && (std::strcmp(client->getClientControl()->m_name.data(), name) == 0)) {
             return client->getClientControl()->m_refNum;
         }
     }
@@ -901,7 +902,7 @@ Result<bool> Engine::checkPortsConnect(std::int32_t refnum, PortIdC src, PortIdC
     // jack_log("sum = %d", sum);
     if (sum == 0)
         return true;
-    char lmode = tolower(m_selfConnectMode);
+    char lmode = std::tolower(m_selfConnectMode);
     // jack_log("lmode = '%c'", lmode);
     if (sum == 2 && lmode == 'e')
         return true;
@@ -1059,7 +1060,7 @@ Result<void> Engine::getUUIDForClientName(const char* clientName, char* uuidRes)
     for (std::int32_t i = 0; i < kClientNum; i++) {
         ClientInterface* client = m_clientTable[i];
 
-        if (client && (strcmp(clientName, client->getClientControl()->m_name.data()) == 0)) {
+        if (client && (std::strcmp(clientName, client->getClientControl()->m_name.data()) == 0)) {
             jackmini::uuid::unparse(Uuid { client->getClientControl()->m_sessionID },
                 std::span<char>(uuidRes, kUuidStringSize));
             return { };

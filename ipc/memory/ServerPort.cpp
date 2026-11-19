@@ -19,10 +19,10 @@
 #include "common/CString.h"
 #include "common/Error.h"
 #include "ipc/memory/PortType.h"
-#include <assert.h>
+#include <cassert>
+#include <cstring>
 #include <array>
 #include <cstdint>
-#include <format>
 #include <span>
 #include <string_view>
 
@@ -201,7 +201,7 @@ const char* ServerPort::getShortName() const
 {
     // we know there is always a colon, because we put
     // it there ...
-    return strchr(m_name.data(), ':') + 1;
+    return std::strchr(m_name.data(), ':') + 1;
 }
 
 std::int32_t ServerPort::getFlags() const
@@ -217,7 +217,7 @@ const char* ServerPort::getType() const
 
 void ServerPort::setName(const char* newName)
 {
-    char* colon = strchr(m_name.data(), ':');
+    char* colon = std::strchr(m_name.data(), ':');
     std::int32_t len = sizeof(m_name) - ((std::int32_t)(colon - m_name.data())) - 2;
     copyCString(std::span<char>(colon + 1, len), newName);
 }
@@ -274,9 +274,9 @@ std::int32_t ServerPort::setAlias(const char* alias)
 
 std::int32_t ServerPort::unsetAlias(const char* alias)
 {
-    if (strcmp(m_alias1.data(), alias) == 0) {
+    if (std::strcmp(m_alias1.data(), alias) == 0) {
         m_alias1[0] = '\0';
-    } else if (strcmp(m_alias2.data(), alias) == 0) {
+    } else if (std::strcmp(m_alias2.data(), alias) == 0) {
         m_alias2[0] = '\0';
     } else {
         return -1;

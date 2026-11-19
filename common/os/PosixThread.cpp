@@ -19,7 +19,7 @@
 #include "common/Error.h"
 #include "common/Globals.h"
 #include "common/Time.h"
-#include <string.h> // for memset
+#include <cstring> // for memset
 #include <unistd.h> // for _POSIX_PRIORITY_SCHEDULING check
 #include <cstdint>
 
@@ -39,7 +39,7 @@ void* PosixThread::threadHandler(void* arg)
     std::int32_t err;
 
     if ((err = pthread_setcanceltype(obj->m_cancellation, nullptr)) != 0) {
-        jack_error("pthread_setcanceltype err = %s", strerror(err));
+        jack_error("pthread_setcanceltype err = %s", std::strerror(err));
     }
 
     // Signal creation thread when started with StartSync
@@ -250,7 +250,7 @@ std::int32_t PosixThread::acquireRealTimeImp(pthread_t thread, std::int32_t prio
     jack_error("Cannot use real-time scheduling (RR/%d)"
                " (%d: %s)",
         rtparam.sched_priority, res,
-        strerror(res));
+        std::strerror(res));
     return -1;
 }
 
@@ -272,7 +272,7 @@ std::int32_t PosixThread::dropRealTimeImp(pthread_t thread)
     rtparam.sched_priority = 0;
 
     if ((res = pthread_setschedparam(thread, SCHED_OTHER, &rtparam)) != 0) {
-        jack_error("Cannot switch to normal scheduling priority(%s)", strerror(errno));
+        jack_error("Cannot switch to normal scheduling priority(%s)", std::strerror(errno));
         return -1;
     }
     return 0;

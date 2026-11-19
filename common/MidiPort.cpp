@@ -19,8 +19,8 @@
 #include "common/MidiPort.h"
 #include "common/Error.h"
 #include "ipc/memory/PortType.h"
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 #include <array>
 #include <cstdint>
 
@@ -142,7 +142,7 @@ static void midiBufferMixdown(void* mixbuffer, void** srcBuffers, std::int32_t s
         if (!dest)
             break;
 
-        memcpy(dest, nextEvent->getData(nextBuf), nextEvent->m_size);
+        std::memcpy(dest, nextEvent->getData(nextBuf), nextEvent->m_size);
         mixIndex[nextBufIndex]++;
     }
     mix->m_lostEvents += eventCount - eventsDone;

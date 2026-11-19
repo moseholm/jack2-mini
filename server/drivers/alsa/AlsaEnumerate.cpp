@@ -21,7 +21,7 @@
 #include <cstdint>
 
 #include <alsa/asoundlib.h>
-#include <stdio.h>
+#include <cstdio>
 
 namespace jackmini {
 

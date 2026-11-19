@@ -27,8 +27,7 @@
 #include "common/SystemDeps.h"
 #include "common/Time.h"
 #include "common/Uuid.hpp"
-#include <assert.h>
-#include <math.h>
+#include <cassert>
 #include <array>
 #include <cstdint>
 
@@ -42,7 +41,7 @@ Driver::Driver(const char* name, const char* alias, LockedEngine* engine, Synchr
     , m_clientControl(name, jackmini::uuid::generateClient().value())
     , m_withMonitorPorts(false)
 {
-    assert(strlen(name) < kClientNameSize);
+    assert(std::strlen(name) < kClientNameSize);
     m_synchroTable = table;
     copyCString(m_aliasName, alias);
     m_engine = engine;
@@ -118,8 +117,8 @@ std::int32_t Driver::open(NframesC bufferSize,
     m_captureLatency = captureLatency;
     m_playbackLatency = playbackLatency;
 
-    assert(strlen(captureDriverName) < kClientNameSize);
-    assert(strlen(playbackDriverName) < kClientNameSize);
+    assert(std::strlen(captureDriverName) < kClientNameSize);
+    assert(std::strlen(playbackDriverName) < kClientNameSize);
 
     copyCString(m_captureDriverName, captureDriverName);
     copyCString(m_playbackDriverName, playbackDriverName);

@@ -22,9 +22,7 @@
 #include "common/CompilerDeps.h"
 #include "common/Exception.h"
 
-#include <assert.h>
 #include <pthread.h>
-#include <stdio.h>
 
 namespace jackmini {
 // \brief Mutex abstraction.

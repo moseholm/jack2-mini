@@ -15,8 +15,8 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "ipc/memory/PortType.h"
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 #include <array>
 
 namespace jackmini {
@@ -33,7 +33,7 @@ PortTypeIdC getPortTypeId(const char* portType)
     for (PortTypeIdC i = 0; i < gPORTTYPESMAX; ++i) {
         const PortType* type = gPortTypes[i];
         assert(type != nullptr);
-        if (strcmp(portType, type->m_name) == 0) {
+        if (std::strcmp(portType, type->m_name) == 0) {
             return i;
         }
     }

@@ -18,7 +18,6 @@
 
 #include "common/Error.h"
 
-#include <fcntl.h>
 #include <grp.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -70,12 +69,12 @@ std::int32_t setPromiscuousPerms(std::int32_t fd, const char* path, gid_t gid)
     // gid_t is unsigned, so the group is always changed here. A gid of -1 leaves the group as it is.
     const std::int32_t chownResult = (fd < 0) ? chown(path, -1, gid) : fchown(fd, -1, gid);
     if (chownResult < 0) {
-        jack_log("Cannot chgrp %s: %s. Falling back to permissive perms.", path, strerror(errno));
+        jack_log("Cannot chgrp %s: %s. Falling back to permissive perms.", path, std::strerror(errno));
     } else {
         mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
     }
     if (((fd < 0) ? chmod(path, mode) : fchmod(fd, mode)) < 0) {
-        jack_log("Cannot chmod %s: %s. Falling back to default (umask) perms.", path, strerror(errno));
+        jack_log("Cannot chmod %s: %s. Falling back to default (umask) perms.", path, std::strerror(errno));
         return -1;
     }
     return 0;

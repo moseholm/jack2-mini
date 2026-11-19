@@ -17,28 +17,22 @@
 
 #define __STDC_FORMAT_MACROS // For inttypes.h to work in C++
 
-#include <errno.h>
-#include <math.h>
-#include <memory.h>
-#include <signal.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/time.h>
-#include <sys/types.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <unistd.h>
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
-#include <iostream>
 #include <string_view>
 #include <thread>
 #include <utility>
 
 #include "server/drivers/alsa/AlsaDriver.h"
+#include "server/drivers/alsa/AlsaControlMonitor.h"
+#include "server/drivers/alsa/AlsaHotplug.h"
 #include "server/drivers/alsa/AlsaEnumerate.h"
 #include "common/CString.h"
 #include "ipc/memory/ClientControl.h"
@@ -454,7 +448,7 @@ char* getControlDeviceName(const char* deviceName)
         deviceName += 4;
     }
 
-    comma = strchr(deviceName, ',');
+    comma = std::strchr(deviceName, ',');
     if (comma == nullptr) {
         ctlName = strdup(deviceName);
         if (ctlName == nullptr) {
@@ -1235,7 +1229,7 @@ void AlsaDriver::clearOutputAux()
 {
     for (std::int32_t chn = 0; chn < m_playbackChannels; chn++) {
         DefaultAudioSampleC* buf = (DefaultAudioSampleC*)m_graphManager->getBuffer(m_playbackPortList[chn], m_engineControl->m_bufferSize);
-        memset(buf, 0, sizeof(DefaultAudioSampleC) * m_engineControl->m_bufferSize);
+        std::memset(buf, 0, sizeof(DefaultAudioSampleC) * m_engineControl->m_bufferSize);
     }
 }
 
@@ -1255,7 +1249,7 @@ void AlsaDriver::writeOutputAux(NframesC origNframes, const jackmini::alsa::Mapp
             // Monitor ports
             if (m_withMonitorPorts && m_graphManager->getConnectionsNum(m_monitorPortList[chn]) > 0) {
                 DefaultAudioSampleC* monbuf = (DefaultAudioSampleC*)m_graphManager->getBuffer(m_monitorPortList[chn], origNframes);
-                memcpy(monbuf + nwritten, buf + nwritten, mapped.m_frames * sizeof(DefaultAudioSampleC));
+                std::memcpy(monbuf + nwritten, buf + nwritten, mapped.m_frames * sizeof(DefaultAudioSampleC));
             }
         }
     }
@@ -1364,7 +1358,7 @@ ditherOpt(char c, DitherAlgorithm* dither)
         break;
 
     default:
-        fprintf(stderr, "ALSA driver: illegal dithering mode %c\n", c);
+        std::fprintf(stderr, "ALSA driver: illegal dithering mode %c\n", c);
         return -1;
     }
     return 0;
@@ -1476,7 +1470,7 @@ static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine*
 
         case 'C':
             capture = true;
-            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
+            if (std::strcmp(param.m_value.m_str.data(), "none") != 0) {
                 capturePcmName = strdup(param.m_value.m_str.data());
                 jack_log("capture device %s", capturePcmName);
             }
@@ -1484,7 +1478,7 @@ static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine*
 
         case 'P':
             playback = true;
-            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
+            if (std::strcmp(param.m_value.m_str.data(), "none") != 0) {
                 playbackPcmName = strdup(param.m_value.m_str.data());
                 jack_log("playback device %s", playbackPcmName);
             }
@@ -1496,7 +1490,7 @@ static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine*
             break;
 
         case 'd':
-            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
+            if (std::strcmp(param.m_value.m_str.data(), "none") != 0) {
                 playbackPcmName = strdup(param.m_value.m_str.data());
                 capturePcmName = strdup(param.m_value.m_str.data());
                 jack_log("playback device %s", playbackPcmName);
@@ -1564,7 +1558,7 @@ static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine*
             break;
 
         case 'Y':
-            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
+            if (std::strcmp(param.m_value.m_str.data(), "none") != 0) {
                 jackmini::AlsaSecondaryConfig config;
                 std::string error;
                 if (!jackmini::alsaSecondaryConfigParse(param.m_value.m_str.data(), &config, &error)) {
@@ -1577,7 +1571,7 @@ static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine*
 
         case 'Z':
             // The parameter holds one value, so a list is comma separated: "-Z PCH,NVidia".
-            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
+            if (std::strcmp(param.m_value.m_str.data(), "none") != 0) {
                 std::string_view list(param.m_value.m_str);
                 while (!list.empty()) {
                     const auto comma = list.find(',');
@@ -1594,7 +1588,7 @@ static jackmini::DriverClientInterface* initializeDriver(jackmini::LockedEngine*
             break;
 
         case 'K':
-            if (strcmp(param.m_value.m_str.data(), "none") != 0) {
+            if (std::strcmp(param.m_value.m_str.data(), "none") != 0) {
                 std::string error;
                 if (!jackmini::alsaSecondaryConfigLoadFile(param.m_value.m_str.data(), &secondaries, &error)) {
                     jack_error("%s", error.c_str());

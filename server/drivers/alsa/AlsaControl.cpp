@@ -19,16 +19,15 @@
 
 #include "ipc/protocol/Constants.h"
 
-#include <ctype.h>
-#include <errno.h>
+#include <cctype>
+#include <cerrno>
 #include <fcntl.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include <sys/file.h>
 #include <unistd.h>
 #include <array>
 #include <cstdint>
-#include <vector>
 
 namespace jackmini {
 
@@ -48,13 +47,13 @@ std::int32_t alsaControlLockCard(const std::string& ctlName)
     std::string file = std::string(kServerDir) + "/jack_alsa_";
     for (size_t i = 0; i < ctlName.size(); i++) {
         char c = ctlName[i];
-        file += (isalnum((unsigned char)c) ? c : '_');
+        file += (std::isalnum((unsigned char)c) ? c : '_');
     }
     file += ".lock";
 
     std::int32_t fd = open(file.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
     if (fd < 0) {
-        jack_error("cannot open card lock %s (%s)", file.c_str(), strerror(errno));
+        jack_error("cannot open card lock %s (%s)", file.c_str(), std::strerror(errno));
         return -1;
     }
     if (flock(fd, LOCK_EX | LOCK_NB) < 0) {

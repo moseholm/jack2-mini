@@ -19,7 +19,6 @@
 
 #include "common/CompilerDeps.h"
 #include "ipc/sync/Synchro.h"
-#include <stddef.h>
 #include <cstdint>
 
 namespace jackmini {

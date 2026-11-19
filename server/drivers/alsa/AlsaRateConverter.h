@@ -16,12 +16,11 @@
 
 #pragma once
 
-#include "server/drivers/alsa/resample/Resampler.h"
-
-#include <stddef.h>
 #include <cstdint>
 
 namespace jackmini {
+
+class Resampler;
 
 // \brief Streams planar float audio through a JackResampler.
 //

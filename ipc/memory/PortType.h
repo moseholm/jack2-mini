@@ -18,7 +18,7 @@
 
 #include "ipc/protocol/Constants.h"
 #include "common/Types.h"
-#include <stddef.h>
+#include <cstddef>
 #include <cstdint>
 
 namespace jackmini {

@@ -21,11 +21,11 @@
 #include "ipc/socket/Promiscuous.hpp"
 #include <fcntl.h>
 #include <linux/futex.h>
-#include <stdio.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 #include <sys/mman.h>
-#include <syscall.h>
 #include <climits>
-#include <cstddef>
+#include <cstring>
 #include <cstdint>
 #include <span>
 
@@ -137,12 +137,12 @@ bool LinuxFutex::allocate(const char* name, const char* serverName, std::int32_t
     jack_log("JackLinuxFutex::Allocate name = %s val = %ld", m_name, value);
 
     if ((m_sharedMem = shm_open(m_name.data(), O_CREAT | O_RDWR, 0777)) < 0) {
-        jack_error("Allocate: can't check in named futex name = %s err = %s", m_name, strerror(errno));
+        jack_error("Allocate: can't check in named futex name = %s err = %s", m_name, std::strerror(errno));
         return false;
     }
 
     if (ftruncate(m_sharedMem, sizeof(FutexData)) != 0) {
-        jack_error("Allocate: can't set shared memory size in named futex name = %s err = %s", m_name, strerror(errno));
+        jack_error("Allocate: can't set shared memory size in named futex name = %s err = %s", m_name, std::strerror(errno));
         return false;
     }
 
@@ -161,7 +161,7 @@ bool LinuxFutex::allocate(const char* name, const char* serverName, std::int32_t
     }
 
     if (futex == nullptr || futex == MAP_FAILED) {
-        jack_error("Allocate: can't check in named futex name = %s err = %s", m_name, strerror(errno));
+        jack_error("Allocate: can't check in named futex name = %s err = %s", m_name, std::strerror(errno));
         close(m_sharedMem);
         m_sharedMem = -1;
         shm_unlink(m_name.data());
@@ -192,7 +192,7 @@ bool LinuxFutex::connect(const char* name, const char* serverName)
     }
 
     if ((m_sharedMem = shm_open(m_name.data(), O_RDWR, 0)) < 0) {
-        jack_error("Connect: can't connect named futex name = %s err = %s", m_name, strerror(errno));
+        jack_error("Connect: can't connect named futex name = %s err = %s", m_name, std::strerror(errno));
         return false;
     }
 
@@ -204,7 +204,7 @@ bool LinuxFutex::connect(const char* name, const char* serverName)
     }
 
     if (futex == nullptr || futex == MAP_FAILED) {
-        jack_error("Connect: can't connect named futex name = %s err = %s", m_name, strerror(errno));
+        jack_error("Connect: can't connect named futex name = %s err = %s", m_name, std::strerror(errno));
         close(m_sharedMem);
         m_sharedMem = -1;
         return false;
@@ -213,7 +213,7 @@ bool LinuxFutex::connect(const char* name, const char* serverName)
     if (!m_private && futex->m_wasInternal) {
         const char* externalSync = getenv("JACK_INTERNAL_CLIENT_SYNC");
 
-        if (externalSync != nullptr && strstr(m_name.data(), externalSync) != nullptr && ++futex->m_externalCount == 1) {
+        if (externalSync != nullptr && std::strstr(m_name.data(), externalSync) != nullptr && ++futex->m_externalCount == 1) {
             jack_error("Note: client %s running as external client temporarily", m_name);
             futex->m_needsChange = true;
         }
@@ -242,7 +242,7 @@ bool LinuxFutex::disconnect()
     if (!m_private && m_futex->m_wasInternal) {
         const char* externalSync = getenv("JACK_INTERNAL_CLIENT_SYNC");
 
-        if (externalSync != nullptr && strstr(m_name.data(), externalSync) != nullptr && --m_futex->m_externalCount == 0) {
+        if (externalSync != nullptr && std::strstr(m_name.data(), externalSync) != nullptr && --m_futex->m_externalCount == 0) {
             jack_error("Note: client %s now running as internal client again", m_name);
             m_futex->m_needsChange = true;
         }

@@ -24,7 +24,6 @@
 #include <cstdio>
 #include <string_view>
 #include <thread>
-#include <vector>
 
 namespace {
 

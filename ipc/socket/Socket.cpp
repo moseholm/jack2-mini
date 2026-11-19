@@ -21,8 +21,11 @@
 #include "common/Error.h"
 #include "ipc/socket/Promiscuous.hpp"
 #include <fcntl.h>
-#include <pthread.h>
-#include <string.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <cstring>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -58,7 +61,7 @@ void ClientSocket::setReadTimeOut(std::int64_t sec)
     timout.tv_sec = sec;
     timout.tv_usec = 0;
     if (setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timout, sizeof(timeval)) < 0) {
-        jack_error("SetReadTimeOut fd = %ld err = %s", m_socket, strerror(errno));
+        jack_error("SetReadTimeOut fd = %ld err = %s", m_socket, std::strerror(errno));
     }
 }
 
@@ -68,7 +71,7 @@ void ClientSocket::setWriteTimeOut(std::int64_t sec)
     timout.tv_sec = sec;
     timout.tv_usec = 0;
     if (setsockopt(m_socket, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timout, sizeof(timeval)) < 0) {
-        jack_error("SetWriteTimeOut fd = %ld err = %s", m_socket, strerror(errno));
+        jack_error("SetWriteTimeOut fd = %ld err = %s", m_socket, std::strerror(errno));
     }
 }
 
@@ -78,7 +81,7 @@ void ClientSocket::setNonBlocking(bool onoff)
         m_nonBlocking = true;
         std::int64_t flags = 0;
         if (fcntl(m_socket, F_SETFL, flags | O_NONBLOCK) < 0) {
-            jack_error("SetNonBlocking fd = %ld err = %s", m_socket, strerror(errno));
+            jack_error("SetNonBlocking fd = %ld err = %s", m_socket, std::strerror(errno));
         }
     }
 }
@@ -88,7 +91,7 @@ std::int32_t ClientSocket::connect(const char* dir, const char* name, std::int32
     struct sockaddr_un addr;
 
     if ((m_socket = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
-        jack_error("Cannot create socket err = %s", strerror(errno));
+        jack_error("Cannot create socket err = %s", std::strerror(errno));
         return -1;
     }
 
@@ -98,7 +101,7 @@ std::int32_t ClientSocket::connect(const char* dir, const char* name, std::int32
 
     if (::connect(m_socket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         // The caller reports the failure; a server that is not running is an ordinary answer.
-        jack_log("JackClientSocket::Connect failed err = %s", strerror(errno));
+        jack_log("JackClientSocket::Connect failed err = %s", std::strerror(errno));
         ::close(m_socket);
         m_socket = -1;
         return -1;
@@ -132,7 +135,7 @@ std::int32_t ClientSocket::read(void* data, std::int32_t len)
                 if (m_nonBlocking) {
                     jack_log("JackClientSocket::Read time out on non-blocking socket fd = %d", m_socket);
                     // For a non blocking socket, a read failure is not considered as an error
-                    memset(data, 0, len);
+                    std::memset(data, 0, len);
                     return 0;
                 }
                 jack_error("JackClientSocket::Read time out on blocking socket fd = %d", m_socket);
@@ -142,7 +145,7 @@ std::int32_t ClientSocket::read(void* data, std::int32_t len)
                 // aborted reading due to shutdown
                 return kRequestErrAborted;
             }
-            jack_error("Cannot read socket fd = %d err = %s", m_socket, strerror(errno));
+            jack_error("Cannot read socket fd = %d err = %s", m_socket, std::strerror(errno));
             return -1;
         }
         udata += res;
@@ -173,7 +176,7 @@ std::int32_t ClientSocket::write(void* data, std::int32_t len)
                 // aborted reading due to shutdown
                 return kRequestErrAborted;
             }
-            jack_error("Cannot write socket fd = %ld err = %s", m_socket, strerror(errno));
+            jack_error("Cannot write socket fd = %ld err = %s", m_socket, std::strerror(errno));
             return -1;
         }
         udata += res;
@@ -227,7 +230,7 @@ std::int32_t ServerSocket::bind(const char* dir, const char* name, std::int32_t 
     struct sockaddr_un addr;
 
     if ((m_socket = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
-        jack_error("Cannot create server socket err = %s", strerror(errno));
+        jack_error("Cannot create server socket err = %s", std::strerror(errno));
         return -1;
     }
 
@@ -240,12 +243,12 @@ std::int32_t ServerSocket::bind(const char* dir, const char* name, std::int32_t 
     unlink(m_name.data()); // Security...
 
     if (::bind(m_socket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        jack_error("Cannot bind server to socket err = %s", strerror(errno));
+        jack_error("Cannot bind server to socket err = %s", std::strerror(errno));
         goto error;
     }
 
     if (listen(m_socket, 100) < 0) {
-        jack_error("Cannot enable listen on server socket err = %s", strerror(errno));
+        jack_error("Cannot enable listen on server socket err = %s", std::strerror(errno));
         goto error;
     }
 
@@ -270,7 +273,7 @@ ClientSocket* ServerSocket::accept()
 
     std::int32_t fd = ::accept(m_socket, (struct sockaddr*)&clientAddr, &clientAddrlen);
     if (fd < 0) {
-        jack_error("Cannot accept new connection err = %s", strerror(errno));
+        jack_error("Cannot accept new connection err = %s", std::strerror(errno));
         return 0;
     } else {
         return new ClientSocket(fd);

@@ -27,10 +27,9 @@
 #include "resample/Resampler.h"
 #include "resample/pipewire_resample_bridge.h"
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
 #include <array>
 #include <cstdint>
 #include <vector>
@@ -45,7 +44,7 @@ static std::int32_t gChecks = 0;
         gChecks++;                                                     \
         if (!(cond)) {                                                 \
             gFailures++;                                               \
-            printf("  FAILED %s:%d: %s\n", __FILE__, __LINE__, #cond); \
+            std::printf("  FAILED %s:%d: %s\n", __FILE__, __LINE__, #cond); \
         }                                                              \
     } while (0)
 
@@ -67,7 +66,7 @@ public:
         std::uint32_t n = (*inLen < *outLen) ? *inLen : *outLen;
         // Only the first two channels are used by these tests.
         for (std::int32_t c = 0; c < 2; c++) {
-            memcpy(dst[c], src[c], sizeof(float) * n);
+            std::memcpy(dst[c], src[c], sizeof(float) * n);
         }
         *inLen = n;
         *outLen = n;
@@ -78,7 +77,7 @@ public:
 
 static void testConfigDefaults()
 {
-    printf("config: defaults and a full specification\n");
+    std::printf("config: defaults and a full specification\n");
     AlsaSecondaryConfig c;
     std::string err;
     CHECK(alsaSecondaryConfigParse("name=usb1;device=hw:1;mode=capture;channels=4;rate=44100", &c, &err));
@@ -105,7 +104,7 @@ static void testConfigDefaults()
 
 static void testConfigErrors()
 {
-    printf("config: rejected specifications\n");
+    std::printf("config: rejected specifications\n");
     AlsaSecondaryConfig c;
     std::string err;
     CHECK(!alsaSecondaryConfigParse("device=hw:1;mode=bogus", &c, &err));
@@ -122,7 +121,7 @@ static void testConfigErrors()
 
 static void testConfigClock()
 {
-    printf("config: clock=async and clock=sync\n");
+    std::printf("config: clock=async and clock=sync\n");
     AlsaSecondaryConfig c;
     std::string err;
     CHECK(alsaSecondaryConfigParse("device=hw:1;clock=sync", &c, &err));
@@ -133,7 +132,7 @@ static void testConfigClock()
 
 static void testConfigFormat()
 {
-    printf("config: format=float|s32|s16|auto\n");
+    std::printf("config: format=float|s32|s16|auto\n");
     AlsaSecondaryConfig c;
     std::string err;
     CHECK(alsaSecondaryConfigParse("device=hw:1", &c, &err));
@@ -147,7 +146,7 @@ static void testConfigFormat()
 
 static void testConfigResampler()
 {
-    printf("config: resampler=<name>\n");
+    std::printf("config: resampler=<name>\n");
     AlsaSecondaryConfig c;
     std::string err;
     CHECK(alsaSecondaryConfigParse("device=hw:1", &c, &err));
@@ -159,20 +158,20 @@ static void testConfigResampler()
 
 static void testConfigFile()
 {
-    printf("config: file with comments and an error line\n");
+    std::printf("config: file with comments and an error line\n");
     const char* good = "/tmp/jack_alsa_unit_good.conf";
     const char* bad = "/tmp/jack_alsa_unit_bad.conf";
-    FILE* f = fopen(good, "w");
-    fprintf(f, "# two cards\n\nname=a;device=hw:1;mode=capture\n  name=b;device=hw:2  # trailing\n");
-    fclose(f);
+    FILE* f = std::fopen(good, "w");
+    std::fprintf(f, "# two cards\n\nname=a;device=hw:1;mode=capture\n  name=b;device=hw:2  # trailing\n");
+    std::fclose(f);
     std::vector<AlsaSecondaryConfig> cards;
     std::string err;
     CHECK(alsaSecondaryConfigLoadFile(good, &cards, &err));
     CHECK(cards.size() == 2);
 
-    f = fopen(bad, "w");
-    fprintf(f, "name=a;device=hw:1\nname=b;device=hw:2;mode=nonsense\n");
-    fclose(f);
+    f = std::fopen(bad, "w");
+    std::fprintf(f, "name=a;device=hw:1\nname=b;device=hw:2;mode=nonsense\n");
+    std::fclose(f);
     cards.clear();
     CHECK(!alsaSecondaryConfigLoadFile(bad, &cards, &err));
     CHECK(err.find(":2:") != std::string::npos); // names the line
@@ -182,7 +181,7 @@ static void testConfigFile()
 
 static void testRing()
 {
-    printf("ring: wrap-around, overflow and underflow\n");
+    std::printf("ring: wrap-around, overflow and underflow\n");
     AlsaRingBuffer ring(2, 8);
     std::array<std::array<float, 5>, 2> a;
     std::array<std::array<float, 6>, 2> b;
@@ -222,7 +221,7 @@ static void testRing()
 
 static void testConverterDI()
 {
-    printf("converter: injected resampler is used\n");
+    std::printf("converter: injected resampler is used\n");
     PassThroughResampler* fake = new PassThroughResampler();
     AlsaRateConverter conv(fake, 2, 1024);
     CHECK(conv.isValid());
@@ -236,12 +235,12 @@ static void testConverterDI()
     CHECK(conv.convert(in.data(), 4, out.data(), 4) == 4);
     CHECK(o0[0] == 1 && o0[3] == 4 && o1[2] == 7);
     conv.setRate(1.25);
-    CHECK(fabs(fake->m_rate - 1.25) < 1e-12);
+    CHECK(std::fabs(fake->m_rate - 1.25) < 1e-12);
 }
 
 static void testResamplerFactories()
 {
-    printf("resampler: only pipewire is built in\n");
+    std::printf("resampler: only pipewire is built in\n");
     CHECK(ResamplerFactory::find("pipewire") != nullptr);
     CHECK(ResamplerFactory::defaultFactory() == ResamplerFactory::find("pipewire"));
     CHECK(ResamplerFactory::find("linear") == nullptr);
@@ -258,8 +257,8 @@ static void testResamplerFactories()
     CHECK(pw != nullptr);
     if (pw != nullptr) {
         const char* kernel = jack_pw_resampler_kernel_name(pw);
-        printf("resampler: selected '%s' kernel\n", kernel);
-        bool known = strcmp(kernel, "full_c") == 0 || strcmp(kernel, "inter_c") == 0 || strcmp(kernel, "full_sse") == 0 || strcmp(kernel, "inter_sse") == 0 || strcmp(kernel, "full_avx2") == 0 || strcmp(kernel, "inter_avx2") == 0 || strcmp(kernel, "full_neon") == 0 || strcmp(kernel, "inter_neon") == 0;
+        std::printf("resampler: selected '%s' kernel\n", kernel);
+        bool known = std::strcmp(kernel, "full_c") == 0 || std::strcmp(kernel, "inter_c") == 0 || std::strcmp(kernel, "full_sse") == 0 || std::strcmp(kernel, "inter_sse") == 0 || std::strcmp(kernel, "full_avx2") == 0 || std::strcmp(kernel, "inter_avx2") == 0 || std::strcmp(kernel, "full_neon") == 0 || std::strcmp(kernel, "inter_neon") == 0;
         CHECK(known);
         jack_pw_resampler_free(pw);
     }
@@ -267,7 +266,7 @@ static void testResamplerFactories()
 
 static void testSlotTable()
 {
-    printf("slots: fixed table, full and free, RT-readable\n");
+    std::printf("slots: fixed table, full and free, RT-readable\n");
     typedef AlsaSlotTable<std::int32_t, 3> Table;
     Table table;
     std::int32_t a = 1, b = 2, c = 3, d = 4;
@@ -292,7 +291,7 @@ static void testSlotTable()
 
 static void testPcmDeviceNumber()
 {
-    printf("naming: device numbers from PCM names\n");
+    std::printf("naming: device numbers from PCM names\n");
     CHECK(alsaPcmDeviceNumber("hw:2,3") == 3);
     CHECK(alsaPcmDeviceNumber("hw:1,7") == 7);
     CHECK(alsaPcmDeviceNumber("hw:CARD=NVidia,DEV=8") == 8);
@@ -302,7 +301,7 @@ static void testPcmDeviceNumber()
 
 static void testCardDiff()
 {
-    printf("reconcile: which cards to retire and add\n");
+    std::printf("reconcile: which cards to retire and add\n");
     std::vector<std::string> cur, want;
     AlsaCardChanges c = alsaDiffCards(cur, want);
     CHECK(c.m_retire.empty() && c.m_add.empty());
@@ -334,7 +333,7 @@ static void testCardDiff()
 
 static void testCardExcluded()
 {
-    printf("exclude-card: ids are matched without case\n");
+    std::printf("exclude-card: ids are matched without case\n");
     std::vector<std::string> none;
     std::vector<std::string> one;
     one.push_back("Loopback");
@@ -348,7 +347,7 @@ static void testCardExcluded()
 
 static void testPrimaryById()
 {
-    printf("primary: named by ALSA id, not by number\n");
+    std::printf("primary: named by ALSA id, not by number\n");
     CHECK(alsaPcmNameIsById("hw:CARD=PCH"));
     CHECK(alsaPcmNameIsById("hw:CARD=PCH,DEV=0"));
     CHECK(alsaPcmNameIsById("hw:PCH,0"));
@@ -364,7 +363,7 @@ static void testPrimaryById()
 
 static void testConverterRates()
 {
-    printf("converter: 44.1 kHz capture and 48 kHz playback keep exact counts\n");
+    std::printf("converter: 44.1 kHz capture and 48 kHz playback keep exact counts\n");
     const std::uint32_t period = 512;
     ResamplerParams p = { 2, 44100, 48000, -1 };
     AlsaRateConverter cap(ResamplerFactory::defaultFactory()->create(p), 2, 8192);
@@ -411,7 +410,7 @@ static void testConverterRates()
         }
     }
     double ratio = (double)outTotal / (double)inTotal;
-    CHECK(fabs(ratio - 44100.0 / 48000.0) < 1e-3);
+    CHECK(std::fabs(ratio - 44100.0 / 48000.0) < 1e-3);
 }
 
 // Drives a capture ring with a card running `drift` faster than the primary,
@@ -452,7 +451,7 @@ static void simulateCapture(double drift, double* finalCorrection, double* meanF
         conv.convert(needBuf.data(), need, out.data(), primary);
 
         if (cycle >= 2000) {
-            errorSum += fabs(fill - target);
+            errorSum += std::fabs(fill - target);
             samples++;
         }
     }
@@ -467,24 +466,24 @@ static void simulateCapture(double drift, double* finalCorrection, double* meanF
 
 static void testDriftController()
 {
-    printf("drift: the correction follows the card's clock\n");
+    std::printf("drift: the correction follows the card's clock\n");
     std::array<const double, 3> drifts = { 0.0, 300e-6, -300e-6 };
     for (std::int32_t i = 0; i < 3; i++) {
         double correction = 0, error = 0;
         simulateCapture(drifts[i], &correction, &error);
         // The correction must cancel the drift, and the buffer must stay on target.
-        CHECK(fabs(correction + drifts[i]) < 20e-6);
+        CHECK(std::fabs(correction + drifts[i]) < 20e-6);
         CHECK(error < 5.0);
     }
 }
 
 static void testDriftLimits()
 {
-    printf("drift: the correction is clamped and slew limited\n");
+    std::printf("drift: the correction is clamped and slew limited\n");
     AlsaDriftController c;
     double rate = c.update(100000.0, 0.0, 470.0); // huge error
-    CHECK(fabs(rate - 1.0) <= 1000e-6 + 1e-12);
-    CHECK(fabs(c.correction()) <= 20e-6 + 1e-12); // one slew step at most
+    CHECK(std::fabs(rate - 1.0) <= 1000e-6 + 1e-12);
+    CHECK(std::fabs(c.correction()) <= 20e-6 + 1e-12); // one slew step at most
     c.reset();
     CHECK(c.correction() == 0.0);
 }
@@ -509,6 +508,6 @@ int main()
     testDriftController();
     testDriftLimits();
 
-    printf("%d checks, %d failed\n", gChecks, gFailures);
+    std::printf("%d checks, %d failed\n", gChecks, gFailures);
     return gFailures == 0 ? 0 : 1;
 }

@@ -22,12 +22,9 @@
 
 #include "server/drivers/Memops.h"
 #include <endian.h>
-#include <limits.h>
-#include <math.h>
-#include <memory.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <climits>
+#include <cmath>
+#include <cstring>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -975,7 +972,7 @@ void sampleMoveD24SSs(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t ns
         vst1q_s32(z.data(), converted);
 
         for (i = 0; i != 4; ++i) {
-            memcpy(dst, ((std::byte*)(z.data() + i)) + 1, 3);
+            std::memcpy(dst, ((std::byte*)(z.data() + i)) + 1, 3);
             dst += dstSkip;
         }
         src += 4;
@@ -1028,7 +1025,7 @@ void sampleMoveD24SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsa
 #endif
 
         for (i = 0; i != 4; ++i) {
-            memcpy(dst, z.data() + i, 3);
+            std::memcpy(dst, z.data() + i, 3);
             dst += dstSkip;
         }
 
@@ -1045,7 +1042,7 @@ void sampleMoveD24SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsa
         vst1q_s32(z.data(), converted);
 
         for (i = 0; i != 4; ++i) {
-            memcpy(dst, z.data() + i, 3);
+            std::memcpy(dst, z.data() + i, 3);
             dst += dstSkip;
         }
         src += 4;
@@ -1058,9 +1055,9 @@ void sampleMoveD24SS(std::byte* dst, DefaultAudioSampleC* src, std::uint64_t nsa
     while (nsamples--) {
         float24(*src, z);
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        memcpy(dst, &z, 3);
+        std::memcpy(dst, &z, 3);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        memcpy(dst, (std::byte*)&z + 1, 3);
+        std::memcpy(dst, (std::byte*)&z + 1, 3);
 #endif
         dst += dstSkip;
         src++;
@@ -1075,20 +1072,20 @@ void sampleMoveDSS24s(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t ns
     // we shift 8 to the right by dividing by 256.0 -> no sign extra handling
     const float32x4_t vscaling = vdupq_n_f32(scaling / 256.0);
     std::array<std::int32_t, 4> x;
-    memset(x.data(), 0, sizeof(x));
+    std::memset(x.data(), 0, sizeof(x));
     std::uint64_t unrolled = nsamples / 4;
     while (unrolled--) {
 #if __BYTE_ORDER == __BIG_ENDIAN // ARM big endian??
         // right aligned / inverse sequence below -> *256
-        memcpy(((std::byte*)&x[0]) + 1, src, 3);
-        memcpy(((std::byte*)&x[1]) + 1, src + srcSkip, 3);
-        memcpy(((std::byte*)&x[2]) + 1, src + 2 * srcSkip, 3);
-        memcpy(((std::byte*)&x[3]) + 1, src + 3 * srcSkip, 3);
+        std::memcpy(((std::byte*)&x[0]) + 1, src, 3);
+        std::memcpy(((std::byte*)&x[1]) + 1, src + srcSkip, 3);
+        std::memcpy(((std::byte*)&x[2]) + 1, src + 2 * srcSkip, 3);
+        std::memcpy(((std::byte*)&x[3]) + 1, src + 3 * srcSkip, 3);
 #else
-        memcpy(&x[0], src, 3);
-        memcpy(&x[1], src + srcSkip, 3);
-        memcpy(&x[2], src + 2 * srcSkip, 3);
-        memcpy(&x[3], src + 3 * srcSkip, 3);
+        std::memcpy(&x[0], src, 3);
+        std::memcpy(&x[1], src + srcSkip, 3);
+        std::memcpy(&x[2], src + 2 * srcSkip, 3);
+        std::memcpy(&x[3], src + 3 * srcSkip, 3);
 #endif
         src += 4 * srcSkip;
 
@@ -1142,10 +1139,10 @@ void sampleMoveDSS24(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsa
     while (nsamples >= 4) {
         std::int32_t x0, x1, x2, x3;
 
-        memcpy((std::byte*)&x0 + 1, src, 3);
-        memcpy((std::byte*)&x1 + 1, src + srcSkip, 3);
-        memcpy((std::byte*)&x2 + 1, src + 2 * srcSkip, 3);
-        memcpy((std::byte*)&x3 + 1, src + 3 * srcSkip, 3);
+        std::memcpy((std::byte*)&x0 + 1, src, 3);
+        std::memcpy((std::byte*)&x1 + 1, src + srcSkip, 3);
+        std::memcpy((std::byte*)&x2 + 1, src + 2 * srcSkip, 3);
+        std::memcpy((std::byte*)&x3 + 1, src + 3 * srcSkip, 3);
         src += 4 * srcSkip;
 
         const __m128i blockI = _mm_set_epi32(x3, x2, x1, x0);
@@ -1160,20 +1157,20 @@ void sampleMoveDSS24(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsa
     // we shift 8 to the right by dividing by 256.0 -> no sign extra handling
     const float32x4_t vscaling = vdupq_n_f32(scaling / 256.0);
     std::array<std::int32_t, 4> x;
-    memset(x.data(), 0, sizeof(x));
+    std::memset(x.data(), 0, sizeof(x));
     std::uint64_t unrolled = nsamples / 4;
     while (unrolled--) {
 #if __BYTE_ORDER == __BIG_ENDIAN // ARM big endian??
         // left aligned -> *256
-        memcpy(&x[0], src, 3);
-        memcpy(&x[1], src + srcSkip, 3);
-        memcpy(&x[2], src + 2 * srcSkip, 3);
-        memcpy(&x[3], src + 3 * srcSkip, 3);
+        std::memcpy(&x[0], src, 3);
+        std::memcpy(&x[1], src + srcSkip, 3);
+        std::memcpy(&x[2], src + 2 * srcSkip, 3);
+        std::memcpy(&x[3], src + 3 * srcSkip, 3);
 #else
-        memcpy(((std::byte*)&x[0]) + 1, src, 3);
-        memcpy(((std::byte*)&x[1]) + 1, src + srcSkip, 3);
-        memcpy(((std::byte*)&x[2]) + 1, src + 2 * srcSkip, 3);
-        memcpy(((std::byte*)&x[3]) + 1, src + 3 * srcSkip, 3);
+        std::memcpy(((std::byte*)&x[0]) + 1, src, 3);
+        std::memcpy(((std::byte*)&x[1]) + 1, src + srcSkip, 3);
+        std::memcpy(((std::byte*)&x[2]) + 1, src + 2 * srcSkip, 3);
+        std::memcpy(((std::byte*)&x[3]) + 1, src + 3 * srcSkip, 3);
 #endif
         src += 4 * srcSkip;
 
@@ -1189,9 +1186,9 @@ void sampleMoveDSS24(DefaultAudioSampleC* dst, std::byte* src, std::uint64_t nsa
     while (nsamples--) {
         std::int32_t x;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        memcpy((std::byte*)&x + 1, src, 3);
+        std::memcpy((std::byte*)&x + 1, src, 3);
 #elif __BYTE_ORDER == __BIG_ENDIAN
-        memcpy(&x, src, 3);
+        std::memcpy(&x, src, 3);
 #endif
         x >>= 8;
         *dst = x * scaling;
@@ -1549,7 +1546,7 @@ void memsetInterleave(std::byte* dst, std::byte val, std::uint64_t bytes,
         break;
     default:
         while (bytes) {
-            memset(dst, std::to_integer<std::int32_t>(val), unitBytes);
+            std::memset(dst, std::to_integer<std::int32_t>(val), unitBytes);
             dst += skipBytes;
             bytes -= unitBytes;
         }
@@ -1565,7 +1562,7 @@ void memsetInterleave(std::byte* dst, std::byte val, std::uint64_t bytes,
 
 void memcpyFake(std::byte* dst, std::byte* src, std::uint64_t srcBytes, std::uint64_t foo, std::uint64_t bar)
 {
-    memcpy(dst, src, srcBytes);
+    std::memcpy(dst, src, srcBytes);
 }
 
 void memcpyInterleaveD16S16(std::byte* dst, std::byte* src, std::uint64_t srcBytes,
@@ -1583,7 +1580,7 @@ void memcpyInterleaveD24S24(std::byte* dst, std::byte* src, std::uint64_t srcByt
     std::uint64_t dstSkipBytes, std::uint64_t srcSkipBytes)
 {
     while (srcBytes) {
-        memcpy(dst, src, 3);
+        std::memcpy(dst, src, 3);
         dst += dstSkipBytes;
         src += srcSkipBytes;
         srcBytes -= 3;

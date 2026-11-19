@@ -18,7 +18,7 @@
 
 #include "ipc/memory/Atomic.h"
 #include "common/CompilerDeps.h"
-#include <string.h> // for memcpy
+#include <cstring> // for memcpy
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -143,7 +143,7 @@ protected:
             nextIndexOf(newVal) = curIndexOf(newVal); // Invalidate next index
         } while (!cAS(longVal(oldVal), longVal(newVal), (UInt32*)&m_counter));
         if (needCopy)
-            memcpy(&m_state[nextIndex], &m_state[curIndex], sizeof(T));
+            std::memcpy(&m_state[nextIndex], &m_state[curIndex], sizeof(T));
         return nextIndex;
     }
 

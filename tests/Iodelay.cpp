@@ -26,7 +26,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 
 using namespace jackmini;
 
@@ -145,10 +144,10 @@ std::int32_t mtdmResolve(struct MTDM* self)
         p = atan2(f->m_y2, f->m_x2) / (2 * M_PI) - d * f->m_f / f0;
         if (self->m_inv)
             p += 0.5;
-        p -= floor(p);
+        p -= std::floor(p);
         p *= 2;
-        k = (std::int32_t)(floor(p + 0.5));
-        e = fabs(p - k);
+        k = (std::int32_t)(std::floor(p + 0.5));
+        e = std::fabs(p - k);
         if (e > self->m_err)
             self->m_err = e;
         if (e > 0.4)
@@ -185,14 +184,14 @@ void latencyCb(LatencyMode mode)
         range = gJackHandle->portLatency(gJackCapt, mode);
         if ((range.m_min != gCaptureLatency.m_min) || (range.m_max != gCaptureLatency.m_max)) {
             gCaptureLatency = range;
-            printf("new capture latency: [%d, %d]\n", range.m_min, range.m_max);
+            std::printf("new capture latency: [%d, %d]\n", range.m_min, range.m_max);
         }
     } else {
         gJackHandle->setPortLatency(gJackCapt, mode, range);
         range = gJackHandle->portLatency(gJackPlay, mode);
         if ((range.m_min != gPlaybackLatency.m_min) || (range.m_max != gPlaybackLatency.m_max)) {
             gPlaybackLatency = range;
-            printf("new playback latency: [%d, %d]\n", range.m_min, range.m_max);
+            std::printf("new playback latency: [%d, %d]\n", range.m_min, range.m_max);
         }
     }
 }
@@ -214,8 +213,8 @@ int main(std::int32_t ac, char* av[])
 
     auto opened = Client::open("jack_delay", options);
     if (!opened) {
-        fprintf(stderr, "Can't connect to Jack, is the server running ?\n");
-        exit(1);
+        std::fprintf(stderr, "Can't connect to Jack, is the server running ?\n");
+        std::exit(1);
     }
     Client client = std::move(*opened);
     gJackHandle = &client;
@@ -228,7 +227,7 @@ int main(std::int32_t ac, char* av[])
     auto capt = client.registerPort("in", PortType::kAudio, PortFlags::kInput);
     auto play = client.registerPort("out", PortType::kAudio, PortFlags::kOutput);
     if (!capt || !play) {
-        fprintf(stderr, "Can't register the ports\n");
+        std::fprintf(stderr, "Can't register the ports\n");
         return 1;
     }
     gJackCapt = *capt;
@@ -237,7 +236,7 @@ int main(std::int32_t ac, char* av[])
     t = 1000.0f / client.sampleRate();
 
     if (!client.activate().has_value()) {
-        fprintf(stderr, "Can't activate Jack");
+        std::fprintf(stderr, "Can't activate Jack");
         return 1;
     }
 
@@ -245,11 +244,11 @@ int main(std::int32_t ac, char* av[])
     const std::uint64_t cyclesPerReport = std::max<std::uint64_t>(1, client.sampleRate() / 4 / client.bufferSize());
     while (1) {
         if (!waitCycles(gCycles, cyclesPerReport)) {
-            fprintf(stderr, "The server stopped running cycles\n");
+            std::fprintf(stderr, "The server stopped running cycles\n");
             return 1;
         }
         if (mtdmResolve(gMtdm) < 0)
-            printf("Signal below threshold...\n");
+            std::printf("Signal below threshold...\n");
         else {
             FrameCount systemicLatency;
 
@@ -257,15 +256,15 @@ int main(std::int32_t ac, char* av[])
                 mtdmInvert(gMtdm);
                 mtdmResolve(gMtdm);
             }
-            systemicLatency = (FrameCount)floor(gMtdm->m_del - (gCaptureLatency.m_max + gPlaybackLatency.m_max));
+            systemicLatency = (FrameCount)std::floor(gMtdm->m_del - (gCaptureLatency.m_max + gPlaybackLatency.m_max));
 
-            printf("%10.3lf frames %10.3lf ms total roundtrip latency\n\textra loopback latency: %u frames\n\tuse %u for the backend arguments -I and -O", gMtdm->m_del, gMtdm->m_del * t,
+            std::printf("%10.3lf frames %10.3lf ms total roundtrip latency\n\textra loopback latency: %u frames\n\tuse %u for the backend arguments -I and -O", gMtdm->m_del, gMtdm->m_del * t,
                 systemicLatency, systemicLatency / 2);
             if (gMtdm->m_err > 0.2)
-                printf(" ??");
+                std::printf(" ??");
             if (gMtdm->m_inv)
-                printf(" Inv");
-            printf("\n");
+                std::printf(" Inv");
+            std::printf("\n");
         }
     }
 

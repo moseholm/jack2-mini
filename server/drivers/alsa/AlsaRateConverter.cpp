@@ -15,9 +15,10 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "server/drivers/alsa/AlsaRateConverter.h"
+#include "server/drivers/alsa/resample/Resampler.h"
 #include "common/Error.h"
 
-#include <string.h>
+#include <cstring>
 #include <algorithm>
 #include <cstdint>
 
@@ -28,7 +29,7 @@ static float** allocChannels(std::int32_t channels, std::uint32_t frames)
     float** buffers = new float*[channels];
     for (std::int32_t i = 0; i < channels; i++) {
         buffers[i] = new float[frames];
-        memset(buffers[i], 0, sizeof(float) * frames);
+        std::memset(buffers[i], 0, sizeof(float) * frames);
     }
     return buffers;
 }
@@ -122,7 +123,7 @@ std::uint32_t AlsaRateConverter::convert(const float* const* in, std::uint32_t i
         inFrames = m_capacity - m_inCount;
     }
     for (std::int32_t c = 0; c < m_channels; c++) {
-        memcpy(m_in[c] + m_inCount, in[c], sizeof(float) * inFrames);
+        std::memcpy(m_in[c] + m_inCount, in[c], sizeof(float) * inFrames);
     }
     m_inCount += inFrames;
 
@@ -140,7 +141,7 @@ std::uint32_t AlsaRateConverter::convert(const float* const* in, std::uint32_t i
 
         if (inLen > 0 && inLen < m_inCount) {
             for (std::int32_t c = 0; c < m_channels; c++) {
-                memmove(m_in[c], m_in[c] + inLen, sizeof(float) * (m_inCount - inLen));
+                std::memmove(m_in[c], m_in[c] + inLen, sizeof(float) * (m_inCount - inLen));
             }
         }
         m_inCount -= inLen;
@@ -149,11 +150,11 @@ std::uint32_t AlsaRateConverter::convert(const float* const* in, std::uint32_t i
 
     std::uint32_t produced = std::min(m_outCount, outFrames);
     for (std::int32_t c = 0; c < m_channels; c++) {
-        memcpy(out[c], m_out[c], sizeof(float) * produced);
+        std::memcpy(out[c], m_out[c], sizeof(float) * produced);
     }
     if (produced < m_outCount) {
         for (std::int32_t c = 0; c < m_channels; c++) {
-            memmove(m_out[c], m_out[c] + produced, sizeof(float) * (m_outCount - produced));
+            std::memmove(m_out[c], m_out[c] + produced, sizeof(float) * (m_outCount - produced));
         }
     }
     m_outCount -= produced;

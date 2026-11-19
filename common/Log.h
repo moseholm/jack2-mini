@@ -23,7 +23,7 @@
 #pragma once
 
 #include "common/CompilerDeps.h"
-#include <stdarg.h>
+#include <cstdarg>
 #include <cstdint>
 
 

@@ -21,7 +21,7 @@
 
 #include "common/Error.h"
 #include "common/os/Platform.h"
-#include <assert.h>
+#include <cassert>
 
 
 namespace jackmini {

@@ -20,7 +20,6 @@
 #include "common/CompilerDeps.h"
 #include "ipc/protocol/Constants.h"
 #include "common/Types.h"
-#include <stddef.h>
 #include <array>
 #include <cstddef>
 #include <cstdint>

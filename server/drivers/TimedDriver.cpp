@@ -19,10 +19,7 @@
 #include "common/CompilerDeps.h"
 #include "ipc/memory/EngineControl.h"
 #include "common/Time.h"
-#include <math.h>
-#include <unistd.h>
 #include <cstdint>
-#include <iostream>
 
 namespace jackmini {
 

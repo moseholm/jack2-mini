@@ -22,7 +22,6 @@
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
-#include <cstring>
 #include <limits>
 #include <vector>
 
