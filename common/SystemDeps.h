@@ -20,6 +20,8 @@
 #include <cinttypes>
 #include <pthread.h>
 #include <csignal>
+#include <string>
+#include <string_view>
 #include <sys/types.h>
 
 #ifndef UINT32_MAX
@@ -27,9 +29,9 @@
 #endif
 
 using DriverHandle = void*;
-inline DriverHandle loadDriverModule(const char* name)
+inline DriverHandle loadDriverModule(std::string_view name)
 {
-    return dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+    return dlopen(std::string(name).c_str(), RTLD_NOW | RTLD_GLOBAL);
 }
 
 inline std::int32_t unloadDriverModule(DriverHandle handle)
@@ -37,14 +39,14 @@ inline std::int32_t unloadDriverModule(DriverHandle handle)
     return dlclose(handle);
 }
 
-inline void* getDriverProc(DriverHandle handle, const char* name)
+inline void* getDriverProc(DriverHandle handle, std::string_view name)
 {
-    return dlsym(handle, name);
+    return dlsym(handle, std::string(name).c_str());
 }
 
-inline DriverHandle loadJackModule(const char* name)
+inline DriverHandle loadJackModule(std::string_view name)
 {
-    return dlopen(name, RTLD_NOW | RTLD_LOCAL);
+    return dlopen(std::string(name).c_str(), RTLD_NOW | RTLD_LOCAL);
 }
 
 inline std::int32_t unloadJackModule(DriverHandle handle)
@@ -52,7 +54,7 @@ inline std::int32_t unloadJackModule(DriverHandle handle)
     return dlclose(handle);
 }
 
-inline void* getJackProc(DriverHandle handle, const char* name)
+inline void* getJackProc(DriverHandle handle, std::string_view name)
 {
-    return dlsym(handle, name);
+    return dlsym(handle, std::string(name).c_str());
 }

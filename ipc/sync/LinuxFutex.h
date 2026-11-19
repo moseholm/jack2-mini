@@ -20,6 +20,8 @@
 #include "common/CompilerDeps.h"
 #include "ipc/sync/Synchro.h"
 #include <cstdint>
+#include <span>
+#include <string_view>
 
 namespace jackmini {
 
@@ -49,7 +51,7 @@ private:
     std::int32_t m_promiscuousGid;
 
 protected:
-    void buildName(const char* name, const char* serverName, char* res, std::int32_t size);
+    void buildName(std::string_view name, std::string_view serverName, std::span<char> res);
 
 public:
     LinuxFutex();
@@ -59,10 +61,10 @@ public:
     bool wait();
     bool timedWait(std::int64_t usec);
 
-    bool allocate(const char* name, const char* serverName, std::int32_t value, bool internal = false);
-    bool connect(const char* name, const char* serverName);
-    bool connectInput(const char* name, const char* serverName);
-    bool connectOutput(const char* name, const char* serverName);
+    bool allocate(std::string_view name, std::string_view serverName, std::int32_t value, bool internal = false);
+    bool connect(std::string_view name, std::string_view serverName);
+    bool connectInput(std::string_view name, std::string_view serverName);
+    bool connectOutput(std::string_view name, std::string_view serverName);
     bool disconnect();
     void destroy();
 

@@ -24,11 +24,11 @@
 
 namespace jackmini {
 
-BasePosixMutex::BasePosixMutex(const char* name)
+BasePosixMutex::BasePosixMutex(std::string_view /*name*/)
     : m_owner(0)
 {
     std::int32_t res = pthread_mutex_init(&m_mutex, nullptr);
-    ThrowIf(res != 0, Exception("JackBasePosixMutex: could not init the mutex"));
+    ThrowIf(res != 0, Exception(std::string_view("JackBasePosixMutex: could not init the mutex")));
 }
 
 BasePosixMutex::~BasePosixMutex()
@@ -87,17 +87,17 @@ bool BasePosixMutex::unlock()
     }
 }
 
-PosixMutex::PosixMutex(const char* name)
+PosixMutex::PosixMutex(std::string_view /*name*/)
 {
     // Use recursive mutex
     pthread_mutexattr_t mutexAttr;
     std::int32_t res;
     res = pthread_mutexattr_init(&mutexAttr);
-    ThrowIf(res != 0, Exception("JackBasePosixMutex: could not init the mutex attribute"));
+    ThrowIf(res != 0, Exception(std::string_view("JackBasePosixMutex: could not init the mutex attribute")));
     res = pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
-    ThrowIf(res != 0, Exception("JackBasePosixMutex: could not settype the mutex"));
+    ThrowIf(res != 0, Exception(std::string_view("JackBasePosixMutex: could not settype the mutex")));
     res = pthread_mutex_init(&m_mutex, &mutexAttr);
-    ThrowIf(res != 0, Exception("JackBasePosixMutex: could not init the mutex"));
+    ThrowIf(res != 0, Exception(std::string_view("JackBasePosixMutex: could not init the mutex")));
     pthread_mutexattr_destroy(&mutexAttr);
 }
 

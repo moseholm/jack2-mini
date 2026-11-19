@@ -20,6 +20,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace jackmini {
 
@@ -34,16 +35,16 @@ namespace jackmini {
 class SERVER_EXPORT Exception : public std::runtime_error {
 
 public:
-    Exception(const std::string& msg)
+    explicit Exception(std::string_view msg)
+        : std::runtime_error(std::string(msg))
+    {
+    }
+    explicit Exception(const std::string& msg)
         : std::runtime_error(msg)
     {
     }
-    Exception(char* msg)
-        : std::runtime_error(msg)
-    {
-    }
-    Exception(const char* msg)
-        : std::runtime_error(msg)
+    explicit Exception(const char* msg)
+        : std::runtime_error(msg != nullptr ? msg : "")
     {
     }
 
@@ -60,20 +61,10 @@ public:
 class SERVER_EXPORT TemporaryException : public Exception {
 
 public:
-    TemporaryException(const std::string& msg)
-        : Exception(msg)
-    {
-    }
-    TemporaryException(char* msg)
-        : Exception(msg)
-    {
-    }
-    TemporaryException(const char* msg)
-        : Exception(msg)
-    {
-    }
+    using Exception::Exception;
+
     TemporaryException()
-        : Exception("")
+        : Exception(std::string_view{})
     {
     }
 };
@@ -83,20 +74,10 @@ public:
 class SERVER_EXPORT QuitException : public Exception {
 
 public:
-    QuitException(const std::string& msg)
-        : Exception(msg)
-    {
-    }
-    QuitException(char* msg)
-        : Exception(msg)
-    {
-    }
-    QuitException(const char* msg)
-        : Exception(msg)
-    {
-    }
+    using Exception::Exception;
+
     QuitException()
-        : Exception("")
+        : Exception(std::string_view{})
     {
     }
 };

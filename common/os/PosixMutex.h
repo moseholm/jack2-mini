@@ -23,6 +23,7 @@
 #include "common/Exception.h"
 
 #include <pthread.h>
+#include <string_view>
 
 namespace jackmini {
 // \brief Mutex abstraction.
@@ -34,7 +35,7 @@ protected:
     pthread_t m_owner;
 
 public:
-    BasePosixMutex(const char* name = nullptr);
+    BasePosixMutex(std::string_view name = {});
     virtual ~BasePosixMutex();
 
     bool lock();
@@ -47,7 +48,7 @@ protected:
     pthread_mutex_t m_mutex;
 
 public:
-    PosixMutex(const char* name = nullptr);
+    PosixMutex(std::string_view name = {});
     virtual ~PosixMutex();
 
     bool lock();

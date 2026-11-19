@@ -22,6 +22,7 @@
 #include "common/Error.h"
 #include "common/os/Platform.h"
 #include <cassert>
+#include <string_view>
 
 
 namespace jackmini {
@@ -32,7 +33,7 @@ class LockAble {
 protected:
     Mutex m_mutex;
 
-    LockAble(const char* name = nullptr)
+    LockAble(std::string_view name = {})
         : m_mutex(name)
     {
     }

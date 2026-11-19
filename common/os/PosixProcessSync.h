@@ -19,6 +19,7 @@
 #include "common/Exception.h"
 #include "common/os/PosixMutex.h"
 #include <cstdint>
+#include <string_view>
 
 namespace jackmini {
 
@@ -30,11 +31,11 @@ private:
     pthread_cond_t m_cond; // Condition variable
 
 public:
-    PosixProcessSync(const char* name = nullptr)
+    PosixProcessSync(std::string_view /*name*/ = {})
         : BasePosixMutex()
     {
         std::int32_t res = pthread_cond_init(&m_cond, nullptr);
-        ThrowIf(res != 0, Exception("JackBasePosixMutex: could not init the cond variable"));
+        ThrowIf(res != 0, Exception(std::string_view("JackBasePosixMutex: could not init the cond variable")));
     }
 
     virtual ~PosixProcessSync()

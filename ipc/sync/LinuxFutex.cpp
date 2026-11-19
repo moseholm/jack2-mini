@@ -44,15 +44,15 @@ LinuxFutex::LinuxFutex()
     readPromiscuousConfig(m_promiscuous, m_promiscuousGid);
 }
 
-void LinuxFutex::buildName(const char* clientName, const char* serverName, char* res, std::int32_t size)
+void LinuxFutex::buildName(std::string_view clientName, std::string_view serverName, std::span<char> res)
 {
-    buildFutexName(clientName, serverName, m_promiscuous, std::span<char>(res, static_cast<std::size_t>(size)));
+    buildFutexName(clientName, serverName, m_promiscuous, res);
 }
 
 bool LinuxFutex::signal()
 {
     if (!m_futex) {
-        jack_error("JackLinuxFutex::Signal name = %s already deallocated!!", m_name);
+        jack_error("JackLinuxFutex::Signal name = %s already deallocated!!", m_name.data());
         return false;
     }
 
@@ -78,7 +78,7 @@ bool LinuxFutex::signalAll()
 bool LinuxFutex::wait()
 {
     if (!m_futex) {
-        jack_error("JackLinuxFutex::Wait name = %s already deallocated!!", m_name);
+        jack_error("JackLinuxFutex::Wait name = %s already deallocated!!", m_name.data());
         return false;
     }
 
@@ -105,7 +105,7 @@ bool LinuxFutex::timedWait(std::int64_t usec)
         return wait();
 
     if (!m_futex) {
-        jack_error("JackLinuxFutex::TimedWait name = %s already deallocated!!", m_name);
+        jack_error("JackLinuxFutex::TimedWait name = %s already deallocated!!", m_name.data());
         return false;
     }
 
@@ -131,18 +131,18 @@ bool LinuxFutex::timedWait(std::int64_t usec)
 }
 
 // Server side : publish the futex in the global namespace
-bool LinuxFutex::allocate(const char* name, const char* serverName, std::int32_t value, bool internal)
+bool LinuxFutex::allocate(std::string_view name, std::string_view serverName, std::int32_t value, bool internal)
 {
-    buildName(name, serverName, m_name.data(), sizeof(m_name));
-    jack_log("JackLinuxFutex::Allocate name = %s val = %ld", m_name, value);
+    buildName(name, serverName, m_name);
+    jack_log("JackLinuxFutex::Allocate name = %s val = %ld", m_name.data(), static_cast<long>(value));
 
     if ((m_sharedMem = shm_open(m_name.data(), O_CREAT | O_RDWR, 0777)) < 0) {
-        jack_error("Allocate: can't check in named futex name = %s err = %s", m_name, std::strerror(errno));
+        jack_error("Allocate: can't check in named futex name = %s err = %s", m_name.data(), std::strerror(errno));
         return false;
     }
 
     if (ftruncate(m_sharedMem, sizeof(FutexData)) != 0) {
-        jack_error("Allocate: can't set shared memory size in named futex name = %s err = %s", m_name, std::strerror(errno));
+        jack_error("Allocate: can't set shared memory size in named futex name = %s err = %s", m_name.data(), std::strerror(errno));
         return false;
     }
 
@@ -161,7 +161,7 @@ bool LinuxFutex::allocate(const char* name, const char* serverName, std::int32_t
     }
 
     if (futex == nullptr || futex == MAP_FAILED) {
-        jack_error("Allocate: can't check in named futex name = %s err = %s", m_name, std::strerror(errno));
+        jack_error("Allocate: can't check in named futex name = %s err = %s", m_name.data(), std::strerror(errno));
         close(m_sharedMem);
         m_sharedMem = -1;
         shm_unlink(m_name.data());
@@ -180,19 +180,19 @@ bool LinuxFutex::allocate(const char* name, const char* serverName, std::int32_t
 }
 
 // Client side : get the published futex from server
-bool LinuxFutex::connect(const char* name, const char* serverName)
+bool LinuxFutex::connect(std::string_view name, std::string_view serverName)
 {
-    buildName(name, serverName, m_name.data(), sizeof(m_name));
-    jack_log("JackLinuxFutex::Connect name = %s", m_name);
+    buildName(name, serverName, m_name);
+    jack_log("JackLinuxFutex::Connect name = %s", m_name.data());
 
     // Temporary...
     if (m_futex) {
-        jack_log("Already connected name = %s", name);
+        jack_log("Already connected name = %.*s", static_cast<int>(name.size()), name.data());
         return true;
     }
 
     if ((m_sharedMem = shm_open(m_name.data(), O_RDWR, 0)) < 0) {
-        jack_error("Connect: can't connect named futex name = %s err = %s", m_name, std::strerror(errno));
+        jack_error("Connect: can't connect named futex name = %s err = %s", m_name.data(), std::strerror(errno));
         return false;
     }
 
@@ -204,7 +204,7 @@ bool LinuxFutex::connect(const char* name, const char* serverName)
     }
 
     if (futex == nullptr || futex == MAP_FAILED) {
-        jack_error("Connect: can't connect named futex name = %s err = %s", m_name, std::strerror(errno));
+        jack_error("Connect: can't connect named futex name = %s err = %s", m_name.data(), std::strerror(errno));
         close(m_sharedMem);
         m_sharedMem = -1;
         return false;
@@ -214,7 +214,7 @@ bool LinuxFutex::connect(const char* name, const char* serverName)
         const char* externalSync = getenv("JACK_INTERNAL_CLIENT_SYNC");
 
         if (externalSync != nullptr && std::strstr(m_name.data(), externalSync) != nullptr && ++futex->m_externalCount == 1) {
-            jack_error("Note: client %s running as external client temporarily", m_name);
+            jack_error("Note: client %s running as external client temporarily", m_name.data());
             futex->m_needsChange = true;
         }
     }
@@ -223,12 +223,12 @@ bool LinuxFutex::connect(const char* name, const char* serverName)
     return true;
 }
 
-bool LinuxFutex::connectInput(const char* name, const char* serverName)
+bool LinuxFutex::connectInput(std::string_view name, std::string_view serverName)
 {
     return connect(name, serverName);
 }
 
-bool LinuxFutex::connectOutput(const char* name, const char* serverName)
+bool LinuxFutex::connectOutput(std::string_view name, std::string_view serverName)
 {
     return connect(name, serverName);
 }
@@ -243,7 +243,7 @@ bool LinuxFutex::disconnect()
         const char* externalSync = getenv("JACK_INTERNAL_CLIENT_SYNC");
 
         if (externalSync != nullptr && std::strstr(m_name.data(), externalSync) != nullptr && --m_futex->m_externalCount == 0) {
-            jack_error("Note: client %s now running as internal client again", m_name);
+            jack_error("Note: client %s now running as internal client again", m_name.data());
             m_futex->m_needsChange = true;
         }
     }
