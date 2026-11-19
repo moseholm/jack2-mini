@@ -19,11 +19,13 @@
 // through the real message code.  The malformed and version-mismatch cases go through the real request decoder, which
 // refuses them before it needs the engine, so the decoder runs without a server.
 
+#include "ipc/IpcName.h"
 #include "ipc/protocol/Message.h"
 #include "ipc/protocol/Notification.h"
 #include "ipc/protocol/Request.h"
 #include "server/ipc/RequestDecoder.h"
 #include "ipc/socket/Socket.h"
+#include "common/Tools.h"
 
 #include <sys/socket.h>
 #include <unistd.h>
@@ -346,10 +348,28 @@ void testSynchronousNotification()
     CHECK(back.m_result == 0);
 }
 
+// The global names are part of the client/server handshake: keep their exact format.
+void testIpcNames()
+{
+    const std::string uid = std::to_string(Tools::getUID());
+    std::array<char, 256> name {};
+
+    buildSocketName("client/one", "/tmp", 3, false, name);
+    CHECK(std::strcmp(name.data(), ("/tmp/jack_client_one_" + uid + "_3").c_str()) == 0);
+    buildSocketName("client/one", "/tmp", 3, true, name);
+    CHECK(std::strcmp(name.data(), "/tmp/jack_client_one_3") == 0);
+
+    buildFutexName("client/one", "myserver", false, name);
+    CHECK(std::strcmp(name.data(), ("jack_sem." + uid + "_myserver_client_one").c_str()) == 0);
+    buildFutexName("client/one", "myserver", true, name);
+    CHECK(std::strcmp(name.data(), "jack_sem.myserver_client_one") == 0);
+}
+
 } // namespace
 
 int main()
 {
+    testIpcNames();
     testRequestsGetTheirReplies();
     testMalformedRequestIsRefused();
     testVersionMismatchIsRefused();
