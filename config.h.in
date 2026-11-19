@@ -1,13 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 inline constexpr bool kHaveAlsa = true;
 
 inline constexpr std::int32_t kClientNum = @JACK_MAX_CLIENTS@;
 inline constexpr std::int32_t kPortNumForClient = @JACK_PORTS_PER_APPLICATION@;
-inline constexpr const char* kAddonDir = "@JACK_ADDON_DIR@";
-inline constexpr const char* kLocation = "@JACK_LOCATION@";
+inline constexpr std::string_view kAddonDir = "@JACK_ADDON_DIR@";
+inline constexpr std::string_view kLocation = "@JACK_LOCATION@";
 inline constexpr bool kJackmp = true;
 #define JACK_VERSION "@JACK_VERSION@"
 
