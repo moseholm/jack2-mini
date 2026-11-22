@@ -10,7 +10,7 @@ The redesign of the ALSA driver (Plan B, S8) must perform at least as well as th
 - 12 CPUs. Sound card for the ALSA rows: BEHRINGER UMC404HD 192k (USB, `hw:CARD=U192k`). The two internal
   cards (PCH, NVidia) are excluded with `-Z`.
 - The ALSA syscall and allocation counts were taken later, with PipeWire stopped, one server at a time, after the
-  churn fix of `53a5b288` (see [alsa-redesign.md](../archive/alsa-redesign.md)).
+  churn fix of `53a5b288` (see [alsa-redesign.md](../../archive/alsa-redesign.md)).
 
 ## Method
 
@@ -102,4 +102,4 @@ The dummy rows were not re-measured. The ALSA driver is the path this redesign c
 
 The same method on the code at `f38b6e2c`, with the `RelWithDebInfo` build: the raw output is in `s10/`
 (`latency-*`, `allocs-*`, `syscalls-*`). The summary, the sanitizer results and the one outlier are in
-[quality and validation](../developer/architecture/08-quality-and-validation.md).
+[quality and validation](../../developer/architecture/08-quality-and-validation.md).
