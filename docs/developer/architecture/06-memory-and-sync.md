@@ -38,7 +38,7 @@ sequenceDiagram
 | Descriptor passing | `SCM_RIGHTS`, at most 8 descriptors per message | [FdSegment.cpp](../../../ipc/memory/FdSegment.cpp#L38) |
 | Descriptors in `ClientOpen` reply | exactly 3, in order: engine control, graph, client control | [Request.h](../../../ipc/protocol/Request.h#L384) |
 | Client mapping | `mmap(PROT_READ | PROT_WRITE, MAP_SHARED)`; `mlock` where possible | [FdSegment.cpp](../../../ipc/memory/FdSegment.cpp#L148) |
-| Maximum audio frames per port buffer | 8192 (`kBufferSizeMax`) | [Constants.h](../../../ipc/protocol/Constants.h#L29) |
+| Maximum audio frames per port buffer | 8192 (`kBufferSizeMax`) | [Constants.h](../../../ipc/protocol/Constants.h#L28) |
 
 ## Graph segment layout
 
@@ -106,7 +106,7 @@ sequenceDiagram
 | State part | Written by | Copied? | Source |
 |---|---|---|---|
 | Connections, port lists, matrix, configured input counts, inactive flags | Control path only | Yes, copy-on-write | [ConnectionManager.h](../../../ipc/memory/ConnectionManager.h#L374) |
-| Live activation counts | RT thread | No; separate `m_activation[]` | [GraphManager.h](../../../ipc/memory/GraphManager.h#L43) |
+| Live activation counts | RT thread | No; separate `m_activation[]` | [GraphManager.h](../../../ipc/memory/GraphManager.h#L45) |
 | Client timing and UUIDs | Control and RT at defined points | No | [GraphManager.h](../../../ipc/memory/GraphManager.h#L45) |
 
 ## Futex wait and wake
@@ -159,7 +159,7 @@ flowchart LR
     SW --> After
 ```
 
-*Source: [Engine.cpp](../../../server/core/Engine.cpp#L794),
+*Source: [Engine.cpp](../../../server/core/Engine.cpp#L795),
 [GraphManager.cpp](../../../ipc/memory/GraphManager.cpp#L578),
 [ConnectionManager.h](../../../ipc/memory/ConnectionManager.h#L381),
 [GraphManager.cpp](../../../ipc/memory/GraphManager.cpp#L204),
