@@ -21,7 +21,7 @@ the file is the reference for layout: run `clang-format -i` on the files you cha
   the one UUID type and its helpers are in `common/Uuid.hpp`, and the byte ring buffer is replaced by `RingBuffer<T>` in
   `client/api/Ringbuffer.hpp`. The driver descriptor still has a C entry point, but that is a module ABI, not a client
   API. The logging functions `jack_error`, `jack_info` and `jack_log` keep their names as internal helpers; the
-  `jack_slist_*` helpers are gone. The public C++ surface is listed in `docs/design/client-api.md`.
+  `jack_slist_*` helpers are gone. The public C++ surface is listed in `docs/reference/client-api.md`.
 
 ## Types and syntax
 

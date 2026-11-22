@@ -1,8 +1,11 @@
 # ALSA redesign (Plan B, S8)
 
+> **Historical document.** Kept for design history. Paths, type names and statuses below reflect the state at the
+> time of writing and may no longer match the code. The current guide starts at [the docs index](../README.md).
+
 Status: done. The cycle core, the libasound backend, the session and the adapters are in place,
 `alsa_driver.c` is gone, the MIDI backends are removed, and the final measurement is in
-`perf-baseline/README.md` ("After the ALSA redesign"). Plan A is done.
+[perf-baseline/README.md](../measurements/perf-baseline/README.md) ("After the ALSA redesign"). Plan A is done.
 
 ## What is there now
 

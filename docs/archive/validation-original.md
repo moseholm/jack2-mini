@@ -1,8 +1,13 @@
 # Validation (plan S10)
 
+> **Historical document.** This records the S10 validation run. Suite counts and script names below are from that
+> point in time. The current summary is
+> [quality and validation](../developer/architecture/08-quality-and-validation.md); the guide starts at
+> [the docs index](../README.md).
+
 What was checked on the rewritten code, how, and what was found. The acceptance criteria are in the master plan
 (`/home/hjj/.opencode/plan/jack-cxx-architecture.md`, "Acceptance criteria"). The raw measurement output is in
-`perf-baseline/s10/`.
+[perf-baseline/s10/](../measurements/perf-baseline/s10/).
 
 ## Build for measurements and for sanitizers
 
@@ -103,7 +108,7 @@ the whole server under `strace -f -c`, divided by the rtbench cycles of the same
 | dummy 128 | 2666.1 / 2762.7 | 1.6 / 2.3 | 0 | 3.14 |
 | dummy 256 | 5335.1 / 5427.6 | 1.6 / 3.0 | 0 | 3.98 |
 
-Against the S0 baseline (`perf-baseline/README.md`):
+Against the S0 baseline ([perf-baseline/README.md](../measurements/perf-baseline/README.md)):
 
 - Intervals match the baseline and the S8 measurements at every size. The card's clock gap is unchanged.
 - Allocations: zero in the steady window, at every size, in both drivers. The start-up allocations are the same as

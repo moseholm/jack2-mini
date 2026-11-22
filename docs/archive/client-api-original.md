@@ -1,5 +1,9 @@
 # C++ client API (P1 design)
 
+> **Historical document.** Names and statuses below reflect an earlier design (snake_case methods, planned
+> deactivate semantics). The verified reference is [client-api.md](../reference/client-api.md); the current guide
+> starts at [the docs index](../README.md).
+
 Status: implemented. The headers are in `client/api/` and compile standalone.
 
 ## Scope
