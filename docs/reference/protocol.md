@@ -2,7 +2,7 @@
 
 This is the verified description of the current client/server contract. It replaces the proposal in
 <!-- docs-check: allow-stale -->
-[archive/protocol-original.md](../../archive/protocol-original.md), which names protocol version 12 and older socket paths.
+[archive/protocol-original.md](../archive/protocol-original.md), which names protocol version 12 and older socket paths.
 <!-- docs-check: end-allow-stale -->
 Facts here were verified against code and tests at commit `3807a0f2`.
 
