@@ -68,6 +68,7 @@ Mermaid is the only diagram notation. GitHub renders it directly, so no generate
 | Deployment / runtime artifact placement | [01](developer/architecture/01-context-and-goals.md) |
 | Quality-goal map | [01](developer/architecture/01-context-and-goals.md) |
 | Decision landscape | [02](developer/architecture/02-solution-strategy.md) |
+| One diagram per decision record | [decisions](developer/decisions/README.md) |
 | C4 container view | [03](developer/architecture/03-building-blocks.md) |
 | Component view of server and client | [03](developer/architecture/03-building-blocks.md) |
 | CMake target and install graph | [03](developer/architecture/03-building-blocks.md) |
@@ -101,10 +102,16 @@ Mermaid is the only diagram notation. GitHub renders it directly, so no generate
 | Request/notification classification | [protocol reference](reference/protocol.md) |
 | Reply status mapping | [protocol reference](reference/protocol.md) |
 | Client lifecycle in the public API | [client API reference](reference/client-api.md) |
+| Open handshake | [client API reference](reference/client-api.md) |
 | Callback threading | [client API reference](reference/client-api.md) |
-| Quickstart workflow | [quickstart](user/quickstart.md) |
+| Build and install flow | [quickstart](user/quickstart.md) |
+| Dummy-server first session | [quickstart](user/quickstart.md) |
+| Tool verification | [quickstart](user/quickstart.md) |
 | Client/server processes | [quickstart](user/quickstart.md) |
+| Stop sequence | [quickstart](user/quickstart.md) |
 | jackd option handoff | [running jackd](user/running-jackd.md) |
+| Driver argument boundary | [running jackd](user/running-jackd.md) |
+| By-id primary validation | [running jackd](user/running-jackd.md) |
 | Runtime artifacts | [running jackd](user/running-jackd.md) |
 | Server shutdown sequence | [running jackd](user/running-jackd.md) |
 | Primary and secondary topology | [secondary cards](user/secondary-cards.md) |
@@ -113,5 +120,9 @@ Mermaid is the only diagram notation. GitHub renders it directly, so no generate
 | Rate-control sequence | [secondary cards](user/secondary-cards.md) |
 | Secondary capture/playback pipeline | [secondary cards](user/secondary-cards.md) |
 | Tool to API call map | [tools](user/tools.md) |
+| Connecting a port | [tools](user/tools.md) |
+| `jackmini_wait` state machine | [tools](user/tools.md) |
 | Troubleshooting decision tree | [troubleshooting](user/troubleshooting.md) |
-| Error-code map | [troubleshooting](user/troubleshooting.md) |
+| Wire status values | [troubleshooting](user/troubleshooting.md) |
+| Startup gates | [troubleshooting](user/troubleshooting.md) |
+| Runtime artifact names | [troubleshooting](user/troubleshooting.md) |

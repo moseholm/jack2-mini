@@ -10,6 +10,21 @@ This document covers configuration, the ports and controls a secondary card
 exposes, how rate changes behave, the client notification API, the current
 limits, and how the code is tested.
 
+```mermaid
+flowchart LR
+    PRIM["Primary ALSA device<br/>rate + buffer size fixed"] --> CYC["PcmCycle / Engine graph"]
+    HW["Secondary PCM devices"] --> CARDS["AlsaSecondaryCard<br/>own thread, SPSC rings"]
+    CARDS --> SLOTS["AlsaCardSlots (8)"]
+    SLOTS -->|"capture"| CAP["system:capture_* ports"]
+    SLOTS -->|"playback"| PLAY["system:playback_* ports"]
+    CLI["jackmini clients"] <--> CYC
+```
+
+*Source: [AlsaDriver.cpp](../../server/drivers/alsa/AlsaDriver.cpp#L1617),
+[PcmSession.hpp](../../server/drivers/alsa/PcmSession.hpp#L30),
+[AlsaDriver.h](../../server/drivers/alsa/AlsaDriver.h#L44),
+[AlsaSecondaryCard.h](../../server/drivers/alsa/AlsaSecondaryCard.h#L41).*
+
 ## Quick start
 
 Every sound device other than the primary's is added automatically at startup.
@@ -24,8 +39,11 @@ jackd -d alsa -d hw:CARD=PCH --secondary "name=usb1;device=hw:1;mode=capture"
 jackd -d alsa -d hw:CARD=PCH --secondary-file cards.conf
 ```
 
-`--secondary` may be repeated. `--secondary-file` reads the same key/value
-syntax, one card per line. Blank lines and lines starting with `#` are ignored.
+`--secondary` takes a single value: the driver parser stores one string per
+parameter, so a second occurrence replaces the first
+([Control.cpp:511](../../server/control/Control.cpp#L511)). Use one line per
+card in `--secondary-file`, which reads the same key/value syntax. Blank lines
+and lines starting with `#` are ignored.
 
 ```text
 # cards.conf
@@ -94,15 +112,33 @@ Each automatic card:
 Automatic cards never stop the server. Only the configured cards can do that.
 There are eight secondary slots. Devices beyond the eighth are logged and not added.
 
+```mermaid
+flowchart TB
+    WANT["desired cards<br/>automatic + explicit"] --> TABLE["AlsaSlotTable&lt;AlsaSecondaryCard, 8&gt;"]
+    TABLE --> S0["slot 0"]
+    TABLE --> S7["slot 7"]
+    TABLE -->|"more than 8"| SKIP["log and skip device"]
+```
+
+*Source: [AlsaDriver.h](../../server/drivers/alsa/AlsaDriver.h#L44),
+[AlsaSlotTable.h](../../server/drivers/alsa/AlsaSlotTable.h#L51),
+[AlsaDriver.cpp](../../server/drivers/alsa/AlsaDriver.cpp#L204).*
+
 ### Leaving out cards
 
-To keep automatic discovery off a card, give its ALSA id with `--exclude-card`.
-It can be repeated:
+To keep automatic discovery off cards, give their ALSA ids as one
+comma-separated `--exclude-card` value:
 
 ```sh
 # Real hardware only: no loopback devices
 jackd -d alsa -d hw:CARD=PCH --exclude-card=Loopback
+
+# Several ids in the single value
+jackd -d alsa -d hw:CARD=PCH --exclude-card=Loopback,NVidia
 ```
+
+Like the other string parameters, it holds one value; a later occurrence
+replaces an earlier one ([AlsaDriver.cpp:1573](../../server/drivers/alsa/AlsaDriver.cpp#L1573)).
 
 The id is the one ALSA shows in `aplay -l` or `/proc/asound/cards` (for example
 `Loopback` or `NVidia`), and matching ignores case. Every device on an excluded
@@ -130,6 +166,23 @@ primary card.
 udev is needed at build time (`libudev-dev`). If udev cannot be reached at
 runtime, the server keeps the cards it found at startup.
 
+```mermaid
+stateDiagram-v2
+    [*] --> Watching
+    Watching --> Settling: udev sound event
+    Settling --> Watching: another event (250 ms timer restarts)
+    Settling --> Reconciling: quiet for 250 ms
+    Reconciling --> Adding: new device appears
+    Reconciling --> Retiring: device gone or no longer wanted
+    Adding --> Watching: lock, open, start, promote
+    Retiring --> Watching: unregister ports, wait RT epochs, free
+```
+
+*Source: [AlsaHotplug.cpp](../../server/drivers/alsa/AlsaHotplug.cpp#L31),
+[AlsaHotplug.cpp](../../server/drivers/alsa/AlsaHotplug.cpp#L103),
+[AlsaDriver.cpp](../../server/drivers/alsa/AlsaDriver.cpp#L948),
+[AlsaDriver.cpp](../../server/drivers/alsa/AlsaDriver.cpp#L251).*
+
 ## Ports
 
 The secondary ports are added to the single `system` client:
@@ -142,6 +195,27 @@ ALSA card id in lower case), and `<dev>` is the PCM device number. For example,
 `name=usb1;device=hw:1,0` with two capture channels gives `system:capture_usb1_d0_1`
 and `system:capture_usb1_d0_2`. Each device has its own ports, so devices on one
 card never share names.
+
+```mermaid
+flowchart LR
+    subgraph CardThread["card thread"]
+        HW["ALSA poll + mmap"] --> CAPRING["capture ring"]
+        PLAYRING["playback ring"] --> HW
+    end
+    subgraph PrimaryRT["primary RT thread"]
+        CAPCONV["capture converter"] --> CAPPORT["capture port"]
+        PLAYPORT["playback port"] --> PLAYCONV["playback converter"]
+    end
+    CAPRING --> CAPCONV
+    PLAYCONV --> PLAYRING
+    DRIFT["drift controller<br/>resampler ratio"] --> CAPCONV
+    DRIFT --> PLAYCONV
+```
+
+*Source: [AlsaSecondaryCard.h](../../server/drivers/alsa/AlsaSecondaryCard.h#L41),
+[AlsaRingBuffer.h](../../server/drivers/alsa/AlsaRingBuffer.h#L26),
+[AlsaSecondaryCard.cpp](../../server/drivers/alsa/AlsaSecondaryCard.cpp#L892),
+[AlsaDriftController.cpp](../../server/drivers/alsa/AlsaDriftController.cpp#L49).*
 
 ## Rate controls
 
@@ -167,6 +241,31 @@ The driver chooses the control in this order:
    card opens and removed when the server closes.
 
 The chosen control is logged when the card opens.
+
+```mermaid
+sequenceDiagram
+    participant App as amixer / ALSA control
+    participant Mon as AlsaControlMonitor
+    participant Work as Reconfig worker
+    participant Drv as AlsaDriver
+    participant Card as AlsaSecondaryCard
+
+    App-->>Mon: VALUE event
+    Mon->>Work: onRateEvent(card, direction, value)
+    Work->>Drv: handleRateRequest(...)
+    alt refused (range, capture without follow_hw_rate)
+        Drv->>App: log and restore previous rate
+    else accepted
+        Drv->>Card: reconfigure(value)
+        Card->>Card: stop, reopen, rebuild, restart
+        Card-->>Drv: new rate
+    end
+```
+
+*Source: [AlsaControlMonitor.h](../../server/drivers/alsa/AlsaControlMonitor.h#L31),
+[AlsaReconfigWorker.cpp](../../server/drivers/alsa/AlsaReconfigWorker.cpp#L94),
+[AlsaDriver.cpp](../../server/drivers/alsa/AlsaDriver.cpp#L1072),
+[AlsaSecondaryCard.cpp](../../server/drivers/alsa/AlsaSecondaryCard.cpp#L701).*
 
 ## Clocks
 
@@ -233,10 +332,14 @@ secondary card 'usb1': device runs at 48000 Hz, not the requested 44100 Hz; usin
 
 ## Rate-change visibility
 
-The old C callback for rate changes is not part of the C++ client API. The ALSA
-driver logs the change and reopens the card at the rate the device reports; a
-jackmini client has no notification for it yet. Failed or refused changes are
-not reported either.
+The old C callback for rate changes is not part of the C++ client API. The wire
+protocol emits `kSecondarySampleRateCallback = 20` on a rate change
+([Notification.h:42](../../ipc/protocol/Notification.h#L42),
+[Engine.cpp:391](../../server/core/Engine.cpp#L391)), but the C++ client has no
+dispatch or public callback for it
+([ClientSession.cpp:291](../../client/session/ClientSession.cpp#L291)). The ALSA
+driver logs the change and reopens the card at the rate the device reports.
+Failed or refused changes are not reported to the client either.
 
 ## Limits
 
@@ -266,8 +369,11 @@ not reported either.
 
 ## Resampler
 
-The PipeWire resampler is the only one. A card that names another resampler is
-refused, and the server does not start (unless the card is `optional`).
+The PipeWire resampler is the only one. The factory lookup happens before
+`optional` is considered: an unknown resampler fails server startup even when
+the card is marked `optional=1`
+([AlsaDriver.cpp:750](../../server/drivers/alsa/AlsaDriver.cpp#L750),
+[AlsaDriver.cpp:760](../../server/drivers/alsa/AlsaDriver.cpp#L760)).
 
 ## Troubleshooting
 
@@ -300,19 +406,19 @@ ctest --test-dir build --output-on-failure
 
 They also run as `build/bin/jack_alsa_unit`.
 
-### Live checks
+### Recorded observations (live checks)
 
 These need real hardware or a loopback card, so they are not part of the
 automated tests.
 
-Tested on this development machine:
+**Recorded observations — tested on this development machine:**
 
 - creating, reading, writing, and removing a rate control, with a write from a
   second client producing a value event;
 - a server with a secondary capture card, and its element removed on shutdown;
 - refusal of a second server on the same card;
 - a playback card on HDMI (`hw:1,3`) reopened at 96 kHz and rolled back from
-  44.1 kHz, with the callback delivered only for the accepted change.
+  44.1 kHz.
 
 Not yet tested on hardware:
 
@@ -333,7 +439,7 @@ amixer -c Loopback cset name='JACK Secondary Playback Rate' 44100
 
 Loopback devices may refuse some rates or periods; the log says why.
 
-What was found on `snd-aloop` (kernel 7.0):
+**Recorded observation on `snd-aloop` (kernel 7.0):**
 
 - Playback through a secondary card reaches the loopback's capture side:
   a 1 kHz tone played through the card was read back with a peak of 0.76 by
