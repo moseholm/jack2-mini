@@ -1,8 +1,11 @@
 # Session handoff: where the work stands
 
+> **Historical document.** This is a project-status handoff, not current documentation. Its “current work”, open
+> issues and file paths are a snapshot. The current guide starts at [the docs index](../README.md).
+
 Written so a new session can pick up without the conversation. Read this file first, then
-`docs/design/client-api.md`, `docs/design/style.md`, `docs/design/alsa-redesign.md`, and
-`docs/design/perf-baseline/README.md`. The master plan is outside the repo, at
+`docs/reference/client-api.md`, `docs/developer/style.md`, `docs/archive/alsa-redesign.md`, and
+`docs/measurements/perf-baseline/README.md`. The master plan is outside the repo, at
 `/home/hjj/.opencode/plan/jack-cxx-architecture.md` (S0 to S10 and the decisions).
 
 ## Branch and state
@@ -44,7 +47,7 @@ The user wants the README to describe the new project honestly, and the licence 
 | S7: server and protocol | done (`a0f275e1` to `ab182c4e`) | see "Next" |
 | S9: remove the C (resampler kernels stay) | done (`9ab39c81`, `38bcbfe5`) | see "Next" |
 | Legacy C API cleanup (`common/jack`) | done | this branch: C headers, jslist, byte ring buffer and C UUID helpers removed |
-| S10: validation | done (`f38b6e2c`; `docs/design/validation.md`) | see "Next" |
+| S10: validation | done (`f38b6e2c`; `docs/developer/architecture/08-quality-and-validation.md`) | see "Next" |
 | Tools: the command-line tools, rebuilt on the jackmini API | done (T0 to T5) | see "Tools" |
 | WebKit style (PR #4, merged into `develop`) | done | identifier names, CamelCase files, `std::array`, `constexpr`, `//` comments; see "Decisions" |
 | CI: `scripts/ci.sh` shared by the workflow and local runs | done | SSE4.1/AVX2 matrix entry added; latest run green |
@@ -64,7 +67,7 @@ The user wants the README to describe the new project honestly, and the licence 
 | S7: server and protocol | done (`a0f275e1` to `ab182c4e`) | see "Next" |
 | S9: remove the C (resampler kernels stay) | done (`9ab39c81`, `38bcbfe5`) | see "Next" |
 | Legacy C API cleanup (`common/jack`) | done | this branch: C headers, jslist, byte ring buffer and C UUID helpers removed |
-| S10: validation | done (`f38b6e2c`; `docs/design/validation.md`) | see "Next" |
+| S10: validation | done (`f38b6e2c`; `docs/developer/architecture/08-quality-and-validation.md`) | see "Next" |
 | Tools: the command-line tools, rebuilt on the jackmini API | done (T0 to T5) | see "Tools" |
 
 ## Decisions (do not revisit without the user)
@@ -87,7 +90,7 @@ Architecture and scope:
 
 Client API and control:
 
-- Namespace `jackmini`. Headers in `client/api/`. Style per `docs/design/style.md`: CamelCase types,
+- Namespace `jackmini`. Headers in `client/api/`. Style per `docs/developer/style.md`: CamelCase types,
   snake_case methods, `Result<T>` (std::expected with the client `Error` enum), RAII, typed callbacks.
 - Control API: `jackmini::control` (`server/control/Control.hpp`), implemented in `server/control/Control.cpp`
   in the server library. Signal handling is in the library (`setup_signals`, `wait_for_signal`).
@@ -120,7 +123,7 @@ Hardware and measurement:
 - Hardware runs (RT kernel, real latency, the secondary cards at 64 frames) are the user's, at the end. Do not wait for them.
 - Report process-wide counts as process-wide. The realtime path must not allocate, lock, or make syscalls.
 
-Style and naming (PR #4, the WebKit style; `docs/design/style.md` is the reference):
+Style and naming (PR #4, the WebKit style; `docs/developer/style.md` is the reference):
 
 - Types CamelCase without a `Jack` prefix. Functions and methods camelCase. Data members `m_` (classes and structs),
   static members `s_`, globals `g`, constants and enumerators `kCamelCase`. Files CamelCase, named after their main type.
@@ -186,7 +189,7 @@ On `refactor/uuid-consolidation`, one decision per commit:
 - `94606177` midi: the ALSA RawMIDI backend and its glue, the `platform/alsarawmidi` module, and the ALSA `midi-driver` parameter are removed.
 - `5dd484db` midi: the server's MIDI driver and queue classes (`server/JackMidi*`) are removed.
 - `a644bf85` midi: the codec added in `b7781df3` is removed again.
-- `89b9b564` perf: the ALSA measurements after S8 (`docs/design/perf-baseline/s8-*`).
+- `89b9b564` perf: the ALSA measurements after S8 (`docs/measurements/perf-baseline/s8-*`).
 - `b252d274` alsa: the drivers run on the PCM session; `alsa_driver.c` and `alsa_driver.h` are removed.
 - `3cf04a5a`, `526c0fbc`, `224de712`: the session, and the S8 status docs.
 - `c03e30a2`: the libasound backend (`Device`).
@@ -258,7 +261,7 @@ S9 is done. After the legacy C API cleanup, the C left in the tree is the resamp
 helpers, and the allocation interposer in `tests/perf/`. There is no installed C API and no `jack_ringbuffer_*`
 byte ring buffer. C linkage (`extern "C"`) is kept only for those module and implementation boundaries.
 
-S10 is done (`docs/design/validation.md`): ASan, UBSan and TSAN over the unit suites and the server e2e tests; zero
+S10 is done (`docs/developer/architecture/08-quality-and-validation.md`): ASan, UBSan and TSAN over the unit suites and the server e2e tests; zero
 allocations in the steady window; syscalls per cycle below the S0 baseline with no new kind; the latency matches the
 baseline. The RT hardware runs are the user's.
 
@@ -273,7 +276,7 @@ Still `int` on purpose: the graph's sentinel lookups (`GetInputRefNum`, `GetOutp
 
 ## Measurements
 
-ALSA, `hw:CARD=U192k`, 48 kHz, `-Z PCH,NVidia`, after S8 (`docs/design/perf-baseline/s8-*`, README "After the ALSA redesign"):
+ALSA, `hw:CARD=U192k`, 48 kHz, `-Z PCH,NVidia`, after S8 (`docs/measurements/perf-baseline/s8-*`, README "After the ALSA redesign"):
 
 | frames | interval p50 (us) | callback p99 (us) | xruns | allocations (steady 6 s) | syscalls / cycle |
 |---|---|---|---|---|---|
@@ -281,7 +284,7 @@ ALSA, `hw:CARD=U192k`, 48 kHz, `-Z PCH,NVidia`, after S8 (`docs/design/perf-base
 | 128 | 2974 | 2.2 | 0 | 0 | 5.39 |
 | 256 | 5009 | 3.3 | 0 | 0 | 5.64 |
 
-The baseline (before S8) is in `docs/design/perf-baseline/README.md`. The dummy-driver rows were not re-measured.
+The baseline (before S8) is in `docs/measurements/perf-baseline/README.md`. The dummy-driver rows were not re-measured.
 
 ## Environment
 
@@ -326,7 +329,7 @@ The baseline (before S8) is in `docs/design/perf-baseline/README.md`. The dummy-
   `/proc/asound/card2/pcm0p/sub0/status` and `pcm0c` say `closed`.
 - Build for timing with `RelWithDebInfo` or `Release`, not a debug or asserts-on tree.
 - `/tmp/opencode/check.sh`, the baseline script and the allocation counter from earlier sessions are described in the
-  repository's `tests/perf/` and `docs/design/validation.md`. `/tmp/opencode` may have been cleared.
+  repository's `tests/perf/` and `docs/developer/architecture/08-quality-and-validation.md`. `/tmp/opencode` may have been cleared.
 
 ### Thread sanitizer
 
@@ -353,9 +356,9 @@ thread) is in 4 of 5 client runs on both the tree before and after `e2124e88`; i
 ## How to resume
 
 1. `cd /home/hjj/Develop/jack2 && git status && git log --oneline -5 origin/develop`.
-2. Read this file, `docs/design/style.md`, and `docs/design/client-api.md`.
+2. Read this file, `docs/developer/style.md`, and `docs/reference/client-api.md`.
 3. Start the licensing work on a new branch from `origin/develop`. Build and test it with `scripts/ci.sh` (see "Build and checks").
-4. Read `docs/design/validation.md` for the current state of the checks.
+4. Read `docs/developer/architecture/08-quality-and-validation.md` for the current state of the checks.
 
 ## Working agreements with the user
 

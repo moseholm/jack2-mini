@@ -31,8 +31,8 @@ What it does
 ============
 
 - **One primary card, chosen by ALSA id.** Start the server with
-  ``-d hw:CARD=PCH``. Numeric names such as ``hw:0`` are refused, so the
-  choice survives card renumbering. The primary sets the graph's rate and
+  ``jackd -d alsa -d hw:CARD=PCH``. The first ``-d`` selects the driver; the second is the ALSA device. Numeric names
+  such as ``hw:0`` are refused, so the choice survives card renumbering. The primary sets the graph's rate and
   buffer size.
 - **Every other PCM device is a secondary card.** They are discovered at
   startup, one ALSA PCM device per secondary card. A device with both
@@ -99,7 +99,14 @@ Secondary cards
 
 Configuration keys, ports, clocks, rate controls, the client notification API,
 hot-plug behaviour and the current limits are described in
-`docs/secondary-alsa-cards.md <docs/secondary-alsa-cards.md>`_.
+`docs/user/secondary-cards.md <docs/user/secondary-cards.md>`_.
+
+Documentation
+=============
+
+The documentation hub is `docs/README.md <docs/README.md>`_. It has separate tracks for users and operators and for
+contributors, plus verified references for the wire protocol and the client API. Historical design notes are kept in
+`docs/archive/ <docs/archive/README.md>`_ and are not authoritative when they disagree with the current code.
 
 Building
 ========

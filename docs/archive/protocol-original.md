@@ -1,5 +1,9 @@
 # Client–server protocol and shared memory (P2 specification)
 
+> **Historical document.** This is a proposal-plus-implementation record, not the current protocol specification: it
+> names version 12, old socket paths and an older reply mapping. The verified reference is
+> [protocol.md](../reference/protocol.md); the current guide starts at [the docs index](../README.md).
+
 Status: proposed for implementation. Nothing here is implemented yet. The
 current code is the reference for what must keep working, and every
 replacement is named against the current code.

@@ -1,5 +1,8 @@
 # Licence audit
 
+> **Historical document.** This records the licence classification at a specific commit. The current licence layout
+> is described in [LICENSING.md](../../LICENSING.md); the current guide starts at [the docs index](../README.md).
+
 Classification of the tree at `origin/develop`, `1c9a725a`. Input for `LICENSING.md`. The tables record that
 baseline; the later legacy C API cleanup is noted below.
 

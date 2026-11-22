@@ -16,7 +16,7 @@
 
 // Unit tests for the secondary ALSA card building blocks.  They need no ALSA
 // hardware: the card's control, stream and thread code is covered by the live
-// checks described in docs/secondary-alsa-cards.md.
+// checks described in docs/user/secondary-cards.md.
 
 #include "server/drivers/alsa/AlsaCardDiff.h"
 #include "server/drivers/alsa/AlsaDriftController.h"
