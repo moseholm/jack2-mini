@@ -80,19 +80,20 @@ Build first (see `Building`_), then::
 
     jackd -d alsa -d hw:CARD=PCH -r 48000 -p 1024
 
-Leave a card out of automatic discovery with ``--exclude-card`` (repeatable,
-case-insensitive)::
+Leave one card out of automatic discovery with ``--exclude-card`` (a single,
+case-insensitive ALSA id)::
 
     jackd -d alsa -d hw:CARD=PCH --exclude-card=Loopback
 
-Override an automatic card, or configure one explicitly, with ``--secondary``
-(repeatable) or ``--secondary-file``::
+Override an automatic card, or configure one explicitly, with one ``--secondary``
+value or with ``--secondary-file`` for several cards (one per line)::
 
     jackd -d alsa -d hw:CARD=PCH \
         --secondary "name=usb;device=hw:CARD=USB,DEV=0;mode=duplex"
 
-Explicit cards are fatal if they cannot be opened, unless ``optional=1`` is
-set. Automatic cards never stop the server.
+Both ``--exclude-card`` and ``--secondary`` take one string; repeating either
+option overwrites the previous value. Explicit cards are fatal if they cannot be
+opened, unless ``optional=1`` is set. Automatic cards never stop the server.
 
 Secondary cards
 ===============
