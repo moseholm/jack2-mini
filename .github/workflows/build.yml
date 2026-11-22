@@ -9,6 +9,15 @@ on:
       - '*'
 
 jobs:
+  # Documentation drift is reported but does not fail the workflow yet.
+  docs-check:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+    - name: Check documentation
+      run: python3 docs/scripts/check_docs.py --check
+
   linux:
     runs-on: ubuntu-latest
     strategy:

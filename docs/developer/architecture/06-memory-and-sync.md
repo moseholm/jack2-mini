@@ -29,8 +29,8 @@ sequenceDiagram
 [FdSegment.cpp](../../../ipc/memory/FdSegment.cpp#L38),
 [ClientSession.cpp](../../../client/session/ClientSession.cpp#L176).*
 
-<!-- fact: ipc/memory/FdSegment.cpp:38 pattern="kMaxFds\\s*=\\s*8" -->
-<!-- fact: ipc/protocol/Constants.h:29 pattern="kBufferSizeMax\\s*=\\s*8192" -->
+<!-- fact: ipc/memory/FdSegment.cpp:39 pattern="kMaxFds\\s*=\\s*8" -->
+<!-- fact: ipc/protocol/Constants.h:28 pattern="kBufferSizeMax\\s*=\\s*8192" -->
 
 | Property | Value | Source |
 |---|---|---|
