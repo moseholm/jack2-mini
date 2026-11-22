@@ -43,8 +43,8 @@ STALE_ALLOW_START = "<!-- docs-check: allow-stale -->"
 STALE_ALLOW_END = "<!-- docs-check: end-allow-stale -->"
 STALE_PATTERNS: list[tuple[str, str]] = [
     (r"protocol\s+(?:version\s+)?12|kProtocolVersion\s*=\s*12", "protocol version 12"),
-    (r"--secondary[^\n]{0,100}\brepeatable\b", "repeatable --secondary"),
-    (r"--exclude-card[^\n]{0,100}\brepeatable\b", "repeatable --exclude-card"),
+    (r"--secondary[^\n]{0,100}(?<!not )\brepeatable\b", "repeatable --secondary"),
+    (r"--exclude-card[^\n]{0,100}(?<!not )\brepeatable\b", "repeatable --exclude-card"),
     (r"\bcheck\.sh\b", "check.sh"),
     (r"\b15\s+(?:unit\s+)?suites?\b", "15 unit suites"),
     (r"\b(?:client_open|client_close|activate_client|deactivate_client|register_port|audio_buffer|midi_buffer|get_sample_rate|set_buffer_size)\b", "snake_case client API"),
@@ -92,6 +92,10 @@ class Checker:
 
     def check_facts(self, text: str, doc: Path) -> None:
         cache: dict[Path, list[str]] = {}
+        for number, line in enumerate(text.splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith("<!--") and "fact:" in stripped and not FACT_RE.search(stripped):
+                self.error(f"{self.rel(doc)}:{number}: malformed fact anchor: {stripped}")
         for match in FACT_RE.finditer(text):
             self.fact_count += 1
             rel_path = match.group("path")
@@ -169,7 +173,11 @@ class Checker:
             if not resolved.exists():
                 self.error(f"{self.rel(doc)}:{line_no}: broken link {target!r}")
                 continue
-            if not fragment or re.fullmatch(r"L\d+(?:-L\d+)?", fragment):
+            line_range = re.fullmatch(r"L(\d+)(?:-L(\d+))?", fragment)
+            if line_range:
+                self.check_source_line(doc, target, resolved, line_range)
+                continue
+            if not fragment:
                 continue
             if resolved.suffix == ".md":
                 if resolved not in heading_cache:
@@ -180,6 +188,34 @@ class Checker:
                     self.error(
                         f"{self.rel(doc)}:{line_no}: broken heading anchor {target!r}"
                     )
+
+    def check_source_line(
+        self,
+        doc: Path,
+        target: str,
+        resolved: Path,
+        line_range: re.Match[str],
+    ) -> None:
+        start = int(line_range.group(1))
+        end = int(line_range.group(2) or start)
+        if end < start:
+            self.error(f"{self.rel(doc)}: inverted line range in {target!r}")
+            return
+        if resolved.suffix == ".md":
+            return
+        try:
+            lines = resolved.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            return
+        if end > len(lines):
+            self.error(
+                f"{self.rel(doc)}: source line out of range in {target!r} "
+                f"(file has {len(lines)} lines)"
+            )
+            return
+        for number in range(start, end + 1):
+            if not lines[number - 1].strip():
+                self.error(f"{self.rel(doc)}: source line is blank in {target!r}")
 
     def check_mermaid(self, text: str, doc: Path) -> None:
         lines = text.splitlines()

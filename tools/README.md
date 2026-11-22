@@ -1,8 +1,10 @@
 # The command-line tools
 
 The tools are built on the jackmini client API (`client/api/`) and are installed with the other binaries. They
-never start a server: with no server running they print an error and exit with status 1. Each takes `-s <name>` to
-choose a server, `-v` for the version and `-h` for the usage. The build option is `JACK_TOOLS` (on by default).
+never start a server. Most report a failed connection with status 1 when no server runs, but `jackmini_wait -c`
+prints `not running` and `jackmini_wait -q` prints `server is gone`, both with status 0
+([Wait.cpp:131](Wait.cpp#L131)). Each takes `-s <name>` to choose a server, `-v` for the version and `-h` for the
+usage. The build option is `JACK_TOOLS` (on by default).
 
 | Tool | What it does |
 |---|---|
@@ -19,7 +21,8 @@ choose a server, `-v` for the version and `-h` for the usage. The build option i
 `jackmini_lsp` prints the lines of `jack_lsp`, in the same order, with the same indentation and wording. Two differences:
 
 - UUIDs are printed as the server writes them: the decimal of the 64-bit value.
-- `-A` prints nothing yet, since no aliases are set.
+- `-A` prints each port's aliases from `PortInfo::m_aliases`, one per line indented by three spaces
+  ([Lsp.cpp:204](Lsp.cpp#L204)). A port with no aliases prints nothing.
 
 ## Not ported
 
