@@ -204,7 +204,7 @@ flowchart TB
 [LinuxFutex.cpp](../../../ipc/sync/LinuxFutex.cpp#L52).*
 
 Live activation counts are outside the copy-on-write connection state, so the RT thread only decrements atomics; the
-control thread never copies a counter mid-decrement. Source: [GraphManager.h](../../../ipc/memory/GraphManager.h#L43),
+control thread never copies a counter mid-decrement. Source: [GraphManager.h](../../../ipc/memory/GraphManager.h#L45),
 [AtomicState.h](../../../ipc/memory/AtomicState.h#L122).
 
 ## Client lifecycle

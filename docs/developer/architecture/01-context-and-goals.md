@@ -64,9 +64,9 @@ flowchart TB
 | Constraint / non-goal | Consequence |
 |---|---|
 | Linux, C++23, ALSA and libudev only | The build fails on other platforms; there is no portability layer. Source: [CMakeLists.txt](../../../CMakeLists.txt#L7). |
-| No JACK2 wire compatibility | A JACK2 client cannot connect, and a jack2-mini client cannot connect to JACK2. Source: [README.rst](../../../README.rst#L161). |
+| No JACK2 wire compatibility | A JACK2 client cannot connect, and a jack2-mini client cannot connect to JACK2. Source: [README.rst](../../../README.rst#L172). |
 | No installed C API | Applications use `<client/api/Jackmini.hpp>`; the internal C that remains is the resampler kernels, the module descriptor and MIDI helpers. Source: [CMakeLists.txt](../../../CMakeLists.txt#L332). |
-| No hardware MIDI | MIDI is exchanged between clients only. Source: [README.rst](../../../README.rst#L171). |
+| No hardware MIDI | MIDI is exchanged between clients only. Source: [README.rst](../../../README.rst#L183). |
 | jack2-mini must own the cards | PulseAudio, a second jackd and other ALSA users must be stopped. Source: [README.rst](../../../README.rst#L64). |
 | Fixed graph geometry at startup | Client and port maxima are compile-time values; the port array is allocated once. Source: [GraphManager.cpp](../../../ipc/memory/GraphManager.cpp#L46). |
 | One server per user | A second server refuses to start even under another name. Source: [ServerLock.cpp](../../../server/core/ServerLock.cpp#L42). |
