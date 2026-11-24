@@ -14,7 +14,7 @@ flowchart TB
     subgraph ServerLibs["Server side"]
         servercore["ServerCore + Engine + LockedEngine<br/>server/core"]
         ipcsrv["RequestDecoder + socket channels<br/>server/ipc"]
-        graph["GraphManager + ConnectionManager<br/>EngineControl + ports<br/>ipc/memory"]
+        graphmgr["GraphManager + ConnectionManager<br/>EngineControl + ports<br/>ipc/memory"]
         drivers["DriverLoader + audio drivers<br/>server/drivers"]
         alsa["ALSA session, cycle, secondary cards<br/>server/drivers/alsa"]
     end
@@ -29,12 +29,12 @@ flowchart TB
 
     client --> api --> session
     session --> protocol
-    jackd --> servercore --> graph
+    jackd --> servercore --> graphmgr
     servercore --> ipcsrv --> protocol
     servercore --> drivers --> alsa
-    drivers --> graph
+    drivers --> graphmgr
     api -.->|"same vocabulary types"| common
-    graph -.-> common
+    graphmgr -.-> common
     alsa -.-> common
 ```
 
