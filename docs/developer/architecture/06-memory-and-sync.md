@@ -8,20 +8,20 @@ it directly. This view is the data view plus the realtime cross-cutting concept.
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Srv as Server (ShmMem)
-    participant Memfd as memfd_create("jack-sharedN")
+    participant Srv as Server ShmMem
+    participant Memfd as memfd jack-sharedN
     participant Dec as RequestDecoder
     participant Sock as AF_UNIX socket
     participant Cli as ClientSession
 
-    Srv->>Memfd: create + ftruncate + mmap(MAP_SHARED)
+    Srv->>Memfd: create, ftruncate, mmap MAP_SHARED
     Note over Srv: engine control, graph, per-client control
-    Srv->>Dec: three ShmSegment{fd,size}
-    Dec->>Sock: ClientOpenResult + SCM_RIGHTS(fd[0..2])
-    Sock->>Cli: recvWithFds (MSG_CMSG_CLOEXEC), kMaxFds = 8
+    Srv->>Dec: three ShmSegment fd and size
+    Dec->>Sock: ClientOpenResult + SCM_RIGHTS three fds
+    Sock->>Cli: recvWithFds MSG_CMSG_CLOEXEC, max 8
     Cli->>Cli: ShmReadWritePtr maps each segment
-    Cli->>Cli: close the received descriptors; mappings remain
-    Note over Cli: no registry, no /dev/shm table to leak
+    Cli->>Cli: close received descriptors; mappings remain
+    Note over Cli: no registry, no dev shm table to leak
 ```
 
 *Source: [ShmMem.cpp](../../../ipc/memory/ShmMem.cpp#L55),
