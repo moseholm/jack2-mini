@@ -31,7 +31,7 @@ sequenceDiagram
     Srv->>Sock: ClientOpenResult + SCM_RIGHTS three fds
     Sock->>Cli: recvWithFds MSG_CMSG_CLOEXEC
     Cli->>Cli: map engine, graph, client control
-    Cli->>Cli: close received descriptors; mappings remain
+    Cli->>Cli: close descriptors, mappings remain
     Cli->>Cli: connect per-client futex
     Note over Cli: no registry and no named segment table
 ```
