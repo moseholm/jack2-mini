@@ -225,10 +225,10 @@ stateDiagram-v2
       ports and callbacks may be set
     end note
     note right of Active
-      callbacks are fixed; RT thread exists only if onProcess was set
+      callbacks are fixed, RT thread exists only if onProcess was set
     end note
     note right of Inactive
-      same session; connections and ports survive; callbacks may be changed
+      same session, connections and ports survive, callbacks may be changed
     end note
 ```
 
@@ -266,7 +266,7 @@ sequenceDiagram
     Core->>Core: stop active driver
     Core->>Eng: notifyQuit
     Eng->>Clients: kQUIT on notification channels
-    Note over Clients: shutdown callback once if active; RT threads see graph wait fail
+    Note over Clients: shutdown callback once if active, RT threads see graph wait fail
     Core->>Core: stop request channel, QuitException ends listener
     Core->>Core: notify failure or shutdown, detach and close drivers, close engine
     Server->>Server: cleanupFiles and release flock
