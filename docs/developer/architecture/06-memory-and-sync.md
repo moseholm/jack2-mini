@@ -20,7 +20,7 @@ sequenceDiagram
     Dec->>Sock: ClientOpenResult + SCM_RIGHTS three fds
     Sock->>Cli: recvWithFds MSG_CMSG_CLOEXEC, max 8
     Cli->>Cli: ShmReadWritePtr maps each segment
-    Cli->>Cli: close received descriptors; mappings remain
+    Cli->>Cli: close descriptors, mappings remain
     Note over Cli: no registry, no dev shm table to leak
 ```
 
