@@ -21,15 +21,15 @@ mappings keep the segments alive. There is no name registry. Source:
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Srv as Server (ShmMem)
-    participant Memfd as memfd_create segments
+    participant Srv as Server ShmMem
+    participant Memfd as memfd segments
     participant Sock as AF_UNIX request socket
     participant Cli as ClientSession
 
-    Srv->>Memfd: create + ftruncate + mmap(MAP_SHARED)
+    Srv->>Memfd: create, ftruncate, mmap MAP_SHARED
     Note over Srv: engine control, graph, per-client control
-    Srv->>Sock: ClientOpenResult + SCM_RIGHTS(fd[0..2])
-    Sock->>Cli: recvWithFds (MSG_CMSG_CLOEXEC)
+    Srv->>Sock: ClientOpenResult + SCM_RIGHTS three fds
+    Sock->>Cli: recvWithFds MSG_CMSG_CLOEXEC
     Cli->>Cli: map engine, graph, client control
     Cli->>Cli: close received descriptors; mappings remain
     Cli->>Cli: connect per-client futex
