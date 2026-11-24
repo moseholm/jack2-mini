@@ -9,30 +9,30 @@ they do.
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User
+    participant User
     participant Main as Jackdmp.cpp
-    participant Server as control::Server
+    participant Server as control Server
     participant Lock as ServerLock
     participant Core as ServerCore
     participant Driver as AudioDriver module
     participant Chan as SocketServerChannel
 
-    User->>Main: jackd [global options] -d alsa [driver options]
-    Main->>Main: pre-scan -V / --version
+    User->>Main: jackd global options -d alsa driver options
+    Main->>Main: pre-scan -V or --version
     Main->>Server: create, parse options
-    Main->>Server: selectDriver("alsa")
+    Main->>Server: selectDriver alsa
     Main->>Main: remaining argv = driver arguments
-    Main->>Server: start(freewheel)
-    Server->>Lock: flock(LOCK_EX | LOCK_NB) on /dev/shm/jack_<uid>_server.lock
+    Main->>Server: start freewheel
+    Server->>Lock: flock LOCK_EX LOCK_NB on server.lock
     alt lock held
-        Lock-->>Server: EWOULDBLOCK -> file_exists
-        Server-->>User: "'<name>' server already active"
+        Lock-->>Server: EWOULDBLOCK file_exists
+        Server-->>User: server already active
     else lock acquired
-        Server->>Core: construct (graph allocate, EngineControl, Engine, FreewheelDriver)
+        Server->>Core: construct graph, EngineControl, Engine, FreewheelDriver
         Server->>Driver: open with parsed parameters
-        Server->>Core: open driver, request channel, engine, freewheel; attach master/slave
-        Server->>Core: start audio driver (or threaded freewheel), then request channel
-        Core->>Chan: bind /dev/shm/jack_<name>_<uid>_0 and start listener thread
+        Server->>Core: open driver, request channel, engine, freewheel, attach
+        Server->>Core: start audio driver or threaded freewheel, then request channel
+        Core->>Chan: bind server socket and start listener thread
         Server-->>User: server running
     end
 ```
@@ -106,17 +106,17 @@ sequenceDiagram
     participant Eng as Engine
     participant Ext as ExternalClient
 
-    App->>CS: Client::open(name, options)
-    CS->>CS: acquire process-wide ProcessContext; block SIGPIPE
-    CS->>Srv: connect /dev/shm/jack_<name>_<uid>_0
-    Note over CS: failure -> Error::kNoServer (clients never start a server)
-    CS->>Srv: ClientCheck(name, version=13, uuid, open=true)
+    App->>CS: Client.open(name, options)
+    CS->>CS: acquire ProcessContext and block SIGPIPE
+    CS->>Srv: connect server socket
+    Note over CS: failure returns Error kNoServer
+    CS->>Srv: ClientCheck(name, version 13, uuid, open true)
     Srv->>Eng: clientCheck
     alt version mismatch
-        Eng-->>Srv: failure | version error
+        Eng-->>Srv: failure or version error
         Srv-->>CS: status 7, disconnect
     else version ok
-        Eng-->>CS: resolved name (unique suffix or kNameTaken for exact)
+        Eng-->>CS: resolved name or kNameTaken for exact
         CS->>CS: bind notification socket, start jthread
         CS->>Srv: ClientOpen(name, pid, uuid)
         Srv->>Eng: clientOpen
@@ -211,26 +211,24 @@ control thread never copies a counter mid-decrement. Source: [GraphManager.h](..
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Opened: Client::open
-    Opened --> Active: activate()
-    Active --> Inactive: deactivate()
-    Inactive --> Active: activate()
-    Active --> Inactive: process callback returned false (self-deactivation)
-    Opened --> Closed: close() / destructor
-    Inactive --> Closed: close() / destructor
-    Active --> Closed: close() / destructor
+    [*] --> Opened: Client open
+    Opened --> Active: activate
+    Active --> Inactive: deactivate
+    Inactive --> Active: activate
+    Active --> Inactive: process callback returned false
+    Opened --> Closed: close or destructor
+    Inactive --> Closed: close or destructor
+    Active --> Closed: close or destructor
     Closed --> [*]
 
     note right of Opened
       ports and callbacks may be set
     end note
     note right of Active
-      callbacks are fixed; RT thread exists
-      only if onProcess was set
+      callbacks are fixed; RT thread exists only if onProcess was set
     end note
     note right of Inactive
-      same session; connections and ports survive;
-      callbacks may be changed
+      same session; connections and ports survive; callbacks may be changed
     end note
 ```
 
@@ -254,24 +252,24 @@ Two nuances are worth stating explicitly:
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Signal
+    participant Signal
     participant Main as Jackdmp.cpp
-    participant Server as control::Server
+    participant Server as control Server
     participant Core as ServerCore
     participant Eng as Engine
     participant Clients
 
-    Signal->>Main: SIGINT / SIGTERM / SIGHUP / SIGQUIT
-    Main->>Server: waitForSignal -> stop()
-    Server->>Eng: stop()
-    Server->>Core: closeEngine()
+    Signal->>Main: SIGINT SIGTERM SIGHUP SIGQUIT
+    Main->>Server: waitForSignal then stop
+    Server->>Eng: stop
+    Server->>Core: closeEngine
     Core->>Core: stop active driver
-    Core->>Eng: notifyQuit()
+    Core->>Eng: notifyQuit
     Eng->>Clients: kQUIT on notification channels
-    Note over Clients: shutdown callback once (if active); RT threads see graph wait fail
-    Core->>Core: stop request channel (QuitException ends listener)
-    Core->>Core: notify failure/shutdown, detach and close drivers, close engine
-    Server->>Server: cleanupFiles(), release flock
+    Note over Clients: shutdown callback once if active; RT threads see graph wait fail
+    Core->>Core: stop request channel, QuitException ends listener
+    Core->>Core: notify failure or shutdown, detach and close drivers, close engine
+    Server->>Server: cleanupFiles and release flock
 ```
 
 *Source: [Control.cpp](../../../server/control/Control.cpp#L638),
